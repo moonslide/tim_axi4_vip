@@ -1,4 +1,4 @@
-# axi4_avip_ext
+# tim_axi4_vip
 An **AXI VIP (Verification IP)** is a specialized verification component used to validate **AXI (Advanced eXtensible Interface)** protocols within a simulation environment. AXI VIP simplifies and accelerates the process of verifying AXI-based designs by providing a configurable and reusable module that mimics or checks AXI bus behavior.
 
 ### Key Features:
