@@ -2,13 +2,13 @@ all:
 	make clean; make sim; make clean;
 
 
-comp:
+sim:
 	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check -f ../axi4_compile.f -debug_access+all +fsdbfile+$(test).fsdb -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
 
 
 
-sim:
-	./simv +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
+#sim:
+#	./simv +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
 
 ##	+incdir+../../src/hvl_top/master/ \
 ##	+incdir+../../src/hdl_top/master_agent_bfm/  \
