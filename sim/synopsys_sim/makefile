@@ -3,8 +3,12 @@ all:
 
 
 sim:
-	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check -f ../axi4_compile.f -debug_access+all +fsdbfile+$(test).fsdb -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
+	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check -f ../axi4_compile.f -debug_access+all -P $(VERDI_HOME)/share/PLI/VCS/LINUX64/novas.tab $(VERDI_HOME)/share/PLI/VCS/LINUX64/pli.a -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
 
+verdi:
+	verdi -ssf axi_dump.fsdb -elab simv.daidir/kdb &
+#sim:
+#	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check -f ../axi4_compile.f -debug_access+all +fsdbfile+$(test).fsdb -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
 
 
 #sim:

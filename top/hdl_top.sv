@@ -81,7 +81,11 @@ module hdl_top;
     run_test("axi4_base_test");
 
   end
-
+  
+  initial begin
+      $fsdbDumpfile("axi_dump.fsdb");
+      $fsdbDumpvars(0,"hdl_top");
+  end
 
 endmodule : hdl_top
 
