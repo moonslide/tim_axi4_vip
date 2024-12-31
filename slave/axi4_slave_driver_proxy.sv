@@ -199,6 +199,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
      axi4_slave_drv_bfm_h.axi4_write_address_phase(struct_write_packet);
 
      if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+       $display("out of order detect");
        if(response_id_queue.size() == 0) begin
          response_id_queue.push_back(struct_write_packet.awid);
        end
@@ -360,7 +361,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-        while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions); //  wait change to while begin
+        while(axi4_slave_write_data_out_fifo_h.size <=   axi4_slave_agent_cfg_h.get_minimum_transactions); begin //  wait change to while begin by tim
+            @(posedge axi4_slave_drv_bfm_h.aclk);
+        end   
           `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_write_data_out_fifo_h.used()),UVM_HIGH)
           if(drive_id_cont == 1) begin
             bid_local = response_id_cont_queue.pop_front(); 
@@ -802,8 +805,12 @@ endtask : task_memory_read
 
 
 task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
- while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions);  //wait change to while
- `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
+//fixed by tim
+// wait(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions); 
+    while (axi4_slave_read_addr_fifo_h.size() <= axi4_slave_agent_cfg_h.get_minimum_transactions) begin
+          @(posedge  axi4_slave_drv_bfm_h.aclk);
+    end    
+         `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
  if(drive_rd_id_cont == 1) begin
    oor_read_data_struct_read_packet = rd_response_id_cont_queue.pop_front(); 
    if(rd_response_id_cont_queue.size()==0) drive_rd_id_cont = 1'b0;
