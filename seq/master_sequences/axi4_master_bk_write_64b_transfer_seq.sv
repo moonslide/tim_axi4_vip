@@ -35,7 +35,7 @@ task axi4_master_bk_write_64b_transfer_seq::body();
     `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: BEFORE axi4_master_bk_write_64b_transfer_seq"), UVM_NONE); 
 
   start_item(req);
-  if(!req.randomize() with {req.awsize == WRITE_8_BYTES;
+  if(!req.randomize() with {req.awsize == WRITE_64_BYTES;
                               req.tx_type == WRITE;
                               req.transfer_type == BLOCKING_WRITE;
                               req.awburst == WRITE_FIXED;}) begin
