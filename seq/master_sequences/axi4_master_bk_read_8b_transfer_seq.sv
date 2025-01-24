@@ -35,7 +35,7 @@ task axi4_master_bk_read_8b_transfer_seq::body();
   req.transfer_type=BLOCKING_READ;
   
   start_item(req);
-  if(!req.randomize() with {req.arsize == READ_1_BYTE;
+  if(!req.randomize() with {req.arsize == READ_8_BYTE;
                             req.tx_type == READ;
                             req.arburst == READ_INCR;
                             req.transfer_type == BLOCKING_READ;}) begin
