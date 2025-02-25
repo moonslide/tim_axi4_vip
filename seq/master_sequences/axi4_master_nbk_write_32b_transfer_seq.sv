@@ -34,7 +34,7 @@ task axi4_master_nbk_write_32b_transfer_seq::body();
   super.body();
 
   start_item(req);
-  if(!req.randomize() with {req.awsize == WRITE_4_BYTES;
+  if(!req.randomize() with {req.awsize == WRITE_32_BYTES;
                               req.tx_type == WRITE;
                               req.awburst == WRITE_FIXED;
                               req.transfer_type == NON_BLOCKING_WRITE;}) begin

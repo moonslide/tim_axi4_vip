@@ -42,7 +42,8 @@ package axi4_master_seq_pkg;
   `include "axi4_master_bk_write_fixed_burst_seq.sv"
   `include "axi4_master_bk_write_outstanding_transfer_seq.sv"
   `include "axi4_master_bk_write_cross_seq.sv"
-
+  
+  `include "axi4_master_nbk_write_1b_transfer_seq.sv"
   `include "axi4_master_nbk_write_8b_transfer_seq.sv"
   `include "axi4_master_nbk_write_16b_transfer_seq.sv"
   `include "axi4_master_nbk_write_32b_transfer_seq.sv"

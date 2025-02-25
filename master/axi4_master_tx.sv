@@ -218,7 +218,11 @@ class axi4_master_tx extends uvm_sequence_item;
   //-------------------------------------------------------
   //Constraint : awaddr
   //Used to generate the alligned address with respect to size
-  constraint awaddr_c0 {soft awaddr == (awaddr%(2**awsize)) == 0;}
+//  constraint awaddr_c0 {soft awaddr == (awaddr%(2**awsize)) == 0;}
+  constraint awaddr_c0 {soft awaddr == (awaddr%(1<<awsize)) == 0;}
+
+
+
 
   //Constraint : awburst_c1
   //Restricting write burst to select only FIXED, INCR and WRAP types
@@ -226,7 +230,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Constraint : awlength_c2
   //Adding constraint for restricting write trasnfers
-  constraint awlength_c2 {if(awburst==WRITE_FIXED || WRITE_WRAP)
+  constraint awlength_c2 {if(awburst==WRITE_FIXED || awburst==WRITE_WRAP)
                               awlen inside {[0:15]};
                           else if(awburst == WRITE_INCR) 
                               awlen inside {[0:255]};}
@@ -285,7 +289,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Constraint : arlength_c2
   //Adding constraint for restricting read trasnfers
-  constraint arlength_c2 { if(arburst==READ_FIXED || READ_WRAP)
+  constraint arlength_c2 { if(arburst==READ_FIXED || arburst==READ_WRAP)
                             arlen inside {[0:15]};
                            else if(arburst == READ_INCR) 
                             arlen inside {[0:255]};

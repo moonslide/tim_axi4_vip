@@ -48,6 +48,8 @@ package axi4_slave_seq_pkg;
   `include "axi4_slave_nbk_write_wrap_burst_seq.sv"
   `include "axi4_slave_nbk_write_okay_resp_seq.sv"
   `include "axi4_slave_nbk_write_exokay_resp_seq.sv"
+
+  `include "axi4_slave_nbk_write_1b_transfer_seq.sv"
   `include "axi4_slave_nbk_write_8b_transfer_seq.sv"
   `include "axi4_slave_nbk_write_16b_transfer_seq.sv"
   `include "axi4_slave_nbk_write_32b_transfer_seq.sv"

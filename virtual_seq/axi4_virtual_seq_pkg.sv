@@ -34,6 +34,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_bk_okay_response_write_seq.sv"
   `include "axi4_virtual_bk_incr_burst_write_seq.sv"
   `include "axi4_virtual_bk_wrap_burst_write_seq.sv"
+  `include "axi4_virtual_nbk_1b_write_data_seq.sv"
   `include "axi4_virtual_nbk_8b_write_data_seq.sv"
   `include "axi4_virtual_nbk_16b_write_data_seq.sv"
   `include "axi4_virtual_nbk_32b_write_data_seq.sv"
