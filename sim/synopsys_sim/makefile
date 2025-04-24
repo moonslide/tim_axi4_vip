@@ -34,4 +34,4 @@ verdi:
 	# vsim -view waveform.wlf &
 
 clean:
-	rm -rf work/ transcript waveform.wlf *.log simv* csrc vc_hdrs.h ucli.key
+	rm -rf work/ transcript waveform.wlf *.log simv* csrc vc_hdrs.h ucli.key verdiL*
