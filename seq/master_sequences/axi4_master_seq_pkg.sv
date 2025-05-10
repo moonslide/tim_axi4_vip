@@ -57,7 +57,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_nbk_write_cross_seq.sv"
   `include "axi4_master_nbk_write_slave_error_seq.sv"
   `include "axi4_master_nbk_write_rand_seq.sv"
-  
+  `include "axi4_master_nbk_rand_write_incr_burst_seq.sv"
   `include "axi4_master_bk_read_incr_burst_seq.sv"
   `include "axi4_master_bk_read_wrap_burst_seq.sv"
   `include "axi4_master_bk_read_8b_transfer_seq.sv"

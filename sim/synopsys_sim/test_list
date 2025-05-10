@@ -28,10 +28,10 @@ axi4_non_blocking_fixed_burst_write_read_test
 axi4_non_blocking_outstanding_transfer_write_read_test 
 axi4_non_blocking_slave_error_write_read_test 
 axi4_non_blocking_unaligned_addr_write_read_test 
-
+axi4_non_blocking_rand_incr_burst_write_test.sv
 # Non Blocking Rand testcase
 axi4_non_blocking_write_read_rand_test 
-
+axi4_non_blocking_rand_incr_burst_write_test.sv
 # Non Blocking Cross testcase
 axi4_non_blocking_cross_write_read_test 
 
