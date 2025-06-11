@@ -62,25 +62,41 @@ task axi4_virtual_write_read_seq::body();
 
   `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: Insdie axi4_virtual_write_read_seq"), UVM_NONE); 
 
-t
-  // Run a limited number of slave and master sequences concurrently. Using a
-  // single fork/join ensures that all threads complete before the sequence
-  // exits, preventing leftover background processes from stalling subsequent
-  // tests.
-  // All threads are synchronized using a single fork/join block.  The
-  // sequence no longer spawns infinite slave threads, so once each block
-  // finishes the virtual sequence can return and the test ends normally.
-  fork
-    begin : T1_BK_SL_WR
-      for (int i = 0; i < 5; i++) begin
-        `uvm_info(get_type_name(), $sformatf("BK_SL_WR iteration %0d", i), UVM_LOW)
+  // Run a limited number of slave and master sequences.  Events are used
+  // to serialize the blocking and non-blocking portions so that only one
+  // sequence is active on a given sequencer at a time.  This mirrors the
+  // original behaviour but terminates cleanly after a finite number of
+  // iterations.
 
-        axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+  event bk_sl_wr_done, bk_sl_rd_done, bk_mst_wr_done, bk_mst_rd_done;
+
+    // Slave blocking write followed by non-blocking write
+        -> bk_sl_wr_done;
+        @(bk_sl_wr_done);
+
+    // Slave blocking read followed by non-blocking read
+    begin : T2_BK_SL_RD
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_SL_RD iteration %0d", i), UVM_LOW)
+        axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+        -> bk_sl_rd_done;
       end
     end
-    begin : T2_BK_SL_RD
+        @(bk_sl_rd_done);
 
-        `uvm_info(get_type_name(), $sformatf("BK_SL_RD iteration %0d", i), UVM_LOW)
+    // Master blocking write followed by non-blocking write
+        -> bk_mst_wr_done;
+        @(bk_mst_wr_done);
+
+    // Master blocking read followed by non-blocking read
+    begin: T2_BK_READ
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_READ iteration %0d", i), UVM_LOW)
+        axi4_master_bk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
+        -> bk_mst_rd_done;
+      end
+    end
+        @(bk_mst_rd_done);
 
         axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
