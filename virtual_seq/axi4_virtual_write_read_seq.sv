@@ -62,6 +62,7 @@ task axi4_virtual_write_read_seq::body();
 
   `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: Insdie axi4_virtual_write_read_seq"), UVM_NONE); 
 
+t
   // Run a limited number of slave and master sequences concurrently. Using a
   // single fork/join ensures that all threads complete before the sequence
   // exits, preventing leftover background processes from stalling subsequent
@@ -73,22 +74,27 @@ task axi4_virtual_write_read_seq::body();
     begin : T1_BK_SL_WR
       for (int i = 0; i < 5; i++) begin
         `uvm_info(get_type_name(), $sformatf("BK_SL_WR iteration %0d", i), UVM_LOW)
+
         axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     begin : T2_BK_SL_RD
-      for (int i = 0; i < 3; i++) begin
+
         `uvm_info(get_type_name(), $sformatf("BK_SL_RD iteration %0d", i), UVM_LOW)
+
         axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
     begin : T1_NBK_SL_WR
+
       for (int i = 0; i < 5; i++) begin
         `uvm_info(get_type_name(), $sformatf("NBK_SL_WR iteration %0d", i), UVM_LOW)
+
         axi4_slave_nbk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     begin : T2_NBK_SL_RD
+
       for (int i = 0; i < 3; i++) begin
         `uvm_info(get_type_name(), $sformatf("NBK_SL_RD iteration %0d", i), UVM_LOW)
         axi4_slave_nbk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
@@ -97,22 +103,27 @@ task axi4_virtual_write_read_seq::body();
     begin: T1_BK_WRITE
       for (int i = 0; i < 5; i++) begin
         `uvm_info(get_type_name(), $sformatf("BK_WRITE iteration %0d", i), UVM_LOW)
+
         axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
       end
     end
     begin: T2_BK_READ
+
       for (int i = 0; i < 3; i++) begin
         `uvm_info(get_type_name(), $sformatf("BK_READ iteration %0d", i), UVM_LOW)
+
         axi4_master_bk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
       end
     end
     begin: T1_NBK_WRITE
+
       for (int i = 0; i < 5; i++) begin
         `uvm_info(get_type_name(), $sformatf("NBK_WRITE iteration %0d", i), UVM_LOW)
         axi4_master_nbk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
       end
     end
     begin: T2_NBK_READ
+
       for (int i = 0; i < 3; i++) begin
         `uvm_info(get_type_name(), $sformatf("NBK_READ iteration %0d", i), UVM_LOW)
         axi4_master_nbk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
