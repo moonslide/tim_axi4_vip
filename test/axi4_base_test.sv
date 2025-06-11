@@ -119,6 +119,7 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].address_width = axi4_env_cfg_h.master_address_width[i];
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width    = axi4_env_cfg_h.master_data_width[i];
+
   end
 
   for(int i =0; i<NO_OF_SLAVES; i++) begin
@@ -169,6 +170,7 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].address_width = axi4_env_cfg_h.slave_address_width[i];
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width    = axi4_env_cfg_h.slave_data_width[i];
+
 
     
     if(SLAVE_AGENT_ACTIVE === 1) begin

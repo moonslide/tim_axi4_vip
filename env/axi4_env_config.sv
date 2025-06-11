@@ -25,6 +25,7 @@ class axi4_env_config extends uvm_object;
   // Number of masters connected to the AXI interface
   int no_of_masters;
 
+
   // Variable: master_address_width
   // Array storing address width for each master. Default value is ADDRESS_WIDTH
   int master_address_width[];
@@ -49,6 +50,7 @@ class axi4_env_config extends uvm_object;
     foreach(master_data_width[i])    master_data_width[i]    inside {32,64,128,256,512,1024};
     foreach(slave_data_width[i])     slave_data_width[i]     inside {32,64,128,256,512,1024};
   }
+
 
 
   // Variable: master_agent_cfg_h
