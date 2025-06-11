@@ -73,6 +73,19 @@ function void axi4_base_test:: setup_axi4_env_cfg();
   axi4_env_cfg_h.has_virtual_seqr = 1;
   axi4_env_cfg_h.no_of_masters = NO_OF_MASTERS;
   axi4_env_cfg_h.no_of_slaves = NO_OF_SLAVES;
+  axi4_env_cfg_h.master_address_width = new[NO_OF_MASTERS];
+  axi4_env_cfg_h.master_data_width    = new[NO_OF_MASTERS];
+  foreach(axi4_env_cfg_h.master_address_width[i]) begin
+    axi4_env_cfg_h.master_address_width[i] = ADDRESS_WIDTH;
+    axi4_env_cfg_h.master_data_width[i]    = DATA_WIDTH;
+  end
+
+  axi4_env_cfg_h.slave_address_width  = new[NO_OF_SLAVES];
+  axi4_env_cfg_h.slave_data_width     = new[NO_OF_SLAVES];
+  foreach(axi4_env_cfg_h.slave_address_width[i]) begin
+    axi4_env_cfg_h.slave_address_width[i] = ADDRESS_WIDTH;
+    axi4_env_cfg_h.slave_data_width[i]    = DATA_WIDTH;
+  end
 
   // Setup the axi4_master agent cfg 
   setup_axi4_master_agent_cfg();
@@ -102,8 +115,10 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i] =
     axi4_master_agent_config::type_id::create($sformatf("axi4_master_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].is_active   = uvm_active_passive_enum'(UVM_ACTIVE);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1; 
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1;
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].address_width = axi4_env_cfg_h.master_address_width[i];
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width    = axi4_env_cfg_h.master_data_width[i];
   end
 
   for(int i =0; i<NO_OF_SLAVES; i++) begin
@@ -152,6 +167,8 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = RANDOM_DATA_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].address_width = axi4_env_cfg_h.slave_address_width[i];
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width    = axi4_env_cfg_h.slave_data_width[i];
 
     
     if(SLAVE_AGENT_ACTIVE === 1) begin

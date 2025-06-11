@@ -49,8 +49,13 @@ module hdl_top;
 
   // Variable : intf
   // axi4 Interface Instantiation
-  axi4_if intf(.aclk(aclk),
-               .aresetn(aresetn));
+  axi4_if #(
+    .ADDRESS_WIDTH(ADDRESS_WIDTH),
+    .DATA_WIDTH(DATA_WIDTH)
+  ) intf(
+    .aclk(aclk),
+    .aresetn(aresetn)
+  );
 
   //-------------------------------------------------------
   // AXI4  No of Master and Slaves Agent Instantiation

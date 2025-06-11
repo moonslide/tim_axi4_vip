@@ -167,6 +167,28 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins READ_SLVERR  = {2};
       bins READ_DECERR  = {3};
     }
+
+    //-------------------------------------------------------
+    // Master address and data width
+    //-------------------------------------------------------
+
+    ADDRESS_WIDTH_CP : coverpoint cfg.address_width {
+      option.comment = "Master address width";
+      bins ADDR_32 = {32};
+      bins ADDR_64 = {64};
+    }
+
+    DATA_WIDTH_CP : coverpoint cfg.data_width {
+      option.comment = "Master data width";
+      bins DATA_32   = {32};
+      bins DATA_64   = {64};
+      bins DATA_128  = {128};
+      bins DATA_256  = {256};
+      bins DATA_512  = {512};
+      bins DATA_1024 = {1024};
+    }
+
+    ADDR_DATA_WIDTH_CP : cross ADDRESS_WIDTH_CP, DATA_WIDTH_CP;
     
 
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
