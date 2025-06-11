@@ -62,6 +62,7 @@ task axi4_virtual_write_read_seq::body();
 
   `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: Insdie axi4_virtual_write_read_seq"), UVM_NONE); 
 
+
   // Run a limited number of slave and master sequences.  Events are used
   // to serialize the blocking and non-blocking portions so that only one
   // sequence is active on a given sequencer at a time.  This mirrors the
@@ -83,6 +84,7 @@ task axi4_virtual_write_read_seq::body();
       for (int i = 0; i < 5; i++) begin
         @(bk_sl_wr_done);
         `uvm_info(get_type_name(), $sformatf("NBK_SL_WR iteration %0d", i), UVM_LOW)
+
         axi4_slave_nbk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
@@ -96,12 +98,15 @@ task axi4_virtual_write_read_seq::body();
       end
     end
     begin : T2_NBK_SL_RD
+
       for (int i = 0; i < 3; i++) begin
         @(bk_sl_rd_done);
+
         `uvm_info(get_type_name(), $sformatf("NBK_SL_RD iteration %0d", i), UVM_LOW)
         axi4_slave_nbk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
+
 
     // Master blocking write followed by non-blocking write
     begin: T1_BK_WRITE
@@ -128,8 +133,10 @@ task axi4_virtual_write_read_seq::body();
       end
     end
     begin: T2_NBK_READ
+
       for (int i = 0; i < 3; i++) begin
         @(bk_mst_rd_done);
+
         `uvm_info(get_type_name(), $sformatf("NBK_READ iteration %0d", i), UVM_LOW)
         axi4_master_nbk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
       end
