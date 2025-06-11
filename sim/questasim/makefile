@@ -81,11 +81,11 @@ compile:
 	make clean_compile;
 	make clean_simulate;
 	vlib work; 
-	vlog -sv \
-	+acc \
-	+cover \
-	+fcover \
-	+define$(args) \
+        vlog -sv \
+        +acc \
+        +cover \
+        +fcover \
+        $(if $(args),+define$(args)) \
 	-l axi4_compile.log \
 	-f ../axi4_compile.f 
 
@@ -106,9 +106,6 @@ ifndef uvm_verbosity
 override uvm_verbosity = UVM_MEDIUM
 endif
 
-ifndef args
-override args = +DATA_WIDTH=32
-endif
 
 
 ## For randomized seed

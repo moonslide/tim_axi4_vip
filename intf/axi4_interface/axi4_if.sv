@@ -8,7 +8,10 @@ import axi4_globals_pkg::*;
 // Interface : axi4_if
 // Declaration of pin level signals for axi4 interface
 //--------------------------------------------------------------------------------------------
-interface axi4_if(input aclk, input aresetn);
+interface axi4_if#(
+  parameter int ADDRESS_WIDTH = axi4_globals_pkg::ADDRESS_WIDTH,
+  parameter int DATA_WIDTH    = axi4_globals_pkg::DATA_WIDTH
+)(input aclk, input aresetn);
 
   //Write_address_channel
   logic     [3: 0] awid     ;

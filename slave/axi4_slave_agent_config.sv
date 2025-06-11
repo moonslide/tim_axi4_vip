@@ -16,6 +16,14 @@ class axi4_slave_agent_config extends uvm_object;
   //Used for enabling the master agent coverage
   bit has_coverage;
 
+  //Variable: address_width
+  //Width of the slave's address bus. Default value is ADDRESS_WIDTH
+  int address_width = ADDRESS_WIDTH;
+
+  //Variable: data_width
+  //Width of the slave's data bus. Default value is DATA_WIDTH
+  int data_width = DATA_WIDTH;
+
   //Variable: slave_id
   //Gives the slave id
   int slave_id;
@@ -59,6 +67,13 @@ class axi4_slave_agent_config extends uvm_object;
   //Used to set default read data
   bit[DATA_WIDTH-1:0] user_rdata;
 
+  //constraint: width_limit_c
+  //Restrict slave widths based on AMBA4 specification
+  constraint width_limit_c {
+    address_width <= 64;
+    data_width inside {32,64,128,256,512,1024};
+  }
+
   //constraint: maximum_txns
   //Make sure to have minimum txns to perform out_of_order
   constraint maximum_txns_c{maximum_transactions >= minimum_transactions;}
@@ -99,6 +114,8 @@ function void axi4_slave_agent_config::do_print(uvm_printer printer);
   printer.print_string ("is_active",   is_active.name());
   printer.print_field ("slave_id",     slave_id,     $bits(slave_id),     UVM_DEC);
   printer.print_field ("has_coverage", has_coverage, $bits(has_coverage), UVM_DEC);
+  printer.print_field ("address_width", address_width, $bits(address_width), UVM_DEC);
+  printer.print_field ("data_width", data_width, $bits(data_width), UVM_DEC);
   printer.print_field ("min_address",  min_address,  $bits(max_address),  UVM_HEX);
   printer.print_field ("max_address",  max_address,  $bits(max_address),  UVM_HEX);
   printer.print_string ("slave_response_type",   slave_response_mode.name());
