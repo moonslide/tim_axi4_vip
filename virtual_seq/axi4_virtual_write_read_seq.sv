@@ -62,9 +62,10 @@ task axi4_virtual_write_read_seq::body();
 
   `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: Insdie axi4_virtual_write_read_seq"), UVM_NONE); 
 
-  // Run a limited number of slave sequences to avoid infinite background
-  // threads which prevented the test from completing.  The slave sequences
-  // now mirror the number of master transactions issued below.
+  // Run a limited number of slave and master sequences concurrently. Using a
+  // single fork/join ensures that all threads complete before the sequence
+  // exits, preventing leftover background processes from stalling subsequent
+  // tests.
   fork
     begin : T1_BK_SL_WR
       repeat(5) begin
@@ -86,10 +87,6 @@ task axi4_virtual_write_read_seq::body();
         axi4_slave_nbk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
-  join_none
-
-
-  fork
     begin: T1_BK_WRITE
       repeat(5) begin
         axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
