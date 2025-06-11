@@ -17,6 +17,21 @@ class axi4_master_agent_config extends uvm_object;
   //Used for enabling the master agent coverage
   bit has_coverage;
 
+  //Variable: address_width
+  //Width of the master's address bus. Default value is ADDRESS_WIDTH
+  int address_width = ADDRESS_WIDTH;
+
+  //Variable: data_width
+  //Width of the master's data bus. Default value is DATA_WIDTH
+  int data_width = DATA_WIDTH;
+
+  //constraint: width_limit_c
+  //Restrict master widths based on AMBA4 specification
+  constraint width_limit_c {
+    address_width <= 64;
+    data_width inside {32,64,128,256,512,1024};
+  }
+
   //Variable : master_memory
   //Used to store all the data from the slaves
   //Each location of the master memory stores 32 bit data
@@ -116,6 +131,8 @@ function void axi4_master_agent_config::do_print(uvm_printer printer);
   
   printer.print_string ("is_active",is_active.name());
   printer.print_field ("has_coverage",  has_coverage, $bits(has_coverage),  UVM_DEC);
+  printer.print_field ("address_width", address_width, $bits(address_width), UVM_DEC);
+  printer.print_field ("data_width", data_width, $bits(data_width), UVM_DEC);
   
   //Memory Mapping Minimum and Maximum Address Range 
   foreach(master_max_addr_range_array[i]) begin
