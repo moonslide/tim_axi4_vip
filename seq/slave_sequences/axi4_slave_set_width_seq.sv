@@ -7,7 +7,6 @@ class axi4_slave_set_width_seq extends axi4_slave_base_seq;
 
   int address_width;
   int data_width;
-  int index = 0;
 
   extern function new(string name = "axi4_slave_set_width_seq");
   extern task body();
@@ -25,15 +24,7 @@ task axi4_slave_set_width_seq::body();
   p_sequencer.axi4_slave_agent_cfg_h.address_width = address_width;
   p_sequencer.axi4_slave_agent_cfg_h.data_width    = data_width;
 
-  axi4_env_config env_cfg;
-  if(uvm_config_db#(axi4_env_config)::get(null, get_full_name(), "axi4_env_config", env_cfg)) begin
-    if(index < env_cfg.slave_address_width.size()) begin
-      env_cfg.slave_address_width[index] = address_width;
-      env_cfg.slave_data_width[index]    = data_width;
-      env_cfg.axi4_slave_agent_cfg_h[index].address_width = address_width;
-      env_cfg.axi4_slave_agent_cfg_h[index].data_width    = data_width;
-    end
-  end
+  // Update the slave configuration connected to this sequencer
 endtask : body
 
 `endif
