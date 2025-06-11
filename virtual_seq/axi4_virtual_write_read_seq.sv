@@ -22,10 +22,10 @@ class axi4_virtual_write_read_seq extends axi4_virtual_base_seq;
   axi4_slave_bk_read_seq axi4_slave_bk_read_seq_h;
   axi4_slave_nbk_read_seq axi4_slave_nbk_read_seq_h;
 
-  process blocking_master_wr_seq;
-  process blocking_master_rd_seq;
-  process blocking_slave_wr_seq;
-  process blocking_slave_rd_seq;
+  // Processes used earlier to synchronize slave sequences with the
+  // master sequences were leaving background threads running forever
+  // causing tests to hang.  These handles are no longer required
+  // after replacing the infinite loops with bounded repeats.
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -62,61 +62,65 @@ task axi4_virtual_write_read_seq::body();
 
   `uvm_info(get_type_name(), $sformatf("DEBUG_MSHA :: Insdie axi4_virtual_write_read_seq"), UVM_NONE); 
 
-  fork 
+  // Run a limited number of slave and master sequences concurrently. Using a
+  // single fork/join ensures that all threads complete before the sequence
+  // exits, preventing leftover background processes from stalling subsequent
+  // tests.
+  // All threads are synchronized using a single fork/join block.  The
+  // sequence no longer spawns infinite slave threads, so once each block
+  // finishes the virtual sequence can return and the test ends normally.
+  fork
     begin : T1_BK_SL_WR
-      forever begin
-        blocking_slave_wr_seq = process::self();
+      for (int i = 0; i < 5; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_SL_WR iteration %0d", i), UVM_LOW)
         axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     begin : T2_BK_SL_RD
-      forever begin
-        blocking_slave_rd_seq = process::self();
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_SL_RD iteration %0d", i), UVM_LOW)
         axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
     begin : T1_NBK_SL_WR
-      forever begin
-        blocking_slave_wr_seq.await();
+      for (int i = 0; i < 5; i++) begin
+        `uvm_info(get_type_name(), $sformatf("NBK_SL_WR iteration %0d", i), UVM_LOW)
         axi4_slave_nbk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     begin : T2_NBK_SL_RD
-      forever begin
-        blocking_slave_rd_seq.await();
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("NBK_SL_RD iteration %0d", i), UVM_LOW)
         axi4_slave_nbk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
-  join_none
-
-
-  fork 
     begin: T1_BK_WRITE
-      blocking_master_wr_seq = process::self();
-      repeat(5) begin
+      for (int i = 0; i < 5; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_WRITE iteration %0d", i), UVM_LOW)
         axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
       end
     end
     begin: T2_BK_READ
-      blocking_master_rd_seq = process::self();
-      repeat(3) begin
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("BK_READ iteration %0d", i), UVM_LOW)
         axi4_master_bk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
       end
     end
     begin: T1_NBK_WRITE
-      repeat(5) begin
-        blocking_master_wr_seq.await();
+      for (int i = 0; i < 5; i++) begin
+        `uvm_info(get_type_name(), $sformatf("NBK_WRITE iteration %0d", i), UVM_LOW)
         axi4_master_nbk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
       end
     end
     begin: T2_NBK_READ
-      repeat(3) begin
-        blocking_master_rd_seq.await();
+      for (int i = 0; i < 3; i++) begin
+        `uvm_info(get_type_name(), $sformatf("NBK_READ iteration %0d", i), UVM_LOW)
         axi4_master_nbk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
       end
     end
   join
- endtask : body
+  `uvm_info(get_type_name(), "Completed all master/slave sequences", UVM_LOW)
+endtask : body
 
 `endif
 
