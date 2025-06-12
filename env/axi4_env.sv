@@ -68,6 +68,9 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_env::build_phase(uvm_phase phase);
   super.build_phase(phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: build_phase", UVM_DEBUG)
+`endif
   
   if(!uvm_config_db #(axi4_env_config)::get(this,"","axi4_env_config",axi4_env_cfg_h)) begin
     `uvm_fatal("FATAL_ENV_AGENT_CONFIG", $sformatf("Couldn't get the env_agent_config from config_db"))
@@ -125,6 +128,9 @@ endfunction : build_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_env::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: connect_phase", UVM_DEBUG)
+`endif
 
   if(axi4_env_cfg_h.has_virtual_seqr) begin
     foreach(axi4_master_agent_h[i]) begin

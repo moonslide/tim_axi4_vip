@@ -100,6 +100,9 @@ endfunction : start_of_simulation_phase
 //  phase - uvm phase
 //--------------------------------------------------------------------------------------------
 task axi4_virtual_sequencer::run_phase(uvm_phase phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: run_phase", UVM_DEBUG)
+`endif
 
   // Work here
   // ...

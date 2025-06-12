@@ -254,6 +254,9 @@ endfunction : start_of_simulation_phase
 task axi4_scoreboard::run_phase(uvm_phase phase);
 
   super.run_phase(phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: run_phase", UVM_DEBUG)
+`endif
 
   fork
     axi4_write_address();

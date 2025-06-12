@@ -63,6 +63,9 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_master_agent::build_phase(uvm_phase phase);
   super.build_phase(phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: build_phase", UVM_DEBUG)
+`endif
   
   if(axi4_master_agent_cfg_h.is_active == UVM_ACTIVE) begin
     axi4_master_drv_proxy_h=axi4_master_driver_proxy::type_id::create("axi4_master_drv_proxy_h",this);
@@ -90,6 +93,9 @@ endfunction : build_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_master_agent::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: connect_phase", UVM_DEBUG)
+`endif
   if(axi4_master_agent_cfg_h.is_active == UVM_ACTIVE) begin
     axi4_master_drv_proxy_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;
     axi4_master_write_seqr_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;

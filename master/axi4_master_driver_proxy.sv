@@ -158,6 +158,9 @@ endfunction : end_of_elaboration_phase
 //  phase - uvm phase
 //--------------------------------------------------------------------------------------------
 task axi4_master_driver_proxy::run_phase(uvm_phase phase);
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: run_phase", UVM_DEBUG)
+`endif
 
   //waiting for system reset
   axi4_master_drv_bfm_h.wait_for_aresetn();

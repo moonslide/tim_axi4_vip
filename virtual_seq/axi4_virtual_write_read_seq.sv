@@ -82,6 +82,11 @@ task axi4_virtual_write_read_seq::body();
     end
     begin : T1_NBK_SL_WR
       for (int i = 0; i < 5; i++) begin
+`ifdef UVM_DBG
+        `uvm_info(get_type_name(),
+                  $sformatf("Waiting for bk_sl_wr_done before NBK_SL_WR iteration %0d", i),
+                  UVM_DEBUG)
+`endif
         @(bk_sl_wr_done);
         `uvm_info(get_type_name(), $sformatf("NBK_SL_WR iteration %0d", i), UVM_LOW)
 
@@ -100,6 +105,11 @@ task axi4_virtual_write_read_seq::body();
     begin : T2_NBK_SL_RD
 
       for (int i = 0; i < 3; i++) begin
+`ifdef UVM_DBG
+        `uvm_info(get_type_name(),
+                  $sformatf("Waiting for bk_sl_rd_done before NBK_SL_RD iteration %0d", i),
+                  UVM_DEBUG)
+`endif
         @(bk_sl_rd_done);
 
         `uvm_info(get_type_name(), $sformatf("NBK_SL_RD iteration %0d", i), UVM_LOW)
@@ -118,6 +128,11 @@ task axi4_virtual_write_read_seq::body();
     end
     begin: T1_NBK_WRITE
       for (int i = 0; i < 5; i++) begin
+`ifdef UVM_DBG
+        `uvm_info(get_type_name(),
+                  $sformatf("Waiting for bk_mst_wr_done before NBK_WRITE iteration %0d", i),
+                  UVM_DEBUG)
+`endif
         @(bk_mst_wr_done);
         `uvm_info(get_type_name(), $sformatf("NBK_WRITE iteration %0d", i), UVM_LOW)
         axi4_master_nbk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
@@ -135,6 +150,11 @@ task axi4_virtual_write_read_seq::body();
     begin: T2_NBK_READ
 
       for (int i = 0; i < 3; i++) begin
+`ifdef UVM_DBG
+        `uvm_info(get_type_name(),
+                  $sformatf("Waiting for bk_mst_rd_done before NBK_READ iteration %0d", i),
+                  UVM_DEBUG)
+`endif
         @(bk_mst_rd_done);
 
         `uvm_info(get_type_name(), $sformatf("NBK_READ iteration %0d", i), UVM_LOW)

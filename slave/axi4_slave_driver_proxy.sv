@@ -146,6 +146,9 @@ endfunction  : end_of_elaboration_phase
 task axi4_slave_driver_proxy::run_phase(uvm_phase phase);
 
   `uvm_info(get_type_name(),"SLAVE_DRIVER_PROXY",UVM_MEDIUM)
+`ifdef UVM_DBG
+  `uvm_info(get_type_name(), "DEBUG: run_phase", UVM_DEBUG)
+`endif
 
   //wait for system reset
   axi4_slave_drv_bfm_h.wait_for_system_reset();
