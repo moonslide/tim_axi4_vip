@@ -16,6 +16,14 @@ class axi4_slave_agent_config extends uvm_object;
   //Used for enabling the master agent coverage
   bit has_coverage;
 
+  //Variable: addr_width
+  //Address width for this slave
+  int addr_width = ADDRESS_WIDTH;
+
+  //Variable: data_width
+  //Data width for this slave
+  int data_width = DATA_WIDTH;
+
   //Variable: slave_id
   //Gives the slave id
   int slave_id;
@@ -99,6 +107,8 @@ function void axi4_slave_agent_config::do_print(uvm_printer printer);
   printer.print_string ("is_active",   is_active.name());
   printer.print_field ("slave_id",     slave_id,     $bits(slave_id),     UVM_DEC);
   printer.print_field ("has_coverage", has_coverage, $bits(has_coverage), UVM_DEC);
+  printer.print_field ("addr_width", addr_width, $bits(addr_width), UVM_DEC);
+  printer.print_field ("data_width", data_width, $bits(data_width), UVM_DEC);
   printer.print_field ("min_address",  min_address,  $bits(max_address),  UVM_HEX);
   printer.print_field ("max_address",  max_address,  $bits(max_address),  UVM_HEX);
   printer.print_string ("slave_response_type",   slave_response_mode.name());

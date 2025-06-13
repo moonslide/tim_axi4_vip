@@ -168,6 +168,24 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
       bins READ_SLVERR = {2};
       bins READ_DECERR = {3};
     }
+
+    // Legal address widths span from 1 to 64 bits.  Create a bin for
+    // every value so that coverage reflects exactly which widths were used.
+    ADDR_WIDTH_CP : coverpoint cfg.addr_width {
+      bins width[] = {[1:64]};
+    }
+
+    // Data width may only be one of the AMBA defined power-of-two widths.
+    DATA_WIDTH_CP : coverpoint cfg.data_width {
+      bins DW_8    = {8};
+      bins DW_16   = {16};
+      bins DW_32   = {32};
+      bins DW_64   = {64};
+      bins DW_128  = {128};
+      bins DW_256  = {256};
+      bins DW_512  = {512};
+      bins DW_1024 = {1024};
+    }
     
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
       option.comment = "transfer type";
@@ -187,6 +205,7 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
     RID_CP_X_RRESP_CP                 :cross BID_CP,BRESP_CP;
     AWBURST_CP_X_AWLEN_CP_X_AWSIZE_CP :cross AWBURST_CP,AWLEN_CP,AWSIZE_CP;
     ARBURST_CP_X_ARLEN_CP_X_ARSIZE_CP :cross ARBURST_CP,ARLEN_CP,ARSIZE_CP;
+    ADDR_DATA_WIDTH_CP : cross ADDR_WIDTH_CP, DATA_WIDTH_CP;
 
   endgroup: axi4_slave_covergroup
 

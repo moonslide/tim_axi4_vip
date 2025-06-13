@@ -20,17 +20,17 @@ package axi4_globals_pkg;
 
   //Parameter: NO_OF_MASTERS
   //Used to set number of masters required
-  parameter int NO_OF_MASTERS = 1;
+  parameter int NO_OF_MASTERS = 4;
 
   //Parameter: NO_OF_SLAVES
   //Used to set number of slaves required
-  parameter int NO_OF_SLAVES = 1;
+  parameter int NO_OF_SLAVES = 4;
 
   //Parameter: ADDRESS_WIDTH
   //Used to set the address width to the address bus
-  parameter int ADDRESS_WIDTH = 32;
+  parameter int ADDRESS_WIDTH = 64;
 
-  `define DATA_WIDTH 32
+  `define DATA_WIDTH 1024
   //Parameter: DATA_WIDTH
   //Used to set the data width 
   parameter int DATA_WIDTH = `DATA_WIDTH;
