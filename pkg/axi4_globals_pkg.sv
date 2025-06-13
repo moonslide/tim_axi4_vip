@@ -367,8 +367,10 @@ package axi4_globals_pkg;
     int       wait_count_write_data_channel;
     int       wait_count_write_response_channel;
     int       outstanding_write_tx;
-    int       no_of_wait_states;
-  } axi4_write_transfer_char_s; 
+    int       aw_wait_states;
+    int       w_wait_states;
+    int       b_wait_states;
+  } axi4_write_transfer_char_s;
 
   //Struct: axi4_r_transfer_char_s
   //This struct datatype consists of all read signals which are used for seq item conversion
@@ -396,7 +398,8 @@ package axi4_globals_pkg;
     int                               wait_count_read_address_channel;
     int                               wait_count_read_data_channel;
     int                               outstanding_read_tx;
-    int                               no_of_wait_states;
+    int                               ar_wait_states;
+    int                               r_wait_states;
   } axi4_read_transfer_char_s;
 
   //Struct: axi4_cfg_char_s

@@ -188,6 +188,35 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins DW_512  = {512};
       bins DW_1024 = {1024};
    }
+
+    //-------------------------------------------------------
+    // Wait state coverage
+    //-------------------------------------------------------
+
+    AW_WAIT_STATES_CP : coverpoint packet.aw_wait_states {
+      option.comment = "AWREADY wait states";
+      bins AW_WS[] = {[0:6]};
+    }
+
+    W_WAIT_STATES_CP : coverpoint packet.w_wait_states {
+      option.comment = "WREADY wait states";
+      bins W_WS[] = {[0:6]};
+    }
+
+    B_WAIT_STATES_CP : coverpoint packet.b_wait_states {
+      option.comment = "BREADY wait states";
+      bins B_WS[] = {[0:6]};
+    }
+
+    AR_WAIT_STATES_CP : coverpoint packet.ar_wait_states {
+      option.comment = "ARREADY wait states";
+      bins AR_WS[] = {[0:6]};
+    }
+
+    R_WAIT_STATES_CP : coverpoint packet.r_wait_states {
+      option.comment = "RREADY wait states";
+      bins R_WS[] = {[0:6]};
+    }
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
       option.comment = "transfer type";
       bins BLOCKING_WRITE     = {0};

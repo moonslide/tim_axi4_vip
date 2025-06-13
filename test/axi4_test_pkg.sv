@@ -105,6 +105,12 @@ package axi4_test_pkg;
   `include "axi4_non_blocking_qos_write_read_test.sv"
   `include "axi4_width_config_test.sv"
   `include "axi4_width_check_test.sv"
+  `include "axi4_aw_ready_delay_test.sv"
+  `include "axi4_w_ready_delay_test.sv"
+  `include "axi4_b_ready_delay_test.sv"
+  `include "axi4_ar_ready_delay_test.sv"
+  `include "axi4_r_ready_delay_test.sv"
+  `include "axi4_aw_w_channel_separation_test.sv"
 endpackage : axi4_test_pkg
 
 `endif

@@ -42,6 +42,12 @@ package axi4_slave_seq_pkg;
   `include "axi4_slave_bk_write_fixed_burst_seq.sv"
   `include "axi4_slave_bk_write_outstanding_transfer_seq.sv"
   `include "axi4_slave_bk_write_cross_seq.sv"
+  `include "axi4_slave_aw_ready_delay_seq.sv"
+  `include "axi4_slave_w_ready_delay_seq.sv"
+  `include "axi4_slave_b_ready_delay_seq.sv"
+  `include "axi4_slave_ar_ready_delay_seq.sv"
+  `include "axi4_slave_r_ready_delay_seq.sv"
+  `include "axi4_slave_aw_w_channel_separation_seq.sv"
 
   `include "axi4_slave_nbk_write_incr_burst_seq.sv"
   `include "axi4_slave_nbk_write_fixed_burst_seq.sv"

@@ -88,3 +88,9 @@ axi4_non_blocking_qos_write_read_test
 
 axi4_width_check_test
 axi4_width_config_test
+axi4_aw_ready_delay_test
+axi4_w_ready_delay_test
+axi4_b_ready_delay_test
+axi4_ar_ready_delay_test
+axi4_r_ready_delay_test
+axi4_aw_w_channel_separation_test

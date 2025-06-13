@@ -158,9 +158,13 @@ class axi4_slave_tx extends uvm_sequence_item;
   //Used to store the read user
   rand bit [3:0] ruser;
 
-  //Variable : no_of_wait_states
-  //Used to count number of wait states
-  rand int no_of_wait_states;
+  //Variable : aw_wait_states
+  //Number of wait states before asserting AWREADY
+  rand int aw_wait_states;
+  rand int w_wait_states;
+  rand int b_wait_states;
+  rand int ar_wait_states;
+  rand int r_wait_states;
   
   //Variable : tx_type
   //Used to determine the transaction type
@@ -215,9 +219,13 @@ class axi4_slave_tx extends uvm_sequence_item;
   //Adding constraint to select the type of read response
   constraint bresp_c1 {soft bresp == WRITE_OKAY;}
 
-  //Constraint : wait_states_c1             
-  //To randomise the wait states in range of 0 to 3
-  constraint wait_states_c1 {soft no_of_wait_states inside {[0:3]};}
+  //Constraint : wait_states_c1
+  //To randomise the wait states in range of 0 to 3 for all channels
+  constraint wait_states_c1 {soft aw_wait_states inside {[0:6]};
+                              soft w_wait_states  inside {[0:6]};
+                              soft b_wait_states  inside {[0:6]};
+                              soft ar_wait_states inside {[0:6]};
+                              soft r_wait_states  inside {[0:6]};}
                     
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -393,7 +401,11 @@ function void axi4_slave_tx::do_print(uvm_printer printer);
     end
     printer.print_string("rresp",rresp.name());
     printer.print_field("ruser",ruser,$bits(ruser),UVM_HEX);
-    printer.print_field("no_of_wait_states",no_of_wait_states,$bits(no_of_wait_states),UVM_HEX);
+    printer.print_field("aw_wait_states",aw_wait_states,$bits(aw_wait_states),UVM_HEX);
+    printer.print_field("w_wait_states",w_wait_states,$bits(w_wait_states),UVM_HEX);
+    printer.print_field("b_wait_states",b_wait_states,$bits(b_wait_states),UVM_HEX);
+    printer.print_field("ar_wait_states",ar_wait_states,$bits(ar_wait_states),UVM_HEX);
+    printer.print_field("r_wait_states",r_wait_states,$bits(r_wait_states),UVM_HEX);
   end
 endfunction : do_print
 
