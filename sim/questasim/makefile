@@ -107,7 +107,7 @@ override uvm_verbosity = UVM_MEDIUM
 endif
 
 ifndef args
-override args = +DATA_WIDTH=32
+override args = +DATA_WIDTH=1024
 endif
 
 
