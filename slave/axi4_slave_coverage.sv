@@ -169,6 +169,7 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
       bins READ_DECERR = {3};
     }
 
+
     // Legal address widths span from 1 to 64 bits.  Create a bin for
     // every value so that coverage reflects exactly which widths were used.
     ADDR_WIDTH_CP : coverpoint cfg.addr_width {
@@ -185,7 +186,7 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
       bins DW_256  = {256};
       bins DW_512  = {512};
       bins DW_1024 = {1024};
-    }
+
     
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
       option.comment = "transfer type";

@@ -4,6 +4,7 @@
 class axi4_width_config_test extends axi4_write_read_test;
   `uvm_component_utils(axi4_width_config_test)
 
+
   // Dynamic arrays to hold per-agent width information
   int master_addr_widths[$];
   int master_data_widths[$];
@@ -15,9 +16,11 @@ class axi4_width_config_test extends axi4_write_read_test;
   int slave_start_addr[$];
   int slave_size_kb[$];
 
+
   function new(string name="axi4_width_config_test", uvm_component parent=null);
     super.new(name, parent);
   endfunction
+
 
   //----------------------------------------------------------------------
   // Setup configuration for AXI4 master agents
@@ -31,10 +34,12 @@ class axi4_width_config_test extends axi4_write_read_test;
     master_size_kb     = '{10, 100, 50, 10};
 
     foreach (axi4_env_cfg_h.axi4_master_agent_cfg_h[i]) begin
+
       axi4_env_cfg_h.axi4_master_agent_cfg_h[i].addr_width = master_addr_widths[i];
       axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width = master_data_widths[i];
       axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i, master_start_addr[i]);
       axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,
+
           master_start_addr[i] + master_size_kb[i] * 1024 - 1);
     end
   endfunction
@@ -51,11 +56,14 @@ class axi4_width_config_test extends axi4_write_read_test;
     slave_size_kb     = '{10, 1, 100, 100};
 
     foreach (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width = slave_addr_widths[i];
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width = slave_data_widths[i];
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = slave_start_addr[i];
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address =
+
           slave_start_addr[i] + slave_size_kb[i] * 1024 - 1;
+
     end
   endfunction
 

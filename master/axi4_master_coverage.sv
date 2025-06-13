@@ -168,6 +168,7 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins READ_DECERR  = {3};
     }
 
+
     // Address width can range from 1-64 bits according to the
     // AMBA AXI4 specification. Create a bin for each value so that
     // coverage hits only reflect the configured widths.
@@ -186,7 +187,7 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins DW_256  = {256};
       bins DW_512  = {512};
       bins DW_1024 = {1024};
-    }
+
     
 
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
