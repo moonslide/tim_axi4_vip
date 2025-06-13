@@ -193,8 +193,8 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
       @(posedge aclk);
     end while(bvalid !== 1'b1); 
 
-    repeat(data_write_packet.no_of_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING WAIT STATES in write response:: %0d",data_write_packet.no_of_wait_states),UVM_HIGH);
+    repeat(data_write_packet.b_wait_states)begin
+      `uvm_info(name,$sformatf("DRIVING WAIT STATES in write response:: %0d",data_write_packet.b_wait_states),UVM_HIGH);
       @(posedge aclk);
       bready <= 0;
     end
@@ -263,8 +263,8 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
       rready  <= 0;
     end while(rvalid === 1'b0);
     
-    repeat(data_read_packet.no_of_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING WAIT STATES in read data channel :: %0d",data_read_packet.no_of_wait_states),UVM_HIGH);
+    repeat(data_read_packet.r_wait_states)begin
+      `uvm_info(name,$sformatf("DRIVING WAIT STATES in read data channel :: %0d",data_read_packet.r_wait_states),UVM_HIGH);
       @(posedge aclk);
     end
 

@@ -101,8 +101,11 @@ function void axi4_master_seq_item_converter::from_write_class( input axi4_maste
   output_conv_h.wuser = input_conv_h.wuser;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wuser =  %0h",output_conv_h.wuser),UVM_HIGH);
 
-  output_conv_h.no_of_wait_states = input_conv_h.no_of_wait_states;
-  `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting no_wait_states =  %0d",output_conv_h.no_of_wait_states),UVM_HIGH);
+  output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
+  output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
+  output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
+  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
 
   output_conv_h.wait_count_write_address_channel =input_conv_h.wait_count_write_address_channel ;
   output_conv_h.wait_count_write_data_channel =input_conv_h.wait_count_write_data_channel ;
@@ -170,8 +173,8 @@ function void axi4_master_seq_item_converter::from_read_class( input axi4_master
   output_conv_h.ruser = input_conv_h.ruser;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting ruser =  %0b",output_conv_h.ruser),UVM_HIGH);
 
-  output_conv_h.no_of_wait_states = input_conv_h.no_of_wait_states;
-  `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting no_wait_states =  %0d",output_conv_h.no_of_wait_states),UVM_HIGH);
+  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
 
   output_conv_h.wait_count_read_address_channel =input_conv_h.wait_count_read_address_channel ;
   output_conv_h.wait_count_read_data_channel =input_conv_h.wait_count_read_data_channel ;

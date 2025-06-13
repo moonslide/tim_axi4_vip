@@ -173,9 +173,9 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
    i = i+1;
 
    // based on the wait_cycles we can choose to drive the awready
-    `uvm_info(name,$sformatf("Before DRIVING WRITE ADDRS WAIT STATES :: %0d",data_write_packet.no_of_wait_states),UVM_HIGH);
-    repeat(data_write_packet.no_of_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING_WRITE_ADDRS_WAIT_STATES :: %0d",data_write_packet.no_of_wait_states),UVM_HIGH);
+    `uvm_info(name,$sformatf("Before DRIVING WRITE ADDRS WAIT STATES :: %0d",data_write_packet.aw_wait_states),UVM_HIGH);
+    repeat(data_write_packet.aw_wait_states)begin
+      `uvm_info(name,$sformatf("DRIVING_WRITE_ADDRS_WAIT_STATES :: %0d",data_write_packet.aw_wait_states),UVM_HIGH);
       @(posedge aclk);
       awready<=0;
     end
@@ -201,9 +201,9 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
    end while(wvalid === 1'b0);
 
    // based on the wait_cycles we can choose to drive the wready
-    `uvm_info("SLAVE_BFM_WDATA_PHASE",$sformatf("Before DRIVING WRITE DATA WAIT STATES :: %0d",data_write_packet.no_of_wait_states),UVM_HIGH);
-    repeat(data_write_packet.no_of_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING_WRITE_DATA_WAIT_STATES :: %0d",data_write_packet.no_of_wait_states),UVM_HIGH);
+    `uvm_info("SLAVE_BFM_WDATA_PHASE",$sformatf("Before DRIVING WRITE DATA WAIT STATES :: %0d",data_write_packet.w_wait_states),UVM_HIGH);
+    repeat(data_write_packet.w_wait_states)begin
+      `uvm_info(name,$sformatf("DRIVING_WRITE_DATA_WAIT_STATES :: %0d",data_write_packet.w_wait_states),UVM_HIGH);
       @(posedge aclk);
       wready<=0;
     end
@@ -332,8 +332,8 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
       @(posedge aclk);
     end
    
-    repeat(data_read_packet.no_of_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING_READ_ADDRS_WAIT_STATES :: %0d",data_read_packet.no_of_wait_states),UVM_HIGH);
+    repeat(data_read_packet.ar_wait_states)begin
+      `uvm_info(name,$sformatf("DRIVING_READ_ADDRS_WAIT_STATES :: %0d",data_read_packet.ar_wait_states),UVM_HIGH);
       @(posedge aclk);
       arready<=0;
     end

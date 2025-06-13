@@ -181,9 +181,13 @@ class axi4_master_tx extends uvm_sequence_item;
   //Used to the determine the type of the transfer
   rand transfer_type_e transfer_type;
   
-  //Variable : no_of_wait_states
-  //Used to count number of wait states
-  rand int no_of_wait_states;
+  //Variable : aw_wait_states
+  //Number of wait states before driving BREADY/RREADY or waiting on READY
+  rand int aw_wait_states;
+  rand int w_wait_states;
+  rand int b_wait_states;
+  rand int ar_wait_states;
+  rand int r_wait_states;
 
   //Variable: wait_count_write_address_channel
   //Used to determine wait count for write address channel
@@ -267,9 +271,13 @@ class axi4_master_tx extends uvm_sequence_item;
   //based on size setting the strobe values
   constraint wstrb_c4 {foreach(wstrb[i]) $countones(wstrb[i]) == 2**awsize;}
 
-  //Constraint : no_of_wait_states_c3
-  //Adding constraint to restrict the number of wait states for response
-  constraint no_of_wait_states_c3 {no_of_wait_states inside {[0:3]};}
+  //Constraint : wait_states_c3
+  //Adding constraint to restrict the number of wait states for all channels
+  constraint wait_states_c3 {soft aw_wait_states inside {[0:6]};
+                              soft w_wait_states  inside {[0:6]};
+                              soft b_wait_states  inside {[0:6]};
+                              soft ar_wait_states inside {[0:6]};
+                              soft r_wait_states  inside {[0:6]};}
   
   //-------------------------------------------------------
   // READ ADDRESS Constraints
@@ -629,7 +637,9 @@ function void axi4_master_tx::do_print(uvm_printer printer);
     //`uvm_info("-----------------------------------------WRITE_RESPONSE_CHANNEL","------------------------------------",UVM_LOW);
     printer.print_string("bid",bid.name());
     printer.print_string("bresp",bresp.name());
-    printer.print_field("no_of_wait_states",no_of_wait_states,$bits(no_of_wait_states),UVM_DEC);
+    printer.print_field("aw_wait_states",aw_wait_states,$bits(aw_wait_states),UVM_DEC);
+    printer.print_field("w_wait_states",w_wait_states,$bits(w_wait_states),UVM_DEC);
+    printer.print_field("b_wait_states",b_wait_states,$bits(b_wait_states),UVM_DEC);
     printer.print_field("wait_count_write_response_channel",wait_count_write_response_channel,
                          $bits(wait_count_write_response_channel),UVM_HEX);
   end
@@ -654,7 +664,8 @@ function void axi4_master_tx::do_print(uvm_printer printer);
     end
     printer.print_string("rresp",rresp.name());
     printer.print_field("ruser",ruser,$bits(ruser),UVM_HEX);
-    printer.print_field("no_of_wait_states",no_of_wait_states,$bits(no_of_wait_states),UVM_DEC);
+    printer.print_field("ar_wait_states",ar_wait_states,$bits(ar_wait_states),UVM_DEC);
+    printer.print_field("r_wait_states",r_wait_states,$bits(r_wait_states),UVM_DEC);
     printer.print_field("wait_count_read_data_channel",wait_count_read_data_channel,$bits(wait_count_read_data_channel),UVM_HEX);
   end
   printer.print_string("transfer_type",transfer_type.name());

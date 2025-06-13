@@ -94,7 +94,11 @@ function void axi4_slave_seq_item_converter::from_write_class(input axi4_slave_t
   output_conv.awaddr = input_conv_h.awaddr;
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("after writnig awaddr =  %0h",output_conv.awaddr),UVM_FULL);
   
-  output_conv.no_of_wait_states = input_conv_h.no_of_wait_states;
+  output_conv.aw_wait_states = input_conv_h.aw_wait_states;
+  output_conv.w_wait_states  = input_conv_h.w_wait_states;
+  output_conv.b_wait_states  = input_conv_h.b_wait_states;
+  output_conv.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv.r_wait_states  = input_conv_h.r_wait_states;
   
   output_conv.wait_count_write_address_channel =input_conv_h.wait_count_write_address_channel ;
   output_conv.wait_count_write_data_channel =input_conv_h.wait_count_write_data_channel ;
@@ -220,6 +224,12 @@ function void axi4_slave_seq_item_converter::to_write_class(input axi4_write_tra
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("after writnig wstrb to class = \n %0s",output_conv_h.sprint()),UVM_FULL);
   
   output_conv_h.wlast = input_conv_h.wlast;
+
+  output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
+  output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
+  output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
+  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
 
 endfunction : to_write_class
 
