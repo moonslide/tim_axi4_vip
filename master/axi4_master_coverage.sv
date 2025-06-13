@@ -187,9 +187,7 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins DW_256  = {256};
       bins DW_512  = {512};
       bins DW_1024 = {1024};
-
-    
-
+   }
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
       option.comment = "transfer type";
       bins BLOCKING_WRITE     = {0};

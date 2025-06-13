@@ -1,12 +1,12 @@
 all:
-	make clean; make sim; make clean;
+	make clean; make sim; 
 
 
 sim:
-	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check -f ../axi4_compile.f -debug_access+all -P $(VERDI_HOME)/share/PLI/VCS/LINUX64/novas.tab $(VERDI_HOME)/share/PLI/VCS/LINUX64/pli.a -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l $(test).log
+	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE +fsdbfile=$(test) -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +UVM_VERDI_TRACE="UVM_AWARE+HIER+COMPWAVE" +plusarg_ignore -l $(test).log
 
 verdi:
-	verdi -ssf axi_dump.fsdb -elab simv.daidir/kdb &
+	verdi -ssf *.fsdb -elab simv.daidir/kdb &
 
 ##	+incdir+../../src/hvl_top/master/ \
 ##	+incdir+../../src/hdl_top/master_agent_bfm/  \
@@ -34,4 +34,4 @@ verdi:
 	# vsim -view waveform.wlf &
 
 clean:
-	rm -rf work/ transcript waveform.wlf *.log simv* csrc vc_hdrs.h ucli.key verdiL*
+	rm -rf work/ transcript waveform.wlf *.log simv* csrc vc_hdrs.h ucli.key verdi*
