@@ -198,9 +198,19 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins AW_WS[] = {[0:6]};
     }
 
+    AW_HANDSHAKE_CP : coverpoint (packet.aw_wait_states == 0) {
+      option.comment = "AWREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
     W_WAIT_STATES_CP : coverpoint packet.w_wait_states {
       option.comment = "WREADY wait states";
       bins W_WS[] = {[0:6]};
+    }
+
+    W_HANDSHAKE_CP : coverpoint (packet.w_wait_states == 0) {
+      option.comment = "WREADY handshake";
+      bins HANDSHAKE = {1};
     }
 
     B_WAIT_STATES_CP : coverpoint packet.b_wait_states {
@@ -208,14 +218,29 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins B_WS[] = {[0:6]};
     }
 
+    B_HANDSHAKE_CP : coverpoint (packet.b_wait_states == 0) {
+      option.comment = "BREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
     AR_WAIT_STATES_CP : coverpoint packet.ar_wait_states {
       option.comment = "ARREADY wait states";
       bins AR_WS[] = {[0:6]};
     }
 
+    AR_HANDSHAKE_CP : coverpoint (packet.ar_wait_states == 0) {
+      option.comment = "ARREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
     R_WAIT_STATES_CP : coverpoint packet.r_wait_states {
       option.comment = "RREADY wait states";
       bins R_WS[] = {[0:6]};
+    }
+
+    R_HANDSHAKE_CP : coverpoint (packet.r_wait_states == 0) {
+      option.comment = "RREADY handshake";
+      bins HANDSHAKE = {1};
     }
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {
       option.comment = "transfer type";
