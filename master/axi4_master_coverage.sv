@@ -168,13 +168,26 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins READ_DECERR  = {3};
     }
 
+
+    // Address width can range from 1-64 bits according to the
+    // AMBA AXI4 specification. Create a bin for each value so that
+    // coverage hits only reflect the configured widths.
     ADDR_WIDTH_CP : coverpoint cfg.addr_width {
-      option.auto_bin_max = 64;
+      bins width[] = {[1:64]};
     }
 
+    // Data width is restricted to power-of-two values between
+    // 8 and 1024 bits.  Create explicit bins for each legal value.
     DATA_WIDTH_CP : coverpoint cfg.data_width {
-      option.auto_bin_max = 8;
-    }
+      bins DW_8    = {8};
+      bins DW_16   = {16};
+      bins DW_32   = {32};
+      bins DW_64   = {64};
+      bins DW_128  = {128};
+      bins DW_256  = {256};
+      bins DW_512  = {512};
+      bins DW_1024 = {1024};
+
     
 
     TRANSFER_TYPE_CP : coverpoint packet.transfer_type {

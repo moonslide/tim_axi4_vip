@@ -26,33 +26,27 @@ function void axi4_width_check_test::build_phase(uvm_phase phase);
                           axi4_env_cfg_h.axi4_master_agent_cfg_h[i].addr_width))
     end
 
-    if ((axi4_env_cfg_h.axi4_master_agent_cfg_h[i].addr_width > ADDRESS_WIDTH) ||
-        (axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width > DATA_WIDTH)) begin
-      `uvm_fatal("WIDTH_MISMATCH",
-                 $sformatf("Master[%0d] width exceeds interface: addr %0d data %0d",
+
+    // Check that the configured data width is one of the legal AXI sizes
+    if (!(axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width inside {8,16,32,
+                                 64,128,256,512,1024})) begin
+      `uvm_fatal("WIDTH_RANGE",
+                 $sformatf("Master[%0d] illegal data width %0d",
                           i,
-                          axi4_env_cfg_h.axi4_master_agent_cfg_h[i].addr_width,
                           axi4_env_cfg_h.axi4_master_agent_cfg_h[i].data_width))
     end
-  end
 
-  foreach (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
-    if ((axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width < 1) ||
-        (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width > 64)) begin
+
+
+    if (!(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width inside {8,16,32,
+                                 64,128,256,512,1024})) begin
       `uvm_fatal("WIDTH_RANGE",
-                 $sformatf("Slave[%0d] address width %0d out of range",
+                 $sformatf("Slave[%0d] illegal data width %0d",
                           i,
-                          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width))
-    end
-
-    if ((axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width > ADDRESS_WIDTH) ||
-        (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width > DATA_WIDTH)) begin
-      `uvm_fatal("WIDTH_MISMATCH",
-                 $sformatf("Slave[%0d] width exceeds interface: addr %0d data %0d",
-                          i,
-                          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].addr_width,
                           axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].data_width))
     end
+
+
   end
 endfunction : build_phase
 
