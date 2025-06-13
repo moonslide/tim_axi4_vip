@@ -14,14 +14,16 @@ endfunction : new
 
 task axi4_slave_r_ready_delay_seq::body();
   super.body();
-  start_item(req);
-  if(!req.randomize() with {req.ar_wait_states == 0;
-                            req.r_wait_states == 0;}) begin
-    `uvm_fatal("axi4","Rand failed")
+  for(int ws = 0; ws <= 6; ws++) begin
+    start_item(req);
+    if(!req.randomize() with {req.ar_wait_states == 0;
+                              req.r_wait_states == ws;}) begin
+      `uvm_fatal("axi4","Rand failed")
+    end
+    req.rdata.delete();
+    req.rdata.push_back(32'hEEEEFFFF);
+    finish_item(req);
   end
-  req.rdata.delete();
-  req.rdata.push_back(32'hEEEEFFFF);
-  finish_item(req);
 endtask : body
 
 `endif
