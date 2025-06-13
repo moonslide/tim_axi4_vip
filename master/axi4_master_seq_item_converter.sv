@@ -104,8 +104,7 @@ function void axi4_master_seq_item_converter::from_write_class( input axi4_maste
   output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
   output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
   output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
-  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
-  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+
 
   output_conv_h.wait_count_write_address_channel =input_conv_h.wait_count_write_address_channel ;
   output_conv_h.wait_count_write_data_channel =input_conv_h.wait_count_write_data_channel ;

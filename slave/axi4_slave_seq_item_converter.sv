@@ -97,8 +97,7 @@ function void axi4_slave_seq_item_converter::from_write_class(input axi4_slave_t
   output_conv.aw_wait_states = input_conv_h.aw_wait_states;
   output_conv.w_wait_states  = input_conv_h.w_wait_states;
   output_conv.b_wait_states  = input_conv_h.b_wait_states;
-  output_conv.ar_wait_states = input_conv_h.ar_wait_states;
-  output_conv.r_wait_states  = input_conv_h.r_wait_states;
+
   
   output_conv.wait_count_write_address_channel =input_conv_h.wait_count_write_address_channel ;
   output_conv.wait_count_write_data_channel =input_conv_h.wait_count_write_data_channel ;
@@ -228,8 +227,7 @@ function void axi4_slave_seq_item_converter::to_write_class(input axi4_write_tra
   output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
   output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
   output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
-  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
-  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+
 
 endfunction : to_write_class
 
