@@ -10,6 +10,7 @@ class axi4_aw_ready_delay_test extends axi4_base_test;
     super.setup_axi4_env_cfg();
     axi4_env_cfg_h.write_read_mode_h = ONLY_WRITE_DATA;
     uvm_config_db#(axi4_env_config)::set(this,"*","axi4_env_config",axi4_env_cfg_h);
+
   endfunction: setup_axi4_env_cfg
 
   function new(string name="axi4_aw_ready_delay_test", uvm_component parent=null);

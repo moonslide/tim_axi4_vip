@@ -20,6 +20,7 @@ task axi4_slave_r_ready_delay_seq::body();
                               req.r_wait_states == ws;
                               req.arid == arid_e'(ws);
                               req.rid == rid_e'(ws);}) begin
+
       `uvm_fatal("axi4","Rand failed")
     end
     req.rdata.delete();
