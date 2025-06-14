@@ -16,7 +16,7 @@ task axi4_master_r_ready_delay_seq::body();
   super.body();
   for(int ws = 0; ws <= 6; ws++) begin
     start_item(req);
-    if(!req.randomize() with {req.arid == 4'h8;
+    if(!req.randomize() with {req.arid == arid_e'(ws);
                               req.araddr == 32'h00001090;
                               req.arlen == 0;
                               req.arsize == READ_4_BYTES;

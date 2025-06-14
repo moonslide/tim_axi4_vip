@@ -17,7 +17,8 @@ task axi4_slave_ar_ready_delay_seq::body();
   for(int ws = 0; ws <= 6; ws++) begin
     start_item(req);
     if(!req.randomize() with {req.ar_wait_states == ws;
-                              req.r_wait_states == 0;}) begin
+                              req.r_wait_states == 0;
+                              req.arid == arid_e'(ws);}) begin
       `uvm_fatal("axi4","Rand failed")
     end
     finish_item(req);
