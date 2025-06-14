@@ -6,6 +6,12 @@ class axi4_r_ready_delay_test extends axi4_base_test;
 
   axi4_virtual_r_ready_delay_seq vseq;
 
+  function void setup_axi4_env_cfg();
+    super.setup_axi4_env_cfg();
+    axi4_env_cfg_h.write_read_mode_h = ONLY_READ_DATA;
+    uvm_config_db#(axi4_env_config)::set(this,"*","axi4_env_config",axi4_env_cfg_h);
+  endfunction: setup_axi4_env_cfg
+
   function new(string name="axi4_r_ready_delay_test", uvm_component parent=null);
     super.new(name,parent);
   endfunction
