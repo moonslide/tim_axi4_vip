@@ -9,6 +9,7 @@ class axi4_w_ready_delay_test extends axi4_base_test;
   function void setup_axi4_env_cfg();
     super.setup_axi4_env_cfg();
     axi4_env_cfg_h.write_read_mode_h = ONLY_WRITE_DATA;
+    axi4_env_cfg_h.check_wait_states = 1;
     uvm_config_db#(axi4_env_config)::set(this,"*","axi4_env_config",axi4_env_cfg_h);
   endfunction: setup_axi4_env_cfg
 

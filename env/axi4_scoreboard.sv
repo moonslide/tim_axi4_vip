@@ -81,6 +81,12 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_verified_wstrb_count;
   int byte_data_cmp_verified_wuser_count;
 
+  int byte_data_cmp_verified_aw_wait_states_count;
+  int byte_data_cmp_verified_w_wait_states_count;
+  int byte_data_cmp_verified_b_wait_states_count;
+  int byte_data_cmp_verified_ar_wait_states_count;
+  int byte_data_cmp_verified_r_wait_states_count;
+
   int byte_data_cmp_verified_bid_count;
   int byte_data_cmp_verified_bresp_count;
   int byte_data_cmp_verified_buser_count;
@@ -114,6 +120,12 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_wdata_count;
   int byte_data_cmp_failed_wstrb_count;
   int byte_data_cmp_failed_wuser_count;
+
+  int byte_data_cmp_failed_aw_wait_states_count;
+  int byte_data_cmp_failed_w_wait_states_count;
+  int byte_data_cmp_failed_b_wait_states_count;
+  int byte_data_cmp_failed_ar_wait_states_count;
+  int byte_data_cmp_failed_r_wait_states_count;
 
   int byte_data_cmp_failed_bid_count;
   int byte_data_cmp_failed_bresp_count;
@@ -476,6 +488,16 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     byte_data_cmp_failed_awprot_count++;
   end
 
+  if(axi4_env_cfg_h.check_wait_states) begin
+    if(axi4_master_tx_h1.aw_wait_states == axi4_slave_tx_h1.aw_wait_states) begin
+      byte_data_cmp_verified_aw_wait_states_count++;
+    end
+    else begin
+      byte_data_cmp_failed_aw_wait_states_count++;
+      `uvm_info("SB_AW_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h1.aw_wait_states,axi4_slave_tx_h1.aw_wait_states), UVM_HIGH);
+    end
+  end
+
 endtask : axi4_write_address_comparision
 
 //--------------------------------------------------------------------------------------------
@@ -516,7 +538,17 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_wuser from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_wuser_NOT_MATCHED", $sformatf("Master wuser = 'h%0x and Slave wuser = 'h%0x",axi4_master_tx_h2.wuser,axi4_slave_tx_h2.wuser), UVM_HIGH);             
+    `uvm_info("SB_wuser_NOT_MATCHED", $sformatf("Master wuser = 'h%0x and Slave wuser = 'h%0x",axi4_master_tx_h2.wuser,axi4_slave_tx_h2.wuser), UVM_HIGH);
+  end
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    if(axi4_master_tx_h2.w_wait_states == axi4_slave_tx_h2.w_wait_states) begin
+      byte_data_cmp_verified_w_wait_states_count++;
+    end
+    else begin
+      byte_data_cmp_failed_w_wait_states_count++;
+      `uvm_info("SB_W_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h2.w_wait_states,axi4_slave_tx_h2.w_wait_states), UVM_HIGH);
+    end
   end
 
 endtask : axi4_write_data_comparision
@@ -559,7 +591,17 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_buser from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_buser_NOT_MATCHED", $sformatf("Master buser = 'h%0x and Slave buser = 'h%0x",axi4_master_tx_h3.buser,axi4_slave_tx_h3.buser), UVM_HIGH);             
+    `uvm_info("SB_buser_NOT_MATCHED", $sformatf("Master buser = 'h%0x and Slave buser = 'h%0x",axi4_master_tx_h3.buser,axi4_slave_tx_h3.buser), UVM_HIGH);
+  end
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    if(axi4_master_tx_h3.b_wait_states == axi4_slave_tx_h3.b_wait_states) begin
+      byte_data_cmp_verified_b_wait_states_count++;
+    end
+    else begin
+      byte_data_cmp_failed_b_wait_states_count++;
+      `uvm_info("SB_B_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h3.b_wait_states,axi4_slave_tx_h3.b_wait_states), UVM_HIGH);
+    end
   end
 endtask : axi4_write_response_comparision
 
@@ -670,7 +712,17 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_arqos from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_arqos_NOT_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);             
+    `uvm_info("SB_arqos_NOT_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);
+  end
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    if(axi4_master_tx_h4.ar_wait_states == axi4_slave_tx_h4.ar_wait_states) begin
+      byte_data_cmp_verified_ar_wait_states_count++;
+    end
+    else begin
+      byte_data_cmp_failed_ar_wait_states_count++;
+      `uvm_info("SB_AR_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h4.ar_wait_states,axi4_slave_tx_h4.ar_wait_states), UVM_HIGH);
+    end
   end
 endtask : axi4_read_address_comparision
 
@@ -723,6 +775,16 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_ruser from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_ruser_NOT_MATCHED", $sformatf("Master ruser = %0p and Slave ruser = %0p",axi4_master_tx_h5.ruser,axi4_slave_tx_h5.ruser), UVM_HIGH);             
+  end
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    if(axi4_master_tx_h5.r_wait_states == axi4_slave_tx_h5.r_wait_states) begin
+      byte_data_cmp_verified_r_wait_states_count++;
+    end
+    else begin
+      byte_data_cmp_failed_r_wait_states_count++;
+      `uvm_info("SB_R_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h5.r_wait_states,axi4_slave_tx_h5.r_wait_states), UVM_HIGH);
+    end
   end
 
 endtask : axi4_read_data_comparision
@@ -830,14 +892,27 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end
     
     if ((byte_data_cmp_verified_awprot_count != 0) && (byte_data_cmp_failed_awprot_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awprot count comparisions are succesful"),UVM_HIGH);
+            `uvm_info (get_type_name(), $sformatf ("awprot count comparisions are succesful"),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awprot_count :%0d",
                                               byte_data_cmp_verified_awprot_count),UVM_HIGH);
-	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_awprot_count : %0d", 
+            `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_awprot_count : %0d",
                                               byte_data_cmp_failed_awprot_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("awprot count comparisions are failed"));
+    end
+
+    if(axi4_env_cfg_h.check_wait_states) begin
+      if ((byte_data_cmp_verified_aw_wait_states_count != 0) && (byte_data_cmp_failed_aw_wait_states_count == 0)) begin
+              `uvm_info (get_type_name(), $sformatf ("aw wait states comparisions are succesful"),UVM_HIGH);
+      end
+      else begin
+        `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_aw_wait_states_count :%0d",
+                                                byte_data_cmp_verified_aw_wait_states_count),UVM_HIGH);
+              `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_aw_wait_states_count : %0d",
+                                                byte_data_cmp_failed_aw_wait_states_count),UVM_HIGH);
+        `uvm_error (get_type_name(), $sformatf ("aw wait states comparisions are failed"));
+      end
     end
     
     //-------------------------------------------------------
@@ -874,10 +949,23 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_wuser_count :%0d",
                                               byte_data_cmp_verified_wuser_count),UVM_HIGH);
-	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_wuser_count : %0d", 
+            `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_wuser_count : %0d",
                                               byte_data_cmp_failed_wuser_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("wuser count comparisions are failed"));
-    end 
+    end
+
+    if(axi4_env_cfg_h.check_wait_states) begin
+      if ((byte_data_cmp_verified_w_wait_states_count != 0) && (byte_data_cmp_failed_w_wait_states_count == 0)) begin
+              `uvm_info (get_type_name(), $sformatf ("w wait states comparisions are succesful"),UVM_HIGH);
+      end
+      else begin
+        `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_w_wait_states_count :%0d",
+                                                byte_data_cmp_verified_w_wait_states_count),UVM_HIGH);
+              `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_w_wait_states_count : %0d",
+                                                byte_data_cmp_failed_w_wait_states_count),UVM_HIGH);
+        `uvm_error (get_type_name(), $sformatf ("w wait states comparisions are failed"));
+      end
+    end
 
     //-------------------------------------------------------
     // Write_Response_Channel comparision
@@ -914,10 +1002,23 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_buser_count :%0d",
                                               byte_data_cmp_verified_buser_count),UVM_HIGH);
-	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_buser_count : %0d", 
+            `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_buser_count : %0d",
                                               byte_data_cmp_failed_buser_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("buser count comparisions are failed"));
-    end 
+    end
+
+    if(axi4_env_cfg_h.check_wait_states) begin
+      if ((byte_data_cmp_verified_b_wait_states_count != 0) && (byte_data_cmp_failed_b_wait_states_count == 0)) begin
+              `uvm_info (get_type_name(), $sformatf ("b wait states comparisions are succesful"),UVM_HIGH);
+      end
+      else begin
+        `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_b_wait_states_count :%0d",
+                                                byte_data_cmp_verified_b_wait_states_count),UVM_HIGH);
+              `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_b_wait_states_count : %0d",
+                                                byte_data_cmp_failed_b_wait_states_count),UVM_HIGH);
+        `uvm_error (get_type_name(), $sformatf ("b wait states comparisions are failed"));
+      end
+    end
   end
 
   //-------------------------------------------------------
@@ -1029,10 +1130,23 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_arqos_count :%0d",
                                               byte_data_cmp_verified_arqos_count),UVM_HIGH);
-	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_arqos_count : %0d", 
+            `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_arqos_count : %0d",
                                               byte_data_cmp_failed_arqos_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("arqos count comparisions are failed"));
-    end 
+    end
+
+    if(axi4_env_cfg_h.check_wait_states) begin
+      if ((byte_data_cmp_verified_ar_wait_states_count != 0) && (byte_data_cmp_failed_ar_wait_states_count == 0)) begin
+              `uvm_info (get_type_name(), $sformatf ("ar wait states comparisions are succesful"),UVM_HIGH);
+      end
+      else begin
+        `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_ar_wait_states_count :%0d",
+                                                byte_data_cmp_verified_ar_wait_states_count),UVM_HIGH);
+              `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_ar_wait_states_count : %0d",
+                                                byte_data_cmp_failed_ar_wait_states_count),UVM_HIGH);
+        `uvm_error (get_type_name(), $sformatf ("ar wait states comparisions are failed"));
+      end
+    end
 
     //-------------------------------------------------------
     // Read_Data_Channel comparision
@@ -1077,9 +1191,22 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_ruser_count :%0d",
                                               byte_data_cmp_verified_ruser_count),UVM_HIGH);
-	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_ruser_count : %0d", 
+            `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_ruser_count : %0d",
                                               byte_data_cmp_failed_ruser_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("ruser count comparisions are failed"));
+    end
+
+    if(axi4_env_cfg_h.check_wait_states) begin
+      if ((byte_data_cmp_verified_r_wait_states_count != 0) && (byte_data_cmp_failed_r_wait_states_count == 0)) begin
+              `uvm_info (get_type_name(), $sformatf ("r wait states comparisions are succesful"),UVM_HIGH);
+      end
+      else begin
+        `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_r_wait_states_count :%0d",
+                                                byte_data_cmp_verified_r_wait_states_count),UVM_HIGH);
+              `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_r_wait_states_count : %0d",
+                                                byte_data_cmp_failed_r_wait_states_count),UVM_HIGH);
+        `uvm_error (get_type_name(), $sformatf ("r wait states comparisions are failed"));
+      end
     end
   end
 
@@ -1241,6 +1368,12 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot comparisions:%0d",byte_data_cmp_verified_awprot_count+byte_data_cmp_failed_awprot_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot failed comparisions:%0d",byte_data_cmp_failed_awprot_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot verified comparisions:%0d",byte_data_cmp_verified_awprot_count ),UVM_HIGH);
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    `uvm_info (get_type_name(),$sformatf("Total no. of aw wait state comparisions:%0d",byte_data_cmp_verified_aw_wait_states_count+byte_data_cmp_failed_aw_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of aw wait state failed comparisions:%0d",byte_data_cmp_failed_aw_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of aw wait state verified comparisions:%0d",byte_data_cmp_verified_aw_wait_states_count ),UVM_HIGH);
+  end
   
   $display("WRITE_DATA_PHASE");
   
@@ -1260,6 +1393,12 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise wuser comparisions:%0d",byte_data_cmp_verified_wuser_count+byte_data_cmp_failed_wuser_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise wuser failed comparisions:%0d",byte_data_cmp_failed_wuser_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise wuser verified comparisions:%0d",byte_data_cmp_verified_wuser_count ),UVM_HIGH);
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    `uvm_info (get_type_name(),$sformatf("Total no. of w wait state comparisions:%0d",byte_data_cmp_verified_w_wait_states_count+byte_data_cmp_failed_w_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of w wait state failed comparisions:%0d",byte_data_cmp_failed_w_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of w wait state verified comparisions:%0d",byte_data_cmp_verified_w_wait_states_count ),UVM_HIGH);
+  end
  
   $display("WRITE_RESPONSE_PHASE");
   
@@ -1272,6 +1411,12 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise bresp comparisions:%0d",byte_data_cmp_verified_bresp_count+byte_data_cmp_failed_bresp_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise bresp failed comparisions:%0d",byte_data_cmp_failed_bresp_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise bresp verified comparisions:%0d",byte_data_cmp_verified_bresp_count ),UVM_HIGH);
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    `uvm_info (get_type_name(),$sformatf("Total no. of b wait state comparisions:%0d",byte_data_cmp_verified_b_wait_states_count+byte_data_cmp_failed_b_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of b wait state failed comparisions:%0d",byte_data_cmp_failed_b_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of b wait state verified comparisions:%0d",byte_data_cmp_verified_b_wait_states_count ),UVM_HIGH);
+  end
 
   $display(" ");
   $display("-------------------------------------------- ");
@@ -1363,6 +1508,12 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos comparisions:%0d",byte_data_cmp_verified_arqos_count+byte_data_cmp_failed_arqos_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos failed comparisions:%0d",byte_data_cmp_failed_arqos_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos verified comparisions:%0d",byte_data_cmp_verified_arqos_count ),UVM_HIGH);
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    `uvm_info (get_type_name(),$sformatf("Total no. of ar wait state comparisions:%0d",byte_data_cmp_verified_ar_wait_states_count+byte_data_cmp_failed_ar_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of ar wait state failed comparisions:%0d",byte_data_cmp_failed_ar_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of ar wait state verified comparisions:%0d",byte_data_cmp_verified_ar_wait_states_count ),UVM_HIGH);
+  end
   
   $display("READ_DATA_PHASE");
  
@@ -1388,6 +1539,12 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise ruser comparisions:%0d",byte_data_cmp_verified_ruser_count+byte_data_cmp_failed_ruser_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise ruser failed comparisions:%0d",byte_data_cmp_failed_ruser_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise ruser verified comparisions:%0d",byte_data_cmp_verified_ruser_count ),UVM_HIGH);
+
+  if(axi4_env_cfg_h.check_wait_states) begin
+    `uvm_info (get_type_name(),$sformatf("Total no. of r wait state comparisions:%0d",byte_data_cmp_verified_r_wait_states_count+byte_data_cmp_failed_r_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of r wait state failed comparisions:%0d",byte_data_cmp_failed_r_wait_states_count ),UVM_HIGH);
+    `uvm_info (get_type_name(),$sformatf("Total no. of r wait state verified comparisions:%0d",byte_data_cmp_verified_r_wait_states_count ),UVM_HIGH);
+  end
   
   $display(" ");
   $display("-------------------------------------------- ");

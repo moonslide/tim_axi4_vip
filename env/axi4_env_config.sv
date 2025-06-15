@@ -36,6 +36,10 @@ class axi4_env_config extends uvm_object;
   // Variable: write_read_mode_h
   write_read_data_mode_e write_read_mode_h;
 
+  // Variable: check_wait_states
+  // Enable wait state comparison in scoreboard
+  bit check_wait_states = 0;
+
 //-------------------------------------------------------
 // Externally defined Tasks and Functions
 //-------------------------------------------------------
@@ -67,6 +71,7 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_field ("no_of_masters",no_of_masters,$bits(no_of_masters), UVM_HEX);
   printer.print_field ("no_of_slaves",no_of_slaves,$bits(no_of_slaves), UVM_HEX);
   printer.print_string ("transfer_type",   write_read_mode_h.name());
+  printer.print_field ("check_wait_states",check_wait_states,1, UVM_DEC);
 
 endfunction : do_print
 

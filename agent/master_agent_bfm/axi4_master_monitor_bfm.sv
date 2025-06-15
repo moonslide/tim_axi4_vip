@@ -93,11 +93,16 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   //-------------------------------------------------------
   task axi4_write_address_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
+    int aw_ws = 0;
     @(posedge aclk);
-    while(awvalid!==1 || awready!==1)begin
+    while(awvalid !== 1) begin
       @(posedge aclk);
+    end
+    while(awready !== 1) begin
+      @(posedge aclk);
+      aw_ws++;
       `uvm_info("FROM MASTER MON BFM",$sformatf("Inside while loop......"),UVM_HIGH)
-    end    
+    end
     `uvm_info("FROM MASTER MON BFM",$sformatf("after while loop ......."),UVM_HIGH)
       
     req.awid    = awid ;
@@ -108,6 +113,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     req.awlock  = awlock;
     req.awcache = awcache;
     req.awprot  = awprot;
+    req.aw_wait_states = aw_ws;
     `uvm_info("FROM MASTER MON BFM",$sformatf("datapacket =%p",req),UVM_HIGH)
   endtask
   
@@ -120,16 +126,24 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     static int i = 0;
 
     forever begin
-      // Wait for valid and ready to be high
+      int w_ws = 0;
+      // Wait for valid
       do begin
         @(posedge aclk);
-      end while((wvalid!==1 || wready!==1));
+      end while(wvalid !== 1);
+
+      // Wait for ready
+      while(wready !== 1) begin
+        @(posedge aclk);
+        w_ws++;
+      end
       `uvm_info("FROM MASTER MON BFM",$sformatf("After while loop write data......"),UVM_HIGH)
   
       req.wdata[i] = wdata;
       req.wstrb[i] = wstrb;
       req.wuser[i] = wuser;
       req.wlast    = wlast;
+      if(i == 0) req.w_wait_states = w_ws;
   
       `uvm_info("FROM MASTER MON BFM write data",$sformatf("write datapacket wdata[%0d] = 'h%0x",i,req.wdata[i]),UVM_HIGH)
       `uvm_info("FROM MASTER MON BFM write data",$sformatf("write datapacket wstrb[%0d] = 'h%0x",i,req.wstrb[i]),UVM_HIGH)
@@ -148,12 +162,20 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   //-------------------------------------------------------
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
     `uvm_info("FROM MASTER MON BFM",$sformatf("AFTER WHILE LOOP OF WRITE RESPONSE"),UVM_HIGH)
-   
+
+    int b_ws = 0;
     do begin
       @(posedge aclk);
-    end while((bvalid!==1 || bready!==1));
+    end while(bvalid !== 1);
+
+    while(bready !== 1) begin
+      @(posedge aclk);
+      b_ws++;
+    end
+
     req.bid      = bid;
     req.bresp    = bresp;
+    req.b_wait_states = b_ws;
     `uvm_info("FROM MASTER MON BFM::WRITE RESPONSE",$sformatf("WRITE RESPONSE PACKET: \n %p",req),UVM_HIGH)
   endtask
   
@@ -163,9 +185,15 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   //-------------------------------------------------------
   task axi4_read_address_sampling(output axi4_read_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
+    int ar_ws = 0;
     do begin
       @(posedge aclk);
-    end while((arvalid!==1 || arready!==1));
+    end while(arvalid !== 1);
+
+    while(arready !== 1) begin
+      @(posedge aclk);
+      ar_ws++;
+    end
 
     req.arid    = arid;
     req.araddr  = araddr;
@@ -178,6 +206,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     req.arqos   = arqos;
     req.arregion = arregion;
     req.aruser     = aruser;
+    req.ar_wait_states = ar_ws;
     `uvm_info("FROM MASTER MON BFM",$sformatf("datapacket =%p",req),UVM_HIGH)
   endtask
   
@@ -188,16 +217,24 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   task axi4_read_data_sampling(output axi4_read_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
     static reg[7:0] i = 0;
     forever begin
-      // Wait for valid and ready to be high
+      int r_ws = 0;
+      // Wait for valid
       do begin
         @(posedge aclk);
-      end while((rvalid!==1 || rready!==1));
+      end while(rvalid !== 1);
+
+      // Wait for ready
+      while(rready !== 1) begin
+        @(posedge aclk);
+        r_ws++;
+      end
   
       req.rid      = rid;
       req.rdata[i] = rdata;
       req.ruser    = ruser;
       req.rresp    = rresp;
       req.rlast    = rlast;
+      if(i == 0) req.r_wait_states = r_ws;
       i++;
       
       if(req.rlast == 1) begin
