@@ -73,6 +73,7 @@ function void axi4_base_test:: setup_axi4_env_cfg();
   axi4_env_cfg_h.has_virtual_seqr = 1;
   axi4_env_cfg_h.no_of_masters = NO_OF_MASTERS;
   axi4_env_cfg_h.no_of_slaves = NO_OF_SLAVES;
+  axi4_env_cfg_h.ready_delay_cycles = 100;
 
   // Setup the axi4_master agent cfg 
   setup_axi4_master_agent_cfg();

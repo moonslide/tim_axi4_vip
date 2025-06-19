@@ -127,13 +127,25 @@ function void axi4_env::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
 
   if(axi4_env_cfg_h.has_virtual_seqr) begin
+    axi4_virtual_seqr_h.axi4_master_write_seqr_h_all = new[axi4_env_cfg_h.no_of_masters];
+    axi4_virtual_seqr_h.axi4_master_read_seqr_h_all  = new[axi4_env_cfg_h.no_of_masters];
+    axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all  = new[axi4_env_cfg_h.no_of_slaves];
+    axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all   = new[axi4_env_cfg_h.no_of_slaves];
     foreach(axi4_master_agent_h[i]) begin
-      axi4_virtual_seqr_h.axi4_master_write_seqr_h = axi4_master_agent_h[i].axi4_master_write_seqr_h;
-      axi4_virtual_seqr_h.axi4_master_read_seqr_h = axi4_master_agent_h[i].axi4_master_read_seqr_h;
+      axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[i] = axi4_master_agent_h[i].axi4_master_write_seqr_h;
+      axi4_virtual_seqr_h.axi4_master_read_seqr_h_all[i]  = axi4_master_agent_h[i].axi4_master_read_seqr_h;
     end
     foreach(axi4_slave_agent_h[i]) begin
-      axi4_virtual_seqr_h.axi4_slave_write_seqr_h = axi4_slave_agent_h[i].axi4_slave_write_seqr_h;
-      axi4_virtual_seqr_h.axi4_slave_read_seqr_h = axi4_slave_agent_h[i].axi4_slave_read_seqr_h;
+      axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i] = axi4_slave_agent_h[i].axi4_slave_write_seqr_h;
+      axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[i]  = axi4_slave_agent_h[i].axi4_slave_read_seqr_h;
+    end
+    if(axi4_env_cfg_h.no_of_masters > 0) begin
+      axi4_virtual_seqr_h.axi4_master_write_seqr_h = axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0];
+      axi4_virtual_seqr_h.axi4_master_read_seqr_h  = axi4_virtual_seqr_h.axi4_master_read_seqr_h_all[0];
+    end
+    if(axi4_env_cfg_h.no_of_slaves > 0) begin
+      axi4_virtual_seqr_h.axi4_slave_write_seqr_h = axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[0];
+      axi4_virtual_seqr_h.axi4_slave_read_seqr_h  = axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[0];
     end
   end
   
@@ -153,8 +165,22 @@ function void axi4_env::connect_phase(uvm_phase phase);
     axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_address_analysis_fifo.analysis_export);
     axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_data_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_data_analysis_fifo.analysis_export);
     axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
-  end 
+  end
   axi4_scoreboard_h.axi4_env_cfg_h = axi4_env_cfg_h;
+
+  // Configure assertion ready delay cycles
+  foreach(axi4_master_agent_h[i]) begin
+    virtual master_assertions ma_if;
+    if(uvm_config_db#(virtual master_assertions)::get(null, $sformatf("*axi4_master_agent_h[%0d]*", i), "master_assertions", ma_if)) begin
+      ma_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
+    end
+  end
+  foreach(axi4_slave_agent_h[i]) begin
+    virtual slave_assertions sa_if;
+    if(uvm_config_db#(virtual slave_assertions)::get(null, $sformatf("*axi4_slave_agent_h[%0d]*", i), "slave_assertions", sa_if)) begin
+      sa_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
+    end
+  end
 endfunction : connect_phase
 
 `endif

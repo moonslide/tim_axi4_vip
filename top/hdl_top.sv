@@ -63,10 +63,13 @@ module hdl_top;
     aresetn = 1'b1;
   end
 
-  // Variable : intf
-  // axi4 Interface Instantiation for each master/slave pair
-  axi4_if intf[NO_OF_MASTERS] (.aclk(aclk),
-                               .aresetn(aresetn));
+  // Variables : master_intf and slave_intf
+  // Separate interface arrays are used for masters and slaves so that
+  // each agent drives its own instance directly.
+  axi4_if master_intf[NO_OF_MASTERS] (.aclk(aclk),
+                                     .aresetn(aresetn));
+  axi4_if slave_intf[NO_OF_SLAVES]   (.aclk(aclk),
+                                     .aresetn(aresetn));
 
   //-------------------------------------------------------
   // AXI4  No of Master and Slaves Agent Instantiation
@@ -75,12 +78,12 @@ module hdl_top;
   generate
     for (i=0; i<NO_OF_MASTERS; i++) begin : axi4_master_agent_bfm
       axi4_master_agent_bfm #(.MASTER_ID(i))
-        axi4_master_agent_bfm_h(intf[i]);
+        axi4_master_agent_bfm_h(master_intf[i]);
       defparam axi4_master_agent_bfm[i].axi4_master_agent_bfm_h.MASTER_ID = i;
     end
     for (i=0; i<NO_OF_SLAVES; i++) begin : axi4_slave_agent_bfm
       axi4_slave_agent_bfm #(.SLAVE_ID(i))
-        axi4_slave_agent_bfm_h(intf[i]);
+        axi4_slave_agent_bfm_h(slave_intf[i]);
       defparam axi4_slave_agent_bfm[i].axi4_slave_agent_bfm_h.SLAVE_ID = i;
     end
   endgenerate

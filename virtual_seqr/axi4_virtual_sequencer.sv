@@ -9,20 +9,30 @@ class axi4_virtual_sequencer extends uvm_sequencer#(uvm_sequence_item);
   `uvm_component_utils(axi4_virtual_sequencer)
 
   // Variable: master_write_seqr_h
-  // Declaring master write sequencer handle
+  // Handle for the first master write sequencer.  This is kept for
+  // backward compatibility with sequences that assume a single interface.
   axi4_master_write_sequencer axi4_master_write_seqr_h;
 
   // Variable: master_read_seqr_h
-  // Declaring master read sequencer handle
+  // Handle for the first master read sequencer.  This is kept for
+  // backward compatibility with sequences that assume a single interface.
   axi4_master_read_sequencer axi4_master_read_seqr_h;
   
   // Variable: slave_write_seqr_h
-  // Declaring slave write sequencer handle
+  // Handle for the first slave write sequencer.  This is kept for
+  // backward compatibility with sequences that assume a single interface.
   axi4_slave_write_sequencer axi4_slave_write_seqr_h;
 
   // Variable: slave_read_seqr_h
-  // Declaring slave read sequencer handle
+  // Handle for the first slave read sequencer.  This is kept for
+  // backward compatibility with sequences that assume a single interface.
   axi4_slave_read_sequencer axi4_slave_read_seqr_h;
+
+  // Arrays of sequencer handles for multi-interface tests
+  axi4_master_write_sequencer axi4_master_write_seqr_h_all[];
+  axi4_master_read_sequencer  axi4_master_read_seqr_h_all[];
+  axi4_slave_write_sequencer  axi4_slave_write_seqr_h_all[];
+  axi4_slave_read_sequencer   axi4_slave_read_seqr_h_all[];
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
