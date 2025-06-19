@@ -16,12 +16,16 @@ function axi4_virtual_aw_w_channel_separation_seq::new(string name="axi4_virtual
 endfunction : new
 
 task axi4_virtual_aw_w_channel_separation_seq::body();
-  m_seq = axi4_master_aw_w_channel_separation_seq::type_id::create("m_seq");
-  s_seq = axi4_slave_aw_w_channel_separation_seq::type_id::create("s_seq");
-  fork
-    s_seq.start(p_sequencer.axi4_slave_write_seqr_h);
-  join_none
-  m_seq.start(p_sequencer.axi4_master_write_seqr_h);
+  foreach (p_sequencer.axi4_master_write_seqr_h_all[i]) begin
+    axi4_master_aw_w_channel_separation_seq m_seq_local;
+    axi4_slave_aw_w_channel_separation_seq s_seq_local;
+    m_seq_local = axi4_master_aw_w_channel_separation_seq::type_id::create($sformatf("m_seq_%0d", i));
+    s_seq_local = axi4_slave_aw_w_channel_separation_seq::type_id::create($sformatf("s_seq_%0d", i));
+    fork
+      s_seq_local.start(p_sequencer.axi4_slave_write_seqr_h_all[i]);
+    join_none
+    m_seq_local.start(p_sequencer.axi4_master_write_seqr_h_all[i]);
+  end
 endtask : body
 
 `endif

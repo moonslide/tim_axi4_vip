@@ -66,6 +66,15 @@ interface master_assertions (input                     aclk,
   import uvm_pkg::*;
   `include "uvm_macros.svh";
 
+  // Cycle limit between VALID and READY handshakes.
+  // This value is configured by the environment using <uvm_config_db>.
+  // A default of 100 cycles is applied if no configuration is provided.
+  int ready_delay_cycles;
+
+  initial begin
+    ready_delay_cycles = 100;
+  end
+
   initial begin
     `uvm_info("MASTER_ASSERTIONS","MASTER_ASSERTIONS",UVM_LOW);
   end
@@ -91,6 +100,15 @@ interface master_assertions (input                     aclk,
                      && !($isunknown(awburst)) && !($isunknown(awlock)) && !($isunknown(awcache)) && !($isunknown(awprot)));
   endproperty : if_write_address_channel_signals_are_unknown
   AXI_WA_UNKNOWN_SIGNALS_CHECK: assert property (if_write_address_channel_signals_are_unknown);
+
+  //Assertion:   AW_READY_WITHIN_LIMIT
+  //Description: AWREADY must be asserted within ready_delay_cycles after AWVALID rises
+  property aw_ready_within_limit;
+    @(posedge aclk) disable iff(!aresetn)
+      $rose(awvalid) |-> (##[1:ready_delay_cycles] awready);
+  endproperty : aw_ready_within_limit
+  AW_READY_WITHIN_LIMIT: assert property(aw_ready_within_limit)
+    else `uvm_error("AW_READY_DELAY", $sformatf("AWREADY not asserted within %0d cycles after AWVALID", ready_delay_cycles));
 
   //Assertion:   AXI_WA_VALID_STABLE_CHECK
   //Description: When AWVALID is asserted, then it must remain asserted until AWREADY is HIGH
@@ -121,6 +139,15 @@ interface master_assertions (input                     aclk,
   endproperty : if_write_data_channel_signals_are_unknown
   AXI_WD_UNKNOWN_SIGNALS_CHECK: assert property (if_write_data_channel_signals_are_unknown);
 
+  //Assertion:   W_READY_WITHIN_LIMIT
+  //Description: WREADY must be asserted within ready_delay_cycles after WVALID rises
+  property w_ready_within_limit;
+    @(posedge aclk) disable iff(!aresetn)
+      $rose(wvalid) |-> (##[1:ready_delay_cycles] wready);
+  endproperty : w_ready_within_limit
+  W_READY_WITHIN_LIMIT: assert property(w_ready_within_limit)
+    else `uvm_error("W_READY_DELAY", $sformatf("WREADY not asserted within %0d cycles after WVALID", ready_delay_cycles));
+
   //Assertion:   AXI_WD_VALID_STABLE_CHECK
   //Description: When WVALID is asserted, then it must remain asserted until WREADY is HIGH
   //Assertion stays asserted from the time wvalid becomes high and till wready becomes high using s_until_with keyword
@@ -149,6 +176,15 @@ interface master_assertions (input                     aclk,
     bvalid==1 |-> !$isunknown(bid) && !$isunknown(buser) && !$isunknown(bresp);  
   endproperty : if_write_response_channel_signals_are_unknown
   AXI_WR_UNKNOWN_SIGNALS_CHECK: assert property (if_write_response_channel_signals_are_unknown);
+
+  //Assertion:   B_READY_WITHIN_LIMIT
+  //Description: BREADY must be asserted within ready_delay_cycles after BVALID rises
+  property b_ready_within_limit;
+    @(posedge aclk) disable iff(!aresetn)
+      $rose(bvalid) |-> (##[1:ready_delay_cycles] bready);
+  endproperty : b_ready_within_limit
+  B_READY_WITHIN_LIMIT: assert property(b_ready_within_limit)
+    else `uvm_error("B_READY_DELAY", $sformatf("BREADY not asserted within %0d cycles after BVALID", ready_delay_cycles));
 
   //Assertion:   AXI_WR_VALID_STABLE_CHECK
   //Description: When BVALID is asserted, then it must remain asserted until BREADY is HIGH
@@ -181,6 +217,15 @@ interface master_assertions (input                     aclk,
   endproperty : if_read_address_channel_signals_are_unknown
   AXI_RA_UNKNOWN_SIGNALS_CHECK: assert property (if_read_address_channel_signals_are_unknown);
 
+  //Assertion:   AR_READY_WITHIN_LIMIT
+  //Description: ARREADY must be asserted within ready_delay_cycles after ARVALID rises
+  property ar_ready_within_limit;
+    @(posedge aclk) disable iff(!aresetn)
+      $rose(arvalid) |-> (##[1:ready_delay_cycles] arready);
+  endproperty : ar_ready_within_limit
+  AR_READY_WITHIN_LIMIT: assert property(ar_ready_within_limit)
+    else `uvm_error("AR_READY_DELAY", $sformatf("ARREADY not asserted within %0d cycles after ARVALID", ready_delay_cycles));
+
   //Assertion:   AXI_RA_VALID_STABLE_CHECK
   //Description: When ARVALID is asserted, then it must remain asserted until ARREADY is HIGH
   //Assertion stays asserted from the time arvalid becomes high and till arready becomes high using s_until_with keyword
@@ -210,6 +255,15 @@ interface master_assertions (input                     aclk,
                     && !($isunknown(rlast)) && !($isunknown(ruser)));
   endproperty : if_read_data_channel_signals_are_unknown
   AXI_RD_UNKNOWN_SIGNALS_CHECK: assert property (if_read_data_channel_signals_are_unknown);
+
+  //Assertion:   R_READY_WITHIN_LIMIT
+  //Description: RREADY must be asserted within ready_delay_cycles after RVALID rises
+  property r_ready_within_limit;
+    @(posedge aclk) disable iff(!aresetn)
+      $rose(rvalid) |-> (##[1:ready_delay_cycles] rready);
+  endproperty : r_ready_within_limit
+  R_READY_WITHIN_LIMIT: assert property(r_ready_within_limit)
+    else `uvm_error("R_READY_DELAY", $sformatf("RREADY not asserted within %0d cycles after RVALID", ready_delay_cycles));
 
   //Assertion:   AXI_RD_VALID_STABLE_CHECK
   //Description: When RVALID is asserted, then it must remain asserted until RREADY is HIGH
