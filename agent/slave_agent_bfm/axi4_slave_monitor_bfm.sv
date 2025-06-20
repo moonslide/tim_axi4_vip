@@ -174,8 +174,9 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   // Used for sample the write response channel signals
   //-------------------------------------------------------
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
-  @(posedge aclk);
-    int b_ws = 0;
+     int b_ws = 0;
+      
+      @(posedge aclk);
     while(bvalid !== 1) begin
       @(posedge aclk);
     end

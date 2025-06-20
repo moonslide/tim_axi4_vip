@@ -12,7 +12,7 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
   //-------------------------------------------------------
   import uvm_pkg::*;
   `include "uvm_macros.svh"
-  
+  master_assertions M_A(); 
   //-------------------------------------------------------
   // AXI4 Master Driver bfm instantiation
   //-------------------------------------------------------

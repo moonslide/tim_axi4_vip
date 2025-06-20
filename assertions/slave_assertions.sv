@@ -69,12 +69,8 @@ interface slave_assertions (input                     aclk,
   // Cycle limit between VALID and READY handshakes. This can be
   // configured from the UVM environment via <uvm_config_db>. A
   // default of 100 cycles is used if no override is provided.
-  int ready_delay_cycles;
+  localparam ready_delay_cycles = 100;
 
-  initial begin
-    ready_delay_cycles = 100;
-    `uvm_info("SLAVE_ASSERTIONS","SLAVE_ASSERTIONS",UVM_LOW);
-  end
   
 
   //--------------------------------------------------------------------------------------------

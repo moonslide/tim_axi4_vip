@@ -19,8 +19,7 @@ task axi4_slave_aw_w_channel_separation_seq::body();
     if(!req.randomize() with {req.aw_wait_states == ws;
                               req.w_wait_states == ws;
                               req.b_wait_states == 0;
-                              req.awid == awid_e'(ws);
-                              req.bid == bid_e'(ws);}) begin
+                          }) begin
       `uvm_fatal("axi4","Rand failed")
     end
     finish_item(req);

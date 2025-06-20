@@ -161,9 +161,10 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   // Used for sample the write response channel signals
   //-------------------------------------------------------
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
+    int b_ws = 0;
     `uvm_info("FROM MASTER MON BFM",$sformatf("AFTER WHILE LOOP OF WRITE RESPONSE"),UVM_HIGH)
 
-    int b_ws = 0;
+
     do begin
       @(posedge aclk);
     end while(bvalid !== 1);

@@ -12,7 +12,7 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
   //-------------------------------------------------------
   import uvm_pkg::*;
   `include "uvm_macros.svh"
-  
+  slave_assertions S_A(); 
   //-------------------------------------------------------
   // AXI4 Slave Driver bfm instantiation
   //-------------------------------------------------------
