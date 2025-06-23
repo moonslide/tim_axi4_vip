@@ -698,6 +698,12 @@ endtask : axi4_read_task
 
 task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write_packet);
   int lower_addr,end_addr,k_t;
+  int total_bytes;
+  total_bytes = (struct_write_packet.awlen + 1) * (2**(struct_write_packet.awsize));
+  end_addr = struct_write_packet.awaddr + total_bytes - 1;
+  if((struct_write_packet.awaddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin
+    `uvm_warning("SLAVE_4K_BOUNDARY","Write burst crosses 4KB boundary")
+  end
   if(struct_write_packet.awburst == WRITE_FIXED) begin
     for(int j=0;j<(struct_write_packet.awlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_awlen=%d",struct_write_packet.awlen),UVM_HIGH)
@@ -749,6 +755,12 @@ endtask : task_memory_write
 
 task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref axi4_read_transfer_char_s struct_read_packet);
   int lower_addr,end_addr,k_t;
+  int total_bytes;
+  total_bytes = (read_pkt.arlen + 1) * (2**(read_pkt.arsize));
+  end_addr = read_pkt.araddr + total_bytes - 1;
+  if((read_pkt.araddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin
+    `uvm_warning("SLAVE_4K_BOUNDARY","Read burst crosses 4KB boundary")
+  end
   if(read_pkt.arburst == READ_FIXED) begin
     for(int j=0,int k=0;j<(read_pkt.arlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)

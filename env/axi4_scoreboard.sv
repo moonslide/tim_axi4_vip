@@ -66,6 +66,37 @@ class axi4_scoreboard extends uvm_scoreboard;
   int axi4_master_tx_rresp_count;
   //slave tx count
   int axi4_slave_tx_rresp_count;
+  // Count bursts that cross a 4KB boundary
+  int write_cross_4k_count;
+  int read_cross_4k_count;
+  // Simple memory model used for checking reads and writes
+  // This mirrors the contents of the slave memory so that
+  // read data can be checked against previously written values
+  bit [7:0] sb_memory [longint];
+
+  // Handles to the slave memories for initial preload
+  axi4_slave_memory axi4_slave_mem_h[];
+
+  typedef enum { PRELOAD_CONFIG, PRELOAD_RANDOM } preload_mode_e;
+  // Mode used when initializing slave memories at start of simulation
+  preload_mode_e preload_mode = PRELOAD_CONFIG;
+  // Data used in PRELOAD_CONFIG mode
+  bit [DATA_WIDTH-1:0] preload_cfg_data = '0;
+
+  // Function: preload_memory
+  // Write a word into the mirrored scoreboard memory as well as the
+  // slave memory model. This can be used by tests to setup initial
+  // contents for read transactions.
+  extern function void preload_memory(int index,
+                                      bit [ADDRESS_WIDTH-1:0] addr,
+                                      bit [DATA_WIDTH-1:0] data);
+  extern function void preload_memory_range(int index,
+                                            bit [ADDRESS_WIDTH-1:0] start_addr,
+                                            bit [ADDRESS_WIDTH-1:0] end_addr,
+                                            preload_mode_e mode = PRELOAD_CONFIG,
+                                            bit [DATA_WIDTH-1:0] cfg_data = '0);
+  extern function void set_preload_mode(preload_mode_e mode,
+                                        bit [DATA_WIDTH-1:0] cfg_data = '0);
   
   // Signals used to declare verified count
   int byte_data_cmp_verified_awid_count;
@@ -255,6 +286,27 @@ endfunction  : end_of_elaboration_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::start_of_simulation_phase(uvm_phase phase);
   super.start_of_simulation_phase(phase);
+  // Initialize slave memories and preload scoreboard memory
+  if(axi4_env_cfg_h != null && axi4_slave_mem_h.size() > 0) begin
+    foreach(axi4_slave_mem_h[i]) begin
+      axi4_slave_agent_config cfg;
+      if(i < axi4_env_cfg_h.axi4_slave_agent_cfg_h.size())
+        cfg = axi4_env_cfg_h.axi4_slave_agent_cfg_h[i];
+      if(cfg != null && axi4_slave_mem_h[i] != null) begin
+        bit [DATA_WIDTH-1:0] tmp;
+        for(bit [ADDRESS_WIDTH-1:0] addr = cfg.min_address; addr <= cfg.max_address; addr += STROBE_WIDTH) begin
+          case(preload_mode)
+            PRELOAD_RANDOM:   tmp = $urandom;
+            default:          tmp = preload_cfg_data;
+          endcase
+          axi4_slave_mem_h[i].mem_write(addr, tmp);
+          for(int b=0; b<STROBE_WIDTH; b++) begin
+            sb_memory[addr+b] = tmp[8*b +: 8];
+          end
+        end
+      end
+    end
+  end
 endfunction : start_of_simulation_phase
 
 //--------------------------------------------------------------------------------------------
@@ -488,6 +540,15 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     byte_data_cmp_failed_awprot_count++;
   end
 
+  int total_bytes;
+  int end_addr;
+  total_bytes = (axi4_master_tx_h1.awlen + 1) * (2**axi4_master_tx_h1.awsize);
+  end_addr = axi4_master_tx_h1.awaddr + total_bytes - 1;
+  if((axi4_master_tx_h1.awaddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin
+    `uvm_warning("SB_4K_BOUNDARY", $sformatf("Write burst crosses 4KB boundary start=0x%0h end=0x%0h",axi4_master_tx_h1.awaddr,end_addr));
+    write_cross_4k_count++;
+  end
+
   if(axi4_env_cfg_h.check_wait_states) begin
     if(axi4_master_tx_h1.aw_wait_states == axi4_slave_tx_h1.aw_wait_states) begin
       byte_data_cmp_verified_aw_wait_states_count++;
@@ -548,6 +609,17 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
     else begin
       byte_data_cmp_failed_w_wait_states_count++;
       `uvm_info("SB_W_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h2.w_wait_states,axi4_slave_tx_h2.w_wait_states), UVM_HIGH);
+    end
+  end
+
+  // Update scoreboard memory so subsequent reads can be checked
+  for(int beat=0; beat<axi4_slave_tx_h2.wdata.size(); beat++) begin
+    bit [ADDRESS_WIDTH-1:0] addr = axi4_slave_tx_h2.awaddr + beat*(1<<axi4_slave_tx_h2.awsize);
+    bit [DATA_WIDTH-1:0] data = axi4_slave_tx_h2.wdata[beat];
+    bit [(DATA_WIDTH/8)-1:0] st = axi4_slave_tx_h2.wstrb.size()>beat ? axi4_slave_tx_h2.wstrb[beat] : '0;
+    for(int b=0; b<STROBE_WIDTH; b++) begin
+      if(st[b])
+        sb_memory[addr+b] = data[8*b +: 8];
     end
   end
 
@@ -715,6 +787,15 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     `uvm_info("SB_arqos_NOT_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);
   end
 
+  int total_bytes;
+  int end_addr;
+  total_bytes = (axi4_master_tx_h4.arlen + 1) * (2**axi4_master_tx_h4.arsize);
+  end_addr = axi4_master_tx_h4.araddr + total_bytes - 1;
+  if((axi4_master_tx_h4.araddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin
+    `uvm_warning("SB_4K_BOUNDARY", $sformatf("Read burst crosses 4KB boundary start=0x%0h end=0x%0h",axi4_master_tx_h4.araddr,end_addr));
+    read_cross_4k_count++;
+  end
+
   if(axi4_env_cfg_h.check_wait_states) begin
     if(axi4_master_tx_h4.ar_wait_states == axi4_slave_tx_h4.ar_wait_states) begin
       byte_data_cmp_verified_ar_wait_states_count++;
@@ -784,6 +865,18 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     else begin
       byte_data_cmp_failed_r_wait_states_count++;
       `uvm_info("SB_R_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h5.r_wait_states,axi4_slave_tx_h5.r_wait_states), UVM_HIGH);
+    end
+  end
+
+  // Compare read data against scoreboard memory
+  for(int beat=0; beat<axi4_master_tx_h5.rdata.size(); beat++) begin
+    bit [ADDRESS_WIDTH-1:0] addr = axi4_master_tx_h5.araddr + beat*(1<<axi4_master_tx_h5.arsize);
+    bit [DATA_WIDTH-1:0] expected = '0;
+    for(int b=0; b<STROBE_WIDTH; b++) begin
+      expected[8*b +: 8] = sb_memory.exists(addr+b) ? sb_memory[addr+b] : '0;
+    end
+    if(expected !== axi4_master_tx_h5.rdata[beat]) begin
+      `uvm_error("SB_MEM_MISMATCH", $sformatf("Read @0x%0h expected %0h got %0h", addr, expected, axi4_master_tx_h5.rdata[beat]));
     end
   end
 
@@ -1569,8 +1662,56 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   $display(" ");
     `uvm_info(get_type_name(),$sformatf("scoreboard's read response packets count from master \n %0d",axi4_master_tx_rresp_count),UVM_HIGH)
     `uvm_info(get_type_name(),$sformatf("scoreboard's read response packets count from slave   \n %0d",axi4_slave_tx_rresp_count),UVM_HIGH)
+  `uvm_info(get_type_name(),$sformatf("write bursts crossing 4KB boundary: %0d", write_cross_4k_count),UVM_HIGH)
+  `uvm_info(get_type_name(),$sformatf("read bursts crossing 4KB boundary: %0d", read_cross_4k_count),UVM_HIGH)
 
 endfunction : report_phase
+
+//------------------------------------------------------------------------------
+// Function: preload_memory
+// Writes a value into both the scoreboard mirror and the slave memory
+// so that subsequent read transactions can be checked against the
+// expected data.
+//------------------------------------------------------------------------------
+function void axi4_scoreboard::preload_memory(int index,
+                                              bit [ADDRESS_WIDTH-1:0] addr,
+                                              bit [DATA_WIDTH-1:0] data);
+  if(index < axi4_slave_mem_h.size() && axi4_slave_mem_h[index] != null)
+    axi4_slave_mem_h[index].mem_write(addr, data);
+  for(int b=0; b<STROBE_WIDTH; b++) begin
+    sb_memory[addr+b] = data[8*b +: 8];
+  end
+endfunction : preload_memory
+
+//------------------------------------------------------------------------------
+// Function: set_preload_mode
+// Configure how slave memories are initialized at start of simulation
+//------------------------------------------------------------------------------
+function void axi4_scoreboard::set_preload_mode(preload_mode_e mode,
+                                                bit [DATA_WIDTH-1:0] cfg_data = '0);
+  preload_mode = mode;
+  preload_cfg_data = cfg_data;
+endfunction : set_preload_mode
+
+//------------------------------------------------------------------------------
+// Function: preload_memory_range
+// Helper to preload a range of addresses either with a fixed value or
+// randomized data.
+//------------------------------------------------------------------------------
+function void axi4_scoreboard::preload_memory_range(int index,
+                                                    bit [ADDRESS_WIDTH-1:0] start_addr,
+                                                    bit [ADDRESS_WIDTH-1:0] end_addr,
+                                                    preload_mode_e mode = PRELOAD_CONFIG,
+                                                    bit [DATA_WIDTH-1:0] cfg_data = '0);
+  for(bit [ADDRESS_WIDTH-1:0] addr = start_addr; addr <= end_addr; addr += STROBE_WIDTH) begin
+    bit [DATA_WIDTH-1:0] val;
+    if(mode == PRELOAD_RANDOM)
+      val = $urandom;
+    else
+      val = cfg_data;
+    preload_memory(index, addr, val);
+  end
+endfunction : preload_memory_range
 
 `endif
 
