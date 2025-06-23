@@ -8,6 +8,7 @@ class tc_040_test extends axi4_base_test;
   extern virtual function void setup_axi4_env_cfg();
   extern virtual function void setup_axi4_master_agent_cfg();
   extern virtual function void setup_axi4_slave_agent_cfg();
+
 endclass : tc_040_test
 
 function tc_040_test::new(string name = "tc_040_test", uvm_component parent = null);
