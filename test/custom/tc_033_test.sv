@@ -5,6 +5,10 @@ class tc_033_test extends axi4_base_test;
   axi4_virtual_tc033_seq tc_seq_h;
   extern function new(string name = "tc_033_test", uvm_component parent = null);
   extern virtual task run_phase(uvm_phase phase);
+  extern virtual function void setup_axi4_env_cfg();
+  extern virtual function void setup_axi4_master_agent_cfg();
+  extern virtual function void setup_axi4_slave_agent_cfg();
+
 endclass : tc_033_test
 
 function tc_033_test::new(string name = "tc_033_test", uvm_component parent = null);
