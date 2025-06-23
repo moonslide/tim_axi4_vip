@@ -81,6 +81,20 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins AWID[] = {[0:$]};
     }
 
+    // Cover write strobe patterns for first data beat
+    WSTRB_CP : coverpoint (packet.wstrb.size() > 0 ? packet.wstrb[0] : 0) {
+      option.comment = "Write strobe patterns";
+      bins NONE         = {4'h0};
+      bins ALL          = {4'hF};
+      bins LOWER_HALF   = {4'h3};
+      bins UPPER_HALF   = {4'hC};
+      bins EVEN_BYTES   = {4'h5};
+      bins ODD_BYTES    = {4'hA};
+      bins BYTE0        = {4'h1};
+      bins BYTE3        = {4'h8};
+      bins OTHER        = default;
+    }
+
     BRESP_CP : coverpoint packet.bresp {
       option.comment    = "Write Response values";
       bins WRITE_OKAY   = {0};
@@ -248,6 +262,18 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
       bins BLOCKING_READ      = {1};
       bins NON_BLOCKING_WRITE = {2};
       bins NON_BLOCKING_READ  = {3};
+    }
+
+    WRITE_CROSS_4K_CP : coverpoint (((packet.awaddr & 32'hFFFFF000) != ((packet.awaddr + ((packet.awlen+1)*(1<<packet.awsize)) - 1) & 32'hFFFFF000))) {
+      option.comment = "Write burst crosses 4KB";
+      bins NO  = {0};
+      bins YES = {1};
+    }
+
+    READ_CROSS_4K_CP : coverpoint (((packet.araddr & 32'hFFFFF000) != ((packet.araddr + ((packet.arlen+1)*(1<<packet.arsize)) - 1) & 32'hFFFFF000))) {
+      option.comment = "Read burst crosses 4KB";
+      bins NO  = {0};
+      bins YES = {1};
     }
 
     //-------------------------------------------------------
