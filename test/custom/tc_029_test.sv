@@ -19,6 +19,14 @@ task tc_029_test::run_phase(uvm_phase phase);
   tc_seq_h = axi4_virtual_tc029_seq::type_id::create("tc_seq_h");
   phase.raise_objection(this);
   tc_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  // Wait until the scoreboard processes the write response
+  time wait_start = $time;
+  `uvm_info("TC029", $sformatf("Waiting for scoreboard response @ %0t", wait_start), UVM_LOW)
+  wait (axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_bresp_count > 0);
+  `uvm_info("TC029", $sformatf("Scoreboard responded after %0t", $time - wait_start), UVM_LOW)
+  if(axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h3.bresp != WRITE_SLVERR)
+    `uvm_error("TC029", $sformatf("Expected SLVERR but got %s",
+                           axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h3.bresp.name()))
   phase.drop_objection(this);
 endtask : run_phase
 
