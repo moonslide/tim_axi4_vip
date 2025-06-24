@@ -179,6 +179,8 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_ruser_count;
 
 
+  int total_bytes;
+  int end_addr;
   semaphore write_address_key;
   semaphore write_data_key;
   semaphore write_response_key;
@@ -540,8 +542,7 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     byte_data_cmp_failed_awprot_count++;
   end
 
-  int total_bytes;
-  int end_addr;
+
   total_bytes = (axi4_master_tx_h1.awlen + 1) * (2**axi4_master_tx_h1.awsize);
   end_addr = axi4_master_tx_h1.awaddr + total_bytes - 1;
   if((axi4_master_tx_h1.awaddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin
@@ -787,8 +788,6 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     `uvm_info("SB_arqos_NOT_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);
   end
 
-  int total_bytes;
-  int end_addr;
   total_bytes = (axi4_master_tx_h4.arlen + 1) * (2**axi4_master_tx_h4.arsize);
   end_addr = axi4_master_tx_h4.araddr + total_bytes - 1;
   if((axi4_master_tx_h4.araddr & 32'hFFFFF000) != (end_addr & 32'hFFFFF000)) begin

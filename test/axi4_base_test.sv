@@ -25,9 +25,9 @@ class axi4_base_test extends uvm_test;
   extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void setup_axi4_env_cfg();
   extern virtual function void setup_axi4_master_agent_cfg();
-  extern virtual local function void set_and_display_master_config();
+  extern virtual function void set_and_display_master_config();
   extern virtual function void setup_axi4_slave_agent_cfg();
-  extern virtual local function void set_and_display_slave_config();
+  extern virtual function void set_and_display_slave_config();
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
 

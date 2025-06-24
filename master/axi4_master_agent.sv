@@ -94,8 +94,8 @@ function void axi4_master_agent::connect_phase(uvm_phase phase);
     axi4_master_drv_proxy_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;
     axi4_master_write_seqr_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;
     axi4_master_read_seqr_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;
-    axi4_master_cov_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h;
-  
+     if(axi4_master_agent_cfg_h.has_coverage)
+      axi4_master_cov_h.axi4_master_agent_cfg_h = axi4_master_agent_cfg_h; 
     //Connecting the ports
     axi4_master_drv_proxy_h.axi_write_seq_item_port.connect(axi4_master_write_seqr_h.seq_item_export);
     axi4_master_drv_proxy_h.axi_read_seq_item_port.connect(axi4_master_read_seqr_h.seq_item_export);

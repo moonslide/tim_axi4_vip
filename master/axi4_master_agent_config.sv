@@ -15,7 +15,7 @@ class axi4_master_agent_config extends uvm_object;
   
   //Variable: has_coverage
   //Used for enabling the master agent coverage
-  bit has_coverage;
+  bit has_coverage = 1;
 
   //Variable: addr_width
   //Address width for this master
