@@ -228,18 +228,38 @@ class axi4_master_tx extends uvm_sequence_item;
   //Restricting write burst to select only FIXED, INCR and WRAP types
   constraint awburst_c1 {awburst != WRITE_RESERVED;}
 
-  //Constraint : awlength_c2
-  //Adding constraint for restricting write trasnfers
-  constraint awlength_c2 {if(awburst==WRITE_FIXED || WRITE_WRAP)
-                              awlen inside {[0:15]};
-                          else if(awburst == WRITE_INCR) 
-                              awlen inside {[0:255]};}
+// Constraint: aw_len_burst_type_dependency_c
+// This constraint models the dependency between awlen and awburst
+// according to the AMBA AXI4 specification, using the correct
+// 'if-else if' syntax for constraint blocks.
+constraint aw_len_burst_type_dependency_c {
+    if (awburst == WRITE_INCR) {
+        // For INCR bursts, the AXI4 spec allows a burst length of 1-256 transfers.
+        // This corresponds to an AxLEN value of 0-255.
+        awlen inside {[0:255]};
+    } else if (awburst == WRITE_FIXED) {
+        // For FIXED bursts, the AXI4 spec allows a burst length of 1-16 transfers.
+        // This corresponds to an AxLEN value of 0-15.
+        awlen inside {[0:15]};
+    } else if (awburst == WRITE_WRAP) {
+        // For WRAP bursts, the AXI4 spec requires the burst length to be 2, 4, 8, or 16.
+        // Therefore, AxLEN (Burst Length - 1) must be 1, 3, 7, or 15.
+        awlen inside {1, 3, 7, 15};
+    }
+}
 
-  //Constraint : awlength_c3
-  //Adding constraint for restricting to get multiples of 2 in wrap burst
-  constraint awlength_c3 {if(awburst == WRITE_WRAP)
-                          awlen + 1 inside {2,4,8,16};}
-  
+///  //Constraint : awlength_c2
+///  //Adding constraint for restricting write trasnfers
+///  constraint awlength_c2 {if(awburst==WRITE_FIXED || WRITE_WRAP)
+///                              awlen inside {[0:LENGTH-1]};
+///                          else if(awburst == WRITE_INCR) 
+///                              awlen inside {[0:255]};}
+///
+///  //Constraint : awlength_c3
+///  //Adding constraint for restricting to get multiples of 2 in wrap burst
+///  constraint awlength_c3 {if(awburst == WRITE_WRAP)
+///                          awlen + 1 inside {2,4,8,16};}
+///  
   //Constraint : awlock_c4
   //Adding constraint to select the lock transfer type
   constraint awlock_c4 {soft awlock == WRITE_NORMAL_ACCESS;}
@@ -291,20 +311,42 @@ class axi4_master_tx extends uvm_sequence_item;
   //Restricting read burst to select only FIXED, INCR and WRAP types
   constraint arburst_c1 { arburst != READ_RESERVED;}
 
+
+// Constraint: ar_len_burst_type_dependency_c
+// This constraint models the dependency between arlen and arburst
+// according to the AMBA AXI4 specification, using the correct
+// 'if-else if' syntax for constraint blocks.
+constraint ar_len_burst_type_dependency_c {
+    if (arburst == READ_INCR) {
+        // For INCR bursts, the AXI4 spec allows a burst length of 1-256 transfers.
+        // This corresponds to an AxLEN value of 0-255.
+        arlen inside {[0:255]};
+    } else if (arburst == READ_FIXED) {
+        // For FIXED bursts, the AXI4 spec allows a burst length of 1-16 transfers.
+        // This corresponds to an AxLEN value of 0-15.
+        arlen inside {[0:15]};
+    } else if (arburst == READ_WRAP) {
+        // For WRAP bursts, the AXI4 spec requires the burst length to be 2, 4, 8, or 16.
+        // Therefore, AxLEN (Burst Length - 1) must be 1, 3, 7, or 15.
+        arlen inside {1, 3, 7, 15};
+    }
+
+}
+
   //Constraint : arlength_c2
   //Adding constraint for restricting read trasnfers
-  constraint arlength_c2 { if(arburst==READ_FIXED || READ_WRAP)
-                            arlen inside {[0:15]};
-                           else if(arburst == READ_INCR) 
-                            arlen inside {[0:255]};
-                         }
-  
-  //Constraint : arlength_c3
-  //Adding constraint for restricting to get multiples of 2 in wrap burst
-  constraint arlength_c3 { if(arburst == READ_WRAP)
-                            arlen + 1 inside {2,4,8,16};
-                         }
-
+//  constraint arlength_c2 { if(arburst==READ_FIXED || READ_WRAP)
+//                            arlen inside {[0:15]};
+//                           else if(arburst == READ_INCR) 
+//                            arlen inside {[0:255]};
+//                         }
+//  
+//  //Constraint : arlength_c3
+//  //Adding constraint for restricting to get multiples of 2 in wrap burst
+//  constraint arlength_c3 { if(arburst == READ_WRAP)
+//                            arlen + 1 inside {2,4,8,16};
+//                         }
+//
   //Constraint : arlock_c9
   //Adding constraint to select the lock transfer type
   constraint arlock_c4 { soft arlock == READ_NORMAL_ACCESS;}
