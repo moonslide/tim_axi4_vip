@@ -21,6 +21,14 @@ task tc_034_test::run_phase(uvm_phase phase);
   // Preload address outside the valid range so the scoreboard has data
   axi4_env_h.axi4_scoreboard_h.preload_memory(0, 32'h00002000, 32'hDEAD_BEEF);
   tc_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  // Wait for the scoreboard to process the read response
+  time wait_start = $time;
+  `uvm_info("TC034", $sformatf("Waiting for scoreboard response @ %0t", wait_start), UVM_LOW)
+  wait (axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_rresp_count > 0);
+  `uvm_info("TC034", $sformatf("Scoreboard responded after %0t", $time - wait_start), UVM_LOW)
+  if(axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp[0] != READ_DECERR)
+    `uvm_error("TC034", $sformatf("Expected DECERR but got %s",
+                           axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp[0].name()))
   phase.drop_objection(this);
 endtask : run_phase
 
