@@ -16,19 +16,19 @@ function tc_035_test::new(string name = "tc_035_test", uvm_component parent = nu
 endfunction : new
 
 task tc_035_test::run_phase(uvm_phase phase);
+  time wait_start; 
   tc_seq_h = axi4_virtual_tc035_seq::type_id::create("tc_seq_h");
   phase.raise_objection(this);
   // Preload unaligned address for read check
   axi4_env_h.axi4_scoreboard_h.preload_memory(0, 32'h00001001, 32'hFACE1001);
   tc_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
   // Wait for the scoreboard to process the read response
-  time wait_start = $time;
+  wait_start = $time;
   `uvm_info("TC035", $sformatf("Waiting for scoreboard response @ %0t", wait_start), UVM_LOW)
   wait (axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_rresp_count > 0);
   `uvm_info("TC035", $sformatf("Scoreboard responded after %0t", $time - wait_start), UVM_LOW)
-  if(axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp[0] != READ_SLVERR)
-    `uvm_error("TC035", $sformatf("Expected SLVERR but got %s",
-                           axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp[0].name()))
+  if(axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp != READ_SLVERR)
+    `uvm_error("TC035", $sformatf("Expected SLVERR but got %s",axi4_env_h.axi4_scoreboard_h.axi4_slave_tx_h5.rresp.name()))
   phase.drop_objection(this);
 endtask : run_phase
 
