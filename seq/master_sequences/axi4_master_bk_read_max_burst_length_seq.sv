@@ -31,17 +31,23 @@ class axi4_master_bk_read_max_burst_length_seq extends axi4_master_base_seq;
   //--------------------------------------------------------------------
   virtual task body();
     `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_read_max_burst_length_seq", UVM_LOW)
-    super.body();
+    // Local variables for enum types for constraint randomization
+    tx_type_e  des_tx_type;
+    arid_e     des_arid;
+    arsize_e   des_arsize;
+    arburst_e  des_arburst;
+
+    `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_read_max_burst_length_seq", UVM_LOW)
+    super.body(); // Call super.body() first
 
     req = axi4_master_tx::type_id::create("req");
-
     start_item(req);
 
-    // Define local variables for enum values to help constraint solver
-    axi4_globals_pkg::tx_type_e  des_tx_type  = axi4_globals_pkg::READ;
-    axi4_globals_pkg::arid_e     des_arid     = axi4_globals_pkg::ARID_12; // 0xC
-    axi4_globals_pkg::arsize_e   des_arsize   = axi4_globals_pkg::READ_4_BYTES;
-    axi4_globals_pkg::arburst_e  des_arburst  = axi4_globals_pkg::READ_INCR;
+    // Assign values to local variables for constraints
+    des_tx_type  = axi4_globals_pkg::READ;
+    des_arid     = axi4_globals_pkg::ARID_12; // 0xC
+    des_arsize   = axi4_globals_pkg::READ_4_BYTES;
+    des_arburst  = axi4_globals_pkg::READ_INCR;
 
     assert(req.randomize() with {
       req.tx_type == des_tx_type;
