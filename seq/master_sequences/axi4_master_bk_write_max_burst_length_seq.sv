@@ -38,12 +38,12 @@ class axi4_master_bk_write_max_burst_length_seq extends axi4_master_base_seq;
 
     start_item(req);
     assert(req.randomize() with {
-      trans_type == WRITE_TRANSACTION;
-      awaddr == 32'h1100; // Start address
-      awid == 4'hA;
-      awlen == 8'hFF; // 256 beats
-      awsize == 3'b010; // 4 bytes per beat
-      awburst == AXI_BURST_INCR;
+      req.tx_type == WRITE; // Corrected
+      req.awaddr == 32'h1100; // Start address
+      req.awid == axi4_globals_pkg::AWID_10; // Using explicit package scope for AWID enum
+      req.awlen == 8'hFF; // 256 beats
+      req.awsize == axi4_globals_pkg::WRITE_4_BYTES; // Using explicit package scope
+      req.awburst == axi4_globals_pkg::WRITE_INCR; // Corrected and using explicit package scope
       // WLAST will be handled by the driver/BFM
     });
 

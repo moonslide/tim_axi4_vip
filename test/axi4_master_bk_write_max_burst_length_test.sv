@@ -46,7 +46,7 @@ class axi4_master_bk_write_max_burst_length_test extends axi4_base_test;
     // Create and start the master sequence
     m_seq = axi4_master_bk_write_max_burst_length_seq::type_id::create("m_seq");
     assert(m_seq.randomize()); // Basic randomization, specific constraints are in the sequence
-    m_seq.start(axi4_env_h.axi4_mas_agent_h[0].m_seqr_h); // Assuming agent 0 and its master sequencer
+    m_seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h);
 
     #100ns; // Add some delay for the test to complete
     phase.drop_objection(this);

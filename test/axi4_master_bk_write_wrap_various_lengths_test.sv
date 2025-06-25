@@ -38,7 +38,7 @@ class axi4_master_bk_write_wrap_various_lengths_test extends axi4_base_test;
     m_seq = axi4_master_bk_write_wrap_various_lengths_seq::type_id::create("m_seq");
     // No specific randomization needed at test level, sequence handles parameters
     assert(m_seq.randomize());
-    m_seq.start(axi4_env_h.axi4_mas_agent_h[0].m_seqr_h);
+    m_seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h);
 
     #200ns; // Adjust delay as needed for transaction completion
     phase.drop_objection(this);

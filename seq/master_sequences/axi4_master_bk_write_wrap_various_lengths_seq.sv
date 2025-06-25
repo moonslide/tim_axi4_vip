@@ -37,12 +37,12 @@ class axi4_master_bk_write_wrap_various_lengths_seq extends axi4_master_base_seq
 
     start_item(req);
     assert(req.randomize() with {
-      trans_type == WRITE_TRANSACTION;
-      awaddr == 32'h1200; // Aligned address
-      awid == 4'hB;       // Example ID
-      awlen == 8'h03;     // 4 beats
-      awsize == 3'b010;   // 4 bytes per beat
-      awburst == AXI_BURST_WRAP;
+      req.tx_type == WRITE; // Corrected
+      req.awaddr == 32'h1200; // Aligned address
+      req.awid == axi4_globals_pkg::AWID_11;       // Example ID (0xB), using explicit package scope
+      req.awlen == 8'h03;     // 4 beats
+      req.awsize == axi4_globals_pkg::WRITE_4_BYTES;   // 4 bytes per beat, using explicit package scope
+      req.awburst == axi4_globals_pkg::WRITE_WRAP; // Corrected and using explicit package scope
     });
 
     // Populate WDATA with a test pattern for wrap

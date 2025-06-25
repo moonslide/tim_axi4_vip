@@ -55,7 +55,7 @@ class axi4_master_bk_read_max_burst_length_test extends axi4_base_test;
     // data that matches what the slave will return (e.g. 32'hDEAD0000 + i if pre-filled).
     // The scoreboard will do the actual comparison.
     assert(m_seq.randomize());
-    m_seq.start(axi4_env_h.axi4_mas_agent_h[0].m_seqr_h);
+    m_seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_read_seqr_h);
 
     #500ns; // Adjust delay as needed
     phase.drop_objection(this);

@@ -37,12 +37,12 @@ class axi4_master_bk_read_max_burst_length_seq extends axi4_master_base_seq;
 
     start_item(req);
     assert(req.randomize() with {
-      trans_type == READ_TRANSACTION;
-      araddr == 32'h1600; // Start address, must be aligned
-      arid == 4'hC;       // Example ID
-      arlen == 8'hFF;     // 256 beats
-      arsize == 3'b010;   // 4 bytes per beat
-      arburst == AXI_BURST_INCR;
+      req.tx_type == READ; // Corrected
+      req.araddr == 32'h1600; // Start address, must be aligned
+      req.arid == axi4_globals_pkg::ARID_12;       // Example ID (0xC), using explicit package scope
+      req.arlen == 8'hFF;     // 256 beats
+      req.arsize == axi4_globals_pkg::READ_4_BYTES;   // 4 bytes per beat, using explicit package scope
+      req.arburst == axi4_globals_pkg::READ_INCR; // Corrected and using explicit package scope
     });
     finish_item(req);
 
