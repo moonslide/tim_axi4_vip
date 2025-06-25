@@ -85,3 +85,7 @@ axi4_non_blocking_write_read_response_out_of_order_test
 #QOS
 axi4_non_blocking_qos_write_read_test
 
+# Boundary Condition Tests (Max Burst Length, WRAP)
+axi4_master_bk_write_max_burst_length_test
+axi4_master_bk_write_wrap_various_lengths_test
+axi4_master_bk_read_max_burst_length_test

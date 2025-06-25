@@ -95,3 +95,8 @@ axi4_b_ready_delay_test
 axi4_ar_ready_delay_test
 axi4_r_ready_delay_test
 axi4_aw_w_channel_separation_test
+
+# Boundary Condition Tests (Max Burst Length, WRAP)
+axi4_master_bk_write_max_burst_length_test
+axi4_master_bk_write_wrap_various_lengths_test
+axi4_master_bk_read_max_burst_length_test

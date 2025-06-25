@@ -111,6 +111,11 @@ package axi4_test_pkg;
   `include "axi4_ar_ready_delay_test.sv"
   `include "axi4_r_ready_delay_test.sv"
   `include "axi4_aw_w_channel_separation_test.sv"
+
+  // Boundary Condition Tests
+  `include "axi4_master_bk_write_max_burst_length_test.sv"
+  `include "axi4_master_bk_write_wrap_various_lengths_test.sv"
+  `include "axi4_master_bk_read_max_burst_length_test.sv"
 endpackage : axi4_test_pkg
 
 `endif

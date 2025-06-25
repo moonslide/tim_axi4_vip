@@ -114,6 +114,11 @@ package axi4_master_seq_pkg;
   `include "axi4_master_nbk_write_qos_seq.sv"
   `include "axi4_master_nbk_read_qos_seq.sv"
 
+  // Boundary Condition Sequences
+  `include "axi4_master_bk_write_max_burst_length_seq.sv"
+  `include "axi4_master_bk_write_wrap_various_lengths_seq.sv"
+  `include "axi4_master_bk_read_max_burst_length_seq.sv"
+
 endpackage : axi4_master_seq_pkg
 
 `endif
