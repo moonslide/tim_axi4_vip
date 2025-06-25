@@ -32,10 +32,10 @@ class axi4_master_bk_read_max_burst_length_seq extends axi4_master_base_seq;
   virtual task body();
     `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_read_max_burst_length_seq", UVM_LOW)
     // Local variables for enum types for constraint randomization
-    tx_type_e  des_tx_type;
-    arid_e     des_arid;
-    arsize_e   des_arsize;
-    arburst_e  des_arburst;
+    axi4_globals_pkg::tx_type_e  des_tx_type;
+    axi4_globals_pkg::arid_e     des_arid;
+    axi4_globals_pkg::arsize_e   des_arsize;
+    axi4_globals_pkg::arburst_e  des_arburst;
 
     `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_read_max_burst_length_seq", UVM_LOW)
     super.body(); // Call super.body() first

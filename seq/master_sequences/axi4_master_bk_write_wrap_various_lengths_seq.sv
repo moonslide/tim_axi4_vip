@@ -32,10 +32,10 @@ class axi4_master_bk_write_wrap_various_lengths_seq extends axi4_master_base_seq
   virtual task body();
     `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_write_wrap_various_lengths_seq", UVM_LOW)
     // Local variables for enum types for constraint randomization
-    tx_type_e  des_tx_type;
-    awid_e     des_awid;
-    awsize_e   des_awsize;
-    awburst_e  des_awburst;
+    axi4_globals_pkg::tx_type_e  des_tx_type;
+    axi4_globals_pkg::awid_e     des_awid;
+    axi4_globals_pkg::awsize_e   des_awsize;
+    axi4_globals_pkg::awburst_e  des_awburst;
 
     `uvm_info(get_type_name(), "Starting sequence: axi4_master_bk_write_wrap_various_lengths_seq", UVM_LOW)
     super.body(); // Call super.body() first
