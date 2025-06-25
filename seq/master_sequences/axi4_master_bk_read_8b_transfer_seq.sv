@@ -7,6 +7,9 @@
 //--------------------------------------------------------------------------------------------
 class axi4_master_bk_read_8b_transfer_seq extends axi4_master_bk_base_seq;
   `uvm_object_utils(axi4_master_bk_read_8b_transfer_seq)
+  `uvm_declare_p_sequencer(axi4_master_read_sequencer)
+
+  int min_addr, max_addr;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -32,12 +35,19 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 task axi4_master_bk_read_8b_transfer_seq::body();
   super.body();
-  req.transfer_type=BLOCKING_READ;
-  
+  if(!$cast(p_sequencer,m_sequencer)) begin
+    `uvm_error(get_full_name(), "tx_agent_config pointer cast failed")
+  end
+  min_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[0];
+  max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[0];
+
+  req.transfer_type = BLOCKING_READ;
+
   start_item(req);
   if(!req.randomize() with {req.arsize == READ_1_BYTE;
                             req.tx_type == READ;
                             req.arburst == READ_INCR;
+                            req.araddr inside {[min_addr:max_addr]};
                             req.transfer_type == BLOCKING_READ;}) begin
 
     `uvm_fatal("axi4","Rand failed");

@@ -67,6 +67,14 @@ class axi4_slave_agent_config extends uvm_object;
   //Used to set default read data
   bit[DATA_WIDTH-1:0] user_rdata;
 
+  //Variable: invalid_write_resp
+  //Write response value used when address decode fails or is invalid
+  bresp_e invalid_write_resp = WRITE_DECERR;
+
+  //Variable: invalid_read_resp
+  //Read response value used when address decode fails or is invalid
+  rresp_e invalid_read_resp = READ_DECERR;
+
   //constraint: maximum_txns
   //Make sure to have minimum txns to perform out_of_order
   constraint maximum_txns_c{maximum_transactions >= minimum_transactions;}
@@ -118,7 +126,9 @@ function void axi4_slave_agent_config::do_print(uvm_printer printer);
   printer.print_string ("read_data_mode", read_data_mode.name());  
   printer.print_field ("wait_count_write_response_channel",wait_count_write_response_channel,$bits(wait_count_write_response_channel),UVM_DEC);
   printer.print_field ("wait_count_read_data_channel",wait_count_read_data_channel,$bits(wait_count_read_data_channel),UVM_DEC);
-         
+  printer.print_string ("invalid_write_resp", invalid_write_resp.name());
+  printer.print_string ("invalid_read_resp", invalid_read_resp.name());
+
 endfunction : do_print
 
 `endif

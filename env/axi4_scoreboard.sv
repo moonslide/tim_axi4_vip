@@ -867,15 +867,35 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     end
   end
 
-  // Compare read data against scoreboard memory
+  // Compare read data against scoreboard memory when address maps to
+  // a slave operating in memory mode. For random data mode the slave
+  // can return arbitrary values so the comparison is skipped.
   for(int beat=0; beat<axi4_master_tx_h5.rdata.size(); beat++) begin
     bit [ADDRESS_WIDTH-1:0] addr = axi4_master_tx_h5.araddr + beat*(1<<axi4_master_tx_h5.arsize);
-    bit [DATA_WIDTH-1:0] expected = '0;
-    for(int b=0; b<STROBE_WIDTH; b++) begin
-      expected[8*b +: 8] = sb_memory.exists(addr+b) ? sb_memory[addr+b] : '0;
+    bit [DATA_WIDTH-1:0]   expected = '0;
+    bit                    compare = 0;
+
+    // Determine if the address belongs to a memory mapped slave using
+    // SLAVE_MEM_MODE. If so, fetch the expected data from the mirror.
+    foreach (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+      axi4_slave_agent_config cfg = axi4_env_cfg_h.axi4_slave_agent_cfg_h[i];
+      if (addr inside {[cfg.min_address:cfg.max_address]} &&
+          cfg.read_data_mode == SLAVE_MEM_MODE) begin
+        compare = 1;
+      end
     end
-    if(expected !== axi4_master_tx_h5.rdata[beat]) begin
-      `uvm_error("SB_MEM_MISMATCH", $sformatf("Read @0x%0h expected %0h got %0h", addr, expected, axi4_master_tx_h5.rdata[beat]));
+
+    if (compare) begin
+      bit valid = 1;
+      for(int b=0; b<STROBE_WIDTH; b++) begin
+        if(sb_memory.exists(addr+b))
+          expected[8*b +: 8] = sb_memory[addr+b];
+        else
+          valid = 0;
+      end
+      if(valid && expected !== axi4_master_tx_h5.rdata[beat]) begin
+        `uvm_error("SB_MEM_MISMATCH", $sformatf("Read @0x%0h expected %0h got %0h", addr, expected, axi4_master_tx_h5.rdata[beat]));
+      end
     end
   end
 

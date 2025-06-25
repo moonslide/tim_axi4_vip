@@ -17,6 +17,7 @@ class axi4_blocking_8b_data_read_test extends axi4_base_test;
   //-------------------------------------------------------
   extern function new(string name = "axi4_blocking_8b_data_read_test", uvm_component parent = null);
   extern function void setup_axi4_env_cfg();
+  extern function void setup_axi4_slave_agent_cfg();
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_blocking_8b_data_read_test
@@ -39,6 +40,13 @@ function void axi4_blocking_8b_data_read_test::setup_axi4_env_cfg();
   super.setup_axi4_env_cfg();
   axi4_env_cfg_h.write_read_mode_h = ONLY_READ_DATA;
 endfunction:setup_axi4_env_cfg
+
+function void axi4_blocking_8b_data_read_test::setup_axi4_slave_agent_cfg();
+  super.setup_axi4_slave_agent_cfg();
+  foreach (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+  end
+endfunction
 //--------------------------------------------------------------------------------------------
 // Task: run_phase
 // Creates the axi4_virtual_write_data_read_seq sequence and starts the write virtual sequences

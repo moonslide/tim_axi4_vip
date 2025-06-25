@@ -60,4 +60,6 @@ function void tc_029_test::setup_axi4_slave_agent_cfg();
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0] = axi4_slave_agent_config::type_id::create("scfg");
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].min_address = 32'h00001000;
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].max_address = 32'h00001FFF;
+  axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].read_data_mode = SLAVE_MEM_MODE;
+  axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].invalid_write_resp = WRITE_SLVERR;
 endfunction
