@@ -55,10 +55,10 @@ class axi4_master_bk_read_max_burst_length_seq extends axi4_master_base_seq;
 
     // Optional: Basic check of received data properties if needed here,
     // otherwise rely on scoreboard for full data verification.
-    if (req.rdata.size() == (arlen + 1)) begin
-      `uvm_info(get_type_name(), $sformatf("Correct number of read beats received: %0d", req.rdata.size()), UVM_LOW)
-    else
-      `uvm_error(get_type_name(), $sformatf("Incorrect number of read beats. Expected: %0d, Got: %0d", (arlen+1), req.rdata.size()))
+    if (req.rdata.size() == (req.arlen + 1)) begin // Corrected arlen to req.arlen for clarity if arlen is also a class member
+      `uvm_info(get_type_name(), $sformatf("Correct number of read beats received: %0d", req.rdata.size()), UVM_LOW);
+    end else begin
+      `uvm_error(get_type_name(), $sformatf("Incorrect number of read beats. Expected: %0d, Got: %0d", (req.arlen+1), req.rdata.size()));
     end
 
     `uvm_info(get_type_name(), "Finished sequence: axi4_master_bk_read_max_burst_length_seq", UVM_LOW)
