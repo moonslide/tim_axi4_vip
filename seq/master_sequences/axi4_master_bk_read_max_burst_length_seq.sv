@@ -36,13 +36,20 @@ class axi4_master_bk_read_max_burst_length_seq extends axi4_master_base_seq;
     req = axi4_master_tx::type_id::create("req");
 
     start_item(req);
+
+    // Define local variables for enum values to help constraint solver
+    axi4_globals_pkg::tx_type_e  des_tx_type  = axi4_globals_pkg::READ;
+    axi4_globals_pkg::arid_e     des_arid     = axi4_globals_pkg::ARID_12; // 0xC
+    axi4_globals_pkg::arsize_e   des_arsize   = axi4_globals_pkg::READ_4_BYTES;
+    axi4_globals_pkg::arburst_e  des_arburst  = axi4_globals_pkg::READ_INCR;
+
     assert(req.randomize() with {
-      req.tx_type == READ; // Corrected
+      req.tx_type == des_tx_type;
       req.araddr == 32'h1600; // Start address, must be aligned
-      req.arid == axi4_globals_pkg::ARID_12;       // Example ID (0xC), using explicit package scope
+      req.arid == des_arid;
       req.arlen == 8'hFF;     // 256 beats
-      req.arsize == axi4_globals_pkg::READ_4_BYTES;   // 4 bytes per beat, using explicit package scope
-      req.arburst == axi4_globals_pkg::READ_INCR; // Corrected and using explicit package scope
+      req.arsize == des_arsize;
+      req.arburst == des_arburst;
     });
     finish_item(req);
 

@@ -37,13 +37,20 @@ class axi4_master_bk_write_max_burst_length_seq extends axi4_master_base_seq;
     req = axi4_master_tx::type_id::create("req");
 
     start_item(req);
+
+    // Define local variables for enum values to help constraint solver
+    axi4_globals_pkg::tx_type_e  des_tx_type  = axi4_globals_pkg::WRITE;
+    axi4_globals_pkg::awid_e     des_awid     = axi4_globals_pkg::AWID_10; // 4'hA
+    axi4_globals_pkg::awsize_e   des_awsize   = axi4_globals_pkg::WRITE_4_BYTES; // 3'b010
+    axi4_globals_pkg::awburst_e  des_awburst  = axi4_globals_pkg::WRITE_INCR;
+
     assert(req.randomize() with {
-      req.tx_type == WRITE; // Corrected
+      req.tx_type == des_tx_type;
       req.awaddr == 32'h1100; // Start address
-      req.awid == axi4_globals_pkg::AWID_10; // Using explicit package scope for AWID enum
+      req.awid == des_awid;
       req.awlen == 8'hFF; // 256 beats
-      req.awsize == axi4_globals_pkg::WRITE_4_BYTES; // Using explicit package scope
-      req.awburst == axi4_globals_pkg::WRITE_INCR; // Corrected and using explicit package scope
+      req.awsize == des_awsize;
+      req.awburst == des_awburst;
       // WLAST will be handled by the driver/BFM
     });
 

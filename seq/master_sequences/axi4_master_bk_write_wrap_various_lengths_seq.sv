@@ -36,13 +36,20 @@ class axi4_master_bk_write_wrap_various_lengths_seq extends axi4_master_base_seq
     req = axi4_master_tx::type_id::create("req");
 
     start_item(req);
+
+    // Define local variables for enum values to help constraint solver
+    axi4_globals_pkg::tx_type_e  des_tx_type  = axi4_globals_pkg::WRITE;
+    axi4_globals_pkg::awid_e     des_awid     = axi4_globals_pkg::AWID_11; // 0xB
+    axi4_globals_pkg::awsize_e   des_awsize   = axi4_globals_pkg::WRITE_4_BYTES;
+    axi4_globals_pkg::awburst_e  des_awburst  = axi4_globals_pkg::WRITE_WRAP;
+
     assert(req.randomize() with {
-      req.tx_type == WRITE; // Corrected
+      req.tx_type == des_tx_type;
       req.awaddr == 32'h1200; // Aligned address
-      req.awid == axi4_globals_pkg::AWID_11;       // Example ID (0xB), using explicit package scope
+      req.awid == des_awid;
       req.awlen == 8'h03;     // 4 beats
-      req.awsize == axi4_globals_pkg::WRITE_4_BYTES;   // 4 bytes per beat, using explicit package scope
-      req.awburst == axi4_globals_pkg::WRITE_WRAP; // Corrected and using explicit package scope
+      req.awsize == des_awsize;
+      req.awburst == des_awburst;
     });
 
     // Populate WDATA with a test pattern for wrap
