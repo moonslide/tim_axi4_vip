@@ -178,6 +178,13 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern virtual task axi4_write_response_comparision(input axi4_master_tx axi4_master_tx_h3,input axi4_slave_tx axi4_slave_tx_h3);
   extern virtual task axi4_read_address_comparision(input axi4_master_tx axi4_master_tx_h4,input axi4_slave_tx axi4_slave_tx_h4);
   extern virtual task axi4_read_data_comparision(input axi4_master_tx axi4_master_tx_h5,input axi4_slave_tx axi4_slave_tx_h5);
+  extern function bit is_write_out_of_range(input axi4_master_tx tx);
+  extern function bit is_read_out_of_range(input axi4_master_tx tx);
+  extern function bit is_write_unaligned(input axi4_master_tx tx);
+  extern function bit is_read_unaligned(input axi4_master_tx tx);
+  extern function bit is_write_cross_4kb(input axi4_master_tx tx);
+  extern function bit is_read_cross_4kb(input axi4_master_tx tx);
+  extern function int get_slave_index_by_addr(bit [ADDRESS_WIDTH-1:0] addr);
   extern virtual function void check_phase (uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
 
@@ -561,8 +568,14 @@ endtask : axi4_write_data_comparision
 //  axi4_slave_tx_h3  - axi4_slave_tx
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_master_tx_h3,input axi4_slave_tx axi4_slave_tx_h3);
+  int slv_idx;
 
   axi4_write_data_comparision(axi4_master_tx_h3,axi4_slave_tx_h3);
+  slv_idx = get_slave_index_by_addr(axi4_master_tx_h3.awaddr);
+
+  if(is_write_cross_4kb(axi4_master_tx_h3)) begin
+    `uvm_warning("SB_WRITE_CROSS_4KB", $sformatf("Write burst starting at %0h crosses 4KB boundary", axi4_master_tx_h3.awaddr));
+  end
 
   if(axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid)begin
     `uvm_info(get_type_name(),$sformatf("axi4_bid from master and slave is equal"),UVM_HIGH);
@@ -574,14 +587,27 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
     `uvm_info("SB_bid_NOT_MATCHED", $sformatf("Master bid = %0p and Slave bid = %0p",axi4_master_tx_h3.bid,axi4_slave_tx_h3.bid), UVM_HIGH);             
   end
 
-  if(axi4_master_tx_h3.bresp == axi4_slave_tx_h3.bresp)begin
+  if(is_write_out_of_range(axi4_master_tx_h3)) begin
+    if(axi4_slave_tx_h3.bresp != WRITE_DECERR) begin
+      `uvm_error("SB_DECODE_WRITE", $sformatf("Expected decode response %0d for address %0h", WRITE_DECERR, axi4_master_tx_h3.awaddr));
+    end
+  end
+  else if(is_write_unaligned(axi4_master_tx_h3)) begin
+    if(slv_idx >= 0 && axi4_slave_tx_h3.bresp != axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].slave_error_write_resp) begin
+      `uvm_error("SB_UNALIGNED_WRITE", $sformatf("Expected slave error response %0d for address %0h", axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].slave_error_write_resp, axi4_master_tx_h3.awaddr));
+    end
+    else if(slv_idx < 0 && axi4_slave_tx_h3.bresp != axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].slave_error_write_resp) begin
+      `uvm_error("SB_UNALIGNED_WRITE", $sformatf("Expected slave error response %0d for address %0h", axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].slave_error_write_resp, axi4_master_tx_h3.awaddr));
+    end
+  end
+  else if(axi4_master_tx_h3.bresp == axi4_slave_tx_h3.bresp) begin
     `uvm_info(get_type_name(),$sformatf("axi4_bresp from master and slave is equal"),UVM_HIGH);
-    `uvm_info("SB_bresp_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);             
+    `uvm_info("SB_bresp_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
     byte_data_cmp_verified_bresp_count++;
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_bresp from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_bresp_NOT_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);             
+    `uvm_info("SB_bresp_NOT_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
   end
 
   if(axi4_master_tx_h3.buser == axi4_slave_tx_h3.buser)begin
@@ -734,8 +760,14 @@ endtask : axi4_read_address_comparision
 //  axi4_slave_tx_h5  - axi4_slave_tx
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_master_tx_h5,input axi4_slave_tx axi4_slave_tx_h5);
+  int slv_idx;
 
   axi4_read_address_comparision(axi4_master_tx_h5,axi4_slave_tx_h5);
+  slv_idx = get_slave_index_by_addr(axi4_master_tx_h5.araddr);
+
+  if(is_read_cross_4kb(axi4_master_tx_h5)) begin
+    `uvm_warning("SB_READ_CROSS_4KB", $sformatf("Read burst starting at %0h crosses 4KB boundary", axi4_master_tx_h5.araddr));
+  end
   
   if(axi4_master_tx_h5.rid == axi4_slave_tx_h5.rid)begin
     `uvm_info(get_type_name(),$sformatf("axi4_rid from master and slave is equal"),UVM_HIGH);
@@ -757,14 +789,27 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     `uvm_info("SB_rdata_NOT_MATCHED", $sformatf("Master rdata = %0p and Slave rdata = %0p",axi4_master_tx_h5.rdata,axi4_slave_tx_h5.rdata), UVM_HIGH);             
   end
 
-  if(axi4_master_tx_h5.rresp == axi4_slave_tx_h5.rresp)begin
+  if(is_read_out_of_range(axi4_master_tx_h5)) begin
+    if(axi4_slave_tx_h5.rresp != READ_DECERR) begin
+      `uvm_error("SB_DECODE_READ", $sformatf("Expected decode response %0d for address %0h", READ_DECERR, axi4_master_tx_h5.araddr));
+    end
+  end
+  else if(is_read_unaligned(axi4_master_tx_h5)) begin
+    if(slv_idx >= 0 && axi4_slave_tx_h5.rresp != axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].slave_error_read_resp) begin
+      `uvm_error("SB_UNALIGNED_READ", $sformatf("Expected slave error response %0d for address %0h", axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].slave_error_read_resp, axi4_master_tx_h5.araddr));
+    end
+    else if(slv_idx < 0 && axi4_slave_tx_h5.rresp != axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].slave_error_read_resp) begin
+      `uvm_error("SB_UNALIGNED_READ", $sformatf("Expected slave error response %0d for address %0h", axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].slave_error_read_resp, axi4_master_tx_h5.araddr));
+    end
+  end
+  else if(axi4_master_tx_h5.rresp == axi4_slave_tx_h5.rresp) begin
     `uvm_info(get_type_name(),$sformatf("axi4_rresp from master and slave is equal"),UVM_HIGH);
-    `uvm_info("SB_rresp_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
+    `uvm_info("SB_rresp_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);
     byte_data_cmp_verified_rresp_count++;
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_rresp from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_rresp_NOT_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
+    `uvm_info("SB_rresp_NOT_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);
   end
 
   if(axi4_master_tx_h5.ruser == axi4_slave_tx_h5.ruser)begin
@@ -1303,6 +1348,85 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   `uvm_info(get_type_name(),$sformatf("--\n----------------------------------------------END OF SCOREBOARD CHECK PHASE---------------------------------------"),UVM_HIGH)
 
 endfunction : check_phase
+
+//------------------------------------------------------------------------------
+// Function: is_write_out_of_range
+// Returns 1 if the write address range is outside configured slave memory
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_write_out_of_range(input axi4_master_tx tx);
+  bit [ADDRESS_WIDTH-1:0] end_addr;
+  int slv_idx;
+  end_addr = tx.awaddr + ((tx.awlen + 1) * (2**tx.awsize)) - 1;
+  slv_idx = get_slave_index_by_addr(tx.awaddr);
+  if(slv_idx < 0)
+    return 1;
+  return !((tx.awaddr >= axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].min_address) &&
+           (end_addr <= axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].max_address));
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: is_read_out_of_range
+// Returns 1 if the read address range is outside configured slave memory
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_read_out_of_range(input axi4_master_tx tx);
+  bit [ADDRESS_WIDTH-1:0] end_addr;
+  int slv_idx;
+  end_addr = tx.araddr + ((tx.arlen + 1) * (2**tx.arsize)) - 1;
+  slv_idx = get_slave_index_by_addr(tx.araddr);
+  if(slv_idx < 0)
+    return 1;
+  return !((tx.araddr >= axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].min_address) &&
+           (end_addr <= axi4_env_cfg_h.axi4_slave_agent_cfg_h[slv_idx].max_address));
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: is_write_unaligned
+// Returns 1 if the write address is not aligned to transfer size
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_write_unaligned(input axi4_master_tx tx);
+  return (tx.awaddr % (1 << tx.awsize)) != 0;
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: is_read_unaligned
+// Returns 1 if the read address is not aligned to transfer size
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_read_unaligned(input axi4_master_tx tx);
+  return (tx.araddr % (1 << tx.arsize)) != 0;
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: is_write_cross_4kb
+// Returns 1 if the write burst crosses a 4KB address boundary
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_write_cross_4kb(input axi4_master_tx tx);
+  bit [ADDRESS_WIDTH-1:0] end_addr;
+  end_addr = tx.awaddr + ((tx.awlen + 1) * (2**tx.awsize)) - 1;
+  return (tx.awaddr[ADDRESS_WIDTH-1:12] != end_addr[ADDRESS_WIDTH-1:12]);
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: is_read_cross_4kb
+// Returns 1 if the read burst crosses a 4KB address boundary
+//------------------------------------------------------------------------------
+function bit axi4_scoreboard::is_read_cross_4kb(input axi4_master_tx tx);
+  bit [ADDRESS_WIDTH-1:0] end_addr;
+  end_addr = tx.araddr + ((tx.arlen + 1) * (2**tx.arsize)) - 1;
+  return (tx.araddr[ADDRESS_WIDTH-1:12] != end_addr[ADDRESS_WIDTH-1:12]);
+endfunction
+
+//------------------------------------------------------------------------------
+// Function: get_slave_index_by_addr
+// Returns the slave index whose address range contains the given address.
+// Returns -1 if none match.
+//------------------------------------------------------------------------------
+function int axi4_scoreboard::get_slave_index_by_addr(bit [ADDRESS_WIDTH-1:0] addr);
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    if(addr inside {[axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address : axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address]})
+      return i;
+  end
+  return -1;
+endfunction
 
 //--------------------------------------------------------------------------------------------
 // Function: report_phase

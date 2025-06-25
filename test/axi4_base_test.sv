@@ -96,8 +96,6 @@ endfunction: setup_axi4_env_cfg
 // and store the handle into the config_db
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::setup_axi4_master_agent_cfg();
-  bit [63:0]local_min_address;
-  bit [63:0]local_max_address;
   axi4_env_cfg_h.axi4_master_agent_cfg_h = new[axi4_env_cfg_h.no_of_masters];
   foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i])begin
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i] =
@@ -108,19 +106,10 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
   end
 
   for(int i =0; i<NO_OF_SLAVES; i++) begin
-    if(i == 0) begin  
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,0);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,2**(SLAVE_MEMORY_SIZE)-1 );
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
-    else begin
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,local_max_address + SLAVE_MEMORY_GAP);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,local_max_address+ 2**(SLAVE_MEMORY_SIZE)-1 + 
-                                                                      SLAVE_MEMORY_GAP);
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,
+        memory_map_pkg::SLAVE_MEM_MAP[i].min_addr);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,
+        memory_map_pkg::SLAVE_MEM_MAP[i].max_addr);
   end
 endfunction: setup_axi4_master_agent_cfg
 

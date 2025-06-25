@@ -358,6 +358,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
       end
       `uvm_info("get_type_name",$sformatf("end_addr=%0h",end_wrap_addr),UVM_HIGH);
 
+      if(local_slave_addr_tx.awaddr % (1 << local_slave_addr_tx.awsize) != 0) begin
+        struct_write_packet.bresp = axi4_slave_agent_cfg_h.slave_error_write_resp;
+        slave_err = 1;
+      end
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
         while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions); //  wait change to while begin
@@ -374,10 +378,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
             `uvm_info("slave_driver_proxy",$sformatf("bid_local = %0d",bid_local),UVM_HIGH)
           end
           if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE) begin
-             if(!((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
+             if(!slave_err && !((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
                axi4_slave_agent_cfg_h.max_address]}) && (end_wrap_addr inside
                {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}))) begin
-               struct_write_packet.bresp = WRITE_SLVERR;
+               struct_write_packet.bresp = WRITE_DECERR;
                slave_err = 1;
              end
           end
@@ -388,10 +392,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
       end
       else begin
        if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE) begin
-          if(!((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
+          if(!slave_err && !((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
             axi4_slave_agent_cfg_h.max_address]}) && (end_wrap_addr inside
             {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}))) begin
-            struct_write_packet.bresp = WRITE_SLVERR;
+            struct_write_packet.bresp = WRITE_DECERR;
             slave_err = 1;
           end
         end
@@ -604,11 +608,17 @@ task axi4_slave_driver_proxy::axi4_read_task();
       end
       total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
       if(local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
-        if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
+        if(local_slave_addr_chk_tx.araddr % (1 << local_slave_addr_chk_tx.arsize) != 0) begin
+          for(int depth=0; depth<(local_slave_addr_chk_tx.arlen+1); depth++) begin
+            struct_read_packet.rresp[depth] = axi4_slave_agent_cfg_h.slave_error_read_resp;
+          end
+          axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
+        end
+        else if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
           task_memory_read(local_slave_addr_chk_tx,struct_read_packet);
           if(crossed_read_addr) begin 
             for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-              struct_read_packet.rresp[depth] = READ_SLVERR; 
+              struct_read_packet.rresp[depth] = READ_DECERR;
             end
           end
           else begin 
@@ -625,7 +635,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               if((local_slave_addr_chk_tx.araddr+j)==crossed_read_addr) begin
                 loc = j/STROBE_WIDTH;
                 for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-                  if(depth > loc) struct_read_packet.rresp[depth] = READ_SLVERR;
+                  if(depth > loc) struct_read_packet.rresp[depth] = READ_DECERR;
                   else struct_read_packet.rresp[depth] = READ_OKAY;
                 end
                 break;
@@ -655,7 +665,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
-          struct_read_packet.rresp[depth] = READ_SLVERR; 
+          struct_read_packet.rresp[depth] = READ_DECERR;
         end
 
         //read data task
