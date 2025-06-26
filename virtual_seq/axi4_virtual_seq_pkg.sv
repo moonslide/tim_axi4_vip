@@ -108,6 +108,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_b_ready_delay_seq.sv"
   `include "axi4_virtual_ar_ready_delay_seq.sv"
   `include "axi4_virtual_r_ready_delay_seq.sv"
+  `include "axi4_virtual_wstrb_seq.sv"
   `include "axi4_virtual_aw_w_channel_separation_seq.sv"
 endpackage : axi4_virtual_seq_pkg
 

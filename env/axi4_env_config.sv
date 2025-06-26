@@ -40,6 +40,10 @@ class axi4_env_config extends uvm_object;
   // Enable wait state comparison in scoreboard
   bit check_wait_states = 0;
 
+  // Variable: wstrb_compare_enable
+  // Enable scoreboard memory model for WSTRB tests
+  bit wstrb_compare_enable = 0;
+
   // Variable: ready_delay_cycles
   // Maximum cycles allowed between VALID and READY handshake
   int ready_delay_cycles = 100;
@@ -76,6 +80,7 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_field ("no_of_slaves",no_of_slaves,$bits(no_of_slaves), UVM_HEX);
   printer.print_string ("transfer_type",   write_read_mode_h.name());
   printer.print_field ("check_wait_states",check_wait_states,1, UVM_DEC);
+  printer.print_field ("wstrb_compare_enable",wstrb_compare_enable,1, UVM_DEC);
   printer.print_field ("ready_delay_cycles",ready_delay_cycles,32, UVM_DEC);
 
 endfunction : do_print

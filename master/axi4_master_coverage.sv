@@ -11,6 +11,22 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
   // Variable: axi4_master_agent_cfg_h
   // Declaring handle for master agent configuration class 
   axi4_master_agent_config axi4_master_agent_cfg_h;
+
+  // Functional coverage for WSTRB patterns
+  bit [3:0] cov_wstrb;
+  covergroup wstrb_cg;
+    option.per_instance = 1;
+    cp_wstrb : coverpoint cov_wstrb {
+      bins zero        = {4'b0000};
+      bins all_ones    = {4'b1111};
+      bins upper_half  = {4'b1100};
+      bins lower_half  = {4'b0011};
+      bins alt_0101    = {4'b0101};
+      bins alt_1010    = {4'b1010};
+      bins single_bit[] = {4'b0001,4'b0010,4'b0100,4'b1000};
+      bins others      = default;
+    }
+  endgroup
  
   //-------------------------------------------------------
   // Covergroup: axi4_master_covergroup
@@ -286,6 +302,7 @@ function axi4_master_coverage::new(string name = "axi4_master_coverage",
                                  uvm_component parent = null);
   super.new(name, parent);
   axi4_master_covergroup =new();
+  wstrb_cg = new();
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
@@ -297,6 +314,11 @@ function void axi4_master_coverage::write(axi4_master_tx t);
 
   axi4_master_covergroup.sample(axi4_master_agent_cfg_h,t);
 
+  foreach(t.wstrb[i]) begin
+    cov_wstrb = t.wstrb[i][3:0];
+    wstrb_cg.sample();
+  end
+
   `uvm_info(get_type_name(),"After calling SAMPLE METHOD",UVM_HIGH);
 endfunction: write
 
@@ -307,6 +329,10 @@ endfunction: write
 function void axi4_master_coverage::report_phase(uvm_phase phase);
   `uvm_info(get_type_name(),$sformatf("AXI4 Master Agent Coverage = %0.2f %%", axi4_master_covergroup.get_coverage()), UVM_NONE);
 endfunction: report_phase
+
+ function real get_wstrb_coverage();
+   return wstrb_cg.get_coverage();
+ endfunction
 
 `endif
 

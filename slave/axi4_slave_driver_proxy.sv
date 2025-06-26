@@ -715,7 +715,9 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
         for(int strb=0;strb<STROBE_WIDTH;strb++) begin
         `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,k=%0d",struct_write_packet.wstrb[strb],k), UVM_HIGH);
         if(struct_write_packet.wstrb[j][strb] == 1) begin
-          axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k,struct_write_packet.wdata[j][8*strb+7 -: 8]);
+          bit [DATA_WIDTH-1:0] tmp_wdata = '0;
+          tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
+          axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, tmp_wdata);
           k++;
         end
       end
@@ -731,13 +733,17 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
         `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,k=%0d",struct_write_packet.wstrb[strb],k), UVM_HIGH);
           if(struct_write_packet.wstrb[j][strb] == 1) begin
             if(k_t < end_addr)  begin
-            axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k,struct_write_packet.wdata[j][8*strb+7 -: 8]);
+            bit [DATA_WIDTH-1:0] tmp_wdata = '0;
+            tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
+            axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, tmp_wdata);
             k++;
             k_t++;
             if(k_t == end_addr) k = 0;
           end
           else begin
-            axi4_slave_mem_h.mem_write(lower_addr+k,struct_write_packet.wdata[j][8*strb+7 -: 8]);
+            bit [DATA_WIDTH-1:0] tmp_wdata = '0;
+            tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
+            axi4_slave_mem_h.mem_write(lower_addr+k, tmp_wdata);
             k++;
           end
         end
@@ -766,7 +772,9 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
     for(int j=0,int k=0;j<(read_pkt.arlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
-          axi4_slave_mem_h.mem_read(read_pkt.araddr+k,struct_read_packet.rdata[j][8*strb+7 -: 8]);
+          bit [DATA_WIDTH-1:0] tmp_rdata;
+          axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
+          struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
           if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) begin 
             crossed_read_addr = read_pkt.araddr+k;
           end
@@ -782,14 +790,18 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
           if(k_t < end_addr)  begin
-             axi4_slave_mem_h.mem_read(read_pkt.araddr+k,struct_read_packet.rdata[j][8*strb+7 -: 8]);
+             bit [DATA_WIDTH-1:0] tmp_rdata;
+             axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
+             struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = read_pkt.araddr+k;
              k++;
              k_t++;
              if(k_t == end_addr) k = 0;
           end
           else begin
-            axi4_slave_mem_h.mem_read(lower_addr+k,struct_read_packet.rdata[j][8*strb+7 -: 8]);
+            bit [DATA_WIDTH-1:0] tmp_rdata;
+            axi4_slave_mem_h.mem_read(lower_addr+k, tmp_rdata);
+            struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(crossed_read_addr == -1) begin
                if(lower_addr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = lower_addr+k;
              end

@@ -28,6 +28,7 @@ class axi4_env extends uvm_env;
   //Variable : axi4__scoreboard_h
   //Declaring axi4 scoreboard handle
   axi4_scoreboard axi4_scoreboard_h;
+
   
   // Variable: axi4_master_agent_cfg_h;
   // Handle for axi4_master agent configuration
@@ -104,6 +105,7 @@ function void axi4_env::build_phase(uvm_phase phase);
   if(axi4_env_cfg_h.has_scoreboard) begin
     axi4_scoreboard_h=axi4_scoreboard::type_id::create("axi4_scoreboard_h",this);
   end
+
   
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i].axi4_master_agent_cfg_h = axi4_master_agent_cfg_h[i];

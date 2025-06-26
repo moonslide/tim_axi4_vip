@@ -111,6 +111,14 @@ package axi4_test_pkg;
   `include "axi4_ar_ready_delay_test.sv"
   `include "axi4_r_ready_delay_test.sv"
   `include "axi4_aw_w_channel_separation_test.sv"
+  `include "axi4_wstrb_all_zero_test.sv"
+  `include "axi4_wstrb_all_ones_test.sv"
+  `include "axi4_wstrb_upper_half_test.sv"
+  `include "axi4_wstrb_lower_half_test.sv"
+  `include "axi4_wstrb_alternating_test.sv"
+  `include "axi4_wstrb_single_bit_test.sv"
+  `include "axi4_wstrb_random_burst_test.sv"
+  `include "axi4_wstrb_illegal_test.sv"
 endpackage : axi4_test_pkg
 
 `endif

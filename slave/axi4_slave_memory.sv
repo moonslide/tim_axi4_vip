@@ -17,8 +17,10 @@ class axi4_slave_memory extends uvm_object;
   protected bit [7:0] fifo_memory [$];
 
   extern function new(string name = "axi4_slave_memory");  
-  extern virtual function void mem_write(input bit [ADDRESS_WIDTH-1:0]slave_address, bit [DATA_WIDTH-1:0]data);
-  extern virtual function void mem_read (input bit [ADDRESS_WIDTH-1:0]slave_address, output bit [DATA_WIDTH-1:0]data);
+  extern virtual function void mem_write(input bit [ADDRESS_WIDTH-1:0]slave_address,
+                                         bit [DATA_WIDTH-1:0] data);
+  extern virtual function void mem_read (input bit [ADDRESS_WIDTH-1:0]slave_address,
+                                         output bit [DATA_WIDTH-1:0] data);
   extern virtual function void fifo_write(input bit [DATA_WIDTH-1:0]data);
   extern virtual function void fifo_read (output bit [DATA_WIDTH-1:0]data);
   extern virtual function bit is_slave_addr_exists(input bit [ADDRESS_WIDTH-1 :0]slave_address);
@@ -43,7 +45,8 @@ endfunction : new
 //slave_address - bit [ADDRESS_WIDTH-1 :0]
 //data          - bit [DATA_WIDTH-1:0]
 //--------------------------------------------------------------------------------------------
-function void axi4_slave_memory::mem_write(input bit [ADDRESS_WIDTH-1 :0]slave_address, bit [DATA_WIDTH-1:0]data);
+function void axi4_slave_memory::mem_write(input bit [ADDRESS_WIDTH-1 :0]slave_address,
+                                           bit [DATA_WIDTH-1:0] data);
   slave_memory[slave_address] = data;
 endfunction : mem_write
 
@@ -54,7 +57,8 @@ endfunction : mem_write
 //slave_address - bit [ADDRESS_WIDTH-1 :0]
 //data          - bit [DATA_WIDTH-1:0]
 //--------------------------------------------------------------------------------------------
-function void axi4_slave_memory::mem_read(input bit [ADDRESS_WIDTH-1 :0]slave_address, output bit [DATA_WIDTH-1:0]data);
+function void axi4_slave_memory::mem_read(input bit [ADDRESS_WIDTH-1 :0]slave_address,
+                                          output bit [DATA_WIDTH-1:0] data);
    data = slave_memory[slave_address];
 endfunction : mem_read
 
