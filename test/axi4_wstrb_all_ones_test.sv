@@ -4,8 +4,8 @@
 class axi4_wstrb_all_ones_test extends axi4_base_test;
   `uvm_component_utils(axi4_wstrb_all_ones_test)
 
-  bit [STROBE_WIDTH-1:0] pattern[];
-  bit [DATA_WIDTH-1:0]   data_words[];
+  bit [STROBE_WIDTH-1:0] pattern[$];
+  bit [DATA_WIDTH-1:0]   data_words[$];
 
   function new(string name="axi4_wstrb_all_ones_test", uvm_component parent=null);
     super.new(name,parent);
@@ -20,10 +20,12 @@ class axi4_wstrb_all_ones_test extends axi4_base_test;
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     axi4_env_cfg_h.wstrb_compare_enable = 1;
-    pattern = new[1];
-    data_words = new[1];
-    pattern[0] = 4'b1111;
-    data_words[0] = 32'hCAFEBABE;
+    pattern.delete();
+    data_words.delete();
+    pattern.push_back(4'b1111);
+    data_words.push_back(32'hCAFEBABE);
+
+
   endfunction
 
   virtual task run_phase(uvm_phase phase);

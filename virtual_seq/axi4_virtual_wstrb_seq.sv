@@ -5,8 +5,8 @@ class axi4_virtual_wstrb_seq extends axi4_virtual_base_seq;
   `uvm_object_utils(axi4_virtual_wstrb_seq)
 
   // Pattern and data words for all masters
-  bit [STROBE_WIDTH-1:0] pattern[];
-  bit [DATA_WIDTH-1:0]   data_words[];
+  bit [STROBE_WIDTH-1:0] pattern[$];
+  bit [DATA_WIDTH-1:0]   data_words[$];
   rand bit [ADDRESS_WIDTH-1:0] addr = 0;
 
   function new(string name="axi4_virtual_wstrb_seq");

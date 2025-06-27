@@ -8,7 +8,7 @@ class axi4_master_wstrb_seq extends axi4_master_bk_base_seq;
   rand bit [ADDRESS_WIDTH-1:0] addr = 0;
   bit [DATA_WIDTH-1:0] data_q[$];
   bit [STROBE_WIDTH-1:0] wstrb_q[$];
-
+  int bytes;
   function new(string name="axi4_master_wstrb_seq");
     super.new(name);
   endfunction
@@ -16,7 +16,7 @@ class axi4_master_wstrb_seq extends axi4_master_bk_base_seq;
   task body();
     super.body();
     start_item(req);
-    int bytes = p_sequencer.axi4_master_agent_cfg_h.data_width/8;
+    bytes = p_sequencer.axi4_master_agent_cfg_h.data_width/8;
     if(!req.randomize() with {req.awaddr == addr;
                               req.awlen == wstrb_q.size()-1;
                               req.awsize == awsize_e'($clog2(bytes));

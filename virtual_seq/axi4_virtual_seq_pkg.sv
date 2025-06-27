@@ -18,7 +18,7 @@ package axi4_virtual_seq_pkg;
   import axi4_master_seq_pkg::*; 
   import axi4_slave_seq_pkg::*; 
   import axi4_env_pkg::*; 
-
+  import axi4_globals_pkg::*;
   //-------------------------------------------------------
   // Importing the required packages
   //-------------------------------------------------------

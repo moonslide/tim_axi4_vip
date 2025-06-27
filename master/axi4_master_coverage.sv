@@ -330,9 +330,6 @@ function void axi4_master_coverage::report_phase(uvm_phase phase);
   `uvm_info(get_type_name(),$sformatf("AXI4 Master Agent Coverage = %0.2f %%", axi4_master_covergroup.get_coverage()), UVM_NONE);
 endfunction: report_phase
 
- function real get_wstrb_coverage();
-   return wstrb_cg.get_coverage();
- endfunction
 
 `endif
 
