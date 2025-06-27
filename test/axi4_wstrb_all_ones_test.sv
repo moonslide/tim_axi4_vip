@@ -11,6 +11,12 @@ class axi4_wstrb_all_ones_test extends axi4_base_test;
     super.new(name,parent);
   endfunction
 
+  function void setup_axi4_slave_agent_cfg();
+    super.setup_axi4_slave_agent_cfg();
+    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+  endfunction
+
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     axi4_env_cfg_h.wstrb_compare_enable = 1;
