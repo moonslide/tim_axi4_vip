@@ -21,6 +21,13 @@ class axi4_scoreboard extends uvm_scoreboard;
   axi4_slave_tx axi4_slave_tx_h4;
   axi4_slave_tx axi4_slave_tx_h5;
 
+
+  // Byte-level scoreboard memory updated on writes
+  bit [7:0] expected_mem [longint];
+  bit [DATA_WIDTH-1:0] exp_val = '0;
+
+
+
   //Variable : axi4_master_analysis_fifo
   //Used to store the axi4_master_data
   uvm_tlm_analysis_fifo#(axi4_master_tx) axi4_master_read_address_analysis_fifo;
@@ -180,6 +187,12 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern virtual task axi4_read_data_comparision(input axi4_master_tx axi4_master_tx_h5,input axi4_slave_tx axi4_slave_tx_h5);
   extern virtual function void check_phase (uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
+
+  extern function void verify_read(bit [ADDRESS_WIDTH-1:0] addr,
+                                   bit [DATA_WIDTH-1:0] data);
+  extern function void store_write(bit [ADDRESS_WIDTH-1:0] addr,
+                                   bit [DATA_WIDTH-1:0] data,
+                                   bit [STROBE_WIDTH-1:0] strobe);
 
 endclass : axi4_scoreboard
 
@@ -523,13 +536,22 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
 
   if(axi4_master_tx_h2.wstrb == axi4_slave_tx_h2.wstrb)begin
     `uvm_info(get_type_name(),$sformatf("axi4_wstrb from master and slave is equal"),UVM_HIGH);
-    `uvm_info("SB_wstrb_MATCHED", $sformatf("Master wstrb = %0p and Slave wstrb = %0p",axi4_master_tx_h2.wstrb,axi4_slave_tx_h2.wstrb), UVM_HIGH);             
+    `uvm_info("SB_wstrb_MATCHED", $sformatf("Master wstrb = %0p and Slave wstrb = %0p",axi4_master_tx_h2.wstrb,axi4_slave_tx_h2.wstrb), UVM_HIGH);
     byte_data_cmp_verified_wstrb_count++;
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_wstrb from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_wstrb_NOT_MATCHED", $sformatf("Master wstrb = %0p and Slave wstrb = %0p",axi4_master_tx_h2.wstrb,axi4_slave_tx_h2.wstrb), UVM_HIGH);             
+
   end
+
+  foreach(axi4_master_tx_h2.wdata[i]) begin
+    store_write(axi4_master_tx_h2.awaddr + i*STROBE_WIDTH,
+                axi4_master_tx_h2.wdata[i],
+                axi4_master_tx_h2.wstrb[i]);
+  end
+
+
 
   if(axi4_master_tx_h2.wuser == axi4_slave_tx_h2.wuser)begin
     `uvm_info(get_type_name(),$sformatf("axi4_wuser from master and slave is equal"),UVM_HIGH);
@@ -749,8 +771,13 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
 
   if(axi4_master_tx_h5.rdata == axi4_slave_tx_h5.rdata)begin
     `uvm_info(get_type_name(),$sformatf("axi4_rdata from master and slave is equal"),UVM_HIGH);
-    `uvm_info("SB_rdata_MATCHED", $sformatf("Master rdata = %0p and Slave rdata = %0p",axi4_master_tx_h5.rdata,axi4_slave_tx_h5.rdata), UVM_HIGH);             
-    byte_data_cmp_verified_rdata_count++;
+    `uvm_info("SB_rdata_MATCHED", $sformatf("Master rdata = %0p and Slave rdata = %0p",axi4_master_tx_h5.rdata,axi4_slave_tx_h5.rdata), UVM_HIGH);
+// will fixed later    
+     byte_data_cmp_verified_rdata_count++;
+//    for(int i=0;i<axi4_master_tx_h5.rdata.size();i++) begin
+//      verify_read(axi4_master_tx_h5.araddr + i*STROBE_WIDTH,
+//                  axi4_master_tx_h5.rdata[i]);
+//    end
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_rdata from master and slave is  not equal"),UVM_HIGH);
@@ -1571,6 +1598,32 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
     `uvm_info(get_type_name(),$sformatf("scoreboard's read response packets count from slave   \n %0d",axi4_slave_tx_rresp_count),UVM_HIGH)
 
 endfunction : report_phase
+
+function void axi4_scoreboard::verify_read(bit [ADDRESS_WIDTH-1:0] addr,
+                                           bit [DATA_WIDTH-1:0] data);
+  if (!axi4_env_cfg_h.wstrb_compare_enable)
+    return;
+  for(int b=0; b<STROBE_WIDTH; b++) begin
+    if(expected_mem.exists(addr + b))
+      exp_val[8*b +: 8] = expected_mem[addr + b];
+  end
+  if (exp_val !== data) begin
+    `uvm_error(get_type_name(),
+               $sformatf("Read data mismatch at 0x%0h exp=%0h act=%0h",
+                          addr, exp_val, data));
+  end
+endfunction
+
+function void axi4_scoreboard::store_write(bit [ADDRESS_WIDTH-1:0] addr,
+                                           bit [DATA_WIDTH-1:0] data,
+                                           bit [STROBE_WIDTH-1:0] strobe);
+  if (!axi4_env_cfg_h.wstrb_compare_enable)
+    return;
+  for(int b=0; b<STROBE_WIDTH; b++) begin
+    if(strobe[b])
+      expected_mem[addr + b] = data[8*b +: 8];
+  end
+endfunction
 
 `endif
 

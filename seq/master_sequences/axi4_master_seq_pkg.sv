@@ -61,6 +61,8 @@ package axi4_master_seq_pkg;
   `include "axi4_master_aw_ready_delay_seq.sv"
   `include "axi4_master_w_ready_delay_seq.sv"
   `include "axi4_master_b_ready_delay_seq.sv"
+  `include "axi4_master_wstrb_seq.sv"
+  `include "axi4_master_wstrb_read_seq.sv"
   `include "axi4_master_ar_ready_delay_seq.sv"
   `include "axi4_master_r_ready_delay_seq.sv"
   `include "axi4_master_aw_w_channel_separation_seq.sv"

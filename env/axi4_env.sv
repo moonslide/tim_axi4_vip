@@ -28,6 +28,7 @@ class axi4_env extends uvm_env;
   //Variable : axi4__scoreboard_h
   //Declaring axi4 scoreboard handle
   axi4_scoreboard axi4_scoreboard_h;
+
   
   // Variable: axi4_master_agent_cfg_h;
   // Handle for axi4_master agent configuration
@@ -104,6 +105,7 @@ function void axi4_env::build_phase(uvm_phase phase);
   if(axi4_env_cfg_h.has_scoreboard) begin
     axi4_scoreboard_h=axi4_scoreboard::type_id::create("axi4_scoreboard_h",this);
   end
+
   
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i].axi4_master_agent_cfg_h = axi4_master_agent_cfg_h[i];
@@ -169,18 +171,18 @@ function void axi4_env::connect_phase(uvm_phase phase);
   axi4_scoreboard_h.axi4_env_cfg_h = axi4_env_cfg_h;
 
   // Configure assertion ready delay cycles
-  foreach(axi4_master_agent_h[i]) begin
-    virtual master_assertions ma_if;
-    if(uvm_config_db#(virtual master_assertions)::get(null, $sformatf("*axi4_master_agent_h[%0d]*", i), "master_assertions", ma_if)) begin
-      ma_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
-    end
-  end
-  foreach(axi4_slave_agent_h[i]) begin
-    virtual slave_assertions sa_if;
-    if(uvm_config_db#(virtual slave_assertions)::get(null, $sformatf("*axi4_slave_agent_h[%0d]*", i), "slave_assertions", sa_if)) begin
-      sa_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
-    end
-  end
+//  foreach(axi4_master_agent_h[i]) begin
+//    virtual master_assertions ma_if;
+//    if(uvm_config_db#(virtual master_assertions)::get(null, $sformatf("*axi4_master_agent_h[%0d]*", i), "master_assertions", ma_if)) begin
+//      ma_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
+//    end
+//  end
+//  foreach(axi4_slave_agent_h[i]) begin
+//    virtual slave_assertions sa_if;
+//    if(uvm_config_db#(virtual slave_assertions)::get(null, $sformatf("*axi4_slave_agent_h[%0d]*", i), "slave_assertions", sa_if)) begin
+//      sa_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
+//    end
+//  end
 endfunction : connect_phase
 
 `endif
