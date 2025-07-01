@@ -623,9 +623,14 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
     `uvm_info("SB_bresp_NOT_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
   end
 
-  bresp_e exp_b = expected_bresp(axi4_master_tx_h3.master_name, axi4_master_tx_h3.awaddr);
-  if(axi4_slave_tx_h3.bresp != exp_b) begin
-    `uvm_error("SB_RESP", $sformatf("Expected %s but got %s for addr 0x%0h", exp_b.name(), axi4_slave_tx_h3.bresp.name(), axi4_master_tx_h3.awaddr));
+  exp_wr = expected_bresp(axi4_master_tx_h3.master_name,
+                          axi4_master_tx_h3.awaddr);
+  if(axi4_slave_tx_h3.bresp != exp_wr) begin
+    `uvm_error("SB_RESP",
+               $sformatf("Expected %s but got %s for addr 0x%0h",
+                         exp_wr.name(),
+                         axi4_slave_tx_h3.bresp.name(),
+                         axi4_master_tx_h3.awaddr));
   end
 
   if(axi4_master_tx_h3.buser == axi4_slave_tx_h3.buser)begin
