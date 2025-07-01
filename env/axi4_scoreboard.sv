@@ -551,8 +551,9 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
   // is supposed to complete successfully. For accesses that should
   // generate SLVERR/DECERR the data must not be stored so that the
   // read side checks don't falsely expect it to be present.
-  bresp_e exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
-                                  axi4_master_tx_h2.awaddr);
+  bresp_e exp_wr;
+  exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
+                          axi4_master_tx_h2.awaddr);
   if (exp_wr == WRITE_OKAY) begin
     foreach(axi4_master_tx_h2.wdata[i]) begin
       store_write(axi4_master_tx_h2.awaddr + i*STROBE_WIDTH,
@@ -784,8 +785,9 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     `uvm_info("SB_rid_NOT_MATCHED", $sformatf("Master rid = %0p and Slave rid = %0p",axi4_master_tx_h5.rid,axi4_slave_tx_h5.rid), UVM_HIGH);             
   end
 
-  rresp_e exp_r = expected_rresp(axi4_master_tx_h5.master_name,
-                                 axi4_master_tx_h5.araddr);
+  rresp_e exp_r;
+  exp_r = expected_rresp(axi4_master_tx_h5.master_name,
+                         axi4_master_tx_h5.araddr);
   if(axi4_master_tx_h5.rdata == axi4_slave_tx_h5.rdata)begin
     `uvm_info(get_type_name(),$sformatf("axi4_rdata from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_rdata_MATCHED", $sformatf("Master rdata = %0p and Slave rdata = %0p",axi4_master_tx_h5.rdata,axi4_slave_tx_h5.rdata), UVM_HIGH);

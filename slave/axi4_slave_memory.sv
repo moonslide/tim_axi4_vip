@@ -28,8 +28,8 @@ class axi4_slave_memory extends uvm_object;
   extern virtual function void fifo_write(input bit [DATA_WIDTH-1:0]data);
   extern virtual function void fifo_read (output bit [DATA_WIDTH-1:0]data);
   extern virtual function bit is_slave_addr_exists(input bit [ADDRESS_WIDTH-1 :0]slave_address);
-  extern static  function string get_slave_for_address(bit [ADDRESS_WIDTH-1:0] addr);
-  extern static  function bit    master_has_access(string mname, string sname);
+  extern static function string get_slave_for_address(bit [ADDRESS_WIDTH-1:0] addr);
+  extern static function bit    master_has_access(string mname, string sname);
 
 endclass : axi4_slave_memory
 
@@ -98,7 +98,7 @@ function bit axi4_slave_memory::is_slave_addr_exists(input bit [ADDRESS_WIDTH-1 
 endfunction: is_slave_addr_exists
 
 // Return slave name for an address
-function static string axi4_slave_memory::get_slave_for_address(bit [ADDRESS_WIDTH-1:0] addr);
+static function string axi4_slave_memory::get_slave_for_address(bit [ADDRESS_WIDTH-1:0] addr);
   foreach(slave_addr_table[i]) begin
     if(addr >= slave_addr_table[i].base_addr && addr < slave_addr_table[i].base_addr + slave_addr_table[i].size)
       return slave_addr_table[i].slave_name;
@@ -107,7 +107,7 @@ function static string axi4_slave_memory::get_slave_for_address(bit [ADDRESS_WID
 endfunction
 
 // Check if a master is allowed to access a slave
-function static bit axi4_slave_memory::master_has_access(string mname, string sname);
+static function bit axi4_slave_memory::master_has_access(string mname, string sname);
   foreach(master_access_table[i]) begin
     if(master_access_table[i].master_name == mname) begin
       foreach(master_access_table[i].allowed_slaves[j])
