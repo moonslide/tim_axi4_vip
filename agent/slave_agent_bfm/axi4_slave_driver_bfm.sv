@@ -108,6 +108,8 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   reg [	2	: 0]	            mem_rsize	  [2**LENGTH];
   reg [ 1	: 0]	            mem_rburst  [2**LENGTH];
   reg [ 3	: 0]	            mem_rqos    [2**LENGTH];
+  // Timeout counter for write address phase protection
+  int aw_timeout;
   
   //-------------------------------------------------------
   // Task: wait_for_system_reset
@@ -189,7 +191,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     // handshake does not occur due to a misconfigured platform.  After
     // MAX_AWREADY_WAIT cycles the slave forces AWREADY high so the master
     // does not stall indefinitely.
-    int aw_timeout = 0;
+    aw_timeout = 0;
     while(awvalid === 1'b1 && awready === 0) begin
       @(posedge aclk);
       if(++aw_timeout >= MAX_AWREADY_WAIT) begin
