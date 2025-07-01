@@ -113,11 +113,15 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_id = i;
   end
 
-  // Configure address ranges based on slave_addr_table from axi4_config_pkg
-  for(int i =0; i<NO_OF_SLAVES; i++) begin
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i, slave_addr_table[i].base_addr);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i, slave_addr_table[i].base_addr +
-                                                                    slave_addr_table[i].size - 1);
+  // Configure address ranges for each master based on the global slave table so
+  // every master sees the complete memory map
+  foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[m]) begin
+    for(int s = 0; s < NO_OF_SLAVES; s++) begin
+      axi4_env_cfg_h.axi4_master_agent_cfg_h[m].master_min_addr_range(s,
+        slave_addr_table[s].base_addr);
+      axi4_env_cfg_h.axi4_master_agent_cfg_h[m].master_max_addr_range(s,
+        slave_addr_table[s].base_addr + slave_addr_table[s].size - 1);
+    end
   end
 endfunction: setup_axi4_master_agent_cfg
 
@@ -142,10 +146,11 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i] =
     axi4_slave_agent_config::type_id::create($sformatf("axi4_slave_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_id = i;
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].
-                                                           master_min_addr_range_array[i];
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].
-                                                           master_max_addr_range_array[i];
+    // Each slave's address window is taken directly from the global table
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address =
+      slave_addr_table[i].base_addr;
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address =
+      slave_addr_table[i].base_addr + slave_addr_table[i].size - 1;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 3;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = RANDOM_DATA_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
