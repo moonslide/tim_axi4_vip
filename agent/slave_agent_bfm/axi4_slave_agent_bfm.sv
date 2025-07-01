@@ -175,8 +175,9 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
     uvm_config_db#(virtual axi4_slave_monitor_bfm)::set(null, path,
                                                       "axi4_slave_monitor_bfm",
                                                       axi4_slave_mon_bfm_h);
-    // Export the bound assertion interface so the environment can
-    // configure parameters such as ready_delay_cycles after build time.
+    // Export the bound assertion interface so tests can access assertion
+    // parameters such as READY_DELAY_CYCLES. Parameter values must be set at
+    // interface instantiation time.
     uvm_config_db#(virtual slave_assertions)::set(null, path,
                                                  "slave_assertions",
                                                  S_A);

@@ -170,26 +170,6 @@ function void axi4_env::connect_phase(uvm_phase phase);
   end
   axi4_scoreboard_h.axi4_env_cfg_h = axi4_env_cfg_h;
 
-  // Configure assertion ready delay cycles for each bound interface so
-  // that the timing window can be tuned from the testbench.
-  foreach(axi4_master_agent_h[i]) begin
-    virtual master_assertions ma_if;
-    if(uvm_config_db#(virtual master_assertions)::get(null,
-                     $sformatf("*axi4_master_agent_h[%0d]*", i),
-                     "master_assertions",
-                     ma_if)) begin
-      ma_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
-    end
-  end
-  foreach(axi4_slave_agent_h[i]) begin
-    virtual slave_assertions sa_if;
-    if(uvm_config_db#(virtual slave_assertions)::get(null,
-                     $sformatf("*axi4_slave_agent_h[%0d]*", i),
-                     "slave_assertions",
-                     sa_if)) begin
-      sa_if.ready_delay_cycles = axi4_env_cfg_h.ready_delay_cycles;
-    end
-  end
 endfunction : connect_phase
 
 `endif

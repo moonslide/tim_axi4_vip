@@ -67,11 +67,10 @@ interface slave_assertions (input                     aclk,
   `include "uvm_macros.svh";
 
   // Cycle limit between VALID and READY handshakes. This can be
-  // configured from the UVM environment via <uvm_config_db>. A
-  // default of 100 cycles is used if no override is provided.
-  // Cycle window within which READY must follow a VALID. The UVM
-  // environment may override this value via <uvm_config_db>.
-  int ready_delay_cycles = 100;
+  // Cycle limit between VALID and READY handshakes. A constant is required for
+  // the assertion window specification. Tests may override this parameter when
+  // binding the interface if a different limit is desired.
+  parameter int READY_DELAY_CYCLES = 100;
 
   
 
@@ -97,13 +96,13 @@ interface slave_assertions (input                     aclk,
   AXI_WA_UNKNOWN_SIGNALS_CHECK: assert property (if_write_address_channel_signals_are_unknown);
 
   //Assertion:   AW_READY_WITHIN_LIMIT
-  //Description: AWREADY must be asserted within ready_delay_cycles after AWVALID rises
+  //Description: AWREADY must be asserted within READY_DELAY_CYCLES after AWVALID rises
   property aw_ready_within_limit;
     @(posedge aclk) disable iff(!aresetn)
-      $rose(awvalid) |-> (##[1:ready_delay_cycles] awready);
+      $rose(awvalid) |-> (##[1:READY_DELAY_CYCLES] awready);
   endproperty : aw_ready_within_limit
   AW_READY_WITHIN_LIMIT: assert property(aw_ready_within_limit)
-    else `uvm_error("AW_READY_DELAY", $sformatf("AWREADY not asserted within %0d cycles after AWVALID", ready_delay_cycles));
+    else `uvm_error("AW_READY_DELAY", $sformatf("AWREADY not asserted within %0d cycles after AWVALID", READY_DELAY_CYCLES));
 
   //Assertion:   AXI_WA_VALID_STABLE_CHECK
   //Description: When AWVALID is asserted, then it must remain asserted until AWREADY is HIGH
@@ -135,13 +134,13 @@ interface slave_assertions (input                     aclk,
   AXI_WD_UNKNOWN_SIGNALS_CHECK: assert property (if_write_data_channel_signals_are_unknown);
 
   //Assertion:   W_READY_WITHIN_LIMIT
-  //Description: WREADY must be asserted within ready_delay_cycles after WVALID rises
+  //Description: WREADY must be asserted within READY_DELAY_CYCLES after WVALID rises
   property w_ready_within_limit;
     @(posedge aclk) disable iff(!aresetn)
-      $rose(wvalid) |-> (##[1:ready_delay_cycles] wready);
+      $rose(wvalid) |-> (##[1:READY_DELAY_CYCLES] wready);
   endproperty : w_ready_within_limit
   W_READY_WITHIN_LIMIT: assert property(w_ready_within_limit)
-    else `uvm_error("W_READY_DELAY", $sformatf("WREADY not asserted within %0d cycles after WVALID", ready_delay_cycles));
+    else `uvm_error("W_READY_DELAY", $sformatf("WREADY not asserted within %0d cycles after WVALID", READY_DELAY_CYCLES));
 
   //Assertion:   AXI_WD_VALID_STABLE_CHECK
   //Description: When WVALID is asserted, then it must remain asserted until WREADY is HIGH
@@ -173,13 +172,13 @@ interface slave_assertions (input                     aclk,
   AXI_WR_UNKNOWN_SIGNALS_CHECK: assert property (if_write_response_channel_signals_are_unknown);
 
   //Assertion:   B_READY_WITHIN_LIMIT
-  //Description: BREADY must be asserted within ready_delay_cycles after BVALID rises
+  //Description: BREADY must be asserted within READY_DELAY_CYCLES after BVALID rises
   property b_ready_within_limit;
     @(posedge aclk) disable iff(!aresetn)
-      $rose(bvalid) |-> (##[1:ready_delay_cycles] bready);
+      $rose(bvalid) |-> (##[1:READY_DELAY_CYCLES] bready);
   endproperty : b_ready_within_limit
   B_READY_WITHIN_LIMIT: assert property(b_ready_within_limit)
-    else `uvm_error("B_READY_DELAY", $sformatf("BREADY not asserted within %0d cycles after BVALID", ready_delay_cycles));
+    else `uvm_error("B_READY_DELAY", $sformatf("BREADY not asserted within %0d cycles after BVALID", READY_DELAY_CYCLES));
 
   //Assertion:   AXI_WR_VALID_STABLE_CHECK
   //Description: When BVALID is asserted, then it must remain asserted until BREADY is HIGH
@@ -212,13 +211,13 @@ interface slave_assertions (input                     aclk,
   AXI_RA_UNKNOWN_SIGNALS_CHECK: assert property (if_read_address_channel_signals_are_unknown);
 
   //Assertion:   AR_READY_WITHIN_LIMIT
-  //Description: ARREADY must be asserted within ready_delay_cycles after ARVALID rises
+  //Description: ARREADY must be asserted within READY_DELAY_CYCLES after ARVALID rises
   property ar_ready_within_limit;
     @(posedge aclk) disable iff(!aresetn)
-      $rose(arvalid) |-> (##[1:ready_delay_cycles] arready);
+      $rose(arvalid) |-> (##[1:READY_DELAY_CYCLES] arready);
   endproperty : ar_ready_within_limit
   AR_READY_WITHIN_LIMIT: assert property(ar_ready_within_limit)
-    else `uvm_error("AR_READY_DELAY", $sformatf("ARREADY not asserted within %0d cycles after ARVALID", ready_delay_cycles));
+    else `uvm_error("AR_READY_DELAY", $sformatf("ARREADY not asserted within %0d cycles after ARVALID", READY_DELAY_CYCLES));
 
   //Assertion:   AXI_RA_VALID_STABLE_CHECK
   //Description: When ARVALID is asserted, then it must remain asserted until ARREADY is HIGH
@@ -251,13 +250,13 @@ interface slave_assertions (input                     aclk,
   AXI_RD_UNKNOWN_SIGNALS_CHECK: assert property (if_read_data_channel_signals_are_unknown);
 
   //Assertion:   R_READY_WITHIN_LIMIT
-  //Description: RREADY must be asserted within ready_delay_cycles after RVALID rises
+  //Description: RREADY must be asserted within READY_DELAY_CYCLES after RVALID rises
   property r_ready_within_limit;
     @(posedge aclk) disable iff(!aresetn)
-      $rose(rvalid) |-> (##[1:ready_delay_cycles] rready);
+      $rose(rvalid) |-> (##[1:READY_DELAY_CYCLES] rready);
   endproperty : r_ready_within_limit
   R_READY_WITHIN_LIMIT: assert property(r_ready_within_limit)
-    else `uvm_error("R_READY_DELAY", $sformatf("RREADY not asserted within %0d cycles after RVALID", ready_delay_cycles));
+    else `uvm_error("R_READY_DELAY", $sformatf("RREADY not asserted within %0d cycles after RVALID", READY_DELAY_CYCLES));
 
   //Assertion:   AXI_RD_VALID_STABLE_CHECK
   //Description: When RVALID is asserted, then it must remain asserted until RREADY is HIGH

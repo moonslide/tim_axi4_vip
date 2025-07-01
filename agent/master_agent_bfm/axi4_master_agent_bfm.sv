@@ -124,10 +124,10 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
     uvm_config_db#(virtual axi4_master_monitor_bfm)::set(null, path,
                                                         "axi4_master_monitor_bfm",
                                                         axi4_master_mon_bfm_h);
-    // Export the bound assertion interface via config_db so that the UVM
-    // environment can configure assertion parameters such as ready_delay_cycles
-    // after build time. Direct hierarchical access to the interface instance is
-    // not practical once the BFM is instantiated, hence the config_db handle.
+    // Export the bound assertion interface via config_db. Parameters such as
+    // READY_DELAY_CYCLES must be set when the interface is instantiated, so the
+    // config_db handle is provided for tests that need access to the interface
+    // but cannot reach it hierarchically.
     uvm_config_db#(virtual master_assertions)::set(null, path,
                                                   "master_assertions",
                                                   M_A);
