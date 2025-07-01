@@ -551,9 +551,11 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
   // is supposed to complete successfully. For accesses that should
   // generate SLVERR/DECERR the data must not be stored so that the
   // read side checks don't falsely expect it to be present.
-  bresp_e exp_wr;
-  exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
-                          axi4_master_tx_h2.awaddr);
+  // Determine if this write should succeed before logging it in the
+  // expected memory. Older tools require declarations at the start of
+  // a block, so compute the expected response in one statement.
+  bresp_e exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
+                                  axi4_master_tx_h2.awaddr);
   if (exp_wr == WRITE_OKAY) begin
     foreach(axi4_master_tx_h2.wdata[i]) begin
       store_write(axi4_master_tx_h2.awaddr + i*STROBE_WIDTH,
