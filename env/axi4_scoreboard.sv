@@ -194,6 +194,13 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern virtual function void check_phase (uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
 
+  // Helper methods to determine expected responses based on
+  // configured address ranges and permissions.
+  extern function bresp_e expected_bresp(string mname,
+                                        bit[ADDRESS_WIDTH-1:0] addr);
+  extern function rresp_e expected_rresp(string mname,
+                                        bit[ADDRESS_WIDTH-1:0] addr);
+
   extern function void verify_read(bit [ADDRESS_WIDTH-1:0] addr,
                                    bit [DATA_WIDTH-1:0] data);
   extern function void store_write(bit [ADDRESS_WIDTH-1:0] addr,

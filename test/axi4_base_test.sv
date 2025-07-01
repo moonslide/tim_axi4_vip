@@ -7,8 +7,11 @@
 // Sequences are created and started in the test
 //--------------------------------------------------------------------------------------------
 class axi4_base_test extends uvm_test;
-  
+
   `uvm_component_utils(axi4_base_test)
+
+  // Import access and address configuration used by masters and slaves
+  import axi4_config_pkg::*;
 
   // Variable: e_cfg_h
   // Declaring environment config handle
@@ -109,7 +112,6 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
   end
 
   // Configure address ranges based on slave_addr_table from axi4_config_pkg
-  import axi4_config_pkg::*;
   for(int i =0; i<NO_OF_SLAVES; i++) begin
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i, slave_addr_table[i].base_addr);
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i, slave_addr_table[i].base_addr +
