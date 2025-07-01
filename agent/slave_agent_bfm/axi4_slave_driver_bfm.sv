@@ -7,6 +7,11 @@
 //It connects with the HVL driver_proxy for driving the stimulus
 //--------------------------------------------------------------------------------------------
 import axi4_globals_pkg::*;
+
+// Maximum number of cycles to wait before forcing AWREADY high. This helps
+// avoid deadlock if the testbench misconfigures the slave and AWREADY would
+// otherwise remain low forever.
+parameter int MAX_AWREADY_WAIT = 100;
 interface axi4_slave_driver_bfm(input                     aclk    , 
                                 input                     aresetn ,
                                 //Write_address_channel
@@ -174,11 +179,26 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
 
    // based on the wait_cycles we can choose to drive the awready
     `uvm_info(name,$sformatf("Before DRIVING WRITE ADDRS WAIT STATES :: %0d",data_write_packet.aw_wait_states),UVM_HIGH);
-    repeat(data_write_packet.aw_wait_states)begin
-      `uvm_info(name,$sformatf("DRIVING_WRITE_ADDRS_WAIT_STATES :: %0d",data_write_packet.aw_wait_states),UVM_HIGH);
+    repeat(data_write_packet.aw_wait_states) begin
+      `uvm_info(name,$sformatf("DRIVING_WRITE_ADDRS_WAIT_STATES :: %0d", data_write_packet.aw_wait_states), UVM_HIGH);
       @(posedge aclk);
-      awready<=0;
+      awready <= 0;
     end
+
+    // Timeout protection: ensure AWREADY is asserted even if the normal
+    // handshake does not occur due to a misconfigured platform.  After
+    // MAX_AWREADY_WAIT cycles the slave forces AWREADY high so the master
+    // does not stall indefinitely.
+    int aw_timeout = 0;
+    while(awvalid === 1'b1 && awready === 0) begin
+      @(posedge aclk);
+      if(++aw_timeout >= MAX_AWREADY_WAIT) begin
+        `uvm_warning(name, $sformatf("AWREADY forced high after %0d cycles", MAX_AWREADY_WAIT));
+        awready <= 1'b1;
+        break;
+      end
+    end
+
     awready <= 1;
    
   endtask: axi4_write_address_phase 
