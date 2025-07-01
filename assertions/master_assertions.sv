@@ -69,7 +69,10 @@ interface master_assertions (input                     aclk,
   // Cycle limit between VALID and READY handshakes.
   // This value is configured by the environment using <uvm_config_db>.
   // A default of 100 cycles is applied if no configuration is provided.
-  localparam ready_delay_cycles = 100;
+  // Cycle window within which READY must follow a VALID. The UVM
+  // environment may override this value at run time via the
+  // <uvm_config_db> mechanism.
+  int ready_delay_cycles = 100;
 
 
   
