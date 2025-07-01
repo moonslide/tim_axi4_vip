@@ -156,6 +156,10 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_rresp_count;
   int byte_data_cmp_failed_ruser_count;
 
+  // Expected response holders used across comparison tasks
+  bresp_e exp_wr;
+  rresp_e exp_r;
+
 
   semaphore write_address_key;
   semaphore write_data_key;
@@ -554,8 +558,8 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
   // Determine if this write should succeed before logging it in the
   // expected memory. Older tools require declarations at the start of
   // a block, so compute the expected response in one statement.
-  bresp_e exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
-                                  axi4_master_tx_h2.awaddr);
+  exp_wr = expected_bresp(axi4_master_tx_h2.master_name,
+                          axi4_master_tx_h2.awaddr);
   if (exp_wr == WRITE_OKAY) begin
     foreach(axi4_master_tx_h2.wdata[i]) begin
       store_write(axi4_master_tx_h2.awaddr + i*STROBE_WIDTH,
@@ -787,7 +791,6 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     `uvm_info("SB_rid_NOT_MATCHED", $sformatf("Master rid = %0p and Slave rid = %0p",axi4_master_tx_h5.rid,axi4_slave_tx_h5.rid), UVM_HIGH);             
   end
 
-  rresp_e exp_r;
   exp_r = expected_rresp(axi4_master_tx_h5.master_name,
                          axi4_master_tx_h5.araddr);
   if(axi4_master_tx_h5.rdata == axi4_slave_tx_h5.rdata)begin
