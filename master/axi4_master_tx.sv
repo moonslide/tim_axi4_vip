@@ -10,7 +10,10 @@ class axi4_master_tx extends uvm_sequence_item;
   
   `uvm_object_utils(axi4_master_tx)
 
-  axi4_master_agent_config axi4_master_agent_cfg_h; 
+  axi4_master_agent_config axi4_master_agent_cfg_h;
+
+  // Name of the originating master
+  string master_name;
   
   //-------------------------------------------------------
   // WRITE ADDRESS CHANNEL SIGNALS

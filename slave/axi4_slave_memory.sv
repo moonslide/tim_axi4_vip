@@ -8,6 +8,8 @@
 class axi4_slave_memory extends uvm_object;
   `uvm_object_utils(axi4_slave_memory)
 
+  import axi4_config_pkg::*;
+
   //Variable : slave_memory
   //Declaration of slave_memory to store the data from master
   protected bit [7:0] slave_memory [longint];
@@ -90,6 +92,27 @@ endfunction : fifo_read
 function bit axi4_slave_memory::is_slave_addr_exists(input bit [ADDRESS_WIDTH-1 :0]slave_address);
   is_slave_addr_exists = slave_memory.exists(slave_address);
 endfunction: is_slave_addr_exists
+
+// Return slave name for an address
+function string axi4_slave_memory::get_slave_for_address(bit [ADDRESS_WIDTH-1:0] addr);
+  foreach(slave_addr_table[i]) begin
+    if(addr >= slave_addr_table[i].base_addr && addr < slave_addr_table[i].base_addr + slave_addr_table[i].size)
+      return slave_addr_table[i].slave_name;
+  end
+  return "";
+endfunction
+
+// Check if a master is allowed to access a slave
+function bit axi4_slave_memory::master_has_access(string mname, string sname);
+  foreach(master_access_table[i]) begin
+    if(master_access_table[i].master_name == mname) begin
+      foreach(master_access_table[i].allowed_slaves[j])
+        if(master_access_table[i].allowed_slaves[j] == sname)
+          return 1;
+    end
+  end
+  return 0;
+endfunction
 
 
 `endif

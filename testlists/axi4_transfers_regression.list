@@ -103,3 +103,4 @@ axi4_wstrb_alternating_test
 axi4_wstrb_single_bit_test
 axi4_wstrb_random_burst_test
 axi4_wstrb_illegal_test
+axi4_matrix_master_slave_access_test

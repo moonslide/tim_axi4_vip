@@ -119,6 +119,19 @@ package axi4_test_pkg;
   `include "axi4_wstrb_single_bit_test.sv"
   `include "axi4_wstrb_random_burst_test.sv"
   `include "axi4_wstrb_illegal_test.sv"
+  `include "axi4_boundary_write_max_burst_length_test.sv"
+  `include "axi4_boundary_write_wrap_various_lengths_test.sv"
+  `include "axi4_boundary_write_addr_lower_test.sv"
+  `include "axi4_boundary_write_addr_upper_test.sv"
+  `include "axi4_boundary_write_addr_outofrange_test.sv"
+  `include "axi4_boundary_write_unaligned_test.sv"
+  `include "axi4_boundary_write_incr_cross_4k_test.sv"
+  `include "axi4_boundary_write_wrap_misaligned_test.sv"
+  `include "axi4_boundary_read_max_burst_length_test.sv"
+  `include "axi4_boundary_read_addr_lower_test.sv"
+  `include "axi4_boundary_read_addr_upper_test.sv"
+  `include "axi4_boundary_read_addr_outofrange_test.sv"
+  `include "axi4_matrix_master_slave_access_test.sv"
 endpackage : axi4_test_pkg
 
 `endif

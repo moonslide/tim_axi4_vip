@@ -110,6 +110,19 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_r_ready_delay_seq.sv"
   `include "axi4_virtual_wstrb_seq.sv"
   `include "axi4_virtual_aw_w_channel_separation_seq.sv"
+  `include "axi4_virtual_boundary_write_max_burst_seq.sv"
+  `include "axi4_virtual_boundary_write_wrap_var_len_seq.sv"
+  `include "axi4_virtual_boundary_write_addr_lower_seq.sv"
+  `include "axi4_virtual_boundary_write_addr_upper_seq.sv"
+  `include "axi4_virtual_boundary_write_addr_outofrange_seq.sv"
+  `include "axi4_virtual_boundary_write_unaligned_seq.sv"
+  `include "axi4_virtual_boundary_write_incr_cross_4k_seq.sv"
+  `include "axi4_virtual_boundary_write_wrap_misaligned_seq.sv"
+  `include "axi4_virtual_boundary_read_max_burst_seq.sv"
+  `include "axi4_virtual_boundary_read_addr_lower_seq.sv"
+  `include "axi4_virtual_boundary_read_addr_upper_seq.sv"
+  `include "axi4_virtual_boundary_read_addr_outofrange_seq.sv"
+  `include "axi4_virtual_matrix_access_seq.sv"
 endpackage : axi4_virtual_seq_pkg
 
 `endif

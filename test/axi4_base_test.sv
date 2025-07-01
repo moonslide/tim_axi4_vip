@@ -103,24 +103,17 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i] =
     axi4_master_agent_config::type_id::create($sformatf("axi4_master_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].is_active   = uvm_active_passive_enum'(UVM_ACTIVE);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1; 
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1;
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_id = i;
   end
 
+  // Configure address ranges based on slave_addr_table from axi4_config_pkg
+  import axi4_config_pkg::*;
   for(int i =0; i<NO_OF_SLAVES; i++) begin
-    if(i == 0) begin  
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,0);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,2**(SLAVE_MEMORY_SIZE)-1 );
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
-    else begin
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,local_max_address + SLAVE_MEMORY_GAP);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,local_max_address+ 2**(SLAVE_MEMORY_SIZE)-1 + 
-                                                                      SLAVE_MEMORY_GAP);
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i, slave_addr_table[i].base_addr);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i, slave_addr_table[i].base_addr +
+                                                                    slave_addr_table[i].size - 1);
   end
 endfunction: setup_axi4_master_agent_cfg
 
