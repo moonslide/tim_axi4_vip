@@ -339,11 +339,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
           `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
           `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write addr data from FIFO as WRITE_ADDR_FIFO is EMPTY"));
         end
-        else begin
-         axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
-         `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-         `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
-        end
+        axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx); // blocking get ensures handle is valid
+        `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+        `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
       end
 
       if(local_slave_addr_tx.awburst == WRITE_FIXED) begin
