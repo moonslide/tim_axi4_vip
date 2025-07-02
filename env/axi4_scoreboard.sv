@@ -656,13 +656,13 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
     `uvm_info("SB_bresp_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
     byte_data_cmp_verified_bresp_count++;
   end
-
-  cov_bresp = axi4_slave_tx_h3.bresp;
-  resp_cg.sample();
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_bresp from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_bresp_NOT_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
   end
+
+  cov_bresp = axi4_slave_tx_h3.bresp;
+  resp_cg.sample();
 
   exp_wr = expected_bresp(axi4_master_tx_h3.master_name,
                           axi4_master_tx_h3.awaddr);
@@ -860,8 +860,6 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     `uvm_info("SB_rresp_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
     byte_data_cmp_verified_rresp_count++;
   end
-  cov_rresp = axi4_slave_tx_h5.rresp;
-  resp_cg.sample();
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_rresp from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_rresp_NOT_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
@@ -869,6 +867,8 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
       `uvm_error("SB_RESP", $sformatf("Expected %s but got %s for addr 0x%0h", exp_r.name(), axi4_slave_tx_h5.rresp.name(), axi4_master_tx_h5.araddr));
     end
   end
+  cov_rresp = axi4_slave_tx_h5.rresp;
+  resp_cg.sample();
 
   if(axi4_master_tx_h5.ruser == axi4_slave_tx_h5.ruser)begin
     `uvm_info(get_type_name(),$sformatf("axi4_ruser from master and slave is equal"),UVM_HIGH);
