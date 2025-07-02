@@ -28,6 +28,27 @@ class axi4_scoreboard extends uvm_scoreboard;
   bit [7:0] expected_mem [longint];
   bit [DATA_WIDTH-1:0] exp_val = '0;
 
+  // uvm_mem instances representing each slave memory
+  uvm_mem slave_mem[string];
+  bit [ADDRESS_WIDTH-1:0] slave_base[string];
+
+  // coverage for response types seen
+  bresp_e cov_bresp;
+  rresp_e cov_rresp;
+  covergroup resp_cg;
+    option.per_instance = 1;
+    BRESP_CP : coverpoint cov_bresp {
+      bins WRITE_OKAY   = {WRITE_OKAY};
+      bins WRITE_SLVERR = {WRITE_SLVERR};
+      bins WRITE_DECERR = {WRITE_DECERR};
+    }
+    RRESP_CP : coverpoint cov_rresp {
+      bins READ_OKAY   = {READ_OKAY};
+      bins READ_SLVERR = {READ_SLVERR};
+      bins READ_DECERR = {READ_DECERR};
+    }
+  endgroup
+
 
 
   //Variable : axi4_master_analysis_fifo
@@ -236,6 +257,16 @@ function axi4_scoreboard::new(string name = "axi4_scoreboard",
   write_response_key = new(1);
   read_address_key = new(1);
   read_data_key = new(1);
+
+  resp_cg = new();
+  foreach(slave_addr_table[i]) begin
+    slave_mem[slave_addr_table[i].slave_name] =
+      new(slave_addr_table[i].slave_name,
+          slave_addr_table[i].size/STROBE_WIDTH,
+          DATA_WIDTH,
+          "RW");
+    slave_base[slave_addr_table[i].slave_name] = slave_addr_table[i].base_addr;
+  end
 
 endfunction : new
 
@@ -625,6 +656,9 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
     `uvm_info("SB_bresp_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
     byte_data_cmp_verified_bresp_count++;
   end
+
+  cov_bresp = axi4_slave_tx_h3.bresp;
+  resp_cg.sample();
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_bresp from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_bresp_NOT_MATCHED", $sformatf("Master bresp = %0p and Slave bresp = %0p",axi4_master_tx_h3.bresp,axi4_slave_tx_h3.bresp), UVM_HIGH);
@@ -826,6 +860,8 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     `uvm_info("SB_rresp_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
     byte_data_cmp_verified_rresp_count++;
   end
+  cov_rresp = axi4_slave_tx_h5.rresp;
+  resp_cg.sample();
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_rresp from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_rresp_NOT_MATCHED", $sformatf("Master rresp = %0p and Slave rresp = %0p",axi4_master_tx_h5.rresp,axi4_slave_tx_h5.rresp), UVM_HIGH);             
@@ -1670,6 +1706,12 @@ function void axi4_scoreboard::verify_read(bit [ADDRESS_WIDTH-1:0] addr,
                $sformatf("Read data mismatch at 0x%0h exp=%0h act=%0h",
                           addr, exp_val, data));
   end
+  string sl = axi4_slave_memory::get_slave_for_address(addr);
+  if(sl != "" && slave_mem.exists(sl)) begin
+    int unsigned idx = (addr - slave_base[sl])/STROBE_WIDTH;
+    bit [DATA_WIDTH-1:0] tmp;
+    slave_mem[sl].peek(idx, tmp);
+  end
 endfunction
 
 function void axi4_scoreboard::store_write(bit [ADDRESS_WIDTH-1:0] addr,
@@ -1680,6 +1722,11 @@ function void axi4_scoreboard::store_write(bit [ADDRESS_WIDTH-1:0] addr,
   for(int b=0; b<STROBE_WIDTH; b++) begin
     if(strobe[b])
       expected_mem[addr + b] = data[8*b +: 8];
+  end
+  string sl = axi4_slave_memory::get_slave_for_address(addr);
+  if(sl != "" && slave_mem.exists(sl)) begin
+    int unsigned idx = (addr - slave_base[sl])/STROBE_WIDTH;
+    slave_mem[sl].poke(idx, data);
   end
 endfunction
 

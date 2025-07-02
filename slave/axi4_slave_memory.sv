@@ -12,6 +12,11 @@ class axi4_slave_memory extends uvm_object;
 
   import axi4_config_pkg::*;
 
+  // uvm_mem model for this slave
+  uvm_mem mem;
+  // Base address used for index calculations
+  bit [ADDRESS_WIDTH-1:0] base_addr;
+
   //Variable : slave_memory
   //Declaration of slave_memory to store the data from master
   protected bit [7:0] slave_memory [longint];
@@ -40,7 +45,17 @@ endclass : axi4_slave_memory
 //  name - axi4_slave_agent_config
 //--------------------------------------------------------------------------------------------
 function axi4_slave_memory::new(string name = "axi4_slave_memory");
-  super.new(name); 
+  super.new(name);
+  // Determine base address for this memory based on name
+  foreach(slave_addr_table[i]) begin
+    if(slave_addr_table[i].slave_name == name) begin
+      base_addr = slave_addr_table[i].base_addr;
+      mem = new(name,
+                slave_addr_table[i].size/STROBE_WIDTH,
+                DATA_WIDTH,
+                "RW");
+    end
+  end
 endfunction : new
 
 
@@ -54,6 +69,10 @@ endfunction : new
 function void axi4_slave_memory::mem_write(input bit [ADDRESS_WIDTH-1 :0]slave_address,
                                            bit [DATA_WIDTH-1:0] data);
   slave_memory[slave_address] = data;
+  if(mem != null) begin
+    int unsigned idx = (slave_address - base_addr)/STROBE_WIDTH;
+    mem.poke(idx, data);
+  end
 endfunction : mem_write
 
 //--------------------------------------------------------------------------------------------
@@ -65,7 +84,13 @@ endfunction : mem_write
 //--------------------------------------------------------------------------------------------
 function void axi4_slave_memory::mem_read(input bit [ADDRESS_WIDTH-1 :0]slave_address,
                                           output bit [DATA_WIDTH-1:0] data);
-   data = slave_memory[slave_address];
+  if(mem != null) begin
+    int unsigned idx = (slave_address - base_addr)/STROBE_WIDTH;
+    mem.peek(idx, data);
+  end
+  else begin
+    data = slave_memory[slave_address];
+  end
 endfunction : mem_read
 
 //--------------------------------------------------------------------------------------------
@@ -94,7 +119,15 @@ endfunction : fifo_read
 //slave_address - bit [ADDRESS_WIDTH-1 :0]
 //--------------------------------------------------------------------------------------------
 function bit axi4_slave_memory::is_slave_addr_exists(input bit [ADDRESS_WIDTH-1 :0]slave_address);
-  is_slave_addr_exists = slave_memory.exists(slave_address);
+  if(mem != null) begin
+    int unsigned idx = (slave_address - base_addr)/STROBE_WIDTH;
+    bit [DATA_WIDTH-1:0] tmp;
+    mem.peek(idx, tmp);
+    is_slave_addr_exists = 1;
+  end
+  else begin
+    is_slave_addr_exists = slave_memory.exists(slave_address);
+  end
 endfunction: is_slave_addr_exists
 
 // Return slave name for an address
