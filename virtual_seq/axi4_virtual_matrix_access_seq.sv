@@ -24,6 +24,7 @@ task axi4_virtual_matrix_access_seq::body();
     forever sl_wr.start(p_sequencer.axi4_slave_write_seqr_h);
     forever sl_rd.start(p_sequencer.axi4_slave_read_seqr_h);
   join_none
+  #10ns; // allow slave sequences to initialize
 
   foreach (p_sequencer.axi4_master_write_seqr_h_all[m]) begin
     foreach (slave_addr_table[s]) begin

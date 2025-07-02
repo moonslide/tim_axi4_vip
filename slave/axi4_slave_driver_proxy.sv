@@ -9,6 +9,9 @@
 class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   `uvm_component_utils(axi4_slave_driver_proxy)
 
+  import axi4_config_pkg::*;
+  import axi4_globals_pkg::*;
+
   // Port: seq_item_port
   // Derived driver classes should use this port to request items from the sequencer
   // They may also use it to send responses back.
@@ -342,6 +345,21 @@ task axi4_slave_driver_proxy::axi4_write_task();
         axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx); // blocking get ensures handle is valid
         `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
         `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
+
+        // Determine the response based on address decoding and permissions
+        string sname;
+        int    mid;
+        string mname;
+        sname = axi4_slave_memory::get_slave_for_address(local_slave_addr_tx.awaddr);
+        mid   = int'(local_slave_addr_tx.awid) % NO_OF_MASTERS;
+        mname = $sformatf("master%0d", mid);
+        if(sname == "") begin
+          struct_write_packet.bresp = WRITE_DECERR;
+        end else if(!axi4_slave_memory::master_has_access(mname, sname)) begin
+          struct_write_packet.bresp = WRITE_SLVERR;
+        end else begin
+          struct_write_packet.bresp = WRITE_OKAY;
+        end
       end
 
       if(local_slave_addr_tx.awburst == WRITE_FIXED) begin
@@ -600,6 +618,22 @@ task axi4_slave_driver_proxy::axi4_read_task();
       else begin
         axi4_slave_read_addr_fifo_h.peek(local_slave_addr_chk_tx);
       end
+
+      // Determine read response based on address decoding and permissions
+      string rsname;
+      int    rmid;
+      string rmname;
+      rsname = axi4_slave_memory::get_slave_for_address(local_slave_addr_chk_tx.araddr);
+      rmid   = int'(local_slave_addr_chk_tx.arid) % NO_OF_MASTERS;
+      rmname = $sformatf("master%0d", rmid);
+      if(rsname == "") begin
+        foreach(struct_read_packet.rresp[i]) struct_read_packet.rresp[i] = READ_DECERR;
+      end else if(!axi4_slave_memory::master_has_access(rmname, rsname)) begin
+        foreach(struct_read_packet.rresp[i]) struct_read_packet.rresp[i] = READ_SLVERR;
+      end else begin
+        foreach(struct_read_packet.rresp[i]) struct_read_packet.rresp[i] = READ_OKAY;
+      end
+
       total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
       if(local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
         if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
@@ -649,14 +683,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
         end
       end
       else begin : ADDR_NOT_INSIDE_SLAVE_MEM_RANGE
-        for(int depth=0;depth<(((axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER)
-          || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
-          (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
-          (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
-          struct_read_packet.rresp[depth] = READ_SLVERR; 
-        end
-
-        //read data task
+        // Use the precomputed response when the address is out of range
         axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
         `uvm_info("DEBUG_SLAVE_RDATA_PROXY", $sformatf("AFTER :: READ CHANNEL PACKET \n %p",struct_read_packet), UVM_HIGH);
       end
