@@ -293,6 +293,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
       bit[3:0]                   bid_local;
       int                        end_wrap_addr;
       bit                        slave_err;
+      string                     sname;
+      int                        mid;
+      string                     mname;
       
       //returns status of response thread
       response_tx=process::self();
@@ -347,9 +350,6 @@ task axi4_slave_driver_proxy::axi4_write_task();
         `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
 
         // Determine the response based on address decoding and permissions
-        string sname;
-        int    mid;
-        string mname;
         sname = axi4_slave_memory::get_slave_for_address(local_slave_addr_tx.awaddr);
         mid   = int'(local_slave_addr_tx.awid) % NO_OF_MASTERS;
         mname = $sformatf("master%0d", mid);
@@ -596,7 +596,11 @@ task axi4_slave_driver_proxy::axi4_read_task();
        axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
        `uvm_info("DEBUG_SLAVE_RDATA_PROXY", $sformatf("AFTER :: READ CHANNEL PACKET \n %p",struct_read_packet), UVM_HIGH);
      end
-     else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA) begin
+      else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA) begin
+
+        string rsname;
+        int    rmid;
+        string rmname;
 
        wait(completed_initial_txn==1);
        //Converting transactions into struct data type
@@ -620,9 +624,6 @@ task axi4_slave_driver_proxy::axi4_read_task();
       end
 
       // Determine read response based on address decoding and permissions
-      string rsname;
-      int    rmid;
-      string rmname;
       rsname = axi4_slave_memory::get_slave_for_address(local_slave_addr_chk_tx.araddr);
       rmid   = int'(local_slave_addr_chk_tx.arid) % NO_OF_MASTERS;
       rmname = $sformatf("master%0d", rmid);
