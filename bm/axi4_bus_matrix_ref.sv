@@ -69,10 +69,10 @@ function bresp_e axi4_bus_matrix_ref::get_write_resp(int master, bit [ADDRESS_WI
   int sid = decode(addr);
   if(sid < 0)
     return WRITE_DECERR;
-  if(!slave_cfg[sid].write_masters[master])
-    return WRITE_DECERR;
   if(slave_cfg[sid].read_only)
     return WRITE_SLVERR;
+  if(!slave_cfg[sid].write_masters[master])
+    return WRITE_DECERR;
   return WRITE_OKAY;
 endfunction : get_write_resp
 
