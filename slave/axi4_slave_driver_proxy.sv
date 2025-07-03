@@ -296,6 +296,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
       bit[3:0]                   bid_local;
       int                        end_wrap_addr;
       bit                        slave_err;
+      int                        start_sid;
+      int                        end_sid;
       
       //returns status of response thread
       response_tx=process::self();
@@ -365,8 +367,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       // Determine the response for the entire burst. If any address in the
       // burst falls outside the allowed region, the transaction should fail.
-      int start_sid = axi4_bus_matrix_h.decode(local_slave_addr_tx.awaddr);
-      int end_sid   = axi4_bus_matrix_h.decode(end_wrap_addr-1);
+      start_sid = axi4_bus_matrix_h.decode(local_slave_addr_tx.awaddr);
+      end_sid   = axi4_bus_matrix_h.decode(end_wrap_addr-1);
 
       if(start_sid != end_sid || start_sid < 0 || end_sid < 0)
         struct_write_packet.bresp = WRITE_DECERR;
