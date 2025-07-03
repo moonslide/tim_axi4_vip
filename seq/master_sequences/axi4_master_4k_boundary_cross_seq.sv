@@ -3,6 +3,7 @@
 
 class axi4_master_4k_boundary_cross_seq extends axi4_master_nbk_base_seq;
   `uvm_object_utils(axi4_master_4k_boundary_cross_seq)
+  `uvm_declare_p_sequencer(axi4_master_write_sequencer)
   int sid = 0;
 
   extern function new(string name="axi4_master_4k_boundary_cross_seq");

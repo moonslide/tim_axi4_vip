@@ -3,6 +3,7 @@
 
 class axi4_master_upper_boundary_read_seq extends axi4_master_nbk_base_seq;
   `uvm_object_utils(axi4_master_upper_boundary_read_seq)
+  `uvm_declare_p_sequencer(axi4_master_read_sequencer)
   int sid = 0;
 
   extern function new(string name="axi4_master_upper_boundary_read_seq");
