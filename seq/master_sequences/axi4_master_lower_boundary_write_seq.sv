@@ -14,10 +14,12 @@ function axi4_master_lower_boundary_write_seq::new(string name="axi4_master_lowe
 endfunction
 
 task axi4_master_lower_boundary_write_seq::body();
-  super.body();
-  bit [ADDRESS_WIDTH-1:0] min_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[sid];
-  bit [ADDRESS_WIDTH-1:0] max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[sid];
+  bit [ADDRESS_WIDTH-1:0] min_addr;
+  bit [ADDRESS_WIDTH-1:0] max_addr;
   bit [ADDRESS_WIDTH-1:0] addr_list[2];
+  super.body();
+  min_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[sid];
+  max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[sid];
   addr_list[0] = min_addr + 4;
   addr_list[1] = (min_addr > 4) ? min_addr - 4 : 0;
   foreach(addr_list[i]) begin

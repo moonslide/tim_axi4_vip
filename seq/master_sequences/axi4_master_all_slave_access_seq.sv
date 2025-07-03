@@ -16,10 +16,10 @@ endfunction
 // Assumes address ranges are stored in the master configuration
 
 task axi4_master_all_slave_access_seq::body();
+  bit [ADDRESS_WIDTH-1:0] min_addr;
+  bit [ADDRESS_WIDTH-1:0] max_addr;
   super.body();
   foreach(p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[i]) begin
-    bit [ADDRESS_WIDTH-1:0] min_addr;
-    bit [ADDRESS_WIDTH-1:0] max_addr;
     min_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[i];
     max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[i];
 

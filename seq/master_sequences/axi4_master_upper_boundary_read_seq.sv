@@ -14,9 +14,10 @@ function axi4_master_upper_boundary_read_seq::new(string name="axi4_master_upper
 endfunction
 
 task axi4_master_upper_boundary_read_seq::body();
-  super.body();
-  bit [ADDRESS_WIDTH-1:0] max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[sid];
+  bit [ADDRESS_WIDTH-1:0] max_addr;
   bit [ADDRESS_WIDTH-1:0] addr_list[2];
+  super.body();
+  max_addr = p_sequencer.axi4_master_agent_cfg_h.master_max_addr_range_array[sid];
   addr_list[0] = max_addr - 4;
   addr_list[1] = max_addr + 4;
   foreach(addr_list[i]) begin

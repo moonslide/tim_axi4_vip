@@ -14,9 +14,11 @@ function axi4_master_4k_boundary_cross_seq::new(string name="axi4_master_4k_boun
 endfunction
 
 task axi4_master_4k_boundary_cross_seq::body();
+  bit [ADDRESS_WIDTH-1:0] base_addr;
+  bit [ADDRESS_WIDTH-1:0] start_addr;
   super.body();
-  bit [ADDRESS_WIDTH-1:0] base_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[sid];
-  bit [ADDRESS_WIDTH-1:0] start_addr = base_addr + 4096 - 4;
+  base_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[sid];
+  start_addr = base_addr + 4096 - 4;
 
   // write crossing 4K boundary
   start_item(req);
