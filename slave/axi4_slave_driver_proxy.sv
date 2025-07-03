@@ -363,15 +363,24 @@ task axi4_slave_driver_proxy::axi4_write_task();
          end_wrap_addr = end_wrap_addr + ((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize));
       end
 
-      struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(axi4_slave_agent_cfg_h.slave_id,
-                                                                   local_slave_addr_tx.awaddr);
+      // Determine the response for the entire burst. If any address in the
+      // burst falls outside the allowed region, the transaction should fail.
+      int start_sid = axi4_bus_matrix_h.decode(local_slave_addr_tx.awaddr);
+      int end_sid   = axi4_bus_matrix_h.decode(end_wrap_addr-1);
+
+      if(start_sid != end_sid || start_sid < 0 || end_sid < 0)
+        struct_write_packet.bresp = WRITE_DECERR;
+      else
+        struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                     local_slave_addr_tx.awaddr);
       slave_err = (struct_write_packet.bresp != WRITE_OKAY);
       `uvm_info("get_type_name",$sformatf("end_addr=%0h",end_wrap_addr),UVM_HIGH);
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-        while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions)
+        while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
           @(posedge axi4_slave_drv_bfm_h.aclk);
+        end
           `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_write_data_out_fifo_h.used()),UVM_HIGH)
           if(drive_id_cont == 1) begin
             bid_local = response_id_cont_queue.pop_front(); 
@@ -820,8 +829,9 @@ endtask : task_memory_read
 
 
 task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
- while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions)
+ while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
    @(posedge axi4_slave_drv_bfm_h.aclk);  //wait for outstanding transfers
+ end
  `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
  if(drive_rd_id_cont == 1) begin
    oor_read_data_struct_read_packet = rd_response_id_cont_queue.pop_front(); 
