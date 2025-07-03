@@ -110,6 +110,12 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_r_ready_delay_seq.sv"
   `include "axi4_virtual_wstrb_seq.sv"
   `include "axi4_virtual_aw_w_channel_separation_seq.sv"
+  `include "axi4_virtual_all_master_slave_access_seq.sv"
+  `include "axi4_virtual_upper_boundary_write_seq.sv"
+  `include "axi4_virtual_lower_boundary_write_seq.sv"
+  `include "axi4_virtual_upper_boundary_read_seq.sv"
+  `include "axi4_virtual_lower_boundary_read_seq.sv"
+  `include "axi4_virtual_4k_boundary_cross_seq.sv"
 endpackage : axi4_virtual_seq_pkg
 
 `endif

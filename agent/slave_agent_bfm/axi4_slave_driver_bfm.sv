@@ -180,8 +180,10 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
       awready<=0;
     end
     awready <= 1;
-   
-  endtask: axi4_write_address_phase 
+    @(posedge aclk);
+    awready <= 0;
+
+  endtask: axi4_write_address_phase
 
   //-------------------------------------------------------
   // Task: axi4_write_data_phase
