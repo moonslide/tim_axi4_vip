@@ -31,6 +31,7 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   // Variable: axi4_slave_mem_h
   // Declaring handle for axi4_slave memory config class 
   axi4_slave_memory axi4_slave_mem_h;
+  axi4_bus_matrix_ref axi4_bus_matrix_h;
 
   //Variable : axi4_slave_drv_bfm_h
   //Declaring handle for axi4 driver bfm
@@ -122,6 +123,9 @@ function void axi4_slave_driver_proxy::build_phase(uvm_phase phase);
   super.build_phase(phase);
   if(!uvm_config_db #(virtual axi4_slave_driver_bfm)::get(this,"","axi4_slave_driver_bfm",axi4_slave_drv_bfm_h)) begin
     `uvm_fatal("FATAL_MDP_CANNOT_GET_tx_DRIVER_BFM","cannot get() axi4_slave_drv_bfm_h");
+  end
+  if(!uvm_config_db#(axi4_bus_matrix_ref)::get(this, "", "axi4_bus_matrix_gm", axi4_bus_matrix_h)) begin
+    `uvm_fatal("FATAL_NO_BUS_MATRIX", "cannot get bus matrix handle")
   end
 endfunction : build_phase
 
@@ -356,6 +360,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
          end_wrap_addr = local_slave_addr_tx.awaddr - int'(local_slave_addr_tx.awaddr%((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize)));
          end_wrap_addr = end_wrap_addr + ((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize));
       end
+
+      struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                   local_slave_addr_tx.awaddr);
+      slave_err = (struct_write_packet.bresp != WRITE_OKAY);
       `uvm_info("get_type_name",$sformatf("end_addr=%0h",end_wrap_addr),UVM_HIGH);
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
@@ -373,28 +381,14 @@ task axi4_slave_driver_proxy::axi4_write_task();
             bid_local = response_id_queue.pop_front(); 
             `uvm_info("slave_driver_proxy",$sformatf("bid_local = %0d",bid_local),UVM_HIGH)
           end
-          if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE) begin
-             if(!((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
-               axi4_slave_agent_cfg_h.max_address]}) && (end_wrap_addr inside
-               {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}))) begin
-               struct_write_packet.bresp = WRITE_SLVERR;
-               slave_err = 1;
-             end
-          end
+          slave_err = (struct_write_packet.bresp != WRITE_OKAY);
           // write response_task
           axi4_slave_drv_bfm_h.axi4_write_response_phase(struct_write_packet,struct_cfg,bid_local);
           `uvm_info("DEBUG_SLAVE_WDATA_PROXY", $sformatf("AFTER :: Reciving struct pkt from bfm \n %p",struct_write_packet), UVM_HIGH);
       //  end
       end
       else begin
-       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE) begin
-          if(!((local_slave_addr_tx.awaddr inside {[axi4_slave_agent_cfg_h.min_address :
-            axi4_slave_agent_cfg_h.max_address]}) && (end_wrap_addr inside
-            {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}))) begin
-            struct_write_packet.bresp = WRITE_SLVERR;
-            slave_err = 1;
-          end
-        end
+       slave_err = (struct_write_packet.bresp != WRITE_OKAY);
         // write response_task
         axi4_slave_drv_bfm_h.axi4_write_response_phase(struct_write_packet,struct_cfg,bid_local);
         `uvm_info("DEBUG_SLAVE_WDATA_PROXY", $sformatf("AFTER :: Reciving struct pkt from bfm \n %p",struct_write_packet), UVM_HIGH);
@@ -606,13 +600,15 @@ task axi4_slave_driver_proxy::axi4_read_task();
       if(local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
         if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
           task_memory_read(local_slave_addr_chk_tx,struct_read_packet);
-          if(crossed_read_addr) begin 
+          if(crossed_read_addr) begin
             for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-              struct_read_packet.rresp[depth] = READ_SLVERR; 
+              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                               local_slave_addr_chk_tx.araddr);
             end
           end
-          else begin 
-            struct_read_packet.rresp = READ_OKAY;
+          else begin
+            struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                       local_slave_addr_chk_tx.araddr);
           end
           //read data task
           axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
@@ -625,8 +621,10 @@ task axi4_slave_driver_proxy::axi4_read_task();
               if((local_slave_addr_chk_tx.araddr+j)==crossed_read_addr) begin
                 loc = j/STROBE_WIDTH;
                 for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-                  if(depth > loc) struct_read_packet.rresp[depth] = READ_SLVERR;
-                  else struct_read_packet.rresp[depth] = READ_OKAY;
+                  if(depth > loc) struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                                                 local_slave_addr_chk_tx.araddr);
+                  else struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                                           local_slave_addr_chk_tx.araddr);
                 end
                 break;
               end
@@ -655,7 +653,8 @@ task axi4_slave_driver_proxy::axi4_read_task();
           || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
-          struct_read_packet.rresp[depth] = READ_SLVERR; 
+          struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(axi4_slave_agent_cfg_h.slave_id,
+                                                                           local_slave_addr_chk_tx.araddr);
         end
 
         //read data task
@@ -704,7 +703,9 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
         for(int strb=0;strb<STROBE_WIDTH;strb++) begin
         `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h",struct_write_packet.wstrb[strb]), UVM_HIGH);
         if(struct_write_packet.wstrb[j][strb] == 1) begin
-          axi4_slave_mem_h.fifo_write(struct_write_packet.wdata[j][8*strb+7 -: 8]);
+          bit [DATA_WIDTH-1:0] tmp_wdata = '0;
+          tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
+          axi4_bus_matrix_h.store_write(struct_write_packet.awaddr, tmp_wdata);
         end
       end
     end
@@ -717,7 +718,7 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
         if(struct_write_packet.wstrb[j][strb] == 1) begin
           bit [DATA_WIDTH-1:0] tmp_wdata = '0;
           tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
-          axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, tmp_wdata);
+          axi4_bus_matrix_h.store_write(struct_write_packet.awaddr+k, tmp_wdata);
           k++;
         end
       end
@@ -735,7 +736,7 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
             if(k_t < end_addr)  begin
             bit [DATA_WIDTH-1:0] tmp_wdata = '0;
             tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
-            axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, tmp_wdata);
+            axi4_bus_matrix_h.store_write(struct_write_packet.awaddr+k, tmp_wdata);
             k++;
             k_t++;
             if(k_t == end_addr) k = 0;
@@ -743,7 +744,7 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
           else begin
             bit [DATA_WIDTH-1:0] tmp_wdata = '0;
             tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
-            axi4_slave_mem_h.mem_write(lower_addr+k, tmp_wdata);
+            axi4_bus_matrix_h.store_write(lower_addr+k, tmp_wdata);
             k++;
           end
         end
@@ -759,7 +760,9 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
     for(int j=0,int k=0;j<(read_pkt.arlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
       for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
-        axi4_slave_mem_h.fifo_read(struct_read_packet.rdata[j][8*strb+7 -: 8]);
+        bit [DATA_WIDTH-1:0] tmp_rdata;
+        axi4_bus_matrix_h.load_read(read_pkt.araddr, tmp_rdata);
+        struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
         k++;
       end
     end
@@ -773,7 +776,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
           bit [DATA_WIDTH-1:0] tmp_rdata;
-          axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
+          axi4_bus_matrix_h.load_read(read_pkt.araddr+k, tmp_rdata);
           struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
           if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) begin 
             crossed_read_addr = read_pkt.araddr+k;
@@ -791,7 +794,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
           if(k_t < end_addr)  begin
              bit [DATA_WIDTH-1:0] tmp_rdata;
-             axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
+             axi4_bus_matrix_h.load_read(read_pkt.araddr+k, tmp_rdata);
              struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = read_pkt.araddr+k;
              k++;
@@ -800,7 +803,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
           end
           else begin
             bit [DATA_WIDTH-1:0] tmp_rdata;
-            axi4_slave_mem_h.mem_read(lower_addr+k, tmp_rdata);
+            axi4_bus_matrix_h.load_read(lower_addr+k, tmp_rdata);
             struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(crossed_read_addr == -1) begin
                if(lower_addr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = lower_addr+k;

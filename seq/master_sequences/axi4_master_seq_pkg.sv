@@ -115,6 +115,12 @@ package axi4_master_seq_pkg;
   
   `include "axi4_master_nbk_write_qos_seq.sv"
   `include "axi4_master_nbk_read_qos_seq.sv"
+  `include "axi4_master_all_slave_access_seq.sv"
+  `include "axi4_master_upper_boundary_write_seq.sv"
+  `include "axi4_master_lower_boundary_write_seq.sv"
+  `include "axi4_master_upper_boundary_read_seq.sv"
+  `include "axi4_master_lower_boundary_read_seq.sv"
+  `include "axi4_master_4k_boundary_cross_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

@@ -15,6 +15,7 @@ package axi4_env_pkg;
   import axi4_globals_pkg::*;
   import axi4_master_pkg::*;
   import axi4_slave_pkg::*;
+  import axi4_bus_matrix_pkg::*;
 
   //Include all other files
   `include "axi4_env_config.sv"

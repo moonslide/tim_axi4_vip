@@ -5,6 +5,7 @@
 +incdir+../../virtual_seqr/
 +incdir+../../virtual_seq/
 +incdir+../../env
++incdir+../../bm
 +incdir+../../slave
 +incdir+../../seq/slave_sequences/
 +incdir+../../test
@@ -15,6 +16,7 @@
 ../../slave/axi4_slave_pkg.sv
 ../../seq/master_sequences/axi4_master_seq_pkg.sv
 ../../seq/slave_sequences/axi4_slave_seq_pkg.sv
+../../bm/axi4_bus_matrix_pkg.sv
 ../../env/axi4_env_pkg.sv
 ../../virtual_seq/axi4_virtual_seq_pkg.sv
 ../../test/axi4_test_pkg.sv

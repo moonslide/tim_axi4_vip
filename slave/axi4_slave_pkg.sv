@@ -15,6 +15,7 @@ package axi4_slave_pkg;
 
   // Import axi4_globals_pkg 
   import axi4_globals_pkg::*;
+  import axi4_bus_matrix_pkg::*;
 
   //-------------------------------------------------------
   // Include all other files

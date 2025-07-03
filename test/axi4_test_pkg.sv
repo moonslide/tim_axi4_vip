@@ -119,6 +119,13 @@ package axi4_test_pkg;
   `include "axi4_wstrb_single_bit_test.sv"
   `include "axi4_wstrb_random_burst_test.sv"
   `include "axi4_wstrb_illegal_test.sv"
+  `include "axi4_all_master_slave_access_test.sv"
+  `include "axi4_upper_boundary_write_test.sv"
+  `include "axi4_lower_boundary_write_test.sv"
+  `include "axi4_upper_boundary_read_test.sv"
+  `include "axi4_lower_boundary_read_test.sv"
+  `include "axi4_4k_boundary_cross_test.sv"
+  `include "axi4_unaligned_access_test.sv"
 endpackage : axi4_test_pkg
 
 `endif
