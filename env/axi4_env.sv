@@ -29,6 +29,10 @@ class axi4_env extends uvm_env;
   //Declaring axi4 scoreboard handle
   axi4_scoreboard axi4_scoreboard_h;
 
+  //Variable : axi4_bus_matrix_h
+  //Handle for golden bus matrix reference model
+  axi4_bus_matrix_ref axi4_bus_matrix_h;
+
   
   // Variable: axi4_master_agent_cfg_h;
   // Handle for axi4_master agent configuration
@@ -106,6 +110,8 @@ function void axi4_env::build_phase(uvm_phase phase);
     axi4_scoreboard_h=axi4_scoreboard::type_id::create("axi4_scoreboard_h",this);
   end
 
+  axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
+
   
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i].axi4_master_agent_cfg_h = axi4_master_agent_cfg_h[i];
@@ -113,6 +119,9 @@ function void axi4_env::build_phase(uvm_phase phase);
   
   foreach(axi4_slave_agent_h[i]) begin
     axi4_slave_agent_h[i].axi4_slave_agent_cfg_h = axi4_slave_agent_cfg_h[i];
+    uvm_config_db#(axi4_bus_matrix_ref)::set(this,
+                        $sformatf("*axi4_slave_agent_h[%0d]*", i),
+                        "axi4_bus_matrix_gm", axi4_bus_matrix_h);
   end
   
 endfunction : build_phase
