@@ -4,7 +4,8 @@
 class axi4_bus_matrix_ref extends uvm_component;
   `uvm_component_utils(axi4_bus_matrix_ref)
 
-  axi4_slave_memory slave_mem[NO_OF_SLAVES];
+  // simple memory for each slave indexed by address
+  bit [DATA_WIDTH-1:0] slave_mem[NO_OF_SLAVES][bit [ADDRESS_WIDTH-1:0]];
 
   typedef struct {
     bit [ADDRESS_WIDTH-1:0] start_addr;
@@ -33,9 +34,6 @@ endfunction : new
 
 function void axi4_bus_matrix_ref::build_phase(uvm_phase phase);
   super.build_phase(phase);
-  foreach(slave_mem[i]) begin
-    slave_mem[i] = axi4_slave_memory::type_id::create($sformatf("slave_mem[%0d]", i), this);
-  end
 
   slave_cfg[0] = '{64'h0000_0100_0000_0000,
                     64'h0000_0107_FFFF_FFFF,
@@ -91,14 +89,14 @@ function void axi4_bus_matrix_ref::store_write(bit [ADDRESS_WIDTH-1:0] addr,
                                                bit [DATA_WIDTH-1:0] data);
   int sid = decode(addr);
   if(sid >= 0)
-    slave_mem[sid].mem_write(addr, data);
+    slave_mem[sid][addr] = data;
 endfunction : store_write
 
 function void axi4_bus_matrix_ref::load_read(bit [ADDRESS_WIDTH-1:0] addr,
                                              output bit [DATA_WIDTH-1:0] data);
   int sid = decode(addr);
-  if(sid >= 0)
-    slave_mem[sid].mem_read(addr, data);
+  if(sid >= 0 && slave_mem[sid].exists(addr))
+    data = slave_mem[sid][addr];
   else
     data = '0;
 endfunction : load_read

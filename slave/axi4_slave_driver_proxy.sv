@@ -1,6 +1,8 @@
 `ifndef AXI4_SLAVE_DRIVER_PROXY_INCLUDED_
 `define AXI4_SLAVE_DRIVER_PROXY_INCLUDED_
 
+import axi4_bus_matrix_pkg::*;
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_slave_driver_proxy
 // This is the proxy driver on the HVL side
