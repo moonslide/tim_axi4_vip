@@ -14,10 +14,12 @@ endfunction
 
 task axi4_virtual_upper_boundary_write_seq::body();
   axi4_master_upper_boundary_write_seq mseq;
+  bit s_done;
+  bit m_done;
   foreach (p_sequencer.axi4_master_write_seqr_h_all[i]) begin
     foreach (p_sequencer.axi4_slave_write_seqr_h_all[j]) begin
       axi4_slave_nbk_write_seq sseq;
-      bit s_done = 0;
+      s_done = 0;
       sseq = axi4_slave_nbk_write_seq::type_id::create($sformatf("swr_%0d_%0d", i,j));
       fork
         begin
@@ -32,7 +34,7 @@ task axi4_virtual_upper_boundary_write_seq::body();
       join_any;
     end
     mseq = axi4_master_upper_boundary_write_seq::type_id::create($sformatf("mseq_%0d", i));
-    bit m_done = 0;
+    m_done = 0;
     fork
       begin
         mseq.start(p_sequencer.axi4_master_write_seqr_h_all[i]);
