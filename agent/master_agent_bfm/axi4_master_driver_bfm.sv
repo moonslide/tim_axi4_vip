@@ -133,11 +133,15 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     
     `uvm_info(name,$sformatf("detect_awready = %0d",awready),UVM_HIGH)
     
+    int aw_cycles = 0;
     do begin
       @(posedge aclk);
+      if(aw_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for awready")
+        break;
+      end
       data_write_packet.wait_count_write_address_channel++;
-    end
-    while(awready !== 1);
+    end while(awready !== 1);
 
     `uvm_info(name,$sformatf("After_loop_of_Detecting_awready = %0d, awvalid = %0d",awready,awvalid),UVM_HIGH)
     awvalid <= 1'b0;
@@ -168,8 +172,13 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
         wlast  <= 1'b1;
       end
 
+      int wr_cycles = 0;
       do begin
         @(posedge aclk);
+        if(wr_cycles++ > 1000) begin
+          `uvm_error(name,"timeout waiting for wready")
+          break;
+        end
       end while(wready===0);
       `uvm_info(name,$sformatf("DEBUG_NA:WDATA[%0d]=%0h",i,data_write_packet.wdata[i]),UVM_HIGH)
     end
@@ -189,9 +198,14 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     `uvm_info(name,$sformatf("cfg_packet=\n%p",cfg_packet),UVM_HIGH)
     `uvm_info(name,$sformatf("DRIVE TO WRITE RESPONSE CHANNEL"),UVM_HIGH)
     
+    int bv_cycles = 0;
     do begin
       @(posedge aclk);
-    end while(bvalid !== 1'b1); 
+      if(bv_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for bvalid")
+        break;
+      end
+    end while(bvalid !== 1'b1);
 
     repeat(data_write_packet.b_wait_states)begin
       `uvm_info(name,$sformatf("DRIVING WAIT STATES in write response:: %0d",data_write_packet.b_wait_states),UVM_HIGH);
@@ -236,11 +250,15 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     arvalid  <= 1'b1;
 
     `uvm_info(name,$sformatf("detect_awready = %0d",arready),UVM_HIGH)
+    int ar_cycles = 0;
     do begin
       @(posedge aclk);
+      if(ar_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for arready")
+        break;
+      end
       data_read_packet.wait_count_read_address_channel++;
-    end
-    while(arready !== 1);
+    end while(arready !== 1);
 
     `uvm_info(name,$sformatf("After_loop_of_Detecting_awready = %0d, awvalid = %0d",awready,awvalid),UVM_HIGH)
     arvalid <= 1'b0;
@@ -257,10 +275,15 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     `uvm_info(name,$sformatf("cfg_packet=\n%p",cfg_packet),UVM_HIGH)
     `uvm_info(name,$sformatf("DRIVE TO READ DATA CHANNEL"),UVM_HIGH)
     
+    int rv_cycles = 0;
     do begin
       @(posedge aclk);
       //Driving rready as low initially
       rready  <= 0;
+      if(rv_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for rvalid")
+        break;
+      end
     end while(rvalid === 1'b0);
     
     repeat(data_read_packet.r_wait_states)begin
@@ -272,8 +295,13 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     rready <= 1'b1;
 
     forever begin
+      int rv2_cycles = 0;
       do begin
         @(posedge aclk);
+        if(rv2_cycles++ > 1000) begin
+          `uvm_error(name,"timeout waiting for rvalid")
+          break;
+        end
       end while(rvalid === 1'b0);
 
       data_read_packet.rid      = rid;

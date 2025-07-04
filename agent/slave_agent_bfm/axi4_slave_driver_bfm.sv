@@ -143,8 +143,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     // Can make awready to zero 
     awready <= 0;
 
+    int wait_cycles = 0;
     do begin
       @(posedge aclk);
+      if(wait_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for awvalid")
+        break;
+      end
     end while(awvalid===0);
 
     `uvm_info("SLAVE_DRIVER_WADDR_PHASE", $sformatf("outside of awvalid"), UVM_MEDIUM);
@@ -196,8 +201,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     
     wready <= 0;
 
+   int wv_cycles = 0;
    do begin
      @(posedge aclk);
+     if(wv_cycles++ > 1000) begin
+       `uvm_error(name,"timeout waiting for wvalid")
+       break;
+     end
    end while(wvalid === 1'b0);
 
    // based on the wait_cycles we can choose to drive the wready
@@ -212,8 +222,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     
     if(cfg_packet.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE || cfg_packet.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE) begin 
       forever begin
+        int fwv_cycles = 0;
         do begin
           @(posedge aclk);
+          if(fwv_cycles++ > 1000) begin
+            `uvm_error(name,"timeout waiting for wvalid in qos loop")
+            break;
+          end
         end while(wvalid === 1'b0);
 
         data_write_packet.wdata[i] = wdata;
@@ -227,8 +242,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     end
     else begin
       for(int s = 0;s<(mem_wlen[a]+1);s = s+1)begin
+        int swv_cycles = 0;
         do begin
           @(posedge aclk);
+          if(swv_cycles++ > 1000) begin
+            `uvm_error(name,"timeout waiting for wvalid in data loop")
+            break;
+          end
         end while(wvalid === 1'b0);
         `uvm_info("SLAVE_DEBUG",$sformatf("mem_length = %0d",mem_wlen[a]),UVM_HIGH)
          data_write_packet.wdata[s]=wdata;
@@ -303,8 +323,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
      `uvm_info("DEBUG_BRESP",$sformatf("BID = %0d",bid),UVM_HIGH)
    end
     
+    int b_cycles = 0;
     while(bready === 0) begin
       @(posedge aclk);
+      if(b_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for bready")
+        break;
+      end
       data_write_packet.wait_count_write_response_channel++;
       `uvm_info(name,$sformatf("inside_detect_bready = %0d",bready),UVM_HIGH)
     end
@@ -328,8 +353,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     // Can make arready to zero 
      arready <= 0;
 
+    int ar_cycles = 0;
     while(arvalid === 0) begin
       @(posedge aclk);
+      if(ar_cycles++ > 1000) begin
+        `uvm_error(name,"timeout waiting for arvalid")
+        break;
+      end
     end
    
     repeat(data_read_packet.ar_wait_states)begin
@@ -397,8 +427,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
           rlast <= 1'b1;
         end
         
+        int rr_cycles = 0;
         do begin
           @(posedge aclk);
+          if(rr_cycles++ > 1000) begin
+            `uvm_error(name,"timeout waiting for rready")
+            break;
+          end
         end while(rready===0);
         rlast <= 1'b0;
         rvalid <= 1'b0;
@@ -424,8 +459,13 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
           rlast <= 1'b1;
         end
         
+        int rr_cycles2 = 0;
         do begin
           @(posedge aclk);
+          if(rr_cycles2++ > 1000) begin
+            `uvm_error(name,"timeout waiting for rready")
+            break;
+          end
         end while(rready===0);
         rlast <= 1'b0;
         rvalid <= 1'b0;
