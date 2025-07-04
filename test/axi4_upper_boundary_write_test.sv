@@ -15,9 +15,10 @@ function axi4_upper_boundary_write_test::new(string name, uvm_component parent=n
 endfunction
 
 task axi4_upper_boundary_write_test::run_phase(uvm_phase phase);
+  bit seq_done;
   vseq = axi4_virtual_upper_boundary_write_seq::type_id::create("vseq");
   phase.raise_objection(this);
-  bit seq_done = 0;
+  seq_done = 0;
   fork
     begin
       vseq.start(axi4_env_h.axi4_virtual_seqr_h);
