@@ -347,11 +347,19 @@ task axi4_slave_driver_proxy::axi4_write_task();
         if(axi4_slave_write_addr_fifo_h.is_empty) begin
           `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
           `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write addr data from FIFO as WRITE_ADDR_FIFO is EMPTY"));
+          wait_cycles = 0;
+          while(axi4_slave_write_addr_fifo_h.is_empty) begin
+            @(posedge axi4_slave_drv_bfm_h.aclk);
+            if(wait_cycles++ > 1000) begin
+              `uvm_error(get_type_name(),"timeout waiting for write addr")
+              break;
+            end
+          end
         end
-        else begin
-         axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
-         `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-         `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
+        if(!axi4_slave_write_addr_fifo_h.is_empty) begin
+          axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
+          `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+          `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
         end
       end
 
