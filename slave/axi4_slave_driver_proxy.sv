@@ -298,6 +298,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       bit                        slave_err;
       int                        start_sid;
       int                        end_sid;
+      int                        wait_cycles;
       
       //returns status of response thread
       response_tx=process::self();
@@ -380,7 +381,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-        int wait_cycles = 0;
+        wait_cycles = 0;
         while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
           @(posedge axi4_slave_drv_bfm_h.aclk);
           if(wait_cycles++ > 1000) begin
@@ -532,9 +533,11 @@ task axi4_slave_driver_proxy::axi4_read_task();
      axi4_slave_tx              local_slave_addr_chk_tx;
      axi4_slave_tx              qos_value_check_1;
      axi4_slave_tx              packet;
-     axi4_read_transfer_char_s  struct_read_packet;
-     axi4_transfer_cfg_s        struct_cfg;
-     int                        total_bytes;
+    axi4_read_transfer_char_s  struct_read_packet;
+    axi4_transfer_cfg_s        struct_cfg;
+    int                        total_bytes;
+    int                        compl_cycles;
+    int                        rd_cycles;
 
      //returns status of data thread
      rd_data = process::self();
@@ -547,8 +550,8 @@ task axi4_slave_driver_proxy::axi4_read_task();
      semaphore_read_key.get(1);
 
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-         int compl_cycles = 0;
+      if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+         compl_cycles = 0;
          while(completed_initial_txn==0) begin
            @(posedge axi4_slave_drv_bfm_h.aclk);
            if(compl_cycles++ > 1000) begin
@@ -602,7 +605,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
      end
      else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA) begin
 
-      int rd_cycles = 0;
+      rd_cycles = 0;
       while(completed_initial_txn==0) begin
         @(posedge axi4_slave_drv_bfm_h.aclk);
         if(rd_cycles++ > 1000) begin
@@ -850,7 +853,8 @@ endtask : task_memory_read
 
 
 task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
- int read_wait = 0;
+ int read_wait;
+ read_wait = 0;
  while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
    @(posedge axi4_slave_drv_bfm_h.aclk);  //wait for outstanding transfers
    if(read_wait++ > 1000) begin

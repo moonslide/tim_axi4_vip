@@ -134,16 +134,16 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   // Sampling the signals that are associated with write_address_channel
   //-------------------------------------------------------
 
-  task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet);
+task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet);
+    int wait_cycles;
     @(posedge aclk);
+    wait_cycles = 0;
     `uvm_info(name,"INSIDE WRITE_ADDRESS_PHASE",UVM_LOW)
 
     // Ready can be HIGH even before we start to check 
     // based on wait_cycles variable
     // Can make awready to zero 
     awready <= 0;
-
-    int wait_cycles = 0;
     do begin
       @(posedge aclk);
       if(wait_cycles++ > 1000) begin
@@ -192,8 +192,11 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   // Task: axi4_write_data_phase
   // This task will sample the write data signals
   //-------------------------------------------------------
-  task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, input axi4_transfer_cfg_s cfg_packet);
-    static reg [7:0]i =0;
+task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, input axi4_transfer_cfg_s cfg_packet);
+    static reg [7:0]i = 0;
+    int wv_cycles;
+    int fwv_cycles;
+    int swv_cycles;
     @(posedge aclk);
     `uvm_info(name,$sformatf("data_write_packet=\n%p",data_write_packet),UVM_HIGH)
     `uvm_info(name,$sformatf("cfg_packet=\n%p",cfg_packet),UVM_HIGH)
@@ -201,7 +204,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     
     wready <= 0;
 
-   int wv_cycles = 0;
+   wv_cycles = 0;
    do begin
      @(posedge aclk);
      if(wv_cycles++ > 1000) begin
@@ -222,7 +225,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     
     if(cfg_packet.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE || cfg_packet.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE) begin 
       forever begin
-        int fwv_cycles = 0;
+        fwv_cycles = 0;
         do begin
           @(posedge aclk);
           if(fwv_cycles++ > 1000) begin
@@ -242,7 +245,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     end
     else begin
       for(int s = 0;s<(mem_wlen[a]+1);s = s+1)begin
-        int swv_cycles = 0;
+        swv_cycles = 0;
         do begin
           @(posedge aclk);
           if(swv_cycles++ > 1000) begin
@@ -285,10 +288,11 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   // This task will drive the write response signals
   //-------------------------------------------------------
   
-  task axi4_write_response_phase(inout axi4_write_transfer_char_s data_write_packet,
+task axi4_write_response_phase(inout axi4_write_transfer_char_s data_write_packet,
     axi4_transfer_cfg_s struct_cfg,bit[3:0] bid_local);
-    
+
     int j;
+    int b_cycles;
     @(posedge aclk);
 
     
@@ -323,7 +327,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
      `uvm_info("DEBUG_BRESP",$sformatf("BID = %0d",bid),UVM_HIGH)
    end
     
-    int b_cycles = 0;
+    b_cycles = 0;
     while(bready === 0) begin
       @(posedge aclk);
       if(b_cycles++ > 1000) begin
@@ -342,8 +346,10 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   // Task: axi4_read_address_phase
   // This task will sample the read address signals
   //-------------------------------------------------------
-  task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet);
+task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet);
+    int ar_cycles;
     @(posedge aclk);
+    ar_cycles = 0;
     `uvm_info(name,$sformatf("data_read_packet=\n%p",data_read_packet),UVM_HIGH);
     `uvm_info(name,$sformatf("cfg_packet=\n%p",cfg_packet),UVM_HIGH);
     `uvm_info(name,$sformatf("INSIDE READ ADDRESS CHANNEL"),UVM_HIGH);
@@ -352,8 +358,6 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
     // based on wait_cycles variable
     // Can make arready to zero 
      arready <= 0;
-
-    int ar_cycles = 0;
     while(arvalid === 0) begin
       @(posedge aclk);
       if(ar_cycles++ > 1000) begin
@@ -400,8 +404,10 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   // Task: axi4_read_data_channel_task
   // This task will drive the read data signals
   //-------------------------------------------------------
-  task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet,response_mode_e out_of_order_enable);
+task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet,response_mode_e out_of_order_enable);
     int j1;
+    int rr_cycles;
+    int rr_cycles2;
     @(posedge aclk);
     if((out_of_order_enable == RESP_IN_ORDER || out_of_order_enable ==
       ONLY_WRITE_RESP_OUT_OF_ORDER) && (cfg_packet.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE ||
@@ -427,7 +433,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
           rlast <= 1'b1;
         end
         
-        int rr_cycles = 0;
+        rr_cycles = 0;
         do begin
           @(posedge aclk);
           if(rr_cycles++ > 1000) begin
@@ -459,7 +465,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
           rlast <= 1'b1;
         end
         
-        int rr_cycles2 = 0;
+        rr_cycles2 = 0;
         do begin
           @(posedge aclk);
           if(rr_cycles2++ > 1000) begin
