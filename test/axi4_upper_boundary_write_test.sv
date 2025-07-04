@@ -32,7 +32,7 @@ task axi4_upper_boundary_write_test::run_phase(uvm_phase phase);
     end
   join_any
   phase.drop_objection(this);
-  if(phase.get_objection_total() != 0)
+  if(phase.phase_done.get_objection_total(this) != 0)
     `uvm_warning(get_type_name(),"objection count non-zero after drop")
 endtask
 
