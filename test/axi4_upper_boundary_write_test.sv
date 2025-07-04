@@ -17,8 +17,22 @@ endfunction
 task axi4_upper_boundary_write_test::run_phase(uvm_phase phase);
   vseq = axi4_virtual_upper_boundary_write_seq::type_id::create("vseq");
   phase.raise_objection(this);
-  vseq.start(axi4_env_h.axi4_virtual_seqr_h);
+  bit seq_done = 0;
+  fork
+    begin
+      vseq.start(axi4_env_h.axi4_virtual_seqr_h);
+      seq_done = 1;
+    end
+    begin : timeout_watch
+      #1us;
+      if(!seq_done) begin
+        `uvm_error(get_type_name(),"vseq timeout or driver blocked")
+      end
+    end
+  join_any
   phase.drop_objection(this);
+  if(phase.get_objection_total() != 0)
+    `uvm_warning(get_type_name(),"objection count non-zero after drop")
 endtask
 
 `endif

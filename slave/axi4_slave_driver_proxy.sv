@@ -380,8 +380,13 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+        int wait_cycles = 0;
         while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
           @(posedge axi4_slave_drv_bfm_h.aclk);
+          if(wait_cycles++ > 1000) begin
+            `uvm_error("slave_driver_proxy","write response wait timeout")
+            break;
+          end
         end
           `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_write_data_out_fifo_h.used()),UVM_HIGH)
           if(drive_id_cont == 1) begin
@@ -542,8 +547,15 @@ task axi4_slave_driver_proxy::axi4_read_task();
      semaphore_read_key.get(1);
 
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin 
-         wait(completed_initial_txn==1);
+       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+         int compl_cycles = 0;
+         while(completed_initial_txn==0) begin
+           @(posedge axi4_slave_drv_bfm_h.aclk);
+           if(compl_cycles++ > 1000) begin
+             `uvm_error("slave_driver_proxy","initial write completion timeout")
+             break;
+           end
+         end
        end
        if(qos_wait_enable) begin
          wait(qos_read_queue.size>=2);
@@ -590,7 +602,14 @@ task axi4_slave_driver_proxy::axi4_read_task();
      end
      else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA) begin
 
-       wait(completed_initial_txn==1);
+      int rd_cycles = 0;
+      while(completed_initial_txn==0) begin
+        @(posedge axi4_slave_drv_bfm_h.aclk);
+        if(rd_cycles++ > 1000) begin
+          `uvm_error("slave_driver_proxy","initial write completion timeout")
+          break;
+        end
+      end
        //Converting transactions into struct data type
        axi4_slave_seq_item_converter::from_read_class(local_slave_rdata_tx,struct_read_packet);
        `uvm_info(get_type_name(), $sformatf("from_read_class:: struct_read_packet = \n %0p",struct_read_packet), UVM_HIGH); 
@@ -831,8 +850,13 @@ endtask : task_memory_read
 
 
 task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
+ int read_wait = 0;
  while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
    @(posedge axi4_slave_drv_bfm_h.aclk);  //wait for outstanding transfers
+   if(read_wait++ > 1000) begin
+     `uvm_error("slave_driver_proxy","read response wait timeout")
+     break;
+   end
  end
  `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
  if(drive_rd_id_cont == 1) begin
