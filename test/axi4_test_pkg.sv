@@ -140,6 +140,7 @@ package axi4_test_pkg;
   `include "axi4_tc_051_exclusive_write_success_test.sv"
   `include "axi4_tc_052_exclusive_write_fail_test.sv"
   `include "axi4_tc_053_exclusive_read_success_test.sv"
+  `include "axi4_tc_054_exclusive_read_fail_test.sv"
 
 endpackage : axi4_test_pkg
 

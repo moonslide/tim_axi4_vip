@@ -1933,7 +1933,15 @@ endfunction : is_expected_error_response
 task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_tx, input axi4_slave_tx slave_tx, bit is_write);
   if (is_write) begin
     bresp_e expected_resp = get_expected_write_response(master_tx.awaddr, 0); // Using master 0 for now
-    if (slave_tx.bresp == expected_resp) begin
+    
+    // Handle exclusive write access - EXOKAY is valid alternative to OKAY
+    bit response_valid = (slave_tx.bresp == expected_resp);
+    if (!response_valid && expected_resp == WRITE_OKAY && slave_tx.bresp == WRITE_EXOKAY) begin
+      response_valid = 1'b1; // EXOKAY is acceptable when OKAY is expected (exclusive access)
+      `uvm_info(get_type_name(),$sformatf("Correctly generated WRITE_EXOKAY for exclusive access at address 0x%16h", master_tx.awaddr), UVM_LOW);
+    end
+    
+    if (response_valid) begin
       if (expected_resp == WRITE_DECERR) begin
         valid_decerr_count++;
         `uvm_info(get_type_name(),$sformatf("Correctly generated WRITE_DECERR for address 0x%16h (boundary crossing validation successful)", master_tx.awaddr), UVM_LOW);
@@ -1941,14 +1949,22 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
         valid_slverr_count++;
         `uvm_info(get_type_name(),$sformatf("Correctly generated WRITE_SLVERR for address 0x%16h (access control validation successful)", master_tx.awaddr), UVM_LOW);
       end
-      // WRITE_OKAY responses are handled by regular comparison logic
+      // WRITE_OKAY and WRITE_EXOKAY responses are handled by regular comparison logic
     end else begin
       unexpected_error_count++;
       `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.awaddr, expected_resp.name(), slave_tx.bresp.name()));
     end
   end else begin
     rresp_e expected_resp = get_expected_read_response(master_tx.araddr, 0); // Using master 0 for now
-    if (slave_tx.rresp == expected_resp) begin
+    
+    // Handle exclusive read access - EXOKAY is valid alternative to OKAY
+    bit response_valid = (slave_tx.rresp == expected_resp);
+    if (!response_valid && expected_resp == READ_OKAY && slave_tx.rresp == READ_EXOKAY) begin
+      response_valid = 1'b1; // EXOKAY is acceptable when OKAY is expected (exclusive access)
+      `uvm_info(get_type_name(),$sformatf("Correctly generated READ_EXOKAY for exclusive access at address 0x%16h", master_tx.araddr), UVM_LOW);
+    end
+    
+    if (response_valid) begin
       if (expected_resp == READ_DECERR) begin
         valid_decerr_count++;
         `uvm_info(get_type_name(),$sformatf("Correctly generated READ_DECERR for address 0x%16h (boundary crossing validation successful)", master_tx.araddr), UVM_LOW);
@@ -1956,7 +1972,7 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
         valid_slverr_count++;
         `uvm_info(get_type_name(),$sformatf("Correctly generated READ_SLVERR for address 0x%16h (access control validation successful)", master_tx.araddr), UVM_LOW);
       end
-      // READ_OKAY responses are handled by regular comparison logic
+      // READ_OKAY and READ_EXOKAY responses are handled by regular comparison logic
     end else begin
       unexpected_error_count++;
       `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.araddr, expected_resp.name(), slave_tx.rresp.name()));

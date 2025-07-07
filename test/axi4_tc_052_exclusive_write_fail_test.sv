@@ -24,6 +24,12 @@ endfunction : new
 
 function void axi4_tc_052_exclusive_write_fail_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
+  
+  // Enable error injection mode to convert UVM_ERROR to UVM_WARNING for expected errors
+  axi4_env_cfg_h.error_inject = 1;
+  
+  // Update the config_db with modified configuration
+  uvm_config_db #(axi4_env_config)::set(this,"*","axi4_env_config",axi4_env_cfg_h);
 endfunction : build_phase
 
 task axi4_tc_052_exclusive_write_fail_test::run_phase(uvm_phase phase);

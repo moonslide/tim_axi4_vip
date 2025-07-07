@@ -22,7 +22,7 @@ task axi4_virtual_tc_053_exclusive_read_success_seq::body();
   axi4_master_tc_053_seq_h = axi4_master_tc_053_exclusive_read_success_seq::type_id::create("axi4_master_tc_053_seq_h");
   `uvm_info(get_type_name(), $sformatf("TC_053: Starting Exclusive Read Success test"), UVM_LOW);
   fork
-    axi4_master_tc_053_seq_h.start(p_sequencer.axi4_master_read_seqr_h_all[0]);
+    axi4_master_tc_053_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[0]);
   join
   `uvm_info(get_type_name(), $sformatf("TC_053: Completed Exclusive Read Success test"), UVM_LOW);
 endtask : body

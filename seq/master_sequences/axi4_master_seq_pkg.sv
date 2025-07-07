@@ -138,6 +138,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_tc_051_exclusive_write_success_seq.sv"
   `include "axi4_master_tc_052_exclusive_write_fail_seq.sv"
   `include "axi4_master_tc_053_exclusive_read_success_seq.sv"
+  `include "axi4_master_tc_054_exclusive_read_fail_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

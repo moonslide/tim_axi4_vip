@@ -132,6 +132,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_tc_051_exclusive_write_success_seq.sv"
   `include "axi4_virtual_tc_052_exclusive_write_fail_seq.sv"
   `include "axi4_virtual_tc_053_exclusive_read_success_seq.sv"
+  `include "axi4_virtual_tc_054_exclusive_read_fail_seq.sv"
 
 endpackage : axi4_virtual_seq_pkg
 
