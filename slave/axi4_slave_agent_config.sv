@@ -71,6 +71,9 @@ class axi4_slave_agent_config extends uvm_object;
   //Make sure to have minimum txns to perform out_of_order
   constraint maximum_txns_c{maximum_transactions >= minimum_transactions;}
 
+  // Variable: error_inject
+  // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
+  bit error_inject = 0;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions

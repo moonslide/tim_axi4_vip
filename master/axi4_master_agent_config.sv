@@ -70,6 +70,9 @@ class axi4_master_agent_config extends uvm_object;
   //Used to set the qos mode
   qos_mode_e qos_mode_type;
 
+  // Variable: error_inject
+  // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
+  bit error_inject = 0;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions

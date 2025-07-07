@@ -19,6 +19,7 @@ package axi4_virtual_seq_pkg;
   import axi4_slave_seq_pkg::*; 
   import axi4_env_pkg::*; 
   import axi4_globals_pkg::*;
+  import axi4_bus_matrix_pkg::*;
   //-------------------------------------------------------
   // Importing the required packages
   //-------------------------------------------------------
@@ -109,6 +110,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_ar_ready_delay_seq.sv"
   `include "axi4_virtual_r_ready_delay_seq.sv"
   `include "axi4_virtual_wstrb_seq.sv"
+  `include "axi4_virtual_illegal_wstrb_seq.sv"
   `include "axi4_virtual_aw_w_channel_separation_seq.sv"
   `include "axi4_virtual_all_master_slave_access_seq.sv"
   `include "axi4_virtual_upper_boundary_write_seq.sv"
@@ -116,6 +118,21 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_upper_boundary_read_seq.sv"
   `include "axi4_virtual_lower_boundary_read_seq.sv"
   `include "axi4_virtual_4k_boundary_cross_seq.sv"
+  
+  // TC_042~TC_053: AXI4 ID Management and Protocol Violation Virtual Sequences
+  `include "axi4_virtual_tc_042_id_multiple_writes_same_awid_seq.sv"
+  `include "axi4_virtual_tc_043_id_multiple_writes_different_awid_seq.sv"
+  `include "axi4_virtual_tc_044_id_multiple_reads_same_arid_seq.sv"
+  `include "axi4_virtual_tc_045_id_multiple_reads_different_arid_seq.sv"
+  `include "axi4_virtual_tc_046_wid_awid_mismatch_seq.sv"
+  `include "axi4_virtual_tc_047_wlast_too_early_seq.sv"
+  `include "axi4_virtual_tc_048_wlast_too_late_seq.sv"
+  `include "axi4_virtual_tc_049_awlen_out_of_spec_seq.sv"
+  `include "axi4_virtual_tc_050_arlen_out_of_spec_seq.sv"
+  `include "axi4_virtual_tc_051_exclusive_write_success_seq.sv"
+  `include "axi4_virtual_tc_052_exclusive_write_fail_seq.sv"
+  `include "axi4_virtual_tc_053_exclusive_read_success_seq.sv"
+
 endpackage : axi4_virtual_seq_pkg
 
 `endif

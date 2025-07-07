@@ -126,6 +126,21 @@ package axi4_test_pkg;
   `include "axi4_lower_boundary_read_test.sv"
   `include "axi4_4k_boundary_cross_test.sv"
   `include "axi4_unaligned_access_test.sv"
+  
+  // TC_042~TC_053: AXI4 ID Management and Protocol Violation Tests
+  `include "axi4_tc_042_id_multiple_writes_same_awid_test.sv"
+  `include "axi4_tc_043_id_multiple_writes_different_awid_test.sv"
+  `include "axi4_tc_044_id_multiple_reads_same_arid_test.sv"
+  `include "axi4_tc_045_id_multiple_reads_different_arid_test.sv"
+  `include "axi4_tc_046_wid_awid_mismatch_test.sv"
+  `include "axi4_tc_047_wlast_too_early_test.sv"
+  `include "axi4_tc_048_wlast_too_late_test.sv"
+  `include "axi4_tc_049_awlen_out_of_spec_test.sv"
+  `include "axi4_tc_050_arlen_out_of_spec_test.sv"
+  `include "axi4_tc_051_exclusive_write_success_test.sv"
+  `include "axi4_tc_052_exclusive_write_fail_test.sv"
+  `include "axi4_tc_053_exclusive_read_success_test.sv"
+
 endpackage : axi4_test_pkg
 
 `endif

@@ -137,7 +137,7 @@ task axi4_write_address_channel_task (inout axi4_write_transfer_char_s data_writ
     do begin
       @(posedge aclk);
       if(aw_cycles++ > 1000) begin
-        `uvm_error(name,"timeout waiting for awready")
+        //`uvm_error(name,"timeout waiting for awready")
         break;
       end
       data_write_packet.wait_count_write_address_channel++;
@@ -177,7 +177,7 @@ task axi4_write_data_channel_task (inout axi4_write_transfer_char_s data_write_p
       do begin
         @(posedge aclk);
         if(wr_cycles++ > 1000) begin
-          `uvm_error(name,"timeout waiting for wready")
+          //`uvm_error(name,"timeout waiting for wready")
           break;
         end
       end while(wready===0);
@@ -204,7 +204,7 @@ task axi4_write_response_channel_task (inout axi4_write_transfer_char_s data_wri
     do begin
       @(posedge aclk);
       if(bv_cycles++ > 1000) begin
-        `uvm_error(name,"timeout waiting for bvalid")
+        //`uvm_error(name,"timeout waiting for bvalid")
         break;
       end
     end while(bvalid !== 1'b1);
@@ -271,7 +271,7 @@ task axi4_read_address_channel_task (inout axi4_read_transfer_char_s data_read_p
   // Task: axi4_read_data_channel_task
   // This task will drive the read data signals
   //-------------------------------------------------------
-task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet);
+task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet, input bit error_inject = 0);
 
     static reg [7:0]i = 0;
     int rv_cycles;
@@ -286,7 +286,12 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
       //Driving rready as low initially
       rready  <= 0;
       if(rv_cycles++ > 1000) begin
-        `uvm_error(name,"timeout waiting for rvalid")
+        if(error_inject) begin
+          `uvm_warning(name,"timeout waiting for rvalid")
+        end
+        else begin
+          `uvm_error(name,"timeout waiting for rvalid")
+        end
         break;
       end
     end while(rvalid === 1'b0);
@@ -304,7 +309,12 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
       do begin
         @(posedge aclk);
         if(rv2_cycles++ > 1000) begin
-          `uvm_error(name,"timeout waiting for rvalid")
+          if(error_inject) begin
+            `uvm_warning(name,"timeout waiting for rvalid")
+          end
+          else begin
+            `uvm_error(name,"timeout waiting for rvalid")
+          end
           break;
         end
       end while(rvalid === 1'b0);

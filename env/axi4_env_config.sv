@@ -48,6 +48,10 @@ class axi4_env_config extends uvm_object;
   // Maximum cycles allowed between VALID and READY handshake
   int ready_delay_cycles = 100;
 
+  // Variable: error_inject
+  // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
+  bit error_inject = 0;
+
 //-------------------------------------------------------
 // Externally defined Tasks and Functions
 //-------------------------------------------------------
@@ -82,6 +86,7 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_field ("check_wait_states",check_wait_states,1, UVM_DEC);
   printer.print_field ("wstrb_compare_enable",wstrb_compare_enable,1, UVM_DEC);
   printer.print_field ("ready_delay_cycles",ready_delay_cycles,32, UVM_DEC);
+  printer.print_field ("error_inject",error_inject,1, UVM_DEC);
 
 endfunction : do_print
 

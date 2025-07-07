@@ -13,19 +13,31 @@ class axi4_wstrb_alternating_test extends axi4_base_test;
 
   function void setup_axi4_slave_agent_cfg();
     super.setup_axi4_slave_agent_cfg();
-    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])
+    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 20; // Increase for wstrb test
+    end
   endfunction
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     axi4_env_cfg_h.wstrb_compare_enable = 1;
+    
+    // Configure for READ_AFTER_WRITE mode to verify wstrb behavior
+    axi4_env_cfg_h.write_read_mode_h = WRITE_READ_DATA;
+    
     pattern = new[2];
     data_words = new[2];
+    
+    // Test: Alternating wstrb patterns in a burst
+    // Beat 0: wstrb=4'b0101 means bytes 2,0 should be written (bytes 3,1 preserved)
+    // Beat 1: wstrb=4'b1010 means bytes 3,1 should be written (bytes 2,0 preserved)
     pattern[0] = 4'b0101;
     pattern[1] = 4'b1010;
     data_words[0] = 32'hAAAA5555;
     data_words[1] = 32'h5555AAAA;
+    
+    `uvm_info(get_type_name(), "WSTRB ALTERNATING TEST: Testing alternating wstrb patterns (0101, 1010) in burst", UVM_LOW)
   endfunction
 
   virtual task run_phase(uvm_phase phase);

@@ -111,8 +111,7 @@ endfunction : start_of_simulation_phase
 //--------------------------------------------------------------------------------------------
 task axi4_virtual_sequencer::run_phase(uvm_phase phase);
 
-  // Work here
-  // ...
+  // TODO: Modify slave driver proxy to not call get_next_item() in SLAVE_MEM_MODE
 
 endtask : run_phase
 

@@ -107,20 +107,44 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
   end
 
-  for(int i =0; i<NO_OF_SLAVES; i++) begin
-    if(i == 0) begin  
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,0);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,2**(SLAVE_MEMORY_SIZE)-1 );
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
-    else begin
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(i,local_max_address + SLAVE_MEMORY_GAP);
-      local_min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range_array[i];
-      axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(i,local_max_address+ 2**(SLAVE_MEMORY_SIZE)-1 + 
-                                                                      SLAVE_MEMORY_GAP);
-      local_max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range_array[i];
-    end
+  // Configure address ranges for each master based on bus matrix configuration
+  // S0: DDR_Memory (0x0000_0100_0000_0000 - 0x0000_0107_FFFF_FFFF) - R/W for all masters
+  // S1: Boot_ROM (0x0000_0000_0000_0000 - 0x0000_0000_0001_FFFF) - R only, no masters have access
+  // S2: Peripheral_Regs (0x0000_0010_0000_0000 - 0x0000_0010_000F_FFFF) - R/W for M0,M1,M2
+  // S3: HW_Fuse_Box (0x0000_0020_0000_0000 - 0x0000_0020_0000_0FFF) - R only for M0,M3
+  
+  // Master 0 (CPU_Core_A) - accesses S0, S2, S3(read-only)
+  if (axi4_env_cfg_h.no_of_masters > 0) begin
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(0, 64'h0000_0100_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(1, 64'h0000_0010_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(2, 64'h0000_0020_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(2, 64'h0000_0020_0000_0FFF);
+  end
+  
+  // Master 1 (CPU_Core_B) - accesses S0, S2
+  if (axi4_env_cfg_h.no_of_masters > 1) begin
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_min_addr_range(0, 64'h0000_0100_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_min_addr_range(1, 64'h0000_0010_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
+  end
+  
+  // Master 2 (DMA_Controller) - accesses S0, S2
+  if (axi4_env_cfg_h.no_of_masters > 2) begin
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_min_addr_range(0, 64'h0000_0100_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_min_addr_range(1, 64'h0000_0010_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
+  end
+  
+  // Master 3 (GPU) - accesses S0, S3(read-only)
+  if (axi4_env_cfg_h.no_of_masters > 3) begin
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_min_addr_range(0, 64'h0000_0100_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_min_addr_range(1, 64'h0000_0020_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_max_addr_range(1, 64'h0000_0020_0000_0FFF);
   end
 endfunction: setup_axi4_master_agent_cfg
 
@@ -147,12 +171,29 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i] =
     axi4_slave_agent_config::type_id::create($sformatf("axi4_slave_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_id = i;
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].
-                                                           master_min_addr_range_array[i];
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = axi4_env_cfg_h.axi4_master_agent_cfg_h[i].
-                                                           master_max_addr_range_array[i];
+    
+    // Configure slave address ranges based on bus matrix configuration
+    case(i)
+      0: begin // S0: DDR_Memory
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0100_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0107_FFFF_FFFF;
+      end
+      1: begin // S1: Boot_ROM (read-only)
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0000_0001_FFFF;
+      end
+      2: begin // S2: Peripheral_Regs
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0010_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0010_000F_FFFF;
+      end
+      3: begin // S3: HW_Fuse_Box (read-only)
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0020_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0020_0000_0FFF;
+      end
+    endcase
+    
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 3;
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = RANDOM_DATA_MODE;
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
 

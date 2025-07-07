@@ -33,6 +33,10 @@ class axi4_env extends uvm_env;
   //Handle for golden bus matrix reference model
   axi4_bus_matrix_ref axi4_bus_matrix_h;
 
+  //Variable : axi4_protocol_coverage_h
+  //Handle for protocol compliance coverage
+  axi4_protocol_coverage axi4_protocol_coverage_h;
+
   
   // Variable: axi4_master_agent_cfg_h;
   // Handle for axi4_master agent configuration
@@ -49,6 +53,7 @@ class axi4_env extends uvm_env;
   extern function new(string name = "axi4_env", uvm_component parent = null);
   extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void connect_phase(uvm_phase phase);
+  extern virtual function void start_of_simulation_phase(uvm_phase phase);
 
 endclass : axi4_env
 
@@ -96,6 +101,14 @@ function void axi4_env::build_phase(uvm_phase phase);
     end
   end
 
+  // Propagate error_inject flag from environment config to all agent configs
+  foreach(axi4_master_agent_cfg_h[i]) begin
+    axi4_master_agent_cfg_h[i].error_inject = axi4_env_cfg_h.error_inject;
+  end
+  foreach(axi4_slave_agent_cfg_h[i]) begin
+    axi4_slave_agent_cfg_h[i].error_inject = axi4_env_cfg_h.error_inject;
+  end
+
   axi4_master_agent_h = new[axi4_env_cfg_h.no_of_masters];
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i]=axi4_master_agent::type_id::create($sformatf("axi4_master_agent_h[%0d]",i),this);
@@ -114,7 +127,18 @@ function void axi4_env::build_phase(uvm_phase phase);
     axi4_scoreboard_h=axi4_scoreboard::type_id::create("axi4_scoreboard_h",this);
   end
 
+  // Create protocol coverage component
+  axi4_protocol_coverage_h = axi4_protocol_coverage::type_id::create("axi4_protocol_coverage_h", this);
+
   axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
+  
+  // Set bus matrix reference globally for access by sequences
+  uvm_config_db#(axi4_bus_matrix_ref)::set(null, "*", "bus_matrix_ref", axi4_bus_matrix_h);
+  
+  // Set scoreboard handle globally for backdoor verification access by sequences
+  if(axi4_env_cfg_h.has_scoreboard) begin
+    uvm_config_db#(axi4_scoreboard)::set(null, "*", "axi4_scoreboard_h", axi4_scoreboard_h);
+  end
 
   
   foreach(axi4_master_agent_h[i]) begin
@@ -170,6 +194,11 @@ function void axi4_env::connect_phase(uvm_phase phase);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_scoreboard_h.axi4_master_write_address_analysis_fifo.analysis_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_data_analysis_port.connect(axi4_scoreboard_h.axi4_master_write_data_analysis_fifo.analysis_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_response_analysis_port.connect(axi4_scoreboard_h.axi4_master_write_response_analysis_fifo.analysis_export);
+    
+    // Connect protocol coverage to master agent transaction analysis ports
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    
     axi4_master_agent_h[i].axi4_master_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
   end
 
@@ -182,6 +211,7 @@ function void axi4_env::connect_phase(uvm_phase phase);
     axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
   end
   axi4_scoreboard_h.axi4_env_cfg_h = axi4_env_cfg_h;
+
 
   // Configure assertion ready delay cycles
 //  foreach(axi4_master_agent_h[i]) begin
@@ -197,6 +227,31 @@ function void axi4_env::connect_phase(uvm_phase phase);
 //    end
 //  end
 endfunction : connect_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: start_of_simulation_phase
+// Set up slave memory handles for backdoor verification after memories are created
+//
+// Parameters:
+// phase - uvm phase
+//--------------------------------------------------------------------------------------------
+function void axi4_env::start_of_simulation_phase(uvm_phase phase);
+  super.start_of_simulation_phase(phase);
+  
+  // Pass slave memory handles to scoreboard for backdoor verification
+  // This is done in start_of_simulation_phase to ensure slave memories are created
+  if(axi4_env_cfg_h.has_scoreboard) begin
+    axi4_slave_memory slave_mem_handles[];
+    slave_mem_handles = new[axi4_env_cfg_h.no_of_slaves];
+    foreach(axi4_slave_agent_h[i]) begin
+      if (axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) begin
+        slave_mem_handles[i] = axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.axi4_slave_mem_h;
+        `uvm_info(get_type_name(), $sformatf("Setting slave memory handle[%0d] = %p", i, slave_mem_handles[i]), UVM_HIGH);
+      end
+    end
+    axi4_scoreboard_h.set_slave_memory_handles(slave_mem_handles);
+  end
+endfunction : start_of_simulation_phase
 
 `endif
 

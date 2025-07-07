@@ -13,14 +13,28 @@ function axi4_virtual_lower_boundary_read_seq::new(string name);
 endfunction
 
 task axi4_virtual_lower_boundary_read_seq::body();
-  axi4_master_lower_boundary_read_seq mseq;
-  foreach (p_sequencer.axi4_master_read_seqr_h_all[i]) begin
-    foreach (p_sequencer.axi4_slave_read_seqr_h_all[j]) begin
-      axi4_slave_nbk_read_seq::type_id::create($sformatf("sr_%0d_%0d", i,j)).start(p_sequencer.axi4_slave_read_seqr_h_all[j]);
+  axi4_slave_bk_read_seq axi4_slave_bk_read_seq_h;
+  axi4_master_lower_boundary_read_seq axi4_master_lower_boundary_read_seq_h;
+  
+  // Create sequence handles
+  axi4_slave_bk_read_seq_h = axi4_slave_bk_read_seq::type_id::create("axi4_slave_bk_read_seq_h");
+  axi4_master_lower_boundary_read_seq_h = axi4_master_lower_boundary_read_seq::type_id::create("axi4_master_lower_boundary_read_seq_h");
+  
+  // Start slave responder and master sequence in parallel
+  fork
+    begin : T1_SL_RD
+      forever begin
+        axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+      end
     end
-    mseq = axi4_master_lower_boundary_read_seq::type_id::create($sformatf("mseq_%0d", i));
-    mseq.start(p_sequencer.axi4_master_read_seqr_h_all[i]);
-  end
+    begin : T2_MASTER
+      // Run master sequence
+      axi4_master_lower_boundary_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
+    end
+  join_any
+  
+  // Disable the slave responder thread after master completes
+  disable fork;
 endtask
 
 `endif

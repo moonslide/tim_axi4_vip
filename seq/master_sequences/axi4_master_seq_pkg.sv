@@ -15,6 +15,7 @@ package axi4_master_seq_pkg;
   import uvm_pkg::*;
   import axi4_master_pkg::*;
   import axi4_globals_pkg::*;
+  import axi4_bus_matrix_pkg::*;
 
   //-------------------------------------------------------
   // Importing the required packages
@@ -61,7 +62,9 @@ package axi4_master_seq_pkg;
   `include "axi4_master_aw_ready_delay_seq.sv"
   `include "axi4_master_w_ready_delay_seq.sv"
   `include "axi4_master_b_ready_delay_seq.sv"
+  `include "axi4_master_wstrb_baseline_seq.sv"
   `include "axi4_master_wstrb_seq.sv"
+  `include "axi4_master_illegal_wstrb_seq.sv"
   `include "axi4_master_wstrb_read_seq.sv"
   `include "axi4_master_ar_ready_delay_seq.sv"
   `include "axi4_master_r_ready_delay_seq.sv"
@@ -121,6 +124,20 @@ package axi4_master_seq_pkg;
   `include "axi4_master_upper_boundary_read_seq.sv"
   `include "axi4_master_lower_boundary_read_seq.sv"
   `include "axi4_master_4k_boundary_cross_seq.sv"
+  
+  // TC_042~TC_053: AXI4 ID Management and Protocol Violation Test Sequences
+  `include "axi4_master_tc_042_id_multiple_writes_same_awid_seq.sv"
+  `include "axi4_master_tc_043_id_multiple_writes_different_awid_seq.sv"
+  `include "axi4_master_tc_044_id_multiple_reads_same_arid_seq.sv"
+  `include "axi4_master_tc_045_id_multiple_reads_different_arid_seq.sv"
+  `include "axi4_master_tc_046_wid_awid_mismatch_seq.sv"
+  `include "axi4_master_tc_047_wlast_too_early_seq.sv"
+  `include "axi4_master_tc_048_wlast_too_late_seq.sv"
+  `include "axi4_master_tc_049_awlen_out_of_spec_seq.sv"
+  `include "axi4_master_tc_050_arlen_out_of_spec_seq.sv"
+  `include "axi4_master_tc_051_exclusive_write_success_seq.sv"
+  `include "axi4_master_tc_052_exclusive_write_fail_seq.sv"
+  `include "axi4_master_tc_053_exclusive_read_success_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

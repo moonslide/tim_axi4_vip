@@ -515,6 +515,12 @@ task axi4_master_driver_proxy::axi4_write_task();
           `uvm_info(get_type_name(),$sformatf("WRITE_RESPONSE_THREAD::Received_struct_packet = %p",
                                                struct_write_response_packet),UVM_FULL);
 
+          // Log error responses but complete the transaction normally
+          if (struct_write_response_packet.bresp == 2 || struct_write_response_packet.bresp == 3) begin
+            `uvm_info("MASTER_DRIVER_DEBUG", $sformatf("Received error response (bresp=%0d) for BID=0x%h - completing transaction normally", 
+                     struct_write_response_packet.bresp, struct_write_response_packet.bid), UVM_LOW);
+          end
+
           //Converting the write data struct packet to req packet
           axi4_master_seq_item_converter::to_write_class(struct_write_response_packet,local_master_response_tx);
           `uvm_info(get_type_name(),$sformatf("WRITE_RESPONSE_THREAD::Received_req_write_packet = \n %s",
@@ -528,6 +534,7 @@ task axi4_master_driver_proxy::axi4_write_task();
           //Getting the key from the write_response_channel so that 
           //the other transaction should start after completion of the previous transaction
           write_response_channel_key.put(1);
+
         end
 
       join_any
@@ -595,7 +602,7 @@ task axi4_master_driver_proxy::axi4_read_task();
       //Calling read address channel and read data channel tasks declared in bfm to drive the
       //read address channel signals and to sample the read data channel siganls
       axi4_master_drv_bfm_h.axi4_read_address_channel_task(struct_read_packet,struct_cfg);
-      axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_packet,struct_cfg);
+      axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
       
       //Converting transactions into struct data type
       axi4_master_seq_item_converter::to_read_class(struct_read_packet,req_rd);
@@ -677,11 +684,29 @@ task axi4_master_driver_proxy::axi4_read_task();
                                                struct_read_data_packet),UVM_MEDIUM); 
           
           //Calls the read data channel task in bfm to sample the read data signals
-          axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_data_packet,struct_cfg);
+          axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_data_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
           `uvm_info(get_type_name(),$sformatf("READ_DATA_THREAD::Checking response struct packet = %p",
                                                struct_read_data_packet),UVM_FULL); 
           
-          //Getting the key from the write_response_channel so that 
+          // Log error responses but complete the transaction normally
+          begin
+            bit error_response_detected = 1'b0;
+            // Check rresp elements for the actual transaction length (arlen + 1 beats)
+            for (int i = 0; i < (local_master_read_data_tx.arlen + 1); i++) begin
+              if (struct_read_data_packet.rresp[i] == 2 || struct_read_data_packet.rresp[i] == 3) begin
+                error_response_detected = 1'b1;
+                `uvm_info("MASTER_DRIVER_DEBUG", $sformatf("Error response detected: rresp[%0d]=%0d (SLVERR/DECERR)", 
+                         i, struct_read_data_packet.rresp[i]), UVM_LOW);
+              end
+            end
+            
+            if (error_response_detected) begin
+              `uvm_info("MASTER_DRIVER_DEBUG", $sformatf("Received error response (rresp contains DECERR/SLVERR) for RID=0x%h - completing transaction normally", 
+                       struct_read_data_packet.rid), UVM_LOW);
+            end
+          end
+
+          //Getting the key from the read_channel so that 
           //the other transaction should start after completion of the previous transaction
           read_channel_key.put(1);
           

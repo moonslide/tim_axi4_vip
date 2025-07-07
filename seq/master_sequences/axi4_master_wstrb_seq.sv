@@ -5,7 +5,7 @@ class axi4_master_wstrb_seq extends axi4_master_bk_base_seq;
   `uvm_object_utils(axi4_master_wstrb_seq)
   `uvm_declare_p_sequencer(axi4_master_write_sequencer)
 
-  rand bit [ADDRESS_WIDTH-1:0] addr = 0;
+  bit [ADDRESS_WIDTH-1:0] addr = 0; // Not randomizable - set by virtual sequence
   bit [DATA_WIDTH-1:0] data_q[$];
   bit [STROBE_WIDTH-1:0] wstrb_q[$];
   int bytes;
@@ -30,6 +30,13 @@ class axi4_master_wstrb_seq extends axi4_master_bk_base_seq;
     req.wstrb.delete();
     foreach(wstrb_q[i]) req.wstrb.push_back(wstrb_q[i]);
     req.wlast = 1'b1;
+    
+    // Log the wstrb test details
+    `uvm_info(get_type_name(), $sformatf("WSTRB TEST: Writing data 0x%08h to address 0x%016h with wstrb=4'b%04b", data_q[0], addr, wstrb_q[0]), UVM_LOW)
+    foreach(wstrb_q[i]) begin
+      `uvm_info(get_type_name(), $sformatf("  Beat[%0d]: data=0x%08h, wstrb=4'b%04b", i, data_q[i], wstrb_q[i]), UVM_LOW)
+    end
+    
     finish_item(req);
   endtask
 endclass

@@ -15,21 +15,25 @@ function axi4_master_4k_boundary_cross_seq::new(string name="axi4_master_4k_boun
 endfunction
 
 task axi4_master_4k_boundary_cross_seq::body();
-  bit [ADDRESS_WIDTH-1:0] base_addr;
-  bit [ADDRESS_WIDTH-1:0] start_addr;
+  bit [ADDRESS_WIDTH-1:0] valid_cross_addr;
+  bit [ADDRESS_WIDTH-1:0] invalid_cross_addr;
   super.body();
-  base_addr = p_sequencer.axi4_master_agent_cfg_h.master_min_addr_range_array[sid];
-  start_addr = base_addr + 4096 - 4;
-
-  // write crossing 4K boundary
+  
+  // Test 1: Valid 4K boundary crossing within DDR_Memory (should succeed per AMBA AXI4 spec)
+  // Note: AXI4 spec generally prohibits 4K boundary crossing, but we test interconnect response
+  valid_cross_addr = 64'h0000_0100_0000_FFC; // Within DDR_Memory, crosses 4K boundary
+  
+  `uvm_info("4K_BOUNDARY_CROSS", $sformatf("Testing valid 4K boundary cross at: 0x%016h", valid_cross_addr), UVM_MEDIUM);
+  
+  // Write crossing 4K boundary within valid space
   start_item(req);
-  if(!req.randomize() with {awaddr == start_addr;
+  if(!req.randomize() with {awaddr == valid_cross_addr;
                             awlen  == 1;
                             awsize == WRITE_4_BYTES;
                             awburst == WRITE_INCR;
                             tx_type == WRITE;
                             transfer_type == NON_BLOCKING_WRITE;})
-    `uvm_fatal("axi4","Rand failed");
+    `uvm_fatal("axi4","Rand failed for valid 4K cross write");
   req.wdata.delete();
   req.wdata.push_back($urandom); req.wdata.push_back($urandom);
   req.wstrb.delete();
@@ -37,15 +41,47 @@ task axi4_master_4k_boundary_cross_seq::body();
   req.wlast = 1'b1;
   finish_item(req);
 
-  // read back crossing 4K boundary
+  // Read after Write - same address crossing 4K boundary within valid space
   start_item(req);
-  if(!req.randomize() with {araddr == start_addr;
+  if(!req.randomize() with {araddr == valid_cross_addr;
                             arlen  == 1;
                             arsize == READ_4_BYTES;
                             arburst == READ_INCR;
                             tx_type == READ;
                             transfer_type == NON_BLOCKING_READ;})
-    `uvm_fatal("axi4","Rand failed");
+    `uvm_fatal("axi4","Rand failed for valid 4K cross read");
+  finish_item(req);
+  
+  // Test 2: Invalid 4K boundary crossing into unmapped space (should cause DECERR per AMBA AXI4 spec)
+  invalid_cross_addr = 64'h0000_0000_0050_0FFC; // Crosses from unmapped into unmapped space
+  
+  `uvm_info("4K_BOUNDARY_CROSS", $sformatf("Testing invalid 4K boundary cross at: 0x%016h (expect DECERR)", invalid_cross_addr), UVM_MEDIUM);
+  
+  // Write crossing into unmapped space (should cause DECERR)
+  start_item(req);
+  if(!req.randomize() with {awaddr == invalid_cross_addr;
+                            awlen  == 1;
+                            awsize == WRITE_4_BYTES;
+                            awburst == WRITE_INCR;
+                            tx_type == WRITE;
+                            transfer_type == NON_BLOCKING_WRITE;})
+    `uvm_fatal("axi4","Rand failed for invalid 4K cross write");
+  req.wdata.delete();
+  req.wdata.push_back($urandom); req.wdata.push_back($urandom);
+  req.wstrb.delete();
+  req.wstrb.push_back('hf); req.wstrb.push_back('hf);
+  req.wlast = 1'b1;
+  finish_item(req);
+
+  // Read after Write - crossing into unmapped space (should cause DECERR)
+  start_item(req);
+  if(!req.randomize() with {araddr == invalid_cross_addr;
+                            arlen  == 1;
+                            arsize == READ_4_BYTES;
+                            arburst == READ_INCR;
+                            tx_type == READ;
+                            transfer_type == NON_BLOCKING_READ;})
+    `uvm_fatal("axi4","Rand failed for invalid 4K cross read");
   finish_item(req);
 endtask
 

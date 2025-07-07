@@ -1,0 +1,76 @@
+============================================================
+   AXI Memory Map Example (Including a Read-Only Slave and Randomness Considerations)
+============================================================
+
+Of course, here is a modified version based on the previous example.
+
+To "maximize randomness," instead of choosing the most obvious candidate, `Boot_ROM`, as the read-only slave (since ROM is inherently read-only), we will select a more interesting and realistic scenario. In this case, we'll designate a special hardware register space as "read-only" for all masters.
+
+We will replace `S3: System_Config` with `S3: HW_Fuse_Box (Hardware Fuses / Read-Only Information)`. Slaves of this type store factory-programmed, unalterable information such as chip serial numbers, security keys, or calibration data, making them inherently read-only by nature.
+
+Below is the updated plain-text memory map:
+
+------------------------------------------------------------
+1. Master / Slave Definitions
+------------------------------------------------------------
+
+Masters (Initiator Units):
+  - M0: CPU_Core_A (High-Performance CPU Core)
+  - M1: CPU_Core_B (Low-Power CPU Core)
+  - M2: DMA_Controller (Direct Memory Access Controller)
+  - M3: GPU (Graphics Processing Unit)
+
+Slaves (Target Units):
+  - S0: DDR_Memory (Main Memory, DDR4/5)
+  - S1: Boot_ROM (Boot Read-Only Memory)
+  - S2: Peripheral_Regs (Peripheral Registers)
+  - S3: HW_Fuse_Box (Hardware Fuses / Read-Only Info)  <-- This is the designated read-only slave
+
+------------------------------------------------------------
+2. Slave Memory Map
+------------------------------------------------------------
+S3 is designed as a slave that can only be read from, not written to.
+
+Slave ID | Device Name       | Start Address              | End Address                | Size    | Attribute
+---------|-------------------|----------------------------|----------------------------|---------|-----------
+S0       | DDR_Memory        | 0x0000_0100_0000_0000      | 0x0000_0107_FFFF_FFFF      | 32 GiB  | R/W
+S1       | Boot_ROM          | 0x0000_0000_0000_0000      | 0x0000_0000_0001_FFFF      | 128 KiB | R
+S2       | Peripheral_Regs   | 0x0000_0010_0000_0000      | 0x0000_0010_000F_FFFF      | 1 MiB   | R/W
+S3       | HW_Fuse_Box       | 0x0000_0020_0000_0000      | 0x0000_0020_0000_0FFF      | 4 KiB   | R-Only  <--
+
+------------------------------------------------------------
+3. Master Access Permissions
+------------------------------------------------------------
+Permissions are defined more granularly as "Read/Write" or "Read-Only".
+
+* **M0: CPU_Core_A**
+    - Can access S0 (DDR_Memory)      (Permission: R/W)
+    - Can access S2 (Peripheral_Regs)  (Permission: R/W)
+    - Can access S3 (HW_Fuse_Box)      (Permission: **Read-Only**)
+    - (Accesses a total of 3 slaves)
+
+* **M1: CPU_Core_B**
+    - Can access S0 (DDR_Memory)      (Permission: R/W)
+    - Can access S2 (Peripheral_Regs)  (Permission: R/W)
+    - (Accesses a total of 2 slaves)
+
+* **M2: DMA_Controller**
+    - Can access S0 (DDR_Memory)      (Permission: R/W)
+    - Can access S2 (Peripheral_Regs)  (Permission: R/W)
+    - (Accesses a total of 2 slaves; DMA typically does not need to read hardware serial numbers)
+
+* **M3: GPU**
+    - Can access S0 (DDR_Memory)      (Permission: R/W)
+    - Can access S3 (HW_Fuse_Box)      (Permission: **Read-Only**) <-- Randomness consideration: The GPU might need to read a hardware key for content protection (DRM).
+    - (Accesses a total of 2 slaves)
+
+------------------------------------------------------------
+4. Design Considerations & Explanation
+------------------------------------------------------------
+- **Read-Only Design**: `S3: HW_Fuse_Box` is configured as read-only. If any master (even M0 or M3) initiates a "write" transaction to the address range from `0x0000_0020_0000_0000` to `0x0000_0020_0000_0FFF`, the AXI Interconnect will block the operation and return an error to the initiator (e.g., a SLVERR/DECERR on the write response channel via the `BRESP` signal).
+
+- **Maximizing Randomness**:
+    1. **Choosing a Non-Typical Slave**: Instead of selecting `Boot_ROM`, we chose the more specialized `HW_Fuse_Box` as the read-only slave. This is common in real-world designs but adds a layer of specificity.
+    2. **Assigning to a Non-Typical Master**: We also granted read access for the `HW_Fuse_Box` to the `GPU`. This is a less intuitive but perfectly plausible design, for instance, if the GPU needs to read a hardware key for Digital Rights Management (DRM) content decryption, which enhances the randomness and realism of the design.
+
+- **Granular Permissions**: The access rights are explicitly marked as `R/W` (Read/Write) or `R-Only` (Read-Only). This closely reflects the level of control that can be implemented in hardware using AXI protection signals (e.g., `AxPROT`).

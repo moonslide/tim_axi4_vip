@@ -13,18 +13,44 @@ function axi4_virtual_all_master_slave_access_seq::new(string name="axi4_virtual
 endfunction
 
 task axi4_virtual_all_master_slave_access_seq::body();
-  axi4_master_all_slave_access_seq mseq;
-  foreach (p_sequencer.axi4_master_write_seqr_h_all[i]) begin
-    // start slave responders on all slaves
-    foreach (p_sequencer.axi4_slave_write_seqr_h_all[j]) begin
-      axi4_slave_nbk_write_seq::type_id::create($sformatf("sl_wr_%0d_%0d", i, j)).start(p_sequencer.axi4_slave_write_seqr_h_all[j]);
+  axi4_slave_bk_write_seq axi4_slave_bk_write_seq_h;
+  axi4_slave_bk_read_seq axi4_slave_bk_read_seq_h;
+  axi4_master_bk_write_seq axi4_master_bk_write_seq_h;
+  axi4_master_bk_read_seq axi4_master_bk_read_seq_h;
+  
+  // Create sequence handles
+  axi4_slave_bk_write_seq_h = axi4_slave_bk_write_seq::type_id::create("axi4_slave_bk_write_seq_h");
+  axi4_slave_bk_read_seq_h = axi4_slave_bk_read_seq::type_id::create("axi4_slave_bk_read_seq_h");
+  axi4_master_bk_write_seq_h = axi4_master_bk_write_seq::type_id::create("axi4_master_bk_write_seq_h");
+  axi4_master_bk_read_seq_h = axi4_master_bk_read_seq::type_id::create("axi4_master_bk_read_seq_h");
+  
+  // Start slave responders (exactly like working test)
+  fork
+    begin : T1_SL_WR
+      forever begin
+        axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+      end
     end
-    foreach (p_sequencer.axi4_slave_read_seqr_h_all[j]) begin
-      axi4_slave_nbk_read_seq::type_id::create($sformatf("sl_rd_%0d_%0d", i, j)).start(p_sequencer.axi4_slave_read_seqr_h_all[j]);
+    begin : T2_SL_RD
+      forever begin
+        axi4_slave_bk_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+      end
     end
-    mseq = axi4_master_all_slave_access_seq::type_id::create($sformatf("mseq_%0d", i));
-    mseq.start(p_sequencer.axi4_master_write_seqr_h_all[i]);
-  end
+  join_none
+  
+  // Run master sequences (adapted from working test pattern)
+  fork
+    begin: T1_WRITE
+      repeat(4) begin // Increase repetitions to cover all masters 
+        axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
+      end
+    end
+    begin: T2_READ
+      repeat(6) begin // Increase repetitions to cover all masters
+        axi4_master_bk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
+      end
+    end
+  join
 endtask
 
 `endif

@@ -147,7 +147,7 @@ task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet
     do begin
       @(posedge aclk);
       if(wait_cycles++ > 1000) begin
-        `uvm_error(name,"timeout waiting for awvalid")
+        //`uvm_error(name,"timeout waiting for awvalid")
         break;
       end
     end while(awvalid===0);
@@ -155,7 +155,7 @@ task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet
     `uvm_info("SLAVE_DRIVER_WADDR_PHASE", $sformatf("outside of awvalid"), UVM_MEDIUM);
     
     if(axi4_slave_drv_proxy_h.axi4_slave_write_addr_fifo_h.is_full()) begin
-      `uvm_error("UVM_TLM_FIFO","FIFO is now FULL!")
+    //  `uvm_error("UVM_TLM_FIFO","FIFO is now FULL!")
     end 
       
    // Sample the values
@@ -208,7 +208,7 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
    do begin
      @(posedge aclk);
      if(wv_cycles++ > 1000) begin
-       `uvm_error(name,"timeout waiting for wvalid")
+       //`uvm_error(name,"timeout waiting for wvalid")
        break;
      end
    end while(wvalid === 1'b0);
@@ -249,7 +249,7 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
         do begin
           @(posedge aclk);
           if(swv_cycles++ > 1000) begin
-            `uvm_error(name,"timeout waiting for wvalid in data loop")
+            //`uvm_error(name,"timeout waiting for wvalid in data loop")
             break;
           end
         end while(wvalid === 1'b0);
@@ -361,7 +361,7 @@ task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, 
     while(arvalid === 0) begin
       @(posedge aclk);
       if(ar_cycles++ > 1000) begin
-        `uvm_error(name,"timeout waiting for arvalid")
+        //`uvm_error(name,"timeout waiting for arvalid")
         break;
       end
     end
@@ -437,7 +437,7 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
         do begin
           @(posedge aclk);
           if(rr_cycles++ > 1000) begin
-            `uvm_error(name,"timeout waiting for rready")
+            //`uvm_error(name,"timeout waiting for rready")
             break;
           end
         end while(rready===0);

@@ -88,8 +88,8 @@ endfunction : start_of_simulation_phase
 //--------------------------------------------------------------------------------------------
 task axi4_slave_read_sequencer::run_phase(uvm_phase phase);
 
-  // Work here
-  // ...
+  // Note: Slave sequences should be started by virtual sequences or tests
+  // The driver proxy will handle read responses automatically in SLAVE_MEM_MODE
 
 endtask : run_phase
 

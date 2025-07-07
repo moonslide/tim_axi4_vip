@@ -16,11 +16,13 @@ package axi4_env_pkg;
   import axi4_master_pkg::*;
   import axi4_slave_pkg::*;
   import axi4_bus_matrix_pkg::*;
+  import axi4_slave_seq_pkg::*; // Import for slave sequencer sequence access
 
   //Include all other files
   `include "axi4_env_config.sv"
   `include "axi4_virtual_sequencer.sv"
   `include "axi4_scoreboard.sv"
+  `include "axi4_protocol_coverage.sv"
   `include "axi4_env.sv"
 
 endpackage : axi4_env_pkg

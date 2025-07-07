@@ -13,19 +13,28 @@ class axi4_wstrb_all_ones_test extends axi4_base_test;
 
   function void setup_axi4_slave_agent_cfg();
     super.setup_axi4_slave_agent_cfg();
-    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])
+    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 20; // Increase for wstrb test
+    end
   endfunction
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     axi4_env_cfg_h.wstrb_compare_enable = 1;
+    
+    // Configure for READ_AFTER_WRITE mode to verify wstrb behavior
+    axi4_env_cfg_h.write_read_mode_h = WRITE_READ_DATA;
+    
     pattern.delete();
     data_words.delete();
+    
+    // Test: wstrb=4'b1111 means ALL bytes should be written
+    // Expected: Memory should contain new value (0xCAFEBABE) because all bytes are strobed
     pattern.push_back(4'b1111);
     data_words.push_back(32'hCAFEBABE);
-
-
+    
+    `uvm_info(get_type_name(), "WSTRB ALL ONES TEST: Testing that wstrb=4'b1111 writes all bytes (memory should contain new data)", UVM_LOW)
   endfunction
 
   virtual task run_phase(uvm_phase phase);

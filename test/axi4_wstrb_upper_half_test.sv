@@ -13,17 +13,29 @@ class axi4_wstrb_upper_half_test extends axi4_base_test;
 
   function void setup_axi4_slave_agent_cfg();
     super.setup_axi4_slave_agent_cfg();
-    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])
+    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 20; // Increase for wstrb test
+    end
   endfunction
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     axi4_env_cfg_h.wstrb_compare_enable = 1;
+    
+    // Configure for READ_AFTER_WRITE mode to verify wstrb behavior
+    axi4_env_cfg_h.write_read_mode_h = WRITE_READ_DATA;
+    
     pattern = new[1];
     data_words = new[1];
+    
+    // Test: wstrb=4'b1100 means upper 2 bytes (bytes 3,2) should be written
+    // Baseline: 0xFFFFFFFF, Writing: 0x11223344
+    // Expected: 0x1122FFFF (upper bytes 0x1122, lower bytes preserve 0xFFFF)
     pattern[0] = 4'b1100;
     data_words[0] = 32'h11223344;
+    
+    `uvm_info(get_type_name(), "WSTRB UPPER HALF TEST: Testing that wstrb=4'b1100 writes only upper 2 bytes (bytes 3,2)", UVM_LOW)
   endfunction
 
   virtual task run_phase(uvm_phase phase);
