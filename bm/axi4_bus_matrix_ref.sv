@@ -35,33 +35,41 @@ endfunction : new
 function void axi4_bus_matrix_ref::build_phase(uvm_phase phase);
   super.build_phase(phase);
 
+  // S0: DDR_Memory - R/W for all masters 
   slave_cfg[0] = '{64'h0000_0100_0000_0000,
                     64'h0000_0107_FFFF_FFFF,
                     1'b0,
-                    4'b1111,
-                    4'b1111};
+                    4'b1111,  // All masters can read
+                    4'b1111}; // All masters can write
+  // S1: Boot_ROM - Read-only, no masters have access per current config
   slave_cfg[1] = '{64'h0000_0000_0000_0000,
                     64'h0000_0000_0001_FFFF,
                     1'b1,
-                    4'b0000,
-                    4'b0000};
+                    4'b0000,  // No masters can read (per current design)
+                    4'b0000}; // No masters can write (read-only)
+  // S2: Peripheral_Regs - R/W for M0,M1,M2
   slave_cfg[2] = '{64'h0000_0010_0000_0000,
                     64'h0000_0010_000F_FFFF,
                     1'b0,
-                    4'b0111,
-                    4'b0111};
+                    4'b0111,  // M0,M1,M2 can read
+                    4'b0111}; // M0,M1,M2 can write  
+  // S3: HW_Fuse_Box - Read-only for M0,M3
   slave_cfg[3] = '{64'h0000_0020_0000_0000,
                     64'h0000_0020_0000_0FFF,
                     1'b1,
-                    4'b1001,
-                    4'b0000};
+                    4'b1001,  // M0,M3 can read
+                    4'b0000}; // No masters can write (read-only)
 endfunction : build_phase
 
 function int axi4_bus_matrix_ref::decode(bit [ADDRESS_WIDTH-1:0] addr);
   foreach(slave_cfg[i]) begin
-    if(addr >= slave_cfg[i].start_addr && addr <= slave_cfg[i].end_addr)
+    if(addr >= slave_cfg[i].start_addr && addr <= slave_cfg[i].end_addr) begin
+      `uvm_info("BUS_MATRIX_DECODE", $sformatf("Address 0x%16h maps to slave %0d (range 0x%16h - 0x%16h)", 
+               addr, i, slave_cfg[i].start_addr, slave_cfg[i].end_addr), UVM_LOW);
       return i;
+    end
   end
+  `uvm_info("BUS_MATRIX_DECODE", $sformatf("Address 0x%16h does not map to any slave - returning -1", addr), UVM_LOW);
   return -1;
 endfunction : decode
 
@@ -72,16 +80,22 @@ function bresp_e axi4_bus_matrix_ref::get_write_resp(int master, bit [ADDRESS_WI
   if(slave_cfg[sid].read_only)
     return WRITE_SLVERR;
   if(!slave_cfg[sid].write_masters[master])
-    return WRITE_DECERR;
+    return WRITE_SLVERR;
   return WRITE_OKAY;
 endfunction : get_write_resp
 
 function rresp_e axi4_bus_matrix_ref::get_read_resp(int master, bit [ADDRESS_WIDTH-1:0] addr);
   int sid = decode(addr);
-  if(sid < 0)
+  `uvm_info("BUS_MATRIX_READ_RESP", $sformatf("Master %0d reading address 0x%16h: decode returned %0d", master, addr, sid), UVM_LOW);
+  if(sid < 0) begin
+    `uvm_info("BUS_MATRIX_READ_RESP", $sformatf("Address 0x%16h unmapped - returning READ_DECERR", addr), UVM_LOW);
     return READ_DECERR;
-  if(!slave_cfg[sid].read_masters[master])
-    return READ_DECERR;
+  end
+  if(!slave_cfg[sid].read_masters[master]) begin
+    `uvm_info("BUS_MATRIX_READ_RESP", $sformatf("Master %0d not allowed to read slave %0d - returning READ_SLVERR", master, sid), UVM_LOW);
+    return READ_SLVERR;
+  end
+  `uvm_info("BUS_MATRIX_READ_RESP", $sformatf("Master %0d reading slave %0d - returning READ_OKAY", master, sid), UVM_LOW);
   return READ_OKAY;
 endfunction : get_read_resp
 
