@@ -1,4 +1,5 @@
 +incdir+../../pkg/
++incdir+../../include/
 +incdir+../../seq/master_sequences/
 +incdir+../../master/
 +incdir+../../agent/master_agent_bfm/ 

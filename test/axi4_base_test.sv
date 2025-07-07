@@ -1,6 +1,9 @@
 `ifndef AXI4_BASE_TEST_INCLUDED_
 `define AXI4_BASE_TEST_INCLUDED_
 
+// Include test configuration defines
+`include "axi4_test_defines.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_base_test
 // axi4_base test has the test scenarios for testbench which has the env, config, etc.
@@ -30,6 +33,7 @@ class axi4_base_test extends uvm_test;
   extern virtual local function void set_and_display_slave_config();
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
+  extern virtual task timeout_watchdog();
 
 endclass : axi4_base_test
 
@@ -244,6 +248,11 @@ task axi4_base_test::run_phase(uvm_phase phase);
 
   phase.raise_objection(this, "axi4_base_test");
 
+  // Start timeout watchdog in parallel
+  fork
+    timeout_watchdog();
+  join_none
+
   `uvm_info(get_type_name(), $sformatf("Inside BASE_TEST"), UVM_NONE);
   super.run_phase(phase);
   #100;
@@ -251,6 +260,16 @@ task axi4_base_test::run_phase(uvm_phase phase);
   phase.drop_objection(this);
 
 endtask : run_phase
+
+//--------------------------------------------------------------------------------------------
+// Task: timeout_watchdog
+// Implements configurable timeout watchdog that generates UVM_FATAL if exceeded
+// Timeout value is configurable via DEFAULT_TEST_TIMEOUT define
+//--------------------------------------------------------------------------------------------
+task axi4_base_test::timeout_watchdog();
+  #`DEFAULT_TEST_TIMEOUT;
+  `uvm_fatal(get_type_name(), $sformatf("TEST TIMEOUT: Test exceeded %0s execution time limit!", `"DEFAULT_TEST_TIMEOUT`"))
+endtask : timeout_watchdog
 
 `endif
 
