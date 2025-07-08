@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 AXI4 Regression Test Runner
 ==========================
@@ -30,32 +30,30 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime, timedelta
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Tuple
 import signal
 
 
-@dataclass
 class TestResult:
     """Container for test execution results"""
-    name: str
-    status: str  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
-    duration: float
-    log_file: str
-    error_msg: Optional[str] = None
-    folder_id: int = 0
+    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0):
+        self.name = name
+        self.status = status  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
+        self.duration = duration
+        self.log_file = log_file
+        self.error_msg = error_msg
+        self.folder_id = folder_id
 
 
 class RegressionRunner:
     """Main regression test runner class"""
     
-    def __init__(self, max_parallel: int = 10, timeout: int = 600, verbose: bool = False):
+    def __init__(self, max_parallel=10, timeout=600, verbose=False):
         self.max_parallel = max_parallel
         self.timeout = timeout
         self.verbose = verbose
         self.base_dir = Path.cwd()
-        self.results: List[TestResult] = []
-        self.running_tests: Dict[str, threading.Thread] = {}
+        self.results = []
+        self.running_tests = {}
         self.test_queue = queue.Queue()
         self.results_lock = threading.Lock()
         self.stop_all = threading.Event()
@@ -78,7 +76,7 @@ class RegressionRunner:
         self._cleanup_all_folders()
         sys.exit(1)
     
-    def _load_test_list(self, test_list_file: str) -> List[str]:
+    def _load_test_list(self, test_list_file):
         """Load test names from regression list file"""
         tests = []
         try:
@@ -101,7 +99,7 @@ class RegressionRunner:
         except Exception as e:
             raise Exception(f"Error reading test list file: {e}")
     
-    def _setup_test_folders(self) -> List[Path]:
+    def _setup_test_folders(self) :
         """Create and setup parallel test execution folders"""
         folders = []
         
@@ -142,7 +140,7 @@ class RegressionRunner:
                 except Exception as e:
                     print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
     
-    def _run_single_test(self, test_name: str, folder_path: Path, folder_id: int) -> TestResult:
+    def _run_single_test(self, test_name, folder_path, folder_id):
         """Execute a single test in the specified folder"""
         start_time = time.time()
         log_file = folder_path / f"{test_name}.log"
@@ -150,25 +148,34 @@ class RegressionRunner:
         if self.verbose:
             print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
         
-        # VCS command
-        vcs_cmd = [
-            'vcs', '-full64', '-lca', '-kdb', '-sverilog', '+v2k',
-            '-debug_access+all', '-ntb_opts', 'uvm-1.2', 
-            '+ntb_random_seed_automatic', '-override_timescale=1ps/1ps',
-            '+nospecify', '+no_timing_check', '+define+DUMP_FSDB',
-            '+define+UVM_VERDI_COMPWAVE', '-f', '../axi4_compile.f',
-            '-debug_access+all', '-R', f'+UVM_TESTNAME={test_name}',
-            '+UVM_VERBOSITY=MEDIUM', '+plusarg_ignore', '-l', str(log_file)
-        ]
+        # VCS command - use script wrapper to handle directory changes
+        run_script = folder_path / 'run_test.sh'
+        log_file_rel = f'{test_name}.log'
+        
+        # Create run script that changes to parent directory and runs VCS
+        with open(run_script, 'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write('cd ..\n')  # Go back to synopsys_sim directory
+            f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
+            f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
+            f.write(f'+ntb_random_seed_automatic -override_timescale=1ps/1ps ')
+            f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
+            f.write(f'-debug_access+all -R +UVM_TESTNAME={test_name} ')
+            f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
+            f.write(f'-l {folder_path.name}/{log_file_rel}\n')
+        
+        # Make script executable
+        os.chmod(run_script, 0o755)
         
         try:
-            # Change to the test folder
+            # Change to the test folder to run the script
             original_cwd = os.getcwd()
             os.chdir(folder_path)
             
             # Run the test with timeout
             process = subprocess.Popen(
-                vcs_cmd,
+                ['./run_test.sh'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -180,7 +187,7 @@ class RegressionRunner:
                 stdout, _ = process.communicate(timeout=self.timeout)
                 duration = time.time() - start_time
                 
-                # Check if test passed or failed
+                # Check if test passed or failed  
                 status, error_msg = self._analyze_test_result(log_file, stdout)
                 
                 return TestResult(
@@ -221,7 +228,7 @@ class RegressionRunner:
             # Restore original directory
             os.chdir(original_cwd)
     
-    def _analyze_test_result(self, log_file: Path, stdout: str) -> Tuple[str, Optional[str]]:
+    def _analyze_test_result(self, log_file, stdout):
         """Analyze test output to determine pass/fail status and extract error message"""
         error_msg = None
         
@@ -249,13 +256,20 @@ class RegressionRunner:
             
             # Check for success patterns
             success_patterns = [
+                r'TestCase PASSED!!!',
                 r'UVM_INFO.*TEST PASSED',
                 r'UVM_INFO.*PASSED',
                 r'\*\* TEST PASSED \*\*',
                 r'Simulation completed successfully'
             ]
             
-            # Look for failure indicators first
+            # Look for success indicators first 
+            for pattern in success_patterns:
+                matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
+                if matches:
+                    return 'PASS', None
+            
+            # Look for failure indicators second
             for pattern in failure_patterns:
                 matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
                 if matches:
@@ -273,10 +287,7 @@ class RegressionRunner:
                     
                     return 'FAIL', error_msg
             
-            # Check for success patterns
-            for pattern in success_patterns:
-                if re.search(pattern, full_output, re.IGNORECASE):
-                    return 'PASS', None
+            # Success patterns already checked above
             
             # If no explicit pass/fail found, check simulation completion
             if 'CPU TIME' in full_output or 'Total simulation time' in full_output:
@@ -288,7 +299,7 @@ class RegressionRunner:
         except Exception as e:
             return 'ERROR', f"Could not analyze results: {str(e)}"
     
-    def _update_progress(self, test_result: TestResult):
+    def _update_progress(self, test_result):
         """Update progress statistics and display"""
         with self.results_lock:
             self.results.append(test_result)
@@ -401,7 +412,7 @@ class RegressionRunner:
                 
                 f.write(f"\n")
     
-    def run_regression(self, test_list_file: str) -> int:
+    def run_regression(self, test_list_file) :
         """Main method to run the regression"""
         try:
             print("🚀 Starting AXI4 Regression Runner")
@@ -457,14 +468,22 @@ class RegressionRunner:
                         self._update_progress(error_result)
             
             # Print summary and return exit code
-            return self._print_summary()
+            exit_code = self._print_summary()
+            if exit_code == 0:
+                self._regression_success = True
+            return exit_code
             
         except Exception as e:
             print(f"\n💥 Fatal error during regression: {e}")
             return 1
         finally:
-            # Always clean up
-            self._cleanup_all_folders()
+            # Only clean up if successful
+            if hasattr(self, '_regression_success') and self._regression_success:
+                self._cleanup_all_folders()
+                print("🧹 Cleaned up execution folders")
+            else:
+                print("⚠️  Keeping execution folders for debugging (run_folder_*)")
+                print("💡 Manually remove with: rm -rf run_folder_*")
 
 
 def main():
