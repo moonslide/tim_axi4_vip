@@ -116,17 +116,29 @@ class RegressionRunner:
             # Create new folder
             folder_path.mkdir(exist_ok=True)
             
-            # Copy necessary files (if any configuration files exist)
-            config_files = ['../axi4_compile.f', 'Makefile']
-            for config_file in config_files:
-                src_path = self.base_dir / config_file
-                if src_path.exists():
-                    shutil.copy2(src_path, folder_path)
+            # Create modified compile file with adjusted paths for this run folder
+            self._create_compile_file_for_folder(folder_path)
             
             folders.append(folder_path)
             
         print(f"✅ Created {len(folders)} execution folders")
         return folders
+    
+    def _create_compile_file_for_folder(self, folder_path):
+        """Create a compile file with paths adjusted for running from the folder"""
+        # Read the original compile file
+        orig_compile_file = self.base_dir.parent / 'axi4_compile.f'
+        new_compile_file = folder_path / 'axi4_compile.f'
+        
+        with open(orig_compile_file, 'r') as f:
+            content = f.read()
+        
+        # No path adjustment needed since run_folder_XX is at same level as synopsys_sim
+        # Both are at sim/ level, so ../../pkg/ works from both locations
+        adjusted_content = content
+        
+        with open(new_compile_file, 'w') as f:
+            f.write(adjusted_content)
     
     def _cleanup_all_folders(self):
         """Clean up all test execution folders"""
@@ -152,26 +164,24 @@ class RegressionRunner:
         run_script = folder_path / 'run_test.sh'
         log_file_rel = f'{test_name}.log'
         
-        # Create run script that changes to synopsys_sim directory and runs VCS
+        # Create run script that runs VCS directly from within this folder
         with open(run_script, 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write('cd ../synopsys_sim\n')  # Go to synopsys_sim directory
-            f.write('# Clean VCS database files to avoid conflicts\n')
-            f.write('rm -rf csrc simv simv.daidir simv.vdb *.fsdb novas_dump.log tr_db.log ucli.key vc_hdrs.h work.lib++\n')
+            f.write('# Run VCS directly from this folder with adjusted compile file\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
             f.write(f'+ntb_random_seed_automatic -override_timescale=1ps/1ps ')
             f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
-            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
-            f.write(f'-l ../{folder_path.name}/{log_file_rel}\n')
+            f.write(f'-l {log_file_rel}\n')
         
         # Make script executable
         os.chmod(run_script, 0o755)
         
         try:
-            # Change to the test folder to run the script
+            # Change to the test folder and stay there for VCS execution
             original_cwd = os.getcwd()
             os.chdir(folder_path)
             
