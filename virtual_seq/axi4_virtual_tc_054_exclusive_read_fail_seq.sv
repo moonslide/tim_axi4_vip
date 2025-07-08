@@ -4,6 +4,7 @@
 //--------------------------------------------------------------------------------------------
 // Class: axi4_virtual_tc_054_exclusive_read_fail_seq
 // TC_054: Exclusive Read Fail Virtual Sequence
+// Orchestrates write-then-read to unprivileged address to test access privilege violations
 //--------------------------------------------------------------------------------------------
 class axi4_virtual_tc_054_exclusive_read_fail_seq extends axi4_virtual_base_seq;
   `uvm_object_utils(axi4_virtual_tc_054_exclusive_read_fail_seq)

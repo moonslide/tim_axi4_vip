@@ -124,3 +124,5 @@ axi4_tc_050_arlen_out_of_spec_test
 axi4_tc_051_exclusive_write_success_test
 axi4_tc_052_exclusive_write_fail_test
 axi4_tc_053_exclusive_read_success_test
+axi4_tc_054_exclusive_read_fail_test
+

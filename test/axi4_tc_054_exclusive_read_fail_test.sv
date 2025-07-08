@@ -4,8 +4,8 @@
 //--------------------------------------------------------------------------------------------
 // Class: axi4_tc_054_exclusive_read_fail_test
 // TC_054: Optional Exclusive Read Fail
-// Tests ARLOCK=1 to unprivileged address range
-// Expected RRESP=SLVERR/DECERR indicating access privilege violation
+// Tests write then exclusive read (ARLOCK=1) to unprivileged address range
+// Expected BRESP=SLVERR for write and RRESP=SLVERR for read indicating access privilege violation
 //--------------------------------------------------------------------------------------------
 class axi4_tc_054_exclusive_read_fail_test extends axi4_base_test;
   `uvm_component_utils(axi4_tc_054_exclusive_read_fail_test)
@@ -24,6 +24,9 @@ endfunction : new
 
 function void axi4_tc_054_exclusive_read_fail_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
+  
+  // Configure for write-read test (both write and read to unprivileged address)
+  axi4_env_cfg_h.write_read_mode_h = WRITE_READ_DATA;
   
   // Enable error injection mode to convert UVM_ERROR to UVM_WARNING for expected errors
   axi4_env_cfg_h.error_inject = 1;

@@ -76,6 +76,19 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   bit            qos_wait_enable = 1'b1;
   int            read_queue_index;
   
+  // Exclusive Access Monitor - per AMBA AXI4 specification
+  typedef struct {
+    bit [ADDRESS_WIDTH-1:0] address;
+    bit [15:0]              master_id;
+    bit [7:0]               size;
+    bit [7:0]               len;
+    bit                     valid;
+  } exclusive_monitor_s;
+  
+  // Exclusive monitor table - supports multiple monitors per slave
+  exclusive_monitor_s exclusive_monitor[16]; // Support up to 16 exclusive monitors
+  int num_exclusive_monitors = 0;
+  
   
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -89,6 +102,10 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   extern virtual task task_memory_write(input axi4_slave_tx struct_write_packet);
   extern virtual task task_memory_read(input axi4_slave_tx read_pkt,ref axi4_read_transfer_char_s struct_read_packet);
   extern virtual task out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
+  extern virtual function void setup_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id, bit [7:0] size, bit [7:0] len);
+  extern virtual function bit check_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id);
+  extern virtual function void clear_exclusive_monitors(bit [ADDRESS_WIDTH-1:0] addr);
+  extern virtual function void invalidate_all_exclusive_monitors();
 endclass : axi4_slave_driver_proxy
 
 //--------------------------------------------------------------------------------------------
@@ -400,12 +417,35 @@ task axi4_slave_driver_proxy::axi4_write_task();
                  local_slave_addr_tx.awaddr, start_sid, end_sid), UVM_LOW);
         struct_write_packet.bresp = WRITE_DECERR;
       end else begin
-        struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(0, // Master ID 0
-                                                                     local_slave_addr_tx.awaddr);
-        `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Bus matrix returned bresp=%0d for addr 0x%16h", 
-                 struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
+        // Handle exclusive write access according to AMBA AXI4 specification
+        if(local_slave_addr_tx.awlock == WRITE_EXCLUSIVE_ACCESS) begin
+          // Check if this exclusive write should succeed
+          if(check_exclusive_monitor(local_slave_addr_tx.awaddr, local_slave_addr_tx.awid)) begin
+            struct_write_packet.bresp = WRITE_EXOKAY; // Exclusive access succeeded
+            `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive write SUCCESS at 0x%16h for master ID %0d - returning EXOKAY", 
+                     local_slave_addr_tx.awaddr, local_slave_addr_tx.awid), UVM_LOW);
+            // Clear exclusive monitors for this address after successful exclusive write
+            clear_exclusive_monitors(local_slave_addr_tx.awaddr);
+          end else begin
+            struct_write_packet.bresp = WRITE_OKAY; // Exclusive access failed, but write completes normally
+            `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive write FAILED at 0x%16h for master ID %0d - returning OKAY", 
+                     local_slave_addr_tx.awaddr, local_slave_addr_tx.awid), UVM_LOW);
+          end
+          
+          // Clear any other monitors that may overlap with this write (per AXI4 spec)
+          clear_exclusive_monitors(local_slave_addr_tx.awaddr);
+        end else begin
+          // Normal write - check bus matrix and clear any exclusive monitors for this address
+          struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(0, // Master ID 0
+                                                                       local_slave_addr_tx.awaddr);
+          `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Bus matrix returned bresp=%0d for addr 0x%16h", 
+                   struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
+          
+          // Normal write invalidates exclusive monitors at overlapping addresses (per AXI4 spec)
+          clear_exclusive_monitors(local_slave_addr_tx.awaddr);
+        end
       end
-      slave_err = (struct_write_packet.bresp != WRITE_OKAY);
+      slave_err = (struct_write_packet.bresp != WRITE_OKAY && struct_write_packet.bresp != WRITE_EXOKAY);
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
@@ -564,6 +604,14 @@ task axi4_slave_driver_proxy::axi4_read_task();
      axi4_slave_seq_item_converter::to_read_class(struct_read_packet,local_slave_tx);
      `uvm_info("DEBUG_SLAVE_READ_ADDR_PROXY", $sformatf(" to_class_raddr_phase_slave_proxy  \n %p",struct_read_packet), UVM_HIGH);
 
+     // Handle exclusive read access according to AMBA AXI4 specification
+     if(local_slave_tx.arlock == READ_EXCLUSIVE_ACCESS) begin
+       // Set up exclusive monitor for this read
+       setup_exclusive_monitor(local_slave_tx.araddr, local_slave_tx.arid, local_slave_tx.arsize, local_slave_tx.arlen);
+       `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive read monitor setup at 0x%16h for master ID %0d", 
+                local_slave_tx.araddr, local_slave_tx.arid), UVM_LOW);
+     end
+
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
         qos_read_queue.push_front(local_slave_tx);
       end
@@ -709,6 +757,14 @@ task axi4_slave_driver_proxy::axi4_read_task();
           else begin
             struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
                                                                        local_slave_addr_chk_tx.araddr);
+            
+            // Handle exclusive read response according to AMBA AXI4 specification
+            if(local_slave_addr_chk_tx.arlock == READ_EXCLUSIVE_ACCESS && struct_read_packet.rresp == READ_OKAY) begin
+              struct_read_packet.rresp = READ_EXOKAY; // Exclusive read always gets EXOKAY if no error
+              `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive read returning EXOKAY for addr 0x%16h, master ID %0d", 
+                       local_slave_addr_chk_tx.araddr, local_slave_addr_chk_tx.arid), UVM_LOW);
+            end
+            
             if (struct_read_packet.rresp == 2 || struct_read_packet.rresp == 3) begin
               error_response_inside = 1'b1;
             end
@@ -1043,5 +1099,117 @@ task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_c
    oor_read_data_struct_read_packet = rd_response_id_queue.pop_front(); 
  end
 endtask : out_of_order_for_reads
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_exclusive_monitor
+// Sets up exclusive monitor for exclusive read access per AMBA AXI4 specification
+// Parameters:
+//  addr      - Address for exclusive monitor
+//  master_id - Master ID that performed exclusive read
+//  size      - Transfer size
+//  len       - Transfer length
+//--------------------------------------------------------------------------------------------
+function void axi4_slave_driver_proxy::setup_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id, bit [7:0] size, bit [7:0] len);
+  int monitor_idx = -1;
+  
+  // Find an empty monitor slot or reuse existing one for same address/master
+  for(int i = 0; i < 16; i++) begin
+    if(!exclusive_monitor[i].valid) begin
+      monitor_idx = i;
+      break;
+    end else if(exclusive_monitor[i].address == addr && exclusive_monitor[i].master_id == master_id) begin
+      monitor_idx = i;
+      break;
+    end
+  end
+  
+  // If no empty slot, replace the oldest (simple replacement policy)
+  if(monitor_idx == -1) begin
+    monitor_idx = 0;
+    `uvm_info("EXCLUSIVE_MONITOR", "No empty monitor slots - replacing monitor 0", UVM_LOW);
+  end
+  
+  // Setup the monitor
+  exclusive_monitor[monitor_idx].address = addr;
+  exclusive_monitor[monitor_idx].master_id = master_id;
+  exclusive_monitor[monitor_idx].size = size;
+  exclusive_monitor[monitor_idx].len = len;
+  exclusive_monitor[monitor_idx].valid = 1'b1;
+  
+  `uvm_info("EXCLUSIVE_MONITOR", $sformatf("Monitor %0d setup: addr=0x%16h, master=%0d, size=%0d, len=%0d", 
+           monitor_idx, addr, master_id, size, len), UVM_MEDIUM);
+endfunction : setup_exclusive_monitor
+
+//--------------------------------------------------------------------------------------------
+// Function: check_exclusive_monitor
+// Checks if exclusive write should succeed based on exclusive monitors
+// Returns: 1 if exclusive write should succeed (EXOKAY), 0 if it should fail (OKAY)
+// Parameters:
+//  addr      - Address for exclusive write
+//  master_id - Master ID performing exclusive write
+//--------------------------------------------------------------------------------------------
+function bit axi4_slave_driver_proxy::check_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id);
+  for(int i = 0; i < 16; i++) begin
+    if(exclusive_monitor[i].valid && 
+       exclusive_monitor[i].address == addr && 
+       exclusive_monitor[i].master_id == master_id) begin
+      `uvm_info("EXCLUSIVE_MONITOR", $sformatf("Monitor %0d MATCH for exclusive write: addr=0x%16h, master=%0d", 
+               i, addr, master_id), UVM_MEDIUM);
+      return 1'b1; // Exclusive access should succeed
+    end
+  end
+  
+  `uvm_info("EXCLUSIVE_MONITOR", $sformatf("NO MATCH for exclusive write: addr=0x%16h, master=%0d", 
+           addr, master_id), UVM_MEDIUM);
+  return 1'b0; // Exclusive access failed
+endfunction : check_exclusive_monitor
+
+//--------------------------------------------------------------------------------------------
+// Function: clear_exclusive_monitors
+// Clears exclusive monitors that overlap with the given address (per AXI4 spec)
+// Parameters:
+//  addr - Address that invalidates exclusive monitors
+//--------------------------------------------------------------------------------------------
+function void axi4_slave_driver_proxy::clear_exclusive_monitors(bit [ADDRESS_WIDTH-1:0] addr);
+  int cleared_count = 0;
+  
+  for(int i = 0; i < 16; i++) begin
+    if(exclusive_monitor[i].valid) begin
+      // Calculate address range for this monitor
+      bit [ADDRESS_WIDTH-1:0] monitor_start = exclusive_monitor[i].address;
+      bit [ADDRESS_WIDTH-1:0] monitor_end = monitor_start + ((exclusive_monitor[i].len + 1) * (2 ** exclusive_monitor[i].size)) - 1;
+      
+      // Check if addresses overlap (simple overlap check)
+      if(addr >= monitor_start && addr <= monitor_end) begin
+        `uvm_info("EXCLUSIVE_MONITOR", $sformatf("Clearing monitor %0d due to overlapping write at 0x%16h (monitor range: 0x%16h-0x%16h)", 
+                 i, addr, monitor_start, monitor_end), UVM_MEDIUM);
+        exclusive_monitor[i].valid = 1'b0;
+        cleared_count++;
+      end
+    end
+  end
+  
+  if(cleared_count > 0) begin
+    `uvm_info("EXCLUSIVE_MONITOR", $sformatf("Cleared %0d exclusive monitors due to write at 0x%16h", 
+             cleared_count, addr), UVM_LOW);
+  end
+endfunction : clear_exclusive_monitors
+
+//--------------------------------------------------------------------------------------------
+// Function: invalidate_all_exclusive_monitors  
+// Invalidates all exclusive monitors (used for system-wide events)
+//--------------------------------------------------------------------------------------------
+function void axi4_slave_driver_proxy::invalidate_all_exclusive_monitors();
+  int cleared_count = 0;
+  
+  for(int i = 0; i < 16; i++) begin
+    if(exclusive_monitor[i].valid) begin
+      exclusive_monitor[i].valid = 1'b0;
+      cleared_count++;
+    end
+  end
+  
+  `uvm_info("EXCLUSIVE_MONITOR", $sformatf("Invalidated all %0d exclusive monitors", cleared_count), UVM_LOW);
+endfunction : invalidate_all_exclusive_monitors
 
 `endif

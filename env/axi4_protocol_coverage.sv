@@ -45,6 +45,65 @@ class axi4_protocol_coverage extends uvm_subscriber#(axi4_master_tx);
     }
   endgroup : cg_id_management
   
+  // Exclusive Access Coverage Group
+  covergroup cg_exclusive_access;
+    // Exclusive read coverage
+    cp_exclusive_read: coverpoint master_tx_h.arlock {
+      bins normal_read = {READ_NORMAL_ACCESS};
+      bins exclusive_read = {READ_EXCLUSIVE_ACCESS};
+    }
+    
+    // Exclusive write coverage
+    cp_exclusive_write: coverpoint master_tx_h.awlock {
+      bins normal_write = {WRITE_NORMAL_ACCESS};
+      bins exclusive_write = {WRITE_EXCLUSIVE_ACCESS};
+    }
+    
+    // Exclusive read/write combinations
+    cp_exclusive_rw_combo: cross cp_exclusive_read, cp_exclusive_write;
+    
+    // Exclusive access responses
+    cp_exclusive_read_resp: coverpoint master_tx_h.rresp {
+      bins okay_resp = {READ_OKAY};
+      bins exokay_resp = {READ_EXOKAY};
+      bins slverr_resp = {READ_SLVERR};
+      bins decerr_resp = {READ_DECERR};
+    }
+    
+    cp_exclusive_write_resp: coverpoint master_tx_h.bresp {
+      bins okay_resp = {WRITE_OKAY};
+      bins exokay_resp = {WRITE_EXOKAY};
+      bins slverr_resp = {WRITE_SLVERR};
+      bins decerr_resp = {WRITE_DECERR};
+    }
+    
+    // Cross coverage: exclusive access type with response
+    cp_excl_read_with_resp: cross cp_exclusive_read, cp_exclusive_read_resp {
+      bins exclusive_read_exokay = binsof(cp_exclusive_read.exclusive_read) && binsof(cp_exclusive_read_resp.exokay_resp);
+      bins exclusive_read_okay = binsof(cp_exclusive_read.exclusive_read) && binsof(cp_exclusive_read_resp.okay_resp);
+      bins normal_read_okay = binsof(cp_exclusive_read.normal_read) && binsof(cp_exclusive_read_resp.okay_resp);
+    }
+    
+    cp_excl_write_with_resp: cross cp_exclusive_write, cp_exclusive_write_resp {
+      bins exclusive_write_exokay = binsof(cp_exclusive_write.exclusive_write) && binsof(cp_exclusive_write_resp.exokay_resp);
+      bins exclusive_write_okay = binsof(cp_exclusive_write.exclusive_write) && binsof(cp_exclusive_write_resp.okay_resp);
+      bins normal_write_okay = binsof(cp_exclusive_write.normal_write) && binsof(cp_exclusive_write_resp.okay_resp);
+    }
+    
+    // Exclusive access addresses
+    cp_exclusive_addr: coverpoint master_tx_h.awaddr {
+      bins ddr_range = {[64'h0000_0100_0000_0000:64'h0000_0107_FFFF_FFFF]};
+      bins peripheral_range = {[64'h0000_0010_0000_0000:64'h0000_0010_000F_FFFF]};
+      bins fuse_range = {[64'h0000_0020_0000_0000:64'h0000_0020_0000_0FFF]};
+    }
+    
+    // Cross coverage: exclusive access with address ranges
+    cp_excl_write_addr: cross cp_exclusive_write, cp_exclusive_addr {
+      bins exclusive_ddr = binsof(cp_exclusive_write.exclusive_write) && binsof(cp_exclusive_addr.ddr_range);
+      bins exclusive_peripheral = binsof(cp_exclusive_write.exclusive_write) && binsof(cp_exclusive_addr.peripheral_range);
+    }
+  endgroup : cg_exclusive_access
+  
   covergroup cg_protocol_violations;
     // AWLEN violations
     cp_awlen_violation: coverpoint master_tx_h.awlen {
@@ -140,6 +199,7 @@ endclass : axi4_protocol_coverage
 function axi4_protocol_coverage::new(string name = "axi4_protocol_coverage", uvm_component parent = null);
   super.new(name, parent);
   cg_id_management = new();
+  cg_exclusive_access = new();
   cg_protocol_violations = new();
   cg_error_responses = new();
   cg_address_alignment = new();
@@ -157,6 +217,7 @@ function void axi4_protocol_coverage::write(axi4_master_tx t);
   
   // Sample all coverage groups
   cg_id_management.sample();
+  cg_exclusive_access.sample();
   cg_protocol_violations.sample();
   cg_error_responses.sample();
   cg_address_alignment.sample();
@@ -166,9 +227,10 @@ function void axi4_protocol_coverage::report_phase(uvm_phase phase);
   real total_coverage;
   
   total_coverage = (cg_id_management.get_coverage() + 
+                   cg_exclusive_access.get_coverage() +
                    cg_protocol_violations.get_coverage() + 
                    cg_error_responses.get_coverage() + 
-                   cg_address_alignment.get_coverage()) / 4.0;
+                   cg_address_alignment.get_coverage()) / 5.0;
   
   `uvm_info(get_type_name(), $sformatf("================================"), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("AXI4 Protocol Coverage Summary:"), UVM_LOW);
