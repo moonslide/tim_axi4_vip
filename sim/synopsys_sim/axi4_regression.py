@@ -107,7 +107,7 @@ class RegressionRunner:
         
         for i in range(self.max_parallel):
             folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir / folder_name
+            folder_path = self.base_dir.parent / folder_name
             
             # Clean existing folder
             if folder_path.exists():
@@ -133,7 +133,7 @@ class RegressionRunner:
         print("🧹 Cleaning up execution folders...")
         for i in range(self.max_parallel):
             folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir / folder_name
+            folder_path = self.base_dir.parent / folder_name
             if folder_path.exists():
                 try:
                     shutil.rmtree(folder_path)
@@ -152,10 +152,12 @@ class RegressionRunner:
         run_script = folder_path / 'run_test.sh'
         log_file_rel = f'{test_name}.log'
         
-        # Create run script that changes to parent directory and runs VCS
+        # Create run script that changes to synopsys_sim directory and runs VCS
         with open(run_script, 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write('cd ..\n')  # Go back to synopsys_sim directory
+            f.write('cd ../synopsys_sim\n')  # Go to synopsys_sim directory
+            f.write('# Clean VCS database files to avoid conflicts\n')
+            f.write('rm -rf csrc simv simv.daidir simv.vdb *.fsdb novas_dump.log tr_db.log ucli.key vc_hdrs.h work.lib++\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
             f.write(f'+ntb_random_seed_automatic -override_timescale=1ps/1ps ')
@@ -163,7 +165,7 @@ class RegressionRunner:
             f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
-            f.write(f'-l {folder_path.name}/{log_file_rel}\n')
+            f.write(f'-l ../{folder_path.name}/{log_file_rel}\n')
         
         # Make script executable
         os.chmod(run_script, 0o755)
