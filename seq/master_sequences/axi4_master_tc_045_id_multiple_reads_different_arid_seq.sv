@@ -26,18 +26,17 @@ task axi4_master_tc_045_id_multiple_reads_different_arid_seq::body();
   // SETUP PHASE: Write test data D1 to first address
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == WRITE;
-    req.awid == AWID_0;
-    req.awaddr == 64'h0000_0100_0000_10F0; // DDR Memory range
-    req.awlen == 4'h0;  // 1 beat
-    req.awsize == WRITE_4_BYTES;
-    req.awburst == WRITE_INCR;
-    req.wdata.size() == 1;
-    req.wdata[0] == 32'hDAEF0001; // D1
-    req.wstrb.size() == 1;
-    req.wstrb[0] == 4'hF;
-  });
+  // Direct assignment to avoid constraint conflicts
+  req.tx_type = WRITE;
+  req.awid = AWID_0;
+  req.awaddr = 64'h0000_0100_0000_2000; // DDR Memory range - simplified aligned address
+  req.awlen = 4'h0;  // 1 beat
+  req.awsize = WRITE_4_BYTES;
+  req.awburst = WRITE_INCR;
+  req.wdata.delete();
+  req.wdata.push_back(32'hDAEF0001); // D1
+  req.wstrb.delete();
+  req.wstrb.push_back(4'hF);
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_045: Setup - Wrote D1=0x%8h to 0x%16h", 
@@ -46,18 +45,17 @@ task axi4_master_tc_045_id_multiple_reads_different_arid_seq::body();
   // SETUP PHASE: Write test data D2 to second address  
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == WRITE;
-    req.awid == AWID_0;
-    req.awaddr == 64'h0000_0100_0000_10F4; // DDR Memory range
-    req.awlen == 4'h0;  // 1 beat
-    req.awsize == WRITE_4_BYTES;
-    req.awburst == WRITE_INCR;
-    req.wdata.size() == 1;
-    req.wdata[0] == 32'hDAEF0002; // D2
-    req.wstrb.size() == 1;
-    req.wstrb[0] == 4'hF;
-  });
+  // Direct assignment to avoid constraint conflicts
+  req.tx_type = WRITE;
+  req.awid = AWID_0;
+  req.awaddr = 64'h0000_0100_0000_2004; // DDR Memory range - next aligned address
+  req.awlen = 4'h0;  // 1 beat
+  req.awsize = WRITE_4_BYTES;
+  req.awburst = WRITE_INCR;
+  req.wdata.delete();
+  req.wdata.push_back(32'hDAEF0002); // D2
+  req.wstrb.delete();
+  req.wstrb.push_back(4'hF);
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_045: Setup - Wrote D2=0x%8h to 0x%16h", 
@@ -68,14 +66,13 @@ task axi4_master_tc_045_id_multiple_reads_different_arid_seq::body();
   // TEST PHASE: Read T1 with ARID=0xA from first address  
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == READ;
-    req.arid == ARID_10;  // 0xA
-    req.araddr == 64'h0000_0100_0000_10F0; // DDR Memory range
-    req.arlen == 4'h0;  // 1 beat
-    req.arsize == READ_4_BYTES;
-    req.arburst == READ_INCR;
-  });
+  // Direct assignment to avoid constraint conflicts
+  req.tx_type = READ;
+  req.arid = ARID_10;  // 0xA
+  req.araddr = 64'h0000_0100_0000_2000; // DDR Memory range - same as first write address
+  req.arlen = 4'h0;  // 1 beat
+  req.arsize = READ_4_BYTES;
+  req.arburst = READ_INCR;
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_045: Sent T1 Read - ARID=0x%0x, ARADDR=0x%16h", 
@@ -87,14 +84,13 @@ task axi4_master_tc_045_id_multiple_reads_different_arid_seq::body();
   // TEST PHASE: Read T2 with different ARID=0xB from second address
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == READ;
-    req.arid == ARID_11;  // 0xB
-    req.araddr == 64'h0000_0100_0000_10F4; // DDR Memory range
-    req.arlen == 4'h0;  // 1 beat
-    req.arsize == READ_4_BYTES;
-    req.arburst == READ_INCR;
-  });
+  // Direct assignment to avoid constraint conflicts
+  req.tx_type = READ;
+  req.arid = ARID_11;  // 0xB
+  req.araddr = 64'h0000_0100_0000_2004; // DDR Memory range - same as second write address
+  req.arlen = 4'h0;  // 1 beat
+  req.arsize = READ_4_BYTES;
+  req.arburst = READ_INCR;
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_045: Sent T2 Read - ARID=0x%0x, ARADDR=0x%16h", 

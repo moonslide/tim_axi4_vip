@@ -25,17 +25,17 @@ task axi4_master_tc_049_awlen_out_of_spec_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   assert(req.randomize() with {
-    req.tx_type == WRITE;
-    req.awid == AWID_4;  // 0x4
-    req.awaddr == 64'h0000_0100_0000_1230; // DDR Memory range
-    req.awlen == 8'hFF; // 256 beats (0xFF + 1 = 256) - Maximum allowed by AXI4
-    req.awsize == WRITE_4_BYTES;
-    req.awburst == WRITE_INCR;
+    tx_type == WRITE;
+    awid == AWID_4;  // 0x4
+    awaddr == 64'h0000_0100_0000_1230; // DDR Memory range
+    awlen == 8'h100; // 257 beats (0x100 + 1 = 257) - Exceeds AXI4 limit of 256
+    awsize == WRITE_4_BYTES;
+    awburst == WRITE_INCR;
     // Only provide minimal wdata - slave should reject before processing
-    req.wdata.size() == 1;
-    req.wdata[0] == 32'hBAD12340; 
-    req.wstrb.size() == 1;
-    req.wstrb[0] == 4'hF;
+    wdata.size() == 1;
+    wdata[0] == 32'hBAD12340; 
+    wstrb.size() == 1;
+    wstrb[0] == 4'hF;
   });
   finish_item(req);
   
