@@ -41,11 +41,11 @@ function void axi4_bus_matrix_ref::build_phase(uvm_phase phase);
                     1'b0,
                     4'b1111,  // All masters can read
                     4'b1111}; // All masters can write
-  // S1: Boot_ROM - Read-only, no masters have access per current config
+  // S1: Boot_ROM - Read-only, allow master 0 read access for SLAVE_MEM_MODE
   slave_cfg[1] = '{64'h0000_0000_0000_0000,
                     64'h0000_0000_0001_FFFF,
                     1'b1,
-                    4'b0000,  // No masters can read (per current design)
+                    4'b0001,  // M0 can read (needed for SLAVE_MEM_MODE reactive transactions)
                     4'b0000}; // No masters can write (read-only)
   // S2: Peripheral_Regs - R/W for M0,M1,M2
   slave_cfg[2] = '{64'h0000_0010_0000_0000,

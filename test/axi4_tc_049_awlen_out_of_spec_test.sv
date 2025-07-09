@@ -23,6 +23,11 @@ function axi4_tc_049_awlen_out_of_spec_test::new(string name = "axi4_tc_049_awle
 endfunction : new
 
 function void axi4_tc_049_awlen_out_of_spec_test::build_phase(uvm_phase phase);
+  // Set error_inject for protocol violation test - AWLEN out of spec
+  // Must be set BEFORE super.build_phase() so base test can retrieve it
+  uvm_config_db#(bit)::set(this, "*", "error_inject", 1);
+  `uvm_info(get_type_name(), "TC_049: error_inject enabled for AWLEN out of spec protocol violation", UVM_LOW);
+  
   super.build_phase(phase);
 endfunction : build_phase
 

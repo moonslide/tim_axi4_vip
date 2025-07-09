@@ -199,6 +199,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
       // Create reactive transaction - BFM will update with actual AXI signal values
       req_wr = axi4_slave_tx::type_id::create("req_wr");
+      // Initialize with slave's address range to avoid default 0x0
+      req_wr.awaddr = axi4_slave_agent_cfg_h.min_address;
+      req_wr.araddr = axi4_slave_agent_cfg_h.min_address;
       // Put reactive transaction into FIFOs for processing
       axi4_slave_write_data_in_fifo_h.put(req_wr);
       axi4_slave_write_response_fifo_h.put(req_wr);
@@ -376,7 +379,13 @@ task axi4_slave_driver_proxy::axi4_write_task();
       else begin
         if(axi4_slave_write_addr_fifo_h.is_empty) begin
           `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-          `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write addr data from FIFO as WRITE_ADDR_FIFO is EMPTY"));
+          // In out-of-order mode, it's normal for FIFO to be temporarily empty
+          if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || 
+             axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
+          end else begin
+            `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write addr data from FIFO as WRITE_ADDR_FIFO is EMPTY"));
+          end
           wait_cycles = 0;
           while(axi4_slave_write_addr_fifo_h.is_empty) begin
             @(posedge axi4_slave_drv_bfm_h.aclk);
@@ -449,12 +458,15 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
       if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-        wait_cycles = 0;
-        while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
-          @(posedge axi4_slave_drv_bfm_h.aclk);
-          if(wait_cycles++ > 50000) begin
-            `uvm_error("slave_driver_proxy","write response wait timeout")
-            break;
+        // Skip wait loop if minimum_transactions is 0 (configured for out-of-order mode)
+        if(axi4_slave_agent_cfg_h.get_minimum_transactions > 0) begin
+          wait_cycles = 0;
+          while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
+            @(posedge axi4_slave_drv_bfm_h.aclk);
+            if(wait_cycles++ > 50000) begin
+              `uvm_error("slave_driver_proxy","write response wait timeout")
+              break;
+            end
           end
         end
           `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_write_data_out_fifo_h.used()),UVM_HIGH)
@@ -547,6 +559,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
       // Create reactive transaction - BFM will update with actual AXI signal values
       req_rd = axi4_slave_tx::type_id::create("req_rd");
+      // Initialize with slave's address range to avoid default 0x0
+      req_rd.awaddr = axi4_slave_agent_cfg_h.min_address;
+      req_rd.araddr = axi4_slave_agent_cfg_h.min_address;
       // Put reactive transaction into FIFO for processing
       axi4_slave_read_data_in_fifo_h.put(req_rd);
     end else begin

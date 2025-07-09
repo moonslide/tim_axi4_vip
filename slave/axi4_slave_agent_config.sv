@@ -81,6 +81,7 @@ class axi4_slave_agent_config extends uvm_object;
   extern function new(string name = "axi4_slave_agent_config");
   extern function void do_print(uvm_printer printer);
   extern function int get_minimum_transactions();
+  extern function void set_minimum_transactions(int value);
 endclass : axi4_slave_agent_config
 
 //--------------------------------------------------------------------------------------------
@@ -95,6 +96,10 @@ endfunction : new
 
 function int axi4_slave_agent_config::get_minimum_transactions();
   return (this.minimum_transactions);
+endfunction
+
+function void axi4_slave_agent_config::set_minimum_transactions(int value);
+  this.minimum_transactions = value;
 endfunction
 
 //--------------------------------------------------------------------------------------------

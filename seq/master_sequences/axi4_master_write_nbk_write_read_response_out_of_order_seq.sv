@@ -36,7 +36,10 @@ task axi4_master_write_nbk_write_read_response_out_of_order_seq::body();
   start_item(req);
   if(!req.randomize() with {
                               req.tx_type == WRITE;
-                              req.transfer_type == NON_BLOCKING_WRITE;}) begin
+                              req.transfer_type == NON_BLOCKING_WRITE;
+                              // Use valid DDR memory address range to avoid DECERR
+                              req.awaddr >= 64'h0000_0100_0000_0000;
+                              req.awaddr <= 64'h0000_0107_FFFF_FFFF;}) begin
     `uvm_fatal("axi4","Rand failed");
   end
   

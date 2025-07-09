@@ -45,6 +45,8 @@ function void axi4_non_blocking_only_write_response_out_of_order_test::setup_axi
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])begin
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = ONLY_WRITE_RESP_OUT_OF_ORDER;
+    // Set minimum_transactions to 0 for out-of-order mode to avoid FIFO deadlock
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].set_minimum_transactions(0);
   end
 endfunction: setup_axi4_slave_agent_cfg
 
