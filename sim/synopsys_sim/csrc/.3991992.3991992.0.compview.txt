@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1752076553.152366937, "rt":26.23, "ut":27.10, "st":1.06}}
+{"vcselab":{"timestamp_begin":1752076579.585797265, "rt":0.45, "ut":0.32, "st":0.14}}
+{"link":{"timestamp_begin":1752076580.174351056, "rt":1.03, "ut":0.65, "st":0.39}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1752076550.839406815}
+{"VCS_COMP_START_TIME": 1752076550.839406815}
+{"VCS_COMP_END_TIME": 1752076586.885244449}
+{"VCS_USER_OPTIONS": "-full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_tc_049_awlen_out_of_spec_test +UVM_VERBOSITY=MEDIUM +UVM_VERDI_TRACE=UVM_AWARE+HIER+COMPWAVE +plusarg_ignore -l axi4_tc_049_awlen_out_of_spec_test.log"}
+{"vcs1": {"peak_mem": 611252}}
+{"vcselab": {"peak_mem": 187580}}

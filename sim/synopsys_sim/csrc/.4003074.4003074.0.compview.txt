@@ -1,0 +1,6 @@
+Command exited with non-zero status 1
+{"vcs1":{"timestamp_begin":1752077582.417612039, "rt":0.10, "ut":0.03, "st":0.05}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1752077580.150631888}
+{"VCS_COMP_START_TIME": 1752077580.150631888}
+{"VCS_COMP_END_TIME": 1752077582.681651285}
+{"VCS_USER_OPTIONS": "-full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_tc_049_awlen_out_of_spec_test +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l axi4_tc_049_awlen_out_of_spec_test.log"}

@@ -1,0 +1,2586 @@
+global coverage_group 0 0 axi4_master_pkg::axi4_master_coverage::wstrb_cg __coverage_axi4_master_coverage.wstrb_cg unused_axi4_master_coverage_wstrb_cg_loop_label axi4_master_pkg 0 1 0 0 0  ( 0 
+)
+ 1 3
+ 0 99 /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/../../master/axi4_master_coverage.sv
+ 97 /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/../../slave/axi4_slave_coverage.sv
+ 98 /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/../../env/axi4_protocol_coverage.sv
+ 17 0 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_a
+ 0
+0
+0
+0
+64
+0
+ 0
+
+1
+0
+0
+0
+ 8 cp_wstrb 19 0 0 0 0 0 0 138 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn 138 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 4 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 8 1 1 0 0 1 1 4 zero 20 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 all_ones 21 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 upper_half 22 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 lower_half 23 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 alt_0101 24 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 alt_1010 25 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 1 0 1 1 10 single_bit 26 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 4 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_6 0 0 0 0 0 0 0
+ 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_7 0 0 0 0 0 0 0
+ 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_8 0 0 0 0 0 0 0
+ 1 1 140 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_wstrb_cg_fn_9 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 others 27 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_master_pkg::axi4_master_coverage::axi4_master_covergroup __coverage_axi4_master_coverage.axi4_master_covergroup unused_axi4_master_coverage_axi4_master_covergroup_loop_label axi4_master_pkg 0 1 0 0 0  ( 0 
+)
+ 0 36 0 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_55
+ 0
+0
+0
+0
+64
+0
+ 0
+
+31
+0
+7
+0
+ 8 AWLEN_CP 43 0 0 0 0 0 0 152 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn 152 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_9
+ 0
+ 10 1 1 0 0 1 1 7 AWLEN_1 45 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_2 46 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_4 47 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_8 48 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_16 49 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_32 50 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_64 51 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 AWLEN_128 52 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 AWLEN_256 53 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWLEN_DEFAULT 54 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+ 10 AWBURST_CP 57 0 0 0 0 0 0 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_a 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 27 axi4_globals_pkg::awburst_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_c
+ 0
+ 4 1 1 0 0 1 1 10 READ_FIXED 59 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 WRITE_INCR 60 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 READ_WRAP 61 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 22 ILLEGAL_BIN_OF_AWBURST 62 0 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 AWSIZE_CP 65 0 0 0 0 0 0 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_d 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::awsize_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_11
+ 0
+ 8 1 1 0 0 1 1 12 AWSIZE_1BYTE 67 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_2BYTES 68 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_4BYTES 69 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_8BYTES 70 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_16BYTES 71 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_e 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_32BYTES 72 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_f 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_64BYTES 73 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 AWSIZE_128BYTES 74 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 9 AWLOCK_CP 77 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_12 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_12 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::awlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_15
+ 0
+ 1 1 1 1 0 1 1 6 AWLOCK 79 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 2 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_13 0 0 0 0 0 0 0
+ 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 10 AWCACHE_CP 82 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_16 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_16 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 4 1 27 axi4_globals_pkg::awcache_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_17
+ 0
+ 4 1 1 0 0 1 1 16 WRITE_BUFFERABLE 84 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 16 WRITE_MODIFIABLE 85 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 20 WRITE_OTHER_ALLOCATE 86 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 WRITE_ALLOCATE 87 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 AWPROT_CP 90 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_18 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_18 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::awprot_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1a
+ 0
+ 1 1 1 1 0 1 1 6 AWPROT 92 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_19 0 0 0 0 0
+ 0
+
+ 7 AWID_CP 95 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1b 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1b 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::awid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1d
+ 0
+ 1 1 1 1 0 1 1 4 AWID 97 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1c 0 0 0 0 0
+ 0
+
+ 8 BRESP_CP 100 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1e 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1e 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::bresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1f
+ 0
+ 4 1 1 0 0 1 1 10 WRITE_OKAY 102 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_EXOKAY 103 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_SLVERR 104 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_DECERR 105 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 8 ARLEN_CP 112 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_20 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_20 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_21
+ 0
+ 10 1 1 0 0 1 1 7 ARLEN_1 114 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_2 115 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_4 116 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_8 117 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_16 118 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_32 119 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_64 120 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 ARLEN_128 121 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 ARLEN_256 122 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARLEN_DEFAULT 123 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+ 10 ARBURST_CP 126 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_22 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_22 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 27 axi4_globals_pkg::arburst_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_23
+ 0
+ 4 1 1 0 0 1 1 10 READ_FIXED 128 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 WRITE_INCR 129 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 READ_WRAP 130 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 22 ILLEGAL_BIN_OF_ARBURST 131 0 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 ARSIZE_CP 134 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_24 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_24 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::arsize_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_25
+ 0
+ 8 1 1 0 0 1 1 12 ARSIZE_1BYTE 136 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_2BYTES 137 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_4BYTES 138 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_8BYTES 139 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_16BYTES 140 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_e 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_32BYTES 141 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_f 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_64BYTES 142 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 ARSIZE_128BYTES 143 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 9 ARLOCK_CP 146 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_26 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_26 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::arlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_27
+ 0
+ 1 1 1 1 0 1 1 6 ARLOCK 148 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 2 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_13 0 0 0 0 0 0 0
+ 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 10 ARCACHE_CP 151 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_28 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_28 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 4 1 27 axi4_globals_pkg::arcache_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_29
+ 0
+ 4 1 1 0 0 1 1 15 READ_BUFFERABLE 153 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 READ_MODIFIABLE 154 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 19 READ_OTHER_ALLOCATE 155 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 READ_ALLOCATE 156 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 ARPROT_CP 159 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2a 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::arprot_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2c
+ 0
+ 1 1 1 1 0 1 1 6 ARPROT 161 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2b 0 0 0 0 0
+ 0
+
+ 6 BID_CP 164 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2d 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::bid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1f
+ 0
+ 1 1 1 1 0 1 1 3 BID 166 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2e 0 0 0 0 0
+ 0
+
+ 7 ARID_CP 169 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2f 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::rid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_31
+ 0
+ 1 1 1 1 0 1 1 4 ARID 171 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_30 0 0 0 0 0
+ 0
+
+ 6 RID_CP 174 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2f 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::rid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_32
+ 0
+ 1 1 1 1 0 1 1 3 RID 176 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_30 0 0 0 0 0
+ 0
+
+ 8 RRESP_CP 179 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_33 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_33 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::rresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_34
+ 0
+ 4 1 1 0 0 1 1 9 READ_OKAY 181 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_EXOKAY 182 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_SLVERR 183 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_DECERR 184 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 13 ADDR_WIDTH_CP 191 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_35 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_35 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 1 1 0 1 1 5 width 192 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_36 0 0 0 0 0
+ 0
+
+ 13 DATA_WIDTH_CP 197 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_37 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_37 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 8 1 1 0 0 1 1 4 DW_8 198 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_38 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_16 199 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_39 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_32 200 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3a 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_64 201 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_36 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_128 202 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_256 203 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3c 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_512 204 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3d 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 DW_1024 205 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3e 0 0 0 0 0 0 0
+ 0
+
+ 17 AW_WAIT_STATES_CP 212 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3f 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_3f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_40
+ 0
+ 1 1 1 1 0 1 1 5 AW_WS 214 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 15 AW_HANDSHAKE_CP 217 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_41 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_41 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_42
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 219 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 W_WAIT_STATES_CP 222 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_43 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_43 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_44
+ 0
+ 1 1 1 1 0 1 1 4 W_WS 224 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 W_HANDSHAKE_CP 227 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_45 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_45 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_46
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 229 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 B_WAIT_STATES_CP 232 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_47 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_47 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_48
+ 0
+ 1 1 1 1 0 1 1 4 B_WS 234 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 B_HANDSHAKE_CP 237 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_49 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_49 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4a
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 239 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 17 AR_WAIT_STATES_CP 242 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4b 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4b 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4c
+ 0
+ 1 1 1 1 0 1 1 5 AR_WS 244 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 15 AR_HANDSHAKE_CP 247 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4d 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4e
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 249 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 R_WAIT_STATES_CP 252 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4f 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_4f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_50
+ 0
+ 1 1 1 1 0 1 1 4 R_WS 254 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 R_HANDSHAKE_CP 257 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_51 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_51 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_52
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 259 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 TRANSFER_TYPE_CP 261 0 0 0 0 0 0 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_53 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_53 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 33 axi4_globals_pkg::transfer_type_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 155 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_54
+ 0
+ 4 1 1 0 0 1 1 14 BLOCKING_WRITE 263 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 BLOCKING_READ 264 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 18 NON_BLOCKING_WRITE 265 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 17 NON_BLOCKING_READ 266 0 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 154 axi4_master_pkg_axi4_master_coverage_11_0::axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_pkg_axi4_master_coverage_11_0_axi4_master_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 30 AWLENGTH_CP_X_AWSIZE_X_AWBURST 0 273 0 0 -1 0 0 0 0 3 0 2 1 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 30 ARLENGTH_CP_X_ARSIZE_X_ARBURST 0 274 0 0 -1 0 0 0 0 3 8 10 9 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 BID_CP_X_BRESP_CP 0 275 0 0 -1 0 0 0 0 2 14 7 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 RID_CP_X_RRESP_CP 0 276 0 0 -1 0 0 0 0 2 14 7 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 33 AWBURST_CP_X_AWLEN_CP_X_AWSIZE_CP 0 277 0 0 -1 0 0 0 0 3 1 0 2 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 33 ARBURST_CP_X_ARLEN_CP_X_ARSIZE_CP 0 278 0 0 -1 0 0 0 0 3 9 8 10 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 18 ADDR_DATA_WIDTH_CP 0 279 0 0 -1 0 0 0 0 2 18 19 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+end_coverage_group
+global coverage_group 0 0 axi4_slave_pkg::axi4_slave_coverage::wstrb_cg __coverage_axi4_slave_coverage.wstrb_cg unused_axi4_slave_coverage_wstrb_cg_loop_label axi4_slave_pkg 0 1 0 0 0  ( 0 
+)
+ 0 17 1 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_a
+ 0
+0
+0
+0
+64
+0
+ 0
+
+1
+0
+0
+0
+ 8 cp_wstrb 19 1 0 0 0 0 0 132 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn 132 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 4 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 8 1 1 0 0 1 1 4 zero 20 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 all_ones 21 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 upper_half 22 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 lower_half 23 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 alt_0101 24 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 alt_1010 25 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 1 0 1 1 10 single_bit 26 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 4 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_6 0 0 0 0 0 0 0
+ 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_7 0 0 0 0 0 0 0
+ 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_8 0 0 0 0 0 0 0
+ 1 1 134 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_wstrb_cg_fn_9 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 others 27 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_slave_pkg::axi4_slave_coverage::axi4_slave_covergroup __coverage_axi4_slave_coverage.axi4_slave_covergroup unused_axi4_slave_coverage_axi4_slave_covergroup_loop_label axi4_slave_pkg 0 1 0 0 0  ( 0 
+)
+ 0 36 1 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_55
+ 0
+0
+0
+0
+64
+0
+ 0
+
+31
+0
+7
+0
+ 8 AWLEN_CP 43 1 0 0 0 0 0 145 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn 145 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_9
+ 0
+ 10 1 1 0 0 1 1 7 AWLEN_1 45 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_2 46 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_4 47 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 AWLEN_8 48 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_16 49 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_32 50 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 AWLEN_64 51 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 AWLEN_128 52 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 AWLEN_256 53 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWLEN_DEFAULT 54 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+ 10 AWBURST_CP 57 1 0 0 0 0 0 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_a 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 27 axi4_globals_pkg::awburst_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_c
+ 0
+ 4 1 1 0 0 1 1 10 READ_FIXED 59 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 WRITE_INCR 60 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 READ_WRAP 61 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 22 ILLEGAL_BIN_OF_AWBURST 62 1 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 AWSIZE_CP 65 1 0 0 0 0 0 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_d 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::awsize_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_11
+ 0
+ 8 1 1 0 0 1 1 12 AWSIZE_1BYTE 67 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_2BYTES 68 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_4BYTES 69 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 AWSIZE_8BYTES 70 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_16BYTES 71 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_e 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_32BYTES 72 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_f 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 AWSIZE_64BYTES 73 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 AWSIZE_128BYTES 74 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 9 AWLOCK_CP 77 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_12 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_12 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::awlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_15
+ 0
+ 1 1 1 1 0 1 1 6 AWLOCK 79 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 2 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_13 0 0 0 0 0 0 0
+ 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 10 AWCACHE_CP 82 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_16 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_16 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 4 1 27 axi4_globals_pkg::awcache_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_17
+ 0
+ 4 1 1 0 0 1 1 16 WRITE_BUFFERABLE 84 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 16 WRITE_MODIFIABLE 85 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 20 WRITE_OTHER_ALLOCATE 86 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 WRITE_ALLOCATE 87 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 AWPROT_CP 90 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_18 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_18 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::awprot_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1a
+ 0
+ 1 1 1 1 0 1 1 6 AWPROT 92 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_19 0 0 0 0 0
+ 0
+
+ 7 AWID_CP 95 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1b 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1b 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::awid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1d
+ 0
+ 1 1 1 1 0 1 1 4 AWID 97 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1c 0 0 0 0 0
+ 0
+
+ 8 BRESP_CP 100 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1e 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1e 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::bresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1f
+ 0
+ 4 1 1 0 0 1 1 10 WRITE_OKAY 102 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_EXOKAY 103 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_SLVERR 104 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 12 WRITE_DECERR 105 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 8 ARLEN_CP 112 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_20 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_20 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_21
+ 0
+ 10 1 1 0 0 1 1 7 ARLEN_1 114 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_2 115 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_4 116 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 ARLEN_8 117 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_16 118 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_32 119 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 8 ARLEN_64 120 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 ARLEN_128 121 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 ARLEN_256 122 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARLEN_DEFAULT 123 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 8 0 0 0 0 0 0 0 0 0
+
+ 10 ARBURST_CP 127 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_22 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_22 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 27 axi4_globals_pkg::arburst_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_23
+ 0
+ 4 1 1 0 0 1 1 10 READ_FIXED 129 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 WRITE_INCR 130 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 READ_WRAP 131 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 22 ILLEGAL_BIN_OF_ARBURST 132 1 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 ARSIZE_CP 135 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_24 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_24 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::arsize_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_25
+ 0
+ 8 1 1 0 0 1 1 12 ARSIZE_1BYTE 137 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_2BYTES 138 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_4BYTES 139 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 ARSIZE_8BYTES 140 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_16BYTES 141 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_e 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_32BYTES 142 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_f 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 ARSIZE_64BYTES 143 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 ARSIZE_128BYTES 144 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 9 ARLOCK_CP 147 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_26 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_26 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::arlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_27
+ 0
+ 1 1 1 1 0 1 1 6 ARLOCK 149 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 2 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_13 0 0 0 0 0 0 0
+ 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 10 ARCACHE_CP 152 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_28 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_28 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 4 1 27 axi4_globals_pkg::arcache_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_29
+ 0
+ 4 1 1 0 0 1 1 15 READ_BUFFERABLE 154 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 READ_MODIFIABLE 155 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 19 READ_OTHER_ALLOCATE 156 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 READ_ALLOCATE 157 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 9 ARPROT_CP 160 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2a 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 3 1 26 axi4_globals_pkg::arprot_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2c
+ 0
+ 1 1 1 1 0 1 1 6 ARPROT 162 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2b 0 0 0 0 0
+ 0
+
+ 6 BID_CP 165 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2d 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::bid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1f
+ 0
+ 1 1 1 1 0 1 1 3 BID 167 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2e 0 0 0 0 0
+ 0
+
+ 7 ARID_CP 170 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2f 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::rid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_31
+ 0
+ 1 1 1 1 0 1 1 4 ARID 172 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_30 0 0 0 0 0
+ 0
+
+ 6 RID_CP 175 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2f 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 23 axi4_globals_pkg::rid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_32
+ 0
+ 1 1 1 1 0 1 1 3 RID 177 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_30 0 0 0 0 0
+ 0
+
+ 8 RRESP_CP 180 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_33 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_33 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::rresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_34
+ 0
+ 4 1 1 0 0 1 1 9 READ_OKAY 182 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_EXOKAY 183 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_SLVERR 184 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 READ_DECERR 185 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 13 ADDR_WIDTH_CP 191 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_35 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_35 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 1 1 0 1 1 5 width 192 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_36 0 0 0 0 0
+ 0
+
+ 13 DATA_WIDTH_CP 196 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_37 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_37 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 8 1 1 0 0 1 1 4 DW_8 197 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_38 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_16 198 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_39 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_32 199 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3a 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 5 DW_64 200 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_36 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_128 201 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_256 202 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3c 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 DW_512 203 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3d 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 7 DW_1024 204 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3e 0 0 0 0 0 0 0
+ 0
+
+ 17 AW_WAIT_STATES_CP 211 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3f 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_3f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_40
+ 0
+ 1 1 1 1 0 1 1 5 AW_WS 213 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 15 AW_HANDSHAKE_CP 216 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_41 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_41 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_42
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 218 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 W_WAIT_STATES_CP 221 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_43 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_43 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_44
+ 0
+ 1 1 1 1 0 1 1 4 W_WS 223 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 W_HANDSHAKE_CP 226 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_45 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_45 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_46
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 228 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 B_WAIT_STATES_CP 231 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_47 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_47 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_48
+ 0
+ 1 1 1 1 0 1 1 4 B_WS 233 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 B_HANDSHAKE_CP 236 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_49 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_49 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4a
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 238 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 17 AR_WAIT_STATES_CP 241 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4b 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4b 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4c
+ 0
+ 1 1 1 1 0 1 1 5 AR_WS 243 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 15 AR_HANDSHAKE_CP 246 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4d 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4d 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4e
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 248 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 R_WAIT_STATES_CP 251 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4f 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_4f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 1 32 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_50
+ 0
+ 1 1 1 1 0 1 1 4 R_WS 253 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_10 0 0 0 0 0
+ 0
+
+ 14 R_HANDSHAKE_CP 256 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_51 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_51 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_52
+ 0
+ 1 1 1 0 0 1 1 9 HANDSHAKE 258 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_14 0 0 0 0 0 0 0
+ 0
+
+ 16 TRANSFER_TYPE_CP 261 1 0 0 0 0 0 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_53 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_53 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 33 axi4_globals_pkg::transfer_type_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 148 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_54
+ 0
+ 4 1 1 0 0 1 1 14 BLOCKING_WRITE 263 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 13 BLOCKING_READ 264 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 18 NON_BLOCKING_WRITE 265 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 17 NON_BLOCKING_READ 266 1 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_slave_pkg_axi4_slave_coverage_11_0::axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_pkg_axi4_slave_coverage_11_0_axi4_slave_covergroup_fn_2 0 0 0 0 0 0 0
+ 0
+
+ 30 AWLENGTH_CP_X_AWSIZE_X_AWBURST 0 273 1 0 -1 0 0 0 0 3 0 2 1 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 30 ARLENGTH_CP_X_ARSIZE_X_ARBURST 0 274 1 0 -1 0 0 0 0 3 8 10 9 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 BID_CP_X_BRESP_CP 0 275 1 0 -1 0 0 0 0 2 14 7 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 RID_CP_X_RRESP_CP 0 276 1 0 -1 0 0 0 0 2 14 7 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 33 AWBURST_CP_X_AWLEN_CP_X_AWSIZE_CP 0 277 1 0 -1 0 0 0 0 3 1 0 2 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 33 ARBURST_CP_X_ARLEN_CP_X_ARSIZE_CP 0 278 1 0 -1 0 0 0 0 3 9 8 10 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 18 ADDR_DATA_WIDTH_CP 0 279 1 0 -1 0 0 0 0 2 18 19 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+end_coverage_group
+global coverage_group 0 0 axi4_env_pkg::axi4_protocol_coverage::cg_id_management __coverage_axi4_protocol_coverage.cg_id_management unused_axi4_protocol_coverage_cg_id_management_loop_label axi4_env_pkg 0 0 0 0 0  ( 0 
+)
+ 0 18 2 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+0
+0
+0
+64
+0
+ 0
+
+6
+0
+0
+0
+ 7 cp_awid 20 2 0 0 0 0 0 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::awid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 1 1 0 1 1 11 awid_values 21 2 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_1 0 0 0 0 0
+ 0
+
+ 7 cp_arid 25 2 0 0 0 0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::arid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 1 1 0 1 1 11 arid_values 26 2 0 1 0 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_1 0 0 0 0 0
+ 0
+
+ 17 cp_same_id_writes 30 2 0 0 0 0 0 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::awid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 4 0 0 1 1 15 same_id_pattern 31 2 0 4 0 -1 0 0 0 0 0 0 1 2 0 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 16 cp_same_id_reads 34 2 0 0 0 0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::arid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 4 0 0 1 1 15 same_id_pattern 35 2 0 4 0 -1 0 0 0 0 0 0 1 2 0 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_4 0 0 0 0 0 0 0
+ 0
+ 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_4 0 0 0 0 0 0 0
+ 0
+
+ 17 cp_diff_id_writes 39 2 0 0 0 0 0 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 143 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::awid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 4 0 0 1 1 15 diff_id_pattern 40 2 0 4 0 -1 0 0 0 0 0 0 1 2 0 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_6 0 0 0 0 0 0 0
+ 0
+
+ 16 cp_diff_id_reads 43 2 0 0 0 0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_2 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 16 1 24 axi4_globals_pkg::arid_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1 1 4 0 0 1 1 15 diff_id_pattern 44 2 0 4 0 -1 0 0 0 0 0 0 1 2 0 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 0 0 -1 0 4 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_id_management_fn_8 0 0 0 0 0 0 0
+ 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_env_pkg::axi4_protocol_coverage::cg_exclusive_access __coverage_axi4_protocol_coverage.cg_exclusive_access unused_axi4_protocol_coverage_cg_exclusive_access_loop_label axi4_env_pkg 0 1 0 0 0  ( 0 
+)
+ 0 49 2 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+0
+0
+0
+64
+0
+ 0
+
+5
+0
+4
+0
+ 17 cp_exclusive_read 51 2 0 0 0 0 0 146 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn 146 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::arlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 11 normal_read 52 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 exclusive_read 53 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_1 0 0 0 0 0 0 0
+ 0
+
+ 18 cp_exclusive_write 57 2 0 0 0 0 0 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_2 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_2 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::awlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 12 normal_write 58 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_3 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 exclusive_write 59 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_4 0 0 0 0 0 0 0
+ 0
+
+ 22 cp_exclusive_read_resp 66 2 0 0 0 0 0 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_5 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_5 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::rresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 4 1 1 0 0 1 1 9 okay_resp 67 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 exokay_resp 68 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 slverr_resp 69 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 decerr_resp 70 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_9 0 0 0 0 0 0 0
+ 0
+
+ 23 cp_exclusive_write_resp 73 2 0 0 0 0 0 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_a 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::bresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 4 1 1 0 0 1 1 9 okay_resp 74 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_b 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 exokay_resp 75 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_c 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 slverr_resp 76 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_d 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 11 decerr_resp 77 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_e 0 0 0 0 0 0 0
+ 0
+
+ 17 cp_exclusive_addr 94 2 0 0 0 0 0 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_f 148 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_f 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 64 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 3 1 1 0 0 1 1 9 ddr_range 95 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_10 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_11 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 16 peripheral_range 96 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_12 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_13 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 fuse_range 97 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_14 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_exclusive_access_fn_15 0 0 0 0 0
+ 0
+
+ 21 cp_exclusive_rw_combo 0 63 2 0 -1 0 0 0 0 2 0 1 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 22 cp_excl_read_with_resp 0 81 2 0 -1 0 0 0 0 2 0 2 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 3 1 1 0 0 -1 0 0 1 1 21 exclusive_read_exokay 82 2 1 0 1 3 1 0 0 1 14 exclusive_read 0 0 0 0 0 1 0 2 1 11 exokay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 19 exclusive_read_okay 83 2 1 0 1 3 1 0 0 1 14 exclusive_read 0 0 0 0 0 1 0 2 1 9 okay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 16 normal_read_okay 84 2 1 0 1 3 1 0 0 1 11 normal_read 0 0 0 0 0 1 0 2 1 9 okay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+
+ 23 cp_excl_write_with_resp 0 87 2 0 -1 0 0 0 0 2 1 3 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 3 1 1 0 0 -1 0 0 1 1 22 exclusive_write_exokay 88 2 1 0 1 3 1 0 1 1 15 exclusive_write 0 0 0 0 0 1 0 3 1 11 exokay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 20 exclusive_write_okay 89 2 1 0 1 3 1 0 1 1 15 exclusive_write 0 0 0 0 0 1 0 3 1 9 okay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 17 normal_write_okay 90 2 1 0 1 3 1 0 1 1 12 normal_write 0 0 0 0 0 1 0 3 1 9 okay_resp 0 0 0 0 0 0 0 0 0 0 0 0
+
+ 18 cp_excl_write_addr 0 101 2 0 -1 0 0 0 0 2 1 4 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 -1 0 0 1 1 13 exclusive_ddr 102 2 1 0 1 3 1 0 1 1 15 exclusive_write 0 0 0 0 0 1 0 4 1 9 ddr_range 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 20 exclusive_peripheral 103 2 1 0 1 3 1 0 1 1 15 exclusive_write 0 0 0 0 0 1 0 4 1 16 peripheral_range 0 0 0 0 0 0 0 0 0 0 0 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_env_pkg::axi4_protocol_coverage::cg_protocol_violations __coverage_axi4_protocol_coverage.cg_protocol_violations unused_axi4_protocol_coverage_cg_protocol_violations_loop_label axi4_env_pkg 0 1 0 0 0  ( 0 
+)
+ 0 107 2 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+0
+0
+0
+64
+0
+ 0
+
+6
+0
+1
+0
+ 18 cp_awlen_violation 109 2 0 0 0 0 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 10 normal_len 110 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_1 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 11 out_of_spec 111 2 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_2 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_2 0 0 0 0 0
+ 0
+
+ 18 cp_arlen_violation 115 2 0 0 0 0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_3 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_3 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 10 normal_len 116 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_1 0 0 0 0 0
+ 0
+ 1 3 0 0 1 1 11 out_of_spec 117 2 0 3 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_2 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_2 0 0 0 0 0
+ 0
+
+ 18 cp_exclusive_write 121 2 0 0 0 0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_4 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_4 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::awlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 12 normal_write 122 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 15 exclusive_write 123 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_6 0 0 0 0 0 0 0
+ 0
+
+ 17 cp_exclusive_read 126 2 0 0 0 0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_7 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_7 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::arlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 11 normal_read 127 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_8 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 14 exclusive_read 128 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_9 0 0 0 0 0 0 0
+ 0
+
+ 17 master_tx_h.awlen 132 2 0 1 0 0 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 8 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 19 master_tx_h.awburst 132 2 0 1 0 0 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_a 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 27 axi4_globals_pkg::awburst_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 19 cp_burst_len_x_type 0 132 2 0 -1 0 0 0 0 2 4 5 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 -1 0 0 1 1 11 single_beat 133 2 1 0 1 1 1 0 4 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_0 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 10 multi_beat 134 2 1 0 1 1 1 0 4 0 1 1 1 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_b 0 151 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_protocol_violations_fn_1 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_env_pkg::axi4_protocol_coverage::cg_error_responses __coverage_axi4_protocol_coverage.cg_error_responses unused_axi4_protocol_coverage_cg_error_responses_loop_label axi4_env_pkg 0 1 0 0 0  ( 0 
+)
+ 0 138 2 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+0
+0
+0
+64
+0
+ 0
+
+6
+0
+2
+0
+ 8 cp_bresp 140 2 0 0 0 0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::bresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 4 1 1 0 0 1 1 4 okay 141 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 exokay 142 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_1 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 slverr 143 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_2 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 decerr 144 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_3 0 0 0 0 0 0 0
+ 0
+
+ 8 cp_rresp 148 2 0 0 0 0 0 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_4 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_4 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::rresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 4 1 1 0 0 1 1 4 okay 149 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_5 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 exokay 150 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_6 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 slverr 151 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_7 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 6 decerr 152 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_8 0 0 0 0 0 0 0
+ 0
+
+ 18 master_tx_h.awlock 156 2 0 1 0 0 0 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_9 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_9 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::awlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 master_tx_h.bresp 156 2 0 1 0 0 0 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn 145 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::bresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 18 master_tx_h.arlock 163 2 0 1 0 0 0 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_a 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_a 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 1 1 26 axi4_globals_pkg::arlock_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 17 master_tx_h.rresp 163 2 0 1 0 0 0 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_4 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_4 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 7 2 1 25 axi4_globals_pkg::rresp_e 1 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 23 cp_exclusive_write_resp 0 156 2 0 -1 0 0 0 0 2 2 3 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 -1 0 0 1 1 17 exclusive_success 158 2 1 0 1 3 1 0 2 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_b 0 0 0 0 0 0 0
+ 0 0 0 0 1 0 3 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_1 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 14 exclusive_fail 160 2 1 0 1 3 1 0 2 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_b 0 0 0 0 0 0 0
+ 0 0 0 0 1 0 3 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_0 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0
+
+ 22 cp_exclusive_read_resp 0 163 2 0 -1 0 0 0 0 2 4 5 0 -1 0 0 0
+ 0
+ 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 -1 0 0 1 1 17 exclusive_success 165 2 1 0 1 3 1 0 4 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_c 0 0 0 0 0 0 0
+ 0 0 0 0 1 0 5 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_6 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0
+ 1 1 0 0 -1 0 0 1 1 14 exclusive_fail 167 2 1 0 1 3 1 0 4 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_c 0 0 0 0 0 0 0
+ 0 0 0 0 1 0 5 0 1 1 1 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_error_responses_fn_5 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0
+
+end_coverage_group
+global coverage_group 0 0 axi4_env_pkg::axi4_protocol_coverage::cg_address_alignment __coverage_axi4_protocol_coverage.cg_address_alignment unused_axi4_protocol_coverage_cg_address_alignment_loop_label axi4_env_pkg 0 1 0 0 0  ( 0 
+)
+ 0 171 2 0 0 1 0 0 0 0  1
+0
+0
+0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+0
+0
+0
+64
+0
+ 0
+
+3
+0
+0
+0
+ 19 cp_write_addr_align 173 2 0 0 0 0 0 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn 147 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 64 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 7 aligned 174 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 unaligned 175 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_1 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_2 0 0 0 0 0
+ 0
+
+ 18 cp_read_addr_align 178 2 0 0 0 0 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_3 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_3 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 64 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 7 aligned 179 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_0 0 0 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 9 unaligned 180 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_1 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_2 0 0 0 0 0
+ 0
+
+ 14 cp_4k_boundary 185 2 0 0 0 0 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_4 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_4 0 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 0 -1 2 64 0 0 1 0 0 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 2 1 1 0 0 1 1 8 no_cross 186 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_0 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_5 0 0 0 0 0
+ 0
+ 1 1 0 0 1 1 10 crosses_4k 187 2 0 1 0 0 0 0 0 0 0 0 0 0 -1 0 0 -1 0 0 1 1 1 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_6 0 149 axi4_env_pkg_axi4_protocol_coverage_11_0::axi4_env_pkg_axi4_protocol_coverage_11_0_axi4_env_pkg_axi4_protocol_coverage_11_0_cg_address_alignment_fn_2 0 0 0 0 0
+ 0
+
+end_coverage_group

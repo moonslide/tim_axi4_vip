@@ -1,0 +1,27 @@
+AXI4 Regression Results
+Generated: 2025-07-09 23:57:54
+================================================================================
+
+Summary:
+  Total Tests: 2
+  Passed:      0
+  Failed:      2
+  Pass Rate:   0.0%
+
+FAILED Tests (2):
+--------------------------------------------------------------------------------
+Test:     axi4_tc_049_awlen_out_of_spec_test
+Status:   FAIL
+Duration: 37.5s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_tc_049_awlen_out_of_spec_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_non_blocking_write_read_response_out_of_order_test
+Status:   FAIL
+Duration: 39.1s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_non_blocking_write_read_response_out_of_order_test.log
+Error:    UVM_FATAL Count: 0
+
+

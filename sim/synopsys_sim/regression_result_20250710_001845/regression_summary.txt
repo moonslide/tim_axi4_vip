@@ -1,0 +1,614 @@
+AXI4 Regression Results
+Generated: 2025-07-10 00:24:46
+================================================================================
+
+Summary:
+  Total Tests: 98
+  Passed:      87
+  Failed:      11
+  Pass Rate:   88.8%
+
+FAILED Tests (11):
+--------------------------------------------------------------------------------
+Test:     axi4_non_blocking_write_read_response_out_of_order_test
+Status:   FAIL
+Duration: 39.8s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_non_blocking_write_read_response_out_of_order_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_all_ones_test
+Status:   FAIL
+Duration: 39.3s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_wstrb_all_ones_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_r_ready_delay_test
+Status:   FAIL
+Duration: 38.9s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_r_ready_delay_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_ar_ready_delay_test
+Status:   FAIL
+Duration: 38.6s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_ar_ready_delay_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_all_zero_test
+Status:   FAIL
+Duration: 39.3s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_wstrb_all_zero_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_upper_half_test
+Status:   FAIL
+Duration: 39.5s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_wstrb_upper_half_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_lower_half_test
+Status:   FAIL
+Duration: 39.2s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_wstrb_lower_half_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_alternating_test
+Status:   FAIL
+Duration: 39.9s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_wstrb_alternating_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_random_burst_test
+Status:   FAIL
+Duration: 39.6s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_wstrb_random_burst_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_wstrb_single_bit_test
+Status:   FAIL
+Duration: 39.7s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_wstrb_single_bit_test.log
+Error:    UVM_FATAL Count: 0
+
+Test:     axi4_tc_042_id_multiple_writes_same_awid_test
+Status:   FAIL
+Duration: 39.0s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_tc_042_id_multiple_writes_same_awid_test.log
+Error:    UVM_FATAL Count: 0
+
+
+PASSED Tests (87):
+--------------------------------------------------------------------------------
+Test:     axi4_blocking_8b_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_blocking_8b_write_read_test.log
+
+Test:     axi4_blocking_cross_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_blocking_cross_write_read_test.log
+
+Test:     axi4_blocking_wrap_burst_write_read_test
+Status:   PASS
+Duration: 39.0s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_blocking_wrap_burst_write_read_test.log
+
+Test:     axi4_write_read_test
+Status:   PASS
+Duration: 39.2s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_write_read_test.log
+
+Test:     axi4_blocking_16b_write_read_test
+Status:   PASS
+Duration: 39.0s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_blocking_16b_write_read_test.log
+
+Test:     axi4_blocking_slave_error_write_read_test
+Status:   PASS
+Duration: 38.6s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_blocking_slave_error_write_read_test.log
+
+Test:     axi4_blocking_write_read_rand_test
+Status:   PASS
+Duration: 39.6s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_blocking_write_read_rand_test.log
+
+Test:     axi4_blocking_32b_write_read_test
+Status:   PASS
+Duration: 39.7s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_blocking_32b_write_read_test.log
+
+Test:     axi4_non_blocking_8b_write_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_non_blocking_8b_write_read_test.log
+
+Test:     axi4_blocking_fixed_burst_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_blocking_fixed_burst_write_read_test.log
+
+Test:     axi4_blocking_incr_burst_write_read_test
+Status:   PASS
+Duration: 39.1s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_blocking_incr_burst_write_read_test.log
+
+Test:     axi4_blocking_unaligned_addr_write_read_test
+Status:   PASS
+Duration: 39.2s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_blocking_unaligned_addr_write_read_test.log
+
+Test:     axi4_non_blocking_32b_write_read_test
+Status:   PASS
+Duration: 38.2s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_non_blocking_32b_write_read_test.log
+
+Test:     axi4_non_blocking_16b_write_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_non_blocking_16b_write_read_test.log
+
+Test:     axi4_non_blocking_incr_burst_write_read_test
+Status:   PASS
+Duration: 39.3s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_non_blocking_incr_burst_write_read_test.log
+
+Test:     axi4_non_blocking_unaligned_addr_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_non_blocking_unaligned_addr_write_read_test.log
+
+Test:     axi4_blocking_16b_data_read_test
+Status:   PASS
+Duration: 38.8s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_blocking_16b_data_read_test.log
+
+Test:     axi4_non_blocking_slave_error_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_non_blocking_slave_error_write_read_test.log
+
+Test:     axi4_non_blocking_outstanding_transfer_write_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_non_blocking_outstanding_transfer_write_read_test.log
+
+Test:     axi4_non_blocking_write_read_rand_test
+Status:   PASS
+Duration: 39.3s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_non_blocking_write_read_rand_test.log
+
+Test:     axi4_non_blocking_cross_write_read_test
+Status:   PASS
+Duration: 39.2s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_non_blocking_cross_write_read_test.log
+
+Test:     axi4_non_blocking_okay_response_write_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_non_blocking_okay_response_write_read_test.log
+
+Test:     axi4_non_blocking_wrap_burst_write_read_test
+Status:   PASS
+Duration: 38.5s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_non_blocking_wrap_burst_write_read_test.log
+
+Test:     axi4_non_blocking_fixed_burst_write_read_test
+Status:   PASS
+Duration: 38.6s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_non_blocking_fixed_burst_write_read_test.log
+
+Test:     axi4_blocking_32b_data_read_test
+Status:   PASS
+Duration: 40.2s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_blocking_32b_data_read_test.log
+
+Test:     axi4_blocking_64b_data_read_test
+Status:   PASS
+Duration: 37.9s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_blocking_64b_data_read_test.log
+
+Test:     axi4_blocking_8b_data_read_test
+Status:   PASS
+Duration: 38.2s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_blocking_8b_data_read_test.log
+
+Test:     axi4_blocking_incr_burst_read_test
+Status:   PASS
+Duration: 38.3s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_blocking_incr_burst_read_test.log
+
+Test:     axi4_non_blocking_32b_data_read_test
+Status:   PASS
+Duration: 38.2s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_non_blocking_32b_data_read_test.log
+
+Test:     axi4_blocking_okay_response_read_test
+Status:   PASS
+Duration: 38.8s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_blocking_okay_response_read_test.log
+
+Test:     axi4_non_blocking_exokay_response_read_test
+Status:   PASS
+Duration: 38.2s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_non_blocking_exokay_response_read_test.log
+
+Test:     axi4_non_blocking_64b_data_read_test
+Status:   PASS
+Duration: 39.3s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_non_blocking_64b_data_read_test.log
+
+Test:     axi4_non_blocking_16b_data_read_test
+Status:   PASS
+Duration: 38.4s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_non_blocking_16b_data_read_test.log
+
+Test:     axi4_blocking_wrap_burst_read_test
+Status:   PASS
+Duration: 39.5s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_blocking_wrap_burst_read_test.log
+
+Test:     axi4_blocking_exokay_response_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_blocking_exokay_response_read_test.log
+
+Test:     axi4_non_blocking_8b_data_read_test
+Status:   PASS
+Duration: 38.5s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_non_blocking_8b_data_read_test.log
+
+Test:     axi4_non_blocking_incr_burst_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_non_blocking_incr_burst_read_test.log
+
+Test:     axi4_non_blocking_okay_response_read_test
+Status:   PASS
+Duration: 39.1s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_non_blocking_okay_response_read_test.log
+
+Test:     axi4_non_blocking_wrap_burst_read_test
+Status:   PASS
+Duration: 39.2s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_non_blocking_wrap_burst_read_test.log
+
+Test:     axi4_non_blocking_32b_write_data_test
+Status:   PASS
+Duration: 38.0s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_non_blocking_32b_write_data_test.log
+
+Test:     axi4_non_blocking_exokay_write_response_test
+Status:   PASS
+Duration: 38.3s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_non_blocking_exokay_write_response_test.log
+
+Test:     axi4_non_blocking_wrap_burst_write_test
+Status:   PASS
+Duration: 40.6s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_non_blocking_wrap_burst_write_test.log
+
+Test:     axi4_non_blocking_16b_write_data_test
+Status:   PASS
+Duration: 38.8s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_non_blocking_16b_write_data_test.log
+
+Test:     axi4_blocking_wrap_burst_write_test
+Status:   PASS
+Duration: 38.4s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_blocking_wrap_burst_write_test.log
+
+Test:     axi4_non_blocking_incr_burst_write_test
+Status:   PASS
+Duration: 38.6s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_non_blocking_incr_burst_write_test.log
+
+Test:     axi4_non_blocking_okay_write_response_test
+Status:   PASS
+Duration: 38.3s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_non_blocking_okay_write_response_test.log
+
+Test:     axi4_non_blocking_64b_write_data_test
+Status:   PASS
+Duration: 38.4s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_non_blocking_64b_write_data_test.log
+
+Test:     axi4_non_blocking_8b_write_data_test
+Status:   PASS
+Duration: 38.7s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_non_blocking_8b_write_data_test.log
+
+Test:     axi4_blocking_okay_response_write_test
+Status:   PASS
+Duration: 38.7s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_blocking_okay_response_write_test.log
+
+Test:     axi4_blocking_incr_burst_write_test
+Status:   PASS
+Duration: 38.9s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_blocking_incr_burst_write_test.log
+
+Test:     axi4_blocking_exokay_response_write_test
+Status:   PASS
+Duration: 39.3s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_blocking_exokay_response_write_test.log
+
+Test:     axi4_non_blocking_only_read_response_out_of_order_test
+Status:   PASS
+Duration: 37.4s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_non_blocking_only_read_response_out_of_order_test.log
+
+Test:     axi4_blocking_64b_write_data_test
+Status:   PASS
+Duration: 38.4s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_blocking_64b_write_data_test.log
+
+Test:     axi4_blocking_32b_write_data_test
+Status:   PASS
+Duration: 38.8s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_blocking_32b_write_data_test.log
+
+Test:     axi4_blocking_8b_write_data_test
+Status:   PASS
+Duration: 38.6s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_blocking_8b_write_data_test.log
+
+Test:     axi4_non_blocking_slave_mem_mode_wrap_burst_write_read_test
+Status:   PASS
+Duration: 38.0s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_non_blocking_slave_mem_mode_wrap_burst_write_read_test.log
+
+Test:     axi4_non_blocking_slave_mem_mode_incr_burst_write_read_test
+Status:   PASS
+Duration: 38.9s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_non_blocking_slave_mem_mode_incr_burst_write_read_test.log
+
+Test:     axi4_blocking_16b_write_data_test
+Status:   PASS
+Duration: 39.0s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_blocking_16b_write_data_test.log
+
+Test:     axi4_non_blocking_only_write_response_out_of_order_test
+Status:   PASS
+Duration: 39.9s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_non_blocking_only_write_response_out_of_order_test.log
+
+Test:     axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test
+Status:   PASS
+Duration: 38.5s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test.log
+
+Test:     axi4_non_blocking_qos_write_read_test
+Status:   PASS
+Duration: 39.2s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_non_blocking_qos_write_read_test.log
+
+Test:     axi4_width_check_test
+Status:   PASS
+Duration: 39.6s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_width_check_test.log
+
+Test:     axi4_w_ready_delay_test
+Status:   PASS
+Duration: 38.1s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_w_ready_delay_test.log
+
+Test:     axi4_aw_w_channel_separation_test
+Status:   PASS
+Duration: 38.1s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_aw_w_channel_separation_test.log
+
+Test:     axi4_aw_ready_delay_test
+Status:   PASS
+Duration: 38.8s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_aw_ready_delay_test.log
+
+Test:     axi4_b_ready_delay_test
+Status:   PASS
+Duration: 38.5s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_b_ready_delay_test.log
+
+Test:     axi4_width_config_test
+Status:   PASS
+Duration: 40.0s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_width_config_test.log
+
+Test:     axi4_all_master_slave_access_test
+Status:   PASS
+Duration: 38.4s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_all_master_slave_access_test.log
+
+Test:     axi4_lower_boundary_read_test
+Status:   PASS
+Duration: 38.7s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_lower_boundary_read_test.log
+
+Test:     axi4_4k_boundary_cross_test
+Status:   PASS
+Duration: 38.4s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_4k_boundary_cross_test.log
+
+Test:     axi4_upper_boundary_write_test
+Status:   PASS
+Duration: 40.3s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_upper_boundary_write_test.log
+
+Test:     axi4_lower_boundary_write_test
+Status:   PASS
+Duration: 38.6s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_lower_boundary_write_test.log
+
+Test:     axi4_upper_boundary_read_test
+Status:   PASS
+Duration: 38.5s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_upper_boundary_read_test.log
+
+Test:     axi4_wstrb_illegal_test
+Status:   PASS
+Duration: 38.8s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_wstrb_illegal_test.log
+
+Test:     axi4_unaligned_access_test
+Status:   PASS
+Duration: 39.1s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_unaligned_access_test.log
+
+Test:     axi4_tc_043_id_multiple_writes_different_awid_test
+Status:   PASS
+Duration: 38.2s
+Folder:   5
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_05/axi4_tc_043_id_multiple_writes_different_awid_test.log
+
+Test:     axi4_tc_047_wlast_too_early_test
+Status:   PASS
+Duration: 37.3s
+Folder:   6
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_06/axi4_tc_047_wlast_too_early_test.log
+
+Test:     axi4_tc_046_wid_awid_mismatch_test
+Status:   PASS
+Duration: 37.7s
+Folder:   2
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_02/axi4_tc_046_wid_awid_mismatch_test.log
+
+Test:     axi4_tc_044_id_multiple_reads_same_arid_test
+Status:   PASS
+Duration: 40.2s
+Folder:   4
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_04/axi4_tc_044_id_multiple_reads_same_arid_test.log
+
+Test:     axi4_tc_050_arlen_out_of_spec_test
+Status:   PASS
+Duration: 38.1s
+Folder:   3
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_03/axi4_tc_050_arlen_out_of_spec_test.log
+
+Test:     axi4_tc_049_awlen_out_of_spec_test
+Status:   PASS
+Duration: 38.5s
+Folder:   0
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_00/axi4_tc_049_awlen_out_of_spec_test.log
+
+Test:     axi4_tc_045_id_multiple_reads_different_arid_test
+Status:   PASS
+Duration: 38.8s
+Folder:   8
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_08/axi4_tc_045_id_multiple_reads_different_arid_test.log
+
+Test:     axi4_tc_051_exclusive_write_success_test
+Status:   PASS
+Duration: 38.6s
+Folder:   11
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_11/axi4_tc_051_exclusive_write_success_test.log
+
+Test:     axi4_tc_048_wlast_too_late_test
+Status:   PASS
+Duration: 39.0s
+Folder:   9
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_09/axi4_tc_048_wlast_too_late_test.log
+
+Test:     axi4_tc_052_exclusive_write_fail_test
+Status:   PASS
+Duration: 39.0s
+Folder:   7
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_07/axi4_tc_052_exclusive_write_fail_test.log
+
+Test:     axi4_tc_053_exclusive_read_success_test
+Status:   PASS
+Duration: 36.4s
+Folder:   1
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_01/axi4_tc_053_exclusive_read_success_test.log
+
+Test:     axi4_tc_054_exclusive_read_fail_test
+Status:   PASS
+Duration: 36.9s
+Folder:   10
+Log:      /home/timtim01/eda_test/project/tim_axi4_vip/sim/run_folder_10/axi4_tc_054_exclusive_read_fail_test.log
+

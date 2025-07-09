@@ -158,6 +158,19 @@ function void axi4_slave_driver_proxy::end_of_elaboration_phase(uvm_phase phase)
   super.end_of_elaboration_phase(phase);
   if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
     axi4_slave_mem_h = axi4_slave_memory::type_id::create("axi4_slave_mem_h");
+    
+    // Initialize ROM memory content if this is the ROM slave (address range 0x0 - 0x1FFFF)
+    if(axi4_slave_agent_cfg_h.min_address == 64'h0000_0000_0000_0000 && 
+       axi4_slave_agent_cfg_h.max_address == 64'h0000_0000_0001_FFFF) begin
+      // Populate ROM region with basic boot code patterns
+      for(bit [ADDRESS_WIDTH-1:0] addr = axi4_slave_agent_cfg_h.min_address; 
+          addr <= axi4_slave_agent_cfg_h.max_address; addr += 4) begin
+        axi4_slave_mem_h.mem_write(addr, 32'hDEADBEEF); // ROM boot pattern
+      end
+      `uvm_info("slave_driver_proxy", $sformatf("ROM slave memory initialized from 0x%16h to 0x%16h", 
+               axi4_slave_agent_cfg_h.min_address, axi4_slave_agent_cfg_h.max_address), UVM_LOW)
+    end
+    
     // In SLAVE_MEM_MODE, reads are independent of writes, so no need to wait
     completed_initial_txn = 1;
     `uvm_info("slave_driver_proxy", "SLAVE_MEM_MODE: Setting completed_initial_txn=1 (reads independent of writes)", UVM_HIGH)

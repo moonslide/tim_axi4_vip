@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1752078947.198889100, "rt":21.83, "ut":22.81, "st":0.96}}
+{"vcselab":{"timestamp_begin":1752078969.213098503, "rt":0.43, "ut":0.31, "st":0.13}}
+{"link":{"timestamp_begin":1752078969.779795528, "rt":1.11, "ut":0.69, "st":0.43}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1752078944.996146803}
+{"VCS_COMP_START_TIME": 1752078944.996146803}
+{"VCS_COMP_END_TIME": 1752078973.378712416}
+{"VCS_USER_OPTIONS": "-full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_blocking_write_read_rand_test +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l test_rom_config.log"}
+{"vcs1": {"peak_mem": 606960}}
+{"vcselab": {"peak_mem": 187576}}

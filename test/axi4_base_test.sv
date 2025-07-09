@@ -202,16 +202,7 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     endcase
     
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 3;
-    
-    // Configure read_data_mode based on slave type
-    if (i == 1) begin
-      // ROM slave (S1) - use RANDOM_DATA_MODE to avoid memory model dependency
-      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = RANDOM_DATA_MODE;
-    end else begin
-      // All other slaves use SLAVE_MEM_MODE for normal memory behavior
-      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
-    end
-    
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
 

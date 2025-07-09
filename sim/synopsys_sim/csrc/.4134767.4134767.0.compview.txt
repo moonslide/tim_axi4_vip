@@ -1,0 +1,7 @@
+Command exited with non-zero status 255
+{"vcs1":{"timestamp_begin":1752079696.072733390, "rt":5.21, "ut":5.99, "st":0.42}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1752079693.806046046}
+{"VCS_COMP_START_TIME": 1752079693.806046046}
+{"VCS_COMP_END_TIME": 1752079701.454434771}
+{"VCS_USER_OPTIONS": "-full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_wstrb_all_ones_test +UVM_VERBOSITY=MEDIUM +plusarg_ignore -l axi4_wstrb_rom_fix_test.log"}
+{"vcs1": {"peak_mem": 540468}}
