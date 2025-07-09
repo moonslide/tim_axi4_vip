@@ -7,7 +7,8 @@ This directory contains a comprehensive parallel regression test system for AXI4
 - ✅ **Parallel Execution**: Run up to 50 tests simultaneously (local) or unlimited (LSF)
 - ✅ **LSF Support**: Full Load Sharing Facility integration with job monitoring
 - ✅ **Real-time Progress**: Live progress tracking with ETA and job status
-- ✅ **Comprehensive Logging**: Detailed logs for each test with automatic cleanup
+- ✅ **Comprehensive Logging**: Detailed logs for each test with automatic organization into logs folder
+- ✅ **VCS Artifact Cleanup**: Automatic cleanup of compilation artifacts between tests
 - ✅ **Error Analysis**: Automatic failure detection and reporting
 - ✅ **Timeout Handling**: Automatic cleanup of stuck tests and LSF jobs
 - ✅ **Graceful Shutdown**: Ctrl+C handling with cleanup (including LSF job termination)
@@ -116,11 +117,18 @@ axi4_non_blocking_write_test
 🧹 Cleaning up existing run_folder_xx directories...
 ✅ Cleaned up 5 existing run folders
 📁 Created results folder: regression_result_20250708_143025
+📁 Created logs folder: logs
 🔧 Setting up 10 parallel execution folders...
 
+🧹 [Folder 00] Cleaned simv*
+🧹 [Folder 00] Cleaned csrc
+🧹 [Folder 01] Cleaned simv*
+🧹 [Folder 01] Cleaned csrc
 ✅ [  1/ 85] axi4_write_read_test                              (  45.2s) Progress:   1.2% ETA: 0:05:30
 ❌ [  2/ 85] axi4_blocking_8b_write_read_test                  (  23.1s) Progress:   2.4% ETA: 0:05:15
     └─ Error: UVM_ERROR: Comparison failed at address 0x1000
+📋 Organizing logs into logs folder...
+✅ Organized 85/85 logs into logs folder
 ```
 
 #### LSF Mode
@@ -157,19 +165,101 @@ axi4_non_blocking_write_test
 ❌ FAILED TESTS (3):
    FAIL     axi4_blocking_8b_write_read_test                  ( 23.1s)
             └─ UVM_ERROR: Comparison failed at address 0x1000
-            └─ Log: run_folder_02/axi4_blocking_8b_write_read_test.log
+            └─ Log: regression_result_20250708_143025/logs/axi4_blocking_8b_write_read_test.log
 ```
 
 ### Detailed Results File
-A timestamped results file is automatically generated in a dedicated folder:
+A timestamped results folder is automatically generated with organized logs:
 ```
 regression_result_20250708_143025/
 ├── regression_results_20250708_143025.txt    # Main results file
-├── no_pass_list                              # List of failed tests
-├── axi4_write_read_test.log                 # Individual test logs
-├── axi4_blocking_8b_write_read_test.log
-└── ...
+├── regression_summary.txt                    # Copy of results file
+├── no_pass_list                              # List of failed tests (if any)
+├── axi4_write_read_test.log                  # Test logs in main folder
+├── axi4_blocking_8b_write_read_test.log      # (convenient access)
+├── axi4_tc_054_exclusive_read_fail_test.log
+├── ...
+└── logs/                                     # All test logs also organized here
+    ├── axi4_write_read_test.log              # (duplicate for organization)
+    ├── axi4_blocking_8b_write_read_test.log
+    ├── axi4_tc_054_exclusive_read_fail_test.log
+    └── ...
 ```
+
+## Log Organization
+
+The regression system automatically organizes all test logs into a dedicated `logs` subfolder within each results directory:
+
+### Features
+- ✅ **Dual Location**: All test logs are available in both main results folder and `logs/` subfolder
+- ✅ **Immediate Access**: Logs in main folder for quick access, organized in `logs/` for structure
+- ✅ **Safe Copy**: Logs are copied immediately after test completion to prevent loss
+- ✅ **No Missing Files**: Robust log collection prevents missing log file errors
+
+### Folder Structure
+```
+📁 regression_result_YYYYMMDD_HHMMSS/
+├── 📄 regression_results_YYYYMMDD_HHMMSS.txt  # Detailed results report
+├── 📄 regression_summary.txt                  # Copy of results for convenience
+├── 📄 no_pass_list                           # List of failed tests (if any)
+└── 📁 logs/                                  # All test logs organized here
+    ├── 📄 test1.log
+    ├── 📄 test2.log
+    ├── 📄 test3.log
+    └── 📄 ...
+```
+
+### Benefits
+- **Dual Access**: Quick access in main folder, organized structure in `logs/` subfolder
+- **Prevents Loss**: Immediate log copying prevents loss from folder cleanup or test overwrites
+- **Better Analysis**: All logs duplicated in `logs/` for batch processing or analysis
+- **Consistent Structure**: Every regression run follows the same organization pattern
+
+### Console Output
+When logs are organized, you'll see:
+```
+📋 Organizing logs into logs folder...
+✅ Organized 85/85 logs into logs folder and main results folder
+📋 All test logs available in: regression_result_20250708_143025 and regression_result_20250708_143025/logs
+```
+
+## VCS Artifact Cleanup
+
+The regression system automatically cleans up VCS compilation artifacts between test runs to prevent conflicts and ensure clean builds:
+
+### Artifacts Cleaned
+- **simv*** - VCS executable and related files  
+- **csrc** - VCS compilation directory
+- **vc_hdrs.h** - VCS header file
+- **ucli.key** - VCS license key file
+- **\*.fsdb** - FSDB waveform files
+- **\*.daidir** - VCS debug directories
+- **work.lib++** - Work library files
+- **\*.log** - Previous log files
+
+### When Cleanup Occurs
+- ✅ **Before each test**: Ensures clean compilation environment
+- ✅ **Between test runs**: When folders are reused for subsequent tests
+- ✅ **Both local and LSF modes**: Consistent cleanup across execution modes
+
+### Console Output
+When VCS cleanup is active (verbose mode), you'll see:
+```
+🧹 [Folder 00] Cleaned simv*
+🧹 [Folder 00] Cleaned csrc
+🧹 [Folder 00] Cleaned vc_hdrs.h
+🧹 [Folder 00] Cleaned ucli.key
+🧹 [Folder 00] Cleaned *.fsdb
+🧹 [Folder 00] Cleaned *.daidir
+🧹 [Folder 00] Cleaned work.lib++
+🔄 [Folder 00] Starting test_name
+```
+
+### Benefits
+- **Prevents Conflicts**: Avoids issues from previous compilation artifacts
+- **Clean Builds**: Each test starts with a fresh compilation environment
+- **Consistent Results**: Eliminates test-to-test contamination
+- **Automatic**: No manual intervention required
 
 ## LSF Features
 
@@ -332,6 +422,9 @@ python3 test_regression.py
 ```bash
 # Run single test in current directory
 vcs [options] +UVM_TESTNAME=failed_test_name
+
+# Or check the organized log file
+cat regression_result_YYYYMMDD_HHMMSS/logs/failed_test_name.log
 ```
 
 ### Custom Test Subset

@@ -24,6 +24,13 @@ endfunction : new
 
 function void axi4_tc_042_id_multiple_writes_same_awid_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
+  
+  // Disable backdoor verification for same AWID test - since it writes with same WID,
+  // backdoor comparison doesn't make sense as transactions can interleave
+  uvm_config_db#(bit)::set(this, "*", "disable_backdoor_verify", 1);
+  uvm_config_db#(bit)::set(this, "*env*", "disable_backdoor_verify", 1);
+  uvm_config_db#(int)::set(this, "*", "backdoor_verify_enable", 0);
+  `uvm_info(get_type_name(), "TC_042: disabled backdoor verification for same AWID writes", UVM_LOW);
 endfunction : build_phase
 
 task axi4_tc_042_id_multiple_writes_same_awid_test::run_phase(uvm_phase phase);

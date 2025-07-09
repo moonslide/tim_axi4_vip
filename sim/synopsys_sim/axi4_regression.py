@@ -70,6 +70,9 @@ class RegressionRunner:
         # Results folder with timestamp
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.results_folder = self.base_dir / f"regression_result_{self.timestamp}"
+        self.logs_folder = self.results_folder / "logs"
+        self.pass_logs_folder = self.logs_folder / "pass_logs"
+        self.no_pass_logs_folder = self.logs_folder / "no_pass_logs"
         
         # Statistics
         self.total_tests = 0
@@ -163,9 +166,15 @@ class RegressionRunner:
         # Clean up existing run folders first
         self._cleanup_existing_folders()
         
-        # Create results folder
+        # Create results folder and logs subfolders
         self.results_folder.mkdir(exist_ok=True)
+        self.logs_folder.mkdir(exist_ok=True)
+        self.pass_logs_folder.mkdir(exist_ok=True)
+        self.no_pass_logs_folder.mkdir(exist_ok=True)
         print(f"📁 Created results folder: {self.results_folder.name}")
+        print(f"📁 Created logs folder: {self.logs_folder.name}")
+        print(f"📁 Created pass_logs folder: {self.pass_logs_folder.name}")
+        print(f"📁 Created no_pass_logs folder: {self.no_pass_logs_folder.name}")
         
         # Always set up parallel folders based on number of tests
         num_folders = min(self.max_parallel, self.total_tests)
@@ -237,6 +246,9 @@ class RegressionRunner:
             f.write('\n')
             f.write('# Change to execution directory\n')
             f.write(f'cd {folder_path}\n')
+            f.write('\n')
+            f.write('# Clean up VCS artifacts before running test\n')
+            f.write('rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++ *.log\n')
             f.write('\n')
             f.write('# Run VCS\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
@@ -419,13 +431,73 @@ class RegressionRunner:
                 except Exception as e:
                     print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
     
+    def _cleanup_vcs_artifacts(self, folder_path):
+        """Clean up VCS compilation artifacts before running a test"""
+        artifacts_to_clean = [
+            'simv*',           # VCS executable and related files
+            'csrc',            # VCS compilation directory
+            'vc_hdrs.h',       # VCS header file
+            'ucli.key',        # VCS license key file
+            '*.fsdb',          # FSDB waveform files
+            '*.daidir',        # VCS debug directory
+            'work.lib++',      # Work library
+            # Note: We don't clean *.log files here since they might be needed for analysis
+        ]
+        
+        for pattern in artifacts_to_clean:
+            try:
+                # Use shell globbing to handle wildcards
+                result = subprocess.run(
+                    f'cd {folder_path} && rm -rf {pattern}',
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                if self.verbose and result.returncode == 0:
+                    # Only show if files were actually removed
+                    check_result = subprocess.run(
+                        f'cd {folder_path} && ls {pattern} 2>/dev/null',
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                    )
+                    if check_result.returncode != 0:  # Files were removed
+                        print(f"🧹 [Folder {folder_path.name[-2:]}] Cleaned {pattern}")
+            except Exception as e:
+                if self.verbose:
+                    print(f"⚠️  Warning: Could not clean {pattern} in {folder_path}: {e}")
+    
+    def _cleanup_old_logs(self, folder_path, current_test_name):
+        """Clean up old log files from previous tests, but preserve current test's log"""
+        try:
+            # Only clean log files that are not the current test's log
+            result = subprocess.run(
+                f'cd {folder_path} && find . -name "*.log" ! -name "{current_test_name}.log" -delete',
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            if self.verbose and result.returncode == 0:
+                print(f"🧹 [Folder {folder_path.name[-2:]}] Cleaned old log files")
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  Warning: Could not clean old logs in {folder_path}: {e}")
+    
     def _run_single_test(self, test_name, folder_path, folder_id):
         """Execute a single test in the specified folder"""
         start_time = time.time()
         log_file = folder_path / f"{test_name}.log"
         
+        # Clean up VCS artifacts before running the test
+        self._cleanup_vcs_artifacts(folder_path)
+        
+        # Clean up old log files but preserve any that might be from the current test
+        self._cleanup_old_logs(folder_path, test_name)
+        
         if self.verbose:
             print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
+            print(f"    Working directory: {folder_path}")
+            print(f"    Expected log file: {log_file}")
         
         # Always use parallel VCS execution now
         # VCS command - use script wrapper to handle directory changes
@@ -435,6 +507,8 @@ class RegressionRunner:
         # Create run script that runs VCS directly from within this folder
         with open(run_script, 'w') as f:
             f.write('#!/bin/bash\n')
+            f.write('# Clean up VCS artifacts (already done in Python, but ensure completeness)\n')
+            f.write('# This is a backup cleanup in case Python cleanup missed anything\n')
             f.write('# Run VCS directly from this folder with adjusted compile file\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
@@ -467,6 +541,35 @@ class RegressionRunner:
                 stdout, _ = process.communicate(timeout=self.timeout)
                 duration = time.time() - start_time
                 
+                # Wait a moment for log file to be written
+                time.sleep(0.5)
+                
+                # Check multiple possible log file locations
+                log_locations = [
+                    log_file,  # Expected location
+                    Path.cwd() / f"{test_name}.log",  # Current directory
+                    self.base_dir / f"{test_name}.log",  # synopsys_sim directory
+                ]
+                
+                actual_log_file = None
+                for loc in log_locations:
+                    if loc.exists():
+                        actual_log_file = loc
+                        break
+                
+                # If log file found in unexpected location, move it to expected location
+                if actual_log_file and actual_log_file != log_file:
+                    shutil.move(str(actual_log_file), str(log_file))
+                    if self.verbose:
+                        print(f"📋 Moved log from {actual_log_file} to {log_file}")
+                elif not actual_log_file:
+                    # No log file found anywhere
+                    if self.verbose:
+                        print(f"⚠️  No log file found for {test_name}")
+                        print(f"    Checked locations: {[str(loc) for loc in log_locations]}")
+                        if stdout:
+                            print(f"    VCS stdout (first 500 chars): {stdout[:500]}")
+                
                 # Check if test passed or failed  
                 status, error_msg = self._analyze_test_result(log_file, stdout)
                 
@@ -477,12 +580,20 @@ class RegressionRunner:
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         process.communicate()
                 
-                # Always copy log to results folder, regardless of status
+                # Copy log to appropriate logs subfolder based on test status
+                log_copied = False
+                target_folder = self.pass_logs_folder if status == 'PASS' else self.no_pass_logs_folder
+                
                 if log_file.exists():
-                    shutil.copy2(log_file, self.results_folder / f"{test_name}.log")
+                    shutil.copy2(log_file, target_folder / f"{test_name}.log")
+                    log_copied = True
                 elif (folder_path / f"{test_name}.log").exists():
                     # Try alternative log location
-                    shutil.copy2(folder_path / f"{test_name}.log", self.results_folder / f"{test_name}.log")
+                    shutil.copy2(folder_path / f"{test_name}.log", target_folder / f"{test_name}.log")
+                    log_copied = True
+                
+                if not log_copied:
+                    print(f"⚠️  Warning: Could not find log file for {test_name} after test completion")
                 
                 return TestResult(
                     name=test_name,
@@ -514,12 +625,18 @@ class RegressionRunner:
                     except Exception:
                         pass  # Use default timeout message
                 
-                # Always copy log to results folder if exists  
+                # Copy log to no_pass_logs folder for timeout cases
+                log_copied = False
                 if log_file.exists():
-                    shutil.copy2(log_file, self.results_folder / f"{test_name}.log")
+                    shutil.copy2(log_file, self.no_pass_logs_folder / f"{test_name}.log")
+                    log_copied = True
                 elif (folder_path / f"{test_name}.log").exists():
                     # Try alternative log location
-                    shutil.copy2(folder_path / f"{test_name}.log", self.results_folder / f"{test_name}.log")
+                    shutil.copy2(folder_path / f"{test_name}.log", self.no_pass_logs_folder / f"{test_name}.log")
+                    log_copied = True
+                
+                if not log_copied:
+                    print(f"⚠️  Warning: Could not find log file for {test_name} after timeout")
                 
                 return TestResult(
                     name=test_name,
@@ -554,6 +671,11 @@ class RegressionRunner:
             if log_file.exists():
                 with open(log_file, 'r') as f:
                     log_content = f.read()
+            else:
+                # If log file doesn't exist, try to determine status from stdout only
+                if self.verbose:
+                    print(f"⚠️  Log file not found at {log_file}, analyzing stdout only")
+                log_content = ""  # Use empty log content
             
             # Combine stdout and log content for analysis
             full_output = stdout + "\n" + log_content
@@ -672,6 +794,9 @@ class RegressionRunner:
             if 'CPU TIME' in full_output or 'Total simulation time' in full_output:
                 # Simulation completed, assume pass if no errors found
                 return 'PASS', None
+            elif log_content == "" and not log_file.exists():
+                # No log file was created - VCS likely failed to run
+                return 'ERROR', f"VCS failed to create log file: {log_file}"
             else:
                 return 'FAIL', "Simulation did not complete properly"
                 
@@ -733,9 +858,12 @@ class RegressionRunner:
                 print(f"    └─ Error: {test_result.error_msg}")
     
     def _ensure_log_copied(self, test_result):
-        """Ensure test log is copied to results folder"""
+        """Ensure test log is copied to appropriate logs subfolder based on test status"""
         try:
-            target_log = self.results_folder / f"{test_result.name}.log"
+            # Determine target folder based on test status
+            target_folder = self.pass_logs_folder if test_result.status == 'PASS' else self.no_pass_logs_folder
+            target_log = target_folder / f"{test_result.name}.log"
+            
             if target_log.exists():
                 return  # Already copied
             
@@ -752,12 +880,39 @@ class RegressionRunner:
             for log_path in possible_locations:
                 if log_path and log_path.exists():
                     shutil.copy2(log_path, target_log)
-                    print(f"📋 Copied missing log: {test_result.name}.log")
+                    status_folder = "pass_logs" if test_result.status == 'PASS' else "no_pass_logs"
+                    if self.verbose:
+                        print(f"📋 Copied log to {status_folder}: {test_result.name}.log")
                     return
             
             print(f"⚠️  Warning: Could not find log file for {test_result.name}")
         except Exception as e:
             print(f"⚠️  Warning: Error copying log for {test_result.name}: {e}")
+    
+    def _copy_all_logs_to_logs_folder(self):
+        """Ensure all test logs are in appropriate pass_logs or no_pass_logs folders"""
+        print(f"\n📋 Verifying log organization...")
+        verified_count = 0
+        missing_count = 0
+        
+        for test_result in self.results:
+            # Determine target folder based on test status
+            target_folder = self.pass_logs_folder if test_result.status == 'PASS' else self.no_pass_logs_folder
+            target_log = target_folder / f"{test_result.name}.log"
+            
+            # Check if already properly organized
+            if target_log.exists():
+                verified_count += 1
+                continue
+            
+            # If not found, this indicates an issue with earlier copying
+            missing_count += 1
+            print(f"⚠️  Warning: Log not found in expected location for {test_result.name}")
+        
+        status_msg = f"✅ Verified {verified_count}/{len(self.results)} logs are properly organized"
+        if missing_count > 0:
+            status_msg += f" (⚠️  {missing_count} logs missing)"
+        print(status_msg)
     
     def _print_summary(self):
         """Print final test summary report"""
@@ -793,7 +948,7 @@ class RegressionRunner:
                     # Truncate long error messages
                     error_short = result.error_msg[:100] + "..." if len(result.error_msg) > 100 else result.error_msg
                     print(f"            └─ {error_short}")
-                print(f"            └─ Log: {result.log_file}")
+                print(f"            └─ Log: {self.logs_folder / f'{result.name}.log'}")
             
             print(f"\n📝 Failed test list saved to: {no_pass_list_file}")
         
@@ -807,6 +962,9 @@ class RegressionRunner:
         
         print(f"\n📄 Detailed results saved to: {results_file}")
         print(f"📁 All results in folder: {self.results_folder}")
+        print(f"📋 Test logs organized in:")
+        print(f"   ✅ Pass logs: {self.pass_logs_folder}")
+        print(f"   ❌ Fail logs: {self.no_pass_logs_folder}")
         
         # Exit code
         if self.failed_tests > 0:
@@ -998,52 +1156,136 @@ class RegressionRunner:
             if self.completed_tests < self.total_tests:
                 time.sleep(2)
         
-        # Print summary and return exit code
+        # Copy all logs to logs folder and print summary
+        self._copy_all_logs_to_logs_folder()
         exit_code = self._print_summary()
         if exit_code == 0:
             self._regression_success = True
         return exit_code
     
     def _run_local_regression(self, tests, folders):
-        """Run regression using local parallel execution"""
-        # Always use parallel execution mode
-        with ThreadPoolExecutor(max_workers=self.max_parallel) as executor:
-            # Submit all tests
-            future_to_test = {}
-            folder_assignment = {}
+        """Run regression using local parallel execution with proper folder management"""
+        # For now, let's use a simpler sequential approach to verify the fix works
+        # We can re-enable parallelism once we confirm isolation is working
+        
+        if self.max_parallel == 1:
+            # Sequential execution - use only first folder
+            folder_id = 0
+            folder_path = folders[0]
             
-            for i, test_name in enumerate(tests):
+            for test_name in tests:
                 if self.stop_all.is_set():
                     break
-                    
-                folder_id = i % len(folders)  # Use actual number of folders
-                folder_path = folders[folder_id]
                 
-                future = executor.submit(self._run_single_test, test_name, folder_path, folder_id)
-                future_to_test[future] = test_name
-                folder_assignment[test_name] = folder_id
-            
-            # Process completed tests
-            for future in as_completed(future_to_test):
-                if self.stop_all.is_set():
-                    break
-                    
+                # Ensure thorough cleanup before starting new test
+                self._cleanup_vcs_artifacts(folder_path)
+                self._cleanup_old_logs(folder_path, test_name)
+                
+                if self.verbose:
+                    print(f"🔄 [Folder {folder_id:02d}] Running {test_name}")
+                
                 try:
-                    result = future.result()
+                    result = self._run_single_test(test_name, folder_path, folder_id)
                     self._update_progress(result)
                 except Exception as e:
-                    test_name = future_to_test[future]
                     error_result = TestResult(
                         name=test_name,
                         status='ERROR',
                         duration=0.0,
                         log_file='',
-                        error_msg=f"Thread execution error: {str(e)}",
-                        folder_id=folder_assignment.get(test_name, 0)
+                        error_msg=f"Test execution error: {str(e)}",
+                        folder_id=folder_id
                     )
                     self._update_progress(error_result)
+        else:
+            # Parallel execution with proper folder management
+            from queue import Queue
+            import threading
+            
+            # Create a queue of available folders
+            available_folders = Queue()
+            for i, folder_path in enumerate(folders):
+                available_folders.put((i, folder_path))
+            
+            # Track active futures
+            active_futures = {}
+            pending_tests = list(tests)
+            lock = threading.Lock()
+            
+            with ThreadPoolExecutor(max_workers=self.max_parallel) as executor:
+                
+                def submit_test_when_folder_available():
+                    """Submit next test when a folder becomes available"""
+                    while True:
+                        with lock:
+                            if not pending_tests:
+                                return None
+                            test_name = pending_tests.pop(0)
+                        
+                        # Wait for available folder
+                        folder_id, folder_path = available_folders.get()
+                        
+                        # Cleanup before use
+                        self._cleanup_vcs_artifacts(folder_path)
+                        self._cleanup_old_logs(folder_path, test_name)
+                        
+                        if self.verbose:
+                            print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
+                        
+                        # Submit test
+                        future = executor.submit(self._run_single_test, test_name, folder_path, folder_id)
+                        
+                        with lock:
+                            active_futures[future] = {
+                                'test_name': test_name,
+                                'folder_id': folder_id,
+                                'folder_path': folder_path
+                            }
+                        
+                        return future
+                
+                # Submit initial tests
+                while len(active_futures) < self.max_parallel and pending_tests:
+                    submit_test_when_folder_available()
+                
+                # Process completions
+                while active_futures:
+                    if self.stop_all.is_set():
+                        break
+                    
+                    for future in as_completed(active_futures):
+                        with lock:
+                            if future not in active_futures:
+                                continue
+                            future_info = active_futures.pop(future)
+                        
+                        folder_id = future_info['folder_id']
+                        folder_path = future_info['folder_path']
+                        
+                        try:
+                            result = future.result()
+                            self._update_progress(result)
+                        except Exception as e:
+                            test_name = future_info['test_name']
+                            error_result = TestResult(
+                                name=test_name,
+                                status='ERROR',
+                                duration=0.0,
+                                log_file='',
+                                error_msg=f"Thread execution error: {str(e)}",
+                                folder_id=folder_id
+                            )
+                            self._update_progress(error_result)
+                        
+                        # Return folder to queue
+                        available_folders.put((folder_id, folder_path))
+                        
+                        # Submit next test
+                        submit_test_when_folder_available()
+                        break
         
-        # Print summary and return exit code
+        # Copy all logs to logs folder and print summary
+        self._copy_all_logs_to_logs_folder()
         exit_code = self._print_summary()
         if exit_code == 0:
             self._regression_success = True

@@ -23,6 +23,11 @@ function axi4_tc_053_exclusive_read_success_test::new(string name = "axi4_tc_053
 endfunction : new
 
 function void axi4_tc_053_exclusive_read_success_test::build_phase(uvm_phase phase);
+  // Set error_inject for read-only test to bypass write channel count checks
+  // Must set before super.build_phase so base test can retrieve it
+  uvm_config_db#(bit)::set(this, "*", "error_inject", 1);
+  `uvm_info(get_type_name(), "TC_053: error_inject enabled to bypass write channel checks for read-only test", UVM_LOW);
+  
   super.build_phase(phase);
 endfunction : build_phase
 

@@ -24,8 +24,7 @@ task axi4_master_b_ready_delay_seq::body();
                               req.awsize == WRITE_4_BYTES;
                               req.tx_type == WRITE;
                               req.transfer_type == BLOCKING_WRITE;
-                              req.b_wait_states == ws;
-                              req.bid == bid_e'(ws);}) begin
+                              req.b_wait_states == ws;}) begin
 
       `uvm_fatal("axi4","Rand failed")
     end

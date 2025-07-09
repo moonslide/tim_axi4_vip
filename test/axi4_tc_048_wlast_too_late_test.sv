@@ -23,6 +23,11 @@ function axi4_tc_048_wlast_too_late_test::new(string name = "axi4_tc_048_wlast_t
 endfunction : new
 
 function void axi4_tc_048_wlast_too_late_test::build_phase(uvm_phase phase);
+  // Set error_inject for protocol violation test - WLAST too late
+  // Must set before super.build_phase so base test can retrieve it
+  uvm_config_db#(bit)::set(this, "*", "error_inject", 1);
+  `uvm_info(get_type_name(), "TC_048: error_inject enabled for WLAST too late protocol violation", UVM_LOW);
+  
   super.build_phase(phase);
 endfunction : build_phase
 

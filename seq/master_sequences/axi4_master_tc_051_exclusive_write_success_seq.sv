@@ -37,6 +37,7 @@ task axi4_master_tc_051_exclusive_write_success_seq::body();
     req.wdata[0] == 32'hECC10001; // Exclusive write data
     req.wstrb.size() == 1;
     req.wstrb[0] == 4'hF;
+    req.wuser == 4'h0;
   });
   finish_item(req);
   

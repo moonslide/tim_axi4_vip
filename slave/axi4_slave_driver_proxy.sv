@@ -380,7 +380,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
           wait_cycles = 0;
           while(axi4_slave_write_addr_fifo_h.is_empty) begin
             @(posedge axi4_slave_drv_bfm_h.aclk);
-            if(wait_cycles++ > 1000) begin
+            if(wait_cycles++ > 50000) begin
               `uvm_error(get_type_name(),"timeout waiting for write addr")
               break;
             end
@@ -452,7 +452,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
         wait_cycles = 0;
         while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
           @(posedge axi4_slave_drv_bfm_h.aclk);
-          if(wait_cycles++ > 1000) begin
+          if(wait_cycles++ > 50000) begin
             `uvm_error("slave_driver_proxy","write response wait timeout")
             break;
           end

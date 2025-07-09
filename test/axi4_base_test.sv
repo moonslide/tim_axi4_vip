@@ -73,6 +73,11 @@ endfunction : build_phase
 function void axi4_base_test:: setup_axi4_env_cfg();
   axi4_env_cfg_h = axi4_env_config::type_id::create("axi4_env_cfg_h");
  
+  // Get error_inject flag from config_db if set by test
+  if (!uvm_config_db#(bit)::get(this, "*", "error_inject", axi4_env_cfg_h.error_inject)) begin
+    axi4_env_cfg_h.error_inject = 0; // default value
+  end
+  
   axi4_env_cfg_h.has_scoreboard = 1;
   axi4_env_cfg_h.has_virtual_seqr = 1;
   axi4_env_cfg_h.no_of_masters = NO_OF_MASTERS;

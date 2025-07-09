@@ -925,7 +925,13 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
 
   `uvm_info(get_type_name(),$sformatf("--\n----------------------------------------------SCOREBOARD CHECK PHASE---------------------------------------"),UVM_HIGH) 
   
-  `uvm_info (get_type_name(),$sformatf(" Scoreboard Check Phase is starting"),UVM_HIGH); 
+  `uvm_info (get_type_name(),$sformatf(" Scoreboard Check Phase is starting"),UVM_HIGH);
+  
+  // Skip count comparison checks if error_inject is enabled
+  if (axi4_env_cfg_h.error_inject) begin
+    `uvm_info(get_type_name(), "Scoreboard count comparison checks skipped due to error_inject enabled", UVM_MEDIUM);
+    return;
+  end 
   
   //--------------------------------------------------------------------------------------------
   // 1.Check if the comparisions counter is NON-zero

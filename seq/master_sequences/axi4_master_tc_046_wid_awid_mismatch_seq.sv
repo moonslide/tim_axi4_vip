@@ -38,6 +38,7 @@ task axi4_master_tc_046_wid_awid_mismatch_seq::body();
     req.wdata[0] == 32'hBADC0D00; // Bad WID data
     req.wstrb.size() == 1;
     req.wstrb[0] == 4'hF;
+    req.wuser == 4'h0; // Add wuser constraint
     // Note: In real AXI3 implementation, WID would be set to 0xD here
     // For AXI4, this test verifies proper ordering without WID
   });

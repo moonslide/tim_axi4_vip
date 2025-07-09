@@ -62,7 +62,15 @@ task axi4_non_blocking_only_read_response_out_of_order_test::run_phase(uvm_phase
   axi4_virtual_nbk_only_read_response_out_of_order_seq_h=axi4_virtual_nbk_only_read_response_out_of_order_seq::type_id::create("axi4_virtual_nbk_only_read_response_out_of_order_seq_h");
   `uvm_info(get_type_name(),$sformatf("axi4_non_blocking_only_read_response_out_of_order_test"),UVM_LOW);
   phase.raise_objection(this);
+  
+  // Set drain time for out_of_order response handling
+  phase.phase_done.set_drain_time(this, 2000);
+  
   axi4_virtual_nbk_only_read_response_out_of_order_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Allow extra time for out_of_order responses to complete
+  #500;
+  
   phase.drop_objection(this);
 endtask : run_phase
 

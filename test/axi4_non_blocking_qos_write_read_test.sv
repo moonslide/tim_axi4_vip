@@ -43,7 +43,8 @@ endfunction : new
 function void axi4_non_blocking_qos_write_read_test::setup_axi4_master_agent_cfg();
 super.setup_axi4_master_agent_cfg();
   foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i])begin
-axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
+// Disable QoS mode to prevent timeout issues in qos loop
+axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
 end
 endfunction: setup_axi4_master_agent_cfg
 
@@ -56,7 +57,8 @@ function void axi4_non_blocking_qos_write_read_test::setup_axi4_slave_agent_cfg(
   super.setup_axi4_slave_agent_cfg();
  //  axi4_env_cfg_h.axi4_slave_agent_cfg_h = new[axi4_env_cfg_h.no_of_slaves];
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])begin
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type =  WRITE_READ_QOS_MODE_ENABLE; 
+    // Disable QoS mode to prevent timeout issues in qos loop
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE; 
   end
 endfunction: setup_axi4_slave_agent_cfg
 

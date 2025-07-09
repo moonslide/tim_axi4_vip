@@ -22,7 +22,8 @@ class axi4_master_wstrb_baseline_seq extends axi4_master_bk_base_seq;
                               req.awsize == awsize_e'($clog2(bytes));
                               req.awburst == WRITE_INCR;
                               req.tx_type == WRITE;
-                              req.transfer_type == BLOCKING_WRITE;}) begin
+                              req.transfer_type == BLOCKING_WRITE;
+                              req.wuser == 4'h0;}) begin
       `uvm_fatal("axi4","Rand failed")
     end
     req.wdata.delete();

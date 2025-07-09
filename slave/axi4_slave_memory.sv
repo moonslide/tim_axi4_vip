@@ -47,7 +47,10 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_slave_memory::mem_write(input bit [ADDRESS_WIDTH-1 :0]slave_address,
                                            bit [DATA_WIDTH-1:0] data);
-  slave_memory[slave_address] = data;
+  // For byte-addressable memory, write all bytes of the word
+  for (int i = 0; i < DATA_WIDTH/8; i++) begin
+    slave_memory[slave_address + i] = data[i*8 +: 8];
+  end
 endfunction : mem_write
 
 //--------------------------------------------------------------------------------------------
@@ -59,7 +62,13 @@ endfunction : mem_write
 //--------------------------------------------------------------------------------------------
 function void axi4_slave_memory::mem_read(input bit [ADDRESS_WIDTH-1 :0]slave_address,
                                           output bit [DATA_WIDTH-1:0] data);
-   data = slave_memory[slave_address];
+   // For word-aligned reads, combine bytes to form the full word
+   data = '0;
+   for (int i = 0; i < DATA_WIDTH/8; i++) begin
+     if (slave_memory.exists(slave_address + i)) begin
+       data[i*8 +: 8] = slave_memory[slave_address + i];
+     end
+   end
 endfunction : mem_read
 
 //--------------------------------------------------------------------------------------------

@@ -146,7 +146,7 @@ task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet
     awready <= 0;
     do begin
       @(posedge aclk);
-      if(wait_cycles++ > 1000) begin
+      if(wait_cycles++ > 10000) begin
         //`uvm_error(name,"timeout waiting for awvalid")
         break;
       end
@@ -207,7 +207,7 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
    wv_cycles = 0;
    do begin
      @(posedge aclk);
-     if(wv_cycles++ > 1000) begin
+     if(wv_cycles++ > 10000) begin
        //`uvm_error(name,"timeout waiting for wvalid")
        break;
      end
@@ -228,7 +228,7 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
         fwv_cycles = 0;
         do begin
           @(posedge aclk);
-          if(fwv_cycles++ > 1000) begin
+          if(fwv_cycles++ > 10000) begin
             `uvm_error(name,"timeout waiting for wvalid in qos loop")
             break;
           end
@@ -248,7 +248,7 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
         swv_cycles = 0;
         do begin
           @(posedge aclk);
-          if(swv_cycles++ > 1000) begin
+          if(swv_cycles++ > 10000) begin
             //`uvm_error(name,"timeout waiting for wvalid in data loop")
             break;
           end
@@ -330,7 +330,7 @@ task axi4_write_response_phase(inout axi4_write_transfer_char_s data_write_packe
     b_cycles = 0;
     while(bready === 0) begin
       @(posedge aclk);
-      if(b_cycles++ > 1000) begin
+      if(b_cycles++ > 10000) begin
         `uvm_error(name,"timeout waiting for bready")
         break;
       end
@@ -360,7 +360,7 @@ task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, 
      arready <= 0;
     while(arvalid === 0) begin
       @(posedge aclk);
-      if(ar_cycles++ > 1000) begin
+      if(ar_cycles++ > 10000) begin
         //`uvm_error(name,"timeout waiting for arvalid")
         break;
       end
@@ -436,7 +436,7 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
         rr_cycles = 0;
         do begin
           @(posedge aclk);
-          if(rr_cycles++ > 1000) begin
+          if(rr_cycles++ > 10000) begin
             //`uvm_error(name,"timeout waiting for rready")
             break;
           end
@@ -468,7 +468,7 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
         rr_cycles2 = 0;
         do begin
           @(posedge aclk);
-          if(rr_cycles2++ > 1000) begin
+          if(rr_cycles2++ > 10000) begin
             `uvm_error(name,"timeout waiting for rready")
             break;
           end

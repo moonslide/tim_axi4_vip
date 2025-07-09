@@ -38,6 +38,7 @@ task axi4_master_tc_053_exclusive_read_success_seq::body();
     req.wdata[0] == 32'hDEAD1260; // Precondition data
     req.wstrb.size() == 1;
     req.wstrb[0] == 4'hF;
+    req.wuser == 4'h0;
   });
   finish_item(req);
   

@@ -32,7 +32,8 @@ task axi4_master_4k_boundary_cross_seq::body();
                             awsize == WRITE_4_BYTES;
                             awburst == WRITE_INCR;
                             tx_type == WRITE;
-                            transfer_type == NON_BLOCKING_WRITE;})
+                            transfer_type == NON_BLOCKING_WRITE;
+                            wuser == 4'h0;})
     `uvm_fatal("axi4","Rand failed for valid 4K cross write");
   req.wdata.delete();
   req.wdata.push_back($urandom); req.wdata.push_back($urandom);
@@ -64,7 +65,8 @@ task axi4_master_4k_boundary_cross_seq::body();
                             awsize == WRITE_4_BYTES;
                             awburst == WRITE_INCR;
                             tx_type == WRITE;
-                            transfer_type == NON_BLOCKING_WRITE;})
+                            transfer_type == NON_BLOCKING_WRITE;
+                            wuser == 4'h0;})
     `uvm_fatal("axi4","Rand failed for invalid 4K cross write");
   req.wdata.delete();
   req.wdata.push_back($urandom); req.wdata.push_back($urandom);

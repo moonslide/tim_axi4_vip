@@ -21,9 +21,13 @@ endfunction : new
 task axi4_virtual_tc_051_exclusive_write_success_seq::body();
   axi4_master_tc_051_seq_h = axi4_master_tc_051_exclusive_write_success_seq::type_id::create("axi4_master_tc_051_seq_h");
   `uvm_info(get_type_name(), $sformatf("TC_051: Starting Exclusive Write Success test"), UVM_LOW);
-  fork
-    axi4_master_tc_051_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[0]);
-  join
+  
+  // Start sequence on master 0
+  axi4_master_tc_051_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[0]);
+  
+  // Wait for transaction to propagate through system
+  #100;
+  
   `uvm_info(get_type_name(), $sformatf("TC_051: Completed Exclusive Write Success test"), UVM_LOW);
 endtask : body
 
