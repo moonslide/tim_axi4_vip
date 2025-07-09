@@ -14,7 +14,11 @@ class axi4_wstrb_random_burst_test extends axi4_base_test;
   function void setup_axi4_slave_agent_cfg();
     super.setup_axi4_slave_agent_cfg();
     foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
-      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+      // Only modify non-ROM slaves to use SLAVE_MEM_MODE
+      // ROM slave (i==1) keeps its RANDOM_DATA_MODE from base configuration
+      if (i != 1) begin
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+      end
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 20; // Increase for wstrb test
     end
   endfunction
