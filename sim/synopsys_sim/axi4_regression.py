@@ -89,6 +89,19 @@ class RegressionRunner:
         if self.use_lsf:
             self._check_lsf_availability()
     
+    def _to_relative_path(self, path):
+        """Convert absolute path to relative path for display"""
+        try:
+            # Convert to Path object if needed
+            if not isinstance(path, Path):
+                path = Path(path)
+            
+            # Try to make path relative to current working directory
+            return path.relative_to(Path.cwd())
+        except (ValueError, TypeError):
+            # If can't make relative, return the path name only
+            return path.name if hasattr(path, 'name') else str(path)
+    
     def _check_lsf_availability(self):
         """Check if LSF commands are available"""
         try:
@@ -171,10 +184,10 @@ class RegressionRunner:
         self.logs_folder.mkdir(exist_ok=True)
         self.pass_logs_folder.mkdir(exist_ok=True)
         self.no_pass_logs_folder.mkdir(exist_ok=True)
-        print(f"📁 Created results folder: {self.results_folder.name}")
-        print(f"📁 Created logs folder: {self.logs_folder.name}")
-        print(f"📁 Created pass_logs folder: {self.pass_logs_folder.name}")
-        print(f"📁 Created no_pass_logs folder: {self.no_pass_logs_folder.name}")
+        print(f"📁 Created results folder: {self._to_relative_path(self.results_folder)}")
+        print(f"📁 Created logs folder: {self._to_relative_path(self.logs_folder)}")
+        print(f"📁 Created pass_logs folder: {self._to_relative_path(self.pass_logs_folder)}")
+        print(f"📁 Created no_pass_logs folder: {self._to_relative_path(self.no_pass_logs_folder)}")
         
         # Always set up parallel folders based on number of tests
         num_folders = min(self.max_parallel, self.total_tests)
@@ -496,8 +509,8 @@ class RegressionRunner:
         
         if self.verbose:
             print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
-            print(f"    Working directory: {folder_path}")
-            print(f"    Expected log file: {log_file}")
+            print(f"    Working directory: {self._to_relative_path(folder_path)}")
+            print(f"    Expected log file: {self._to_relative_path(log_file)}")
         
         # Always use parallel VCS execution now
         # VCS command - use script wrapper to handle directory changes
@@ -561,12 +574,12 @@ class RegressionRunner:
                 if actual_log_file and actual_log_file != log_file:
                     shutil.move(str(actual_log_file), str(log_file))
                     if self.verbose:
-                        print(f"📋 Moved log from {actual_log_file} to {log_file}")
+                        print(f"📋 Moved log from {self._to_relative_path(actual_log_file)} to {self._to_relative_path(log_file)}")
                 elif not actual_log_file:
                     # No log file found anywhere
                     if self.verbose:
                         print(f"⚠️  No log file found for {test_name}")
-                        print(f"    Checked locations: {[str(loc) for loc in log_locations]}")
+                        print(f"    Checked locations: {[str(self._to_relative_path(loc)) for loc in log_locations]}")
                         if stdout:
                             print(f"    VCS stdout (first 500 chars): {stdout[:500]}")
                 
@@ -674,7 +687,7 @@ class RegressionRunner:
             else:
                 # If log file doesn't exist, try to determine status from stdout only
                 if self.verbose:
-                    print(f"⚠️  Log file not found at {log_file}, analyzing stdout only")
+                    print(f"⚠️  Log file not found at {self._to_relative_path(log_file)}, analyzing stdout only")
                 log_content = ""  # Use empty log content
             
             # Combine stdout and log content for analysis
@@ -796,7 +809,7 @@ class RegressionRunner:
                 return 'PASS', None
             elif log_content == "" and not log_file.exists():
                 # No log file was created - VCS likely failed to run
-                return 'ERROR', f"VCS failed to create log file: {log_file}"
+                return 'ERROR', f"VCS failed to create log file: {self._to_relative_path(log_file)}"
             else:
                 return 'FAIL', "Simulation did not complete properly"
                 
@@ -948,9 +961,9 @@ class RegressionRunner:
                     # Truncate long error messages
                     error_short = result.error_msg[:100] + "..." if len(result.error_msg) > 100 else result.error_msg
                     print(f"            └─ {error_short}")
-                print(f"            └─ Log: {self.no_pass_logs_folder / f'{result.name}.log'}")
+                print(f"            └─ Log: {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}")
             
-            print(f"\n📝 Failed test list saved to: {no_pass_list_file}")
+            print(f"\n📝 Failed test list saved to: {self._to_relative_path(no_pass_list_file)}")
         
         # Save detailed results to results folder
         results_file = self.results_folder / f"regression_results_{self.timestamp}.txt"
@@ -960,11 +973,11 @@ class RegressionRunner:
         regression_log = self.results_folder / "regression_summary.txt"
         shutil.copy2(results_file, regression_log)
         
-        print(f"\n📄 Detailed results saved to: {results_file}")
-        print(f"📁 All results in folder: {self.results_folder}")
+        print(f"\n📄 Detailed results saved to: {self._to_relative_path(results_file)}")
+        print(f"📁 All results in folder: {self._to_relative_path(self.results_folder)}")
         print(f"📋 Test logs organized in:")
-        print(f"   ✅ Pass logs: {self.pass_logs_folder}")
-        print(f"   ❌ Fail logs: {self.no_pass_logs_folder}")
+        print(f"   ✅ Pass logs: {self._to_relative_path(self.pass_logs_folder)}")
+        print(f"   ❌ Fail logs: {self._to_relative_path(self.no_pass_logs_folder)}")
         
         # Exit code
         if self.failed_tests > 0:
@@ -1001,7 +1014,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self.no_pass_logs_folder / f'{result.name}.log'}\n")
+                    f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
                     if result.error_msg:
                         f.write(f"Error:    {result.error_msg}\n")
                     f.write(f"\n")
@@ -1016,7 +1029,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self.no_pass_logs_folder / f'{result.name}.log'}\n")
+                    f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
                     if result.error_msg:
                         f.write(f"Error:    {result.error_msg}\n")
                     f.write(f"\n")
@@ -1031,7 +1044,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self.pass_logs_folder / f'{result.name}.log'}\n")
+                    f.write(f"Log:      {self._to_relative_path(self.pass_logs_folder / f'{result.name}.log')}\n")
                     f.write(f"\n")
     
     def run_regression(self, test_list_file) :
