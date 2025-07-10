@@ -156,45 +156,45 @@ axi4_non_blocking_write_test
 🏁 REGRESSION SUMMARY
 ================================================================================
 📊 Statistics:
-   Total Tests:     85
-   Passed:          82 (96.5%)
-   Failed:          3 (3.5%)
-   Total Time:      0:12:45
-   Average per Test: 9.0s
+   Total Tests:     98
+   Passed:          95 (96.9%)
+   Failed:          1 (1.0%)
+   Total Time:      0:08:17
+   Average per Test: 5.1s
 
-❌ FAILED TESTS (3):
-   FAIL     axi4_blocking_8b_write_read_test                  ( 23.1s)
-            └─ UVM_ERROR: Comparison failed at address 0x1000
-            └─ Log: regression_result_20250708_143025/logs/axi4_blocking_8b_write_read_test.log
+❌ FAILED TESTS (1):
+   FAIL     axi4_non_blocking_write_read_response_out_of_order_test (  59.4s)
+            └─ UVM_FATAL Count: 0
+            └─ Log: regression_result_20250710_190727/logs/no_pass_logs/axi4_non_blocking_write_read_response_out_of_order_test.log
 ```
 
 ### Detailed Results File
 A timestamped results folder is automatically generated with organized logs:
 ```
-regression_result_20250708_143025/
-├── regression_results_20250708_143025.txt    # Main results file
+regression_result_20250710_190727/
+├── regression_results_20250710_190727.txt    # Main results file
 ├── regression_summary.txt                    # Copy of results file
 ├── no_pass_list                              # List of failed tests (if any)
-├── axi4_write_read_test.log                  # Test logs in main folder
-├── axi4_blocking_8b_write_read_test.log      # (convenient access)
-├── axi4_tc_054_exclusive_read_fail_test.log
-├── ...
-└── logs/                                     # All test logs also organized here
-    ├── axi4_write_read_test.log              # (duplicate for organization)
-    ├── axi4_blocking_8b_write_read_test.log
-    ├── axi4_tc_054_exclusive_read_fail_test.log
-    └── ...
+└── logs/                                     # All test logs organized by status
+    ├── pass_logs/                            # Passing test logs
+    │   ├── axi4_write_read_test.log
+    │   ├── axi4_tc_049_awlen_out_of_spec_test.log
+    │   ├── axi4_tc_051_exclusive_write_success_test.log
+    │   └── ...
+    └── no_pass_logs/                         # Failing test logs
+        └── axi4_non_blocking_write_read_response_out_of_order_test.log
 ```
 
 ## Log Organization
 
-The regression system automatically organizes all test logs into a dedicated `logs` subfolder within each results directory:
+The regression system automatically organizes all test logs by status into dedicated subfolders within each results directory:
 
 ### Features
-- ✅ **Dual Location**: All test logs are available in both main results folder and `logs/` subfolder
-- ✅ **Immediate Access**: Logs in main folder for quick access, organized in `logs/` for structure
+- ✅ **Status-Based Organization**: Test logs separated by pass/fail status for easy analysis
+- ✅ **Clear Separation**: Passing tests in `pass_logs/`, failing tests in `no_pass_logs/`
 - ✅ **Safe Copy**: Logs are copied immediately after test completion to prevent loss
 - ✅ **No Missing Files**: Robust log collection prevents missing log file errors
+- ✅ **Easy Analysis**: Failed tests easily identifiable in dedicated folder
 
 ### Folder Structure
 ```
@@ -202,25 +202,31 @@ The regression system automatically organizes all test logs into a dedicated `lo
 ├── 📄 regression_results_YYYYMMDD_HHMMSS.txt  # Detailed results report
 ├── 📄 regression_summary.txt                  # Copy of results for convenience
 ├── 📄 no_pass_list                           # List of failed tests (if any)
-└── 📁 logs/                                  # All test logs organized here
-    ├── 📄 test1.log
-    ├── 📄 test2.log
-    ├── 📄 test3.log
-    └── 📄 ...
+└── 📁 logs/                                  # All test logs organized by status
+    ├── 📁 pass_logs/                         # Passing test logs
+    │   ├── 📄 test1.log
+    │   ├── 📄 test2.log
+    │   └── 📄 ...
+    └── 📁 no_pass_logs/                      # Failing test logs
+        ├── 📄 failed_test1.log
+        └── 📄 failed_test2.log
 ```
 
 ### Benefits
-- **Dual Access**: Quick access in main folder, organized structure in `logs/` subfolder
-- **Prevents Loss**: Immediate log copying prevents loss from folder cleanup or test overwrites
-- **Better Analysis**: All logs duplicated in `logs/` for batch processing or analysis
+- **Status-Based Analysis**: Immediately identify failed tests in dedicated `no_pass_logs/` folder
+- **Prevents Loss**: Immediate log copying prevents loss from folder cleanup or test overwrites  
+- **Better Debugging**: Failed test logs isolated for focused analysis
 - **Consistent Structure**: Every regression run follows the same organization pattern
+- **Easy Filtering**: Pass and fail logs clearly separated for different analysis workflows
 
 ### Console Output
 When logs are organized, you'll see:
 ```
-📋 Organizing logs into logs folder...
-✅ Organized 85/85 logs into logs folder and main results folder
-📋 All test logs available in: regression_result_20250708_143025 and regression_result_20250708_143025/logs
+📋 Verifying log organization...
+✅ Verified 98/98 logs are properly organized
+📋 Test logs organized in:
+   ✅ Pass logs: regression_result_20250710_190727/logs/pass_logs
+   ❌ Fail logs: regression_result_20250710_190727/logs/no_pass_logs
 ```
 
 ## VCS Artifact Cleanup
