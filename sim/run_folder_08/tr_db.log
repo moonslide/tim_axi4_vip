@@ -1,3 +1,0 @@
-  CREATE_STREAM @0 {NAME:axi4_virtual_tc_045_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:8204}
-  CREATE_STREAM @0 {NAME:axi4_master_tc_045_write_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:8221}
-  CREATE_STREAM @480 {NAME:axi4_master_tc_045_read_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_read_seqr_h STREAM:8756}

@@ -1,0 +1,17 @@
+# Simulation temporary files
+*.log
+*.fsdb
+*.vdb
+*.key
+csrc/
+simv
+simv.daidir/
+tr_db.log
+ucli.key
+vc_hdrs.h
+__pycache__/
+regression_result_*/
+run_folder_*/
+test_*.list
+no_pass_list
+.log

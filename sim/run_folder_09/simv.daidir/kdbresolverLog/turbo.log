@@ -1,3 +1,0 @@
-Command Line: /home/eda_tools/synopsys/vcs/W-2024.09-SP1//linux64/bin/elabcom -simflow -KDBRESOLVER -simvdaidir simv.daidir -saveLevel -ssv -ssy -q -logdir simv.daidir/kdbresolverLog
-uname(Linux rocky-eda 4.18.0-553.16.1.el8_10.x86_64 #1 SMP Thu Aug 8 17:47:08 UTC 2024 x86_64)
-au time 0.505816 0.560998 0.066299 delta 127504384 127504384 total 400793600 400793600

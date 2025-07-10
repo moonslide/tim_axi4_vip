@@ -45,6 +45,14 @@ function void axi4_non_blocking_write_read_response_out_of_order_test::setup_axi
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode =WRITE_READ_RESP_OUT_OF_ORDER ;
     // Set minimum_transactions to 0 for out-of-order mode to avoid FIFO deadlock
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].set_minimum_transactions(0);
+    
+    // Override slave agent configurations to prevent address=0 transactions
+    // Force all slaves to use DDR memory range for reactive transactions
+    if (i == 1) begin // Boot ROM slave - force to DDR range to avoid read-only access
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0100_0000_0000;
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0107_FFFF_FFFF;
+      `uvm_info(get_type_name(), $sformatf("Slave[%0d] configured for DDR range to avoid address=0", i), UVM_LOW);
+    end
   end
 endfunction: setup_axi4_slave_agent_cfg
 
