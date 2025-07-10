@@ -22,13 +22,34 @@ endfunction : new
 
 task axi4_master_tc_051_exclusive_write_success_seq::body();
   
-  // Exclusive Write Transaction
+  // Step 1: Exclusive Read Transaction (required to set up exclusive monitor)
+  req = axi4_master_tx::type_id::create("req");
+  start_item(req);
+  assert(req.randomize() with {
+    req.tx_type == READ;
+    req.arid == ARID_13;  // 0xD - same master ID
+    req.araddr == 64'h0000_0100_0000_1250; // DDR Memory range - same address
+    req.arlen == 4'h0;  // 1 beat
+    req.arsize == READ_4_BYTES;
+    req.arburst == READ_INCR;
+    req.arlock == READ_EXCLUSIVE_ACCESS; // ARLOCK=1 for exclusive access
+    req.aruser == 4'h0;
+  });
+  finish_item(req);
+  
+  `uvm_info(get_type_name(), $sformatf("TC_051: Sent Exclusive Read - ARID=0x%0x, ARADDR=0x%16h, ARLOCK=%0d", 
+           req.arid, req.araddr, req.arlock), UVM_LOW);
+
+  // Wait for exclusive read to complete before sending exclusive write
+  #50;
+  
+  // Step 2: Exclusive Write Transaction (should succeed with EXOKAY)
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_13;  // 0xD
-    req.awaddr == 64'h0000_0100_0000_1250; // DDR Memory range
+    req.awid == AWID_13;  // 0xD - same master ID as exclusive read
+    req.awaddr == 64'h0000_0100_0000_1250; // DDR Memory range - same address as exclusive read
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;
     req.awburst == WRITE_INCR;
@@ -44,7 +65,7 @@ task axi4_master_tc_051_exclusive_write_success_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_051: Sent Exclusive Write - AWID=0x%0x, AWADDR=0x%16h, AWLOCK=%0d, WDATA=0x%8h", 
            req.awid, req.awaddr, req.awlock, req.wdata[0]), UVM_LOW);
   
-  `uvm_info(get_type_name(), $sformatf("TC_051: Verification - Check BRESP: EXOKAY if exclusive supported, OKAY if not"), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("TC_051: Verification - Expect BRESP=EXOKAY for successful exclusive write after exclusive read"), UVM_LOW);
 
 endtask : body
 
