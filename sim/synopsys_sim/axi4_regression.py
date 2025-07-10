@@ -948,7 +948,7 @@ class RegressionRunner:
                     # Truncate long error messages
                     error_short = result.error_msg[:100] + "..." if len(result.error_msg) > 100 else result.error_msg
                     print(f"            └─ {error_short}")
-                print(f"            └─ Log: {self.logs_folder / f'{result.name}.log'}")
+                print(f"            └─ Log: {self.no_pass_logs_folder / f'{result.name}.log'}")
             
             print(f"\n📝 Failed test list saved to: {no_pass_list_file}")
         
@@ -1001,7 +1001,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {result.log_file}\n")
+                    f.write(f"Log:      {self.no_pass_logs_folder / f'{result.name}.log'}\n")
                     if result.error_msg:
                         f.write(f"Error:    {result.error_msg}\n")
                     f.write(f"\n")
@@ -1016,7 +1016,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {result.log_file}\n")
+                    f.write(f"Log:      {self.no_pass_logs_folder / f'{result.name}.log'}\n")
                     if result.error_msg:
                         f.write(f"Error:    {result.error_msg}\n")
                     f.write(f"\n")
@@ -1031,7 +1031,7 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {result.log_file}\n")
+                    f.write(f"Log:      {self.pass_logs_folder / f'{result.name}.log'}\n")
                     f.write(f"\n")
     
     def run_regression(self, test_list_file) :
