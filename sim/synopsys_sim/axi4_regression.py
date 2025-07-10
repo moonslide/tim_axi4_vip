@@ -29,6 +29,7 @@ import re
 import argparse
 import queue
 import shutil
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -102,6 +103,22 @@ class RegressionRunner:
             # If can't make relative, return the path name only
             return path.name if hasattr(path, 'name') else str(path)
     
+    def _extract_base_test_name(self, test_name):
+        """Extract base test name from numbered test name
+        
+        Examples:
+        - 'axi4_wstrb_test' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test_1' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test_10' -> 'axi4_wstrb_test'
+        """
+        # Check if test name ends with _N where N is a number
+        import re
+        match = re.match(r'^(.+)_(\d+)$', test_name)
+        if match:
+            return match.group(1)  # Return base name without _N suffix
+        else:
+            return test_name  # Return as-is if no _N suffix found
+    
     def _check_lsf_availability(self):
         """Check if LSF commands are available"""
         try:
@@ -130,8 +147,14 @@ class RegressionRunner:
         sys.exit(1)
     
     def _load_test_list(self, test_list_file):
-        """Load test names from regression list file"""
+        """Load test names from regression list file
+        
+        Supports format:
+        - testname          (run once)
+        - testname N        (run N times with numbered logs: testname_1.log, testname_2.log, etc.)
+        """
         tests = []
+        expanded_tests = []
         try:
             with open(test_list_file, 'r') as f:
                 for line in f:
@@ -142,10 +165,40 @@ class RegressionRunner:
             
             if not tests:
                 raise ValueError(f"No tests found in {test_list_file}")
+            
+            # Parse and expand tests that have repetition count
+            for test_entry in tests:
+                parts = test_entry.split()
+                if len(parts) == 1:
+                    # Single test, no repetition
+                    expanded_tests.append(parts[0])
+                elif len(parts) == 2:
+                    # Test with repetition count
+                    test_name = parts[0]
+                    try:
+                        repeat_count = int(parts[1])
+                        if repeat_count < 1:
+                            raise ValueError(f"Repeat count must be >= 1, got {repeat_count}")
+                        
+                        # Add numbered test entries
+                        for i in range(1, repeat_count + 1):
+                            numbered_test = f"{test_name}_{i}"
+                            expanded_tests.append(numbered_test)
+                        
+                        print(f"📋 Expanded {test_name} into {repeat_count} runs: {test_name}_1 to {test_name}_{repeat_count}")
+                    except ValueError as e:
+                        print(f"⚠️  Warning: Invalid repeat count in '{test_entry}': {e}")
+                        print(f"    Treating as single test: {test_name}")
+                        expanded_tests.append(test_name)
+                else:
+                    print(f"⚠️  Warning: Invalid test entry format '{test_entry}' - expected 'testname' or 'testname N'")
+                    print(f"    Treating as single test: {parts[0]}")
+                    expanded_tests.append(parts[0])
                 
-            self.total_tests = len(tests)
-            print(f"📋 Loaded {self.total_tests} tests from {test_list_file}")
-            return tests
+            self.total_tests = len(expanded_tests)
+            print(f"📋 Loaded {len(tests)} test entries from {test_list_file}")
+            print(f"📋 Expanded to {self.total_tests} total test runs")
+            return expanded_tests
             
         except FileNotFoundError:
             raise FileNotFoundError(f"Test list file not found: {test_list_file}")
@@ -248,6 +301,9 @@ class RegressionRunner:
         job_script = folder_path / f'lsf_job_{test_name}.sh'
         log_file_rel = f'{test_name}.log'
         
+        # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
+        base_test_name = self._extract_base_test_name(test_name)
+        
         with open(job_script, 'w') as f:
             f.write('#!/bin/bash\n')
             f.write('#BSUB -J {}\n'.format(test_name))
@@ -263,13 +319,19 @@ class RegressionRunner:
             f.write('# Clean up VCS artifacts before running test\n')
             f.write('rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++ *.log\n')
             f.write('\n')
+            # Generate a more random seed using multiple entropy sources
+            random_seed = random.randint(1, 2**31-1)
+            random_seed ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
+            random_seed ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
+            random_seed &= 0x7FFFFFFF  # Ensure positive 32-bit value
+            
             f.write('# Run VCS\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
-            f.write(f'+ntb_random_seed_automatic -override_timescale=1ps/1ps ')
+            f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
             f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
-            f.write(f'-debug_access+all -R +UVM_TESTNAME={test_name} ')
+            f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             f.write(f'-l {log_file_rel}\n')
         
@@ -501,6 +563,9 @@ class RegressionRunner:
         start_time = time.time()
         log_file = folder_path / f"{test_name}.log"
         
+        # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
+        base_test_name = self._extract_base_test_name(test_name)
+        
         # Clean up VCS artifacts before running the test
         self._cleanup_vcs_artifacts(folder_path)
         
@@ -509,6 +574,8 @@ class RegressionRunner:
         
         if self.verbose:
             print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
+            if test_name != base_test_name:
+                print(f"    Base test: {base_test_name}")
             print(f"    Working directory: {self._to_relative_path(folder_path)}")
             print(f"    Expected log file: {self._to_relative_path(log_file)}")
         
@@ -520,15 +587,21 @@ class RegressionRunner:
         # Create run script that runs VCS directly from within this folder
         with open(run_script, 'w') as f:
             f.write('#!/bin/bash\n')
+            # Generate a more random seed using multiple entropy sources
+            random_seed = random.randint(1, 2**31-1)
+            random_seed ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
+            random_seed ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
+            random_seed &= 0x7FFFFFFF  # Ensure positive 32-bit value
+            
             f.write('# Clean up VCS artifacts (already done in Python, but ensure completeness)\n')
             f.write('# This is a backup cleanup in case Python cleanup missed anything\n')
             f.write('# Run VCS directly from this folder with adjusted compile file\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
-            f.write(f'+ntb_random_seed_automatic -override_timescale=1ps/1ps ')
+            f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
             f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
-            f.write(f'-debug_access+all -R +UVM_TESTNAME={test_name} ')
+            f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             f.write(f'-l {log_file_rel}\n')
         
