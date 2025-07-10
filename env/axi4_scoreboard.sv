@@ -654,14 +654,9 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
   // Validate response correctness (including expected DECERR/SLVERR)
   validate_response_correctness(axi4_master_tx_h3, axi4_slave_tx_h3, 1); // 1 = write operation
 
-  // Only do write data comparisons for successful writes (WRITE_OKAY)
-  // Skip wuser/wdata comparisons for SLVERR (read-only) and DECERR responses
-  if(axi4_slave_tx_h3.bresp == WRITE_OKAY) begin
-    axi4_write_data_comparision(axi4_master_tx_h3,axi4_slave_tx_h3);
-  end
-  else begin
-    `uvm_info(get_type_name(),$sformatf("Skipping write data comparison for non-OKAY response: %0s",axi4_slave_tx_h3.bresp.name()),UVM_LOW);
-  end
+  // Write response phase should only compare bid, bresp, buser (not wdata/wuser)
+  // Write data comparisons are handled separately in the write data phase
+  `uvm_info(get_type_name(),$sformatf("Write response comparison - bid/bresp/buser only"),UVM_HIGH);
 
   if(axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid)begin
     `uvm_info(get_type_name(),$sformatf("axi4_bid from master and slave is equal"),UVM_HIGH);

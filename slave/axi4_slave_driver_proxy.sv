@@ -1052,7 +1052,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
       for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
         bit [DATA_WIDTH-1:0] tmp_rdata;
-        axi4_bus_matrix_h.load_read(read_pkt.araddr, tmp_rdata);
+        axi4_slave_mem_h.mem_read(read_pkt.araddr, tmp_rdata);
         struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
         k++;
       end
@@ -1067,7 +1067,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_arlen=%d",read_pkt.arlen),UVM_HIGH)
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
           bit [DATA_WIDTH-1:0] tmp_rdata;
-          axi4_bus_matrix_h.load_read(read_pkt.araddr+k, tmp_rdata);
+          axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
           struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
           if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) begin 
             crossed_read_addr = read_pkt.araddr+k;
@@ -1085,7 +1085,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
         for(int strb=0;strb<(2**(read_pkt.arsize));strb++) begin
           if(k_t < end_addr)  begin
              bit [DATA_WIDTH-1:0] tmp_rdata;
-             axi4_bus_matrix_h.load_read(read_pkt.araddr+k, tmp_rdata);
+             axi4_slave_mem_h.mem_read(read_pkt.araddr+k, tmp_rdata);
              struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(read_pkt.araddr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = read_pkt.araddr+k;
              k++;
@@ -1094,7 +1094,7 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
           end
           else begin
             bit [DATA_WIDTH-1:0] tmp_rdata;
-            axi4_bus_matrix_h.load_read(lower_addr+k, tmp_rdata);
+            axi4_slave_mem_h.mem_read(lower_addr+k, tmp_rdata);
             struct_read_packet.rdata[j][8*strb+7 -: 8] = tmp_rdata[7:0];
              if(crossed_read_addr == -1) begin
                if(lower_addr+k > axi4_slave_agent_cfg_h.max_address) crossed_read_addr = lower_addr+k;

@@ -35,7 +35,10 @@ task axi4_slave_write_nbk_write_read_response_out_of_order_seq::body();
   req.transfer_type = NON_BLOCKING_WRITE;
 
   start_item(req);
-  if(!req.randomize())begin
+  if(!req.randomize() with {
+                            // Constrain slave write addresses to valid DDR memory range
+                            req.awaddr >= 64'h0000_0100_0000_0000;
+                            req.awaddr <= 64'h0000_0107_FFFF_FFFF;})begin
     `uvm_fatal("axi4","Rand failed");
   end
   `uvm_info("SLAVE_WRITE_NBK_SEQ", $sformatf("slave_seq = \n%s",req.sprint()), UVM_NONE); 
