@@ -5,9 +5,12 @@ This directory contains a comprehensive parallel regression test system for AXI4
 ## Features
 
 - ✅ **Parallel Execution**: Run up to 50 tests simultaneously (local) or unlimited (LSF)
+- ✅ **Test Repetition**: Run tests multiple times with numbered logs (e.g., `testname 10`)
+- ✅ **Enhanced Random Seeds**: Multiple entropy sources for better test randomization
 - ✅ **LSF Support**: Full Load Sharing Facility integration with job monitoring
 - ✅ **Real-time Progress**: Live progress tracking with ETA and job status
 - ✅ **Comprehensive Logging**: Detailed logs for each test with automatic organization into logs folder
+- ✅ **Smart Folder Management**: Preserve last execution folder and all regression results
 - ✅ **VCS Artifact Cleanup**: Automatic cleanup of compilation artifacts between tests
 - ✅ **Error Analysis**: Automatic failure detection and reporting
 - ✅ **Timeout Handling**: Automatic cleanup of stuck tests and LSF jobs
@@ -93,8 +96,9 @@ Examples:
 
 ## Test List Format
 
-The test list file should contain one test name per line:
+The test list file supports multiple formats for flexible test execution:
 
+### Basic Format
 ```
 # Comments start with #
 axi4_write_read_test
@@ -103,6 +107,50 @@ axi4_tc_054_exclusive_read_fail_test
 
 # Group sections are supported
 axi4_non_blocking_write_test
+```
+
+### Test Repetition Format
+Run tests multiple times with numbered log files:
+```
+# Single run (default)
+axi4_write_read_test
+
+# Run test 5 times
+axi4_wstrb_single_bit_test 5
+
+# Run test 10 times  
+axi4_blocking_32b_write_read_test 10
+
+# Mixed format
+axi4_tc_054_exclusive_read_fail_test
+axi4_wstrb_all_ones_test 3
+axi4_non_blocking_write_test
+```
+
+### Test Repetition Features
+- ✅ **Numbered Logs**: Generates `testname_1.log`, `testname_2.log`, etc.
+- ✅ **Unique Seeds**: Each repetition gets a different random seed
+- ✅ **Progress Tracking**: Shows individual progress for each repetition
+- ✅ **Statistics**: Counts each repetition separately in summary
+
+### Test Repetition Examples
+```bash
+# Test list with repetitions
+echo "axi4_wstrb_single_bit_test 5" > repeat_tests.list
+echo "axi4_blocking_32b_write_read_test 3" >> repeat_tests.list
+
+# Run the repeated tests
+python3 axi4_regression.py --test-list repeat_tests.list
+
+# Results will include:
+# - axi4_wstrb_single_bit_test_1.log
+# - axi4_wstrb_single_bit_test_2.log  
+# - axi4_wstrb_single_bit_test_3.log
+# - axi4_wstrb_single_bit_test_4.log
+# - axi4_wstrb_single_bit_test_5.log
+# - axi4_blocking_32b_write_read_test_1.log
+# - axi4_blocking_32b_write_read_test_2.log
+# - axi4_blocking_32b_write_read_test_3.log
 ```
 
 ## Output and Reports
@@ -125,10 +173,20 @@ axi4_non_blocking_write_test
 🧹 [Folder 01] Cleaned simv*
 🧹 [Folder 01] Cleaned csrc
 ✅ [  1/ 85] axi4_write_read_test                              (  45.2s) Progress:   1.2% ETA: 0:05:30
-❌ [  2/ 85] axi4_blocking_8b_write_read_test                  (  23.1s) Progress:   2.4% ETA: 0:05:15
+✅ [  2/ 85] axi4_wstrb_single_bit_test_1                     (  23.1s) Progress:   2.4% ETA: 0:05:15
+✅ [  3/ 85] axi4_wstrb_single_bit_test_2                     (  24.3s) Progress:   3.5% ETA: 0:05:10
+❌ [  4/ 85] axi4_blocking_8b_write_read_test                  (  28.7s) Progress:   4.7% ETA: 0:05:05
     └─ Error: UVM_ERROR: Comparison failed at address 0x1000
 📋 Organizing logs into logs folder...
-✅ Organized 85/85 logs into logs folder
+✅ Verified 85/85 logs are properly organized
+🧹 Cleaning up execution folders (keeping last folder for debugging)...
+🧹 Removed run_folder_00
+🧹 Removed run_folder_01
+📁 Keeping last execution folder: run_folder_02 for debugging
+
+📊 Regression results saved in: regression_result_20250711_143025
+   View summary: cat regression_result_20250711_143025/regression_summary.txt
+   View detailed results: cat regression_result_20250711_143025/regression_results_20250711_143025.txt
 ```
 
 #### LSF Mode
@@ -228,6 +286,97 @@ When logs are organized, you'll see:
    ✅ Pass logs: regression_result_20250710_190727/logs/pass_logs
    ❌ Fail logs: regression_result_20250710_190727/logs/no_pass_logs
 ```
+
+## Enhanced Random Seed Generation
+
+The regression system uses multiple entropy sources to generate truly random seeds for each test run, ensuring better test coverage and reproducibility.
+
+### Seed Generation Features
+- ✅ **Multiple Entropy Sources**: Combines random number, microsecond timestamp, and test name hash
+- ✅ **Unique Per Test**: Each test run gets its own randomized seed
+- ✅ **Test Repetition Support**: Each repeated test gets a different seed
+- ✅ **32-bit Positive Seeds**: Ensures compatibility with VCS requirements
+- ✅ **Deterministic Base**: Test name hash provides some determinism for debugging
+
+### Seed Algorithm
+```python
+# Generate base random seed
+random_seed = random.randint(1, 2**31-1)
+
+# Mix with microsecond timestamp for temporal uniqueness  
+random_seed ^= int(time.time() * 1000000) & 0x7FFFFFFF
+
+# Mix with test name hash for test-specific variance
+random_seed ^= hash(test_name) & 0x7FFFFFFF
+
+# Ensure positive 32-bit value
+random_seed &= 0x7FFFFFFF
+```
+
+### VCS Command Integration
+The generated seed replaces the default `+ntb_random_seed_automatic`:
+```bash
+# OLD (automatic seed)
+vcs +ntb_random_seed_automatic [other options]
+
+# NEW (enhanced random seed)
+vcs +ntb_random_seed=1847293756 [other options]
+```
+
+### Console Output
+You'll see the generated seeds in the VCS command lines:
+```
+Command: vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all \
++ntb_random_seed=1847293756 -override_timescale=1ps/1ps \
++UVM_TESTNAME=axi4_wstrb_single_bit_test_1 [other options]
+```
+
+## Smart Folder Management
+
+The regression system intelligently manages execution folders and result preservation to aid debugging while maintaining clean environments.
+
+### Folder Preservation Features
+- ✅ **Always Preserve Results**: `regression_result_YYYYMMDD_HHMMSS/` folders are never deleted
+- ✅ **Keep Last Execution Folder**: Highest numbered `run_folder_XX` is preserved for debugging
+- ✅ **Clean Intermediate Folders**: Remove unused execution folders to save space
+- ✅ **Clear Messaging**: Shows which folders are kept and which are removed
+- ✅ **Result Location Summary**: Final message shows where to find all results
+
+### Folder Structure After Execution
+```
+sim/synopsys_sim/
+├── regression_result_20250711_143025/    # PRESERVED - All results and logs
+│   ├── regression_results_20250711_143025.txt
+│   ├── regression_summary.txt
+│   └── logs/
+│       ├── pass_logs/
+│       └── no_pass_logs/
+├── run_folder_02/                        # PRESERVED - Last execution folder
+│   ├── simv
+│   ├── csrc/
+│   ├── test_name.log
+│   └── run_test.sh
+├── axi4_regression.py
+└── [run_folder_00, run_folder_01 REMOVED]
+```
+
+### Console Output During Cleanup
+```
+🧹 Cleaning up execution folders (keeping last folder for debugging)...
+🧹 Removed run_folder_00
+🧹 Removed run_folder_01  
+📁 Keeping last execution folder: run_folder_02 for debugging
+
+📊 Regression results saved in: regression_result_20250711_143025
+   View summary: cat regression_result_20250711_143025/regression_summary.txt
+   View detailed results: cat regression_result_20250711_143025/regression_results_20250711_143025.txt
+```
+
+### Benefits
+- **Easy Debugging**: Last execution environment preserved with all artifacts
+- **Space Efficient**: Only keep what's needed for debugging
+- **Result Safety**: Regression results are never accidentally deleted
+- **Clear Navigation**: Always know where to find results and debugging artifacts
 
 ## VCS Artifact Cleanup
 
@@ -330,18 +479,51 @@ Default LSF job settings (configurable in code):
 
 ## Folder Structure During Execution
 
+### During Regression Run
 ```
 sim/synopsys_sim/
-├── run_folder_00/          # Parallel execution folder 0
-│   ├── test1.log
-│   ├── simv
-│   └── ...
-├── run_folder_01/          # Parallel execution folder 1
+├── run_folder_00/              # Parallel execution folder 0
+│   ├── test1.log               # Current test log
+│   ├── simv                    # VCS executable
+│   ├── csrc/                   # VCS compilation artifacts
+│   ├── run_test.sh             # Generated test script
+│   └── axi4_compile.f          # Adjusted compile file
+├── run_folder_01/              # Parallel execution folder 1
 ├── ...
-├── run_folder_09/          # Parallel execution folder 9
-├── axi4_regression.py      # Main runner
-├── run_regression.sh       # Shell wrapper
-└── regression_results_*.txt # Results files
+├── run_folder_09/              # Parallel execution folder 9 (max parallel)
+├── regression_result_YYYYMMDD_HHMMSS/  # Live results folder
+│   ├── logs/                   # Organized test logs
+│   │   ├── pass_logs/          # Passing test logs (copied here)
+│   │   └── no_pass_logs/       # Failing test logs (copied here)
+│   └── [results files created at end]
+├── axi4_regression.py          # Main runner
+├── run_regression.sh           # Shell wrapper  
+└── axi4_transfers_regression.list  # Default test list
+```
+
+### After Regression Completion
+```
+sim/synopsys_sim/
+├── run_folder_02/              # PRESERVED - Last execution folder
+│   ├── last_test.log           # Final test log
+│   ├── simv                    # VCS executable (for debugging)
+│   ├── csrc/                   # VCS artifacts (for debugging)
+│   └── run_test.sh             # Final test script
+├── regression_result_YYYYMMDD_HHMMSS/  # PRESERVED - Complete results
+│   ├── regression_results_YYYYMMDD_HHMMSS.txt  # Detailed results
+│   ├── regression_summary.txt          # Summary copy
+│   ├── no_pass_list                    # Failed tests (if any)
+│   └── logs/                           # All organized logs
+│       ├── pass_logs/                  # All passing test logs
+│       │   ├── axi4_write_read_test.log
+│       │   ├── axi4_wstrb_single_bit_test_1.log
+│       │   ├── axi4_wstrb_single_bit_test_2.log
+│       │   └── ...
+│       └── no_pass_logs/               # All failing test logs
+│           └── failed_test.log
+├── axi4_regression.py          # Main runner
+├── run_regression.sh           # Shell wrapper
+└── [run_folder_00, run_folder_01 REMOVED for space]
 ```
 
 ## Error Detection
@@ -446,6 +628,58 @@ python3 axi4_regression.py --test-list my_tests.list --max-parallel 2
 python3 axi4_regression.py --lsf --test-list my_tests.list --max-parallel 5
 ```
 
+### Test Repetition Examples
+```bash
+# Create test list with repetitions for stress testing
+echo "axi4_wstrb_single_bit_test 5" > stress_tests.list
+echo "axi4_blocking_32b_write_read_test 3" >> stress_tests.list  
+echo "axi4_tc_054_exclusive_read_fail_test 2" >> stress_tests.list
+
+# Run repeated tests (local mode)
+python3 axi4_regression.py --test-list stress_tests.list --max-parallel 4
+
+# Run repeated tests (LSF mode) 
+python3 axi4_regression.py --lsf --test-list stress_tests.list --max-parallel 10
+
+# Results folder will contain:
+# pass_logs/axi4_wstrb_single_bit_test_1.log
+# pass_logs/axi4_wstrb_single_bit_test_2.log
+# pass_logs/axi4_wstrb_single_bit_test_3.log
+# pass_logs/axi4_wstrb_single_bit_test_4.log
+# pass_logs/axi4_wstrb_single_bit_test_5.log
+# pass_logs/axi4_blocking_32b_write_read_test_1.log
+# pass_logs/axi4_blocking_32b_write_read_test_2.log
+# pass_logs/axi4_blocking_32b_write_read_test_3.log
+# pass_logs/axi4_tc_054_exclusive_read_fail_test_1.log
+# pass_logs/axi4_tc_054_exclusive_read_fail_test_2.log
+```
+
+### Mixed Format Examples
+```bash
+# Create mixed test list (single runs + repetitions)
+cat > mixed_tests.list << EOF
+# Single runs
+axi4_write_read_test
+axi4_non_blocking_write_test
+
+# Stress testing with repetitions
+axi4_wstrb_all_ones_test 3
+axi4_wstrb_all_zero_test 3
+
+# Critical tests with extra runs
+axi4_tc_053_exclusive_read_success_test 5
+axi4_tc_054_exclusive_read_fail_test 5
+EOF
+
+# Run mixed test list
+python3 axi4_regression.py --test-list mixed_tests.list --max-parallel 6
+
+# This creates 18 total test runs:
+# - 2 single runs 
+# - 6 repetition runs (3+3)
+# - 10 critical test runs (5+5)
+```
+
 ### LSF Examples
 ```bash
 # Quick LSF smoke test
@@ -457,3 +691,35 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 # LSF with specific queue (modify script for other queues)
 # Edit line 234 in axi4_regression.py: f.write('#BSUB -q your_queue_name\n')
 ```
+
+## Recent Improvements
+
+### Version 2025.01 Features
+- ✅ **Test Repetition**: Run tests multiple times with `testname N` format in test lists
+- ✅ **Enhanced Random Seeds**: Multiple entropy sources for better randomization
+- ✅ **Smart Folder Management**: Preserve last execution folder and all regression results
+- ✅ **Improved Error Handling**: Better path resolution and cleanup reliability
+- ✅ **Result Preservation**: Regression result folders are always preserved with clear location messaging
+
+### Previous Features  
+- ✅ **LSF Integration**: Full Load Sharing Facility support with job monitoring
+- ✅ **Parallel Execution**: Up to 50 local parallel tests or unlimited with LSF
+- ✅ **Comprehensive Logging**: Automatic log organization by pass/fail status
+- ✅ **VCS Artifact Cleanup**: Automatic cleanup between tests for clean builds
+- ✅ **Real-time Progress**: Live ETA tracking and status updates
+- ✅ **Graceful Shutdown**: Proper cleanup on interruption
+
+## Support and Troubleshooting
+
+### Getting Help
+- Check this README for comprehensive documentation
+- Run with `--verbose` flag for detailed output
+- Examine the preserved `run_folder_XX` for debugging artifacts
+- Review detailed results in `regression_result_YYYYMMDD_HHMMSS/`
+
+### Report Issues
+When reporting issues, please include:
+- Command line used
+- Console output (especially error messages)
+- Relevant log files from `regression_result_*/logs/no_pass_logs/`
+- Contents of preserved `run_folder_XX` if applicable
