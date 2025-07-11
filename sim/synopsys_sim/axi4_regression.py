@@ -39,23 +39,26 @@ import json
 
 class TestResult:
     """Container for test execution results"""
-    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0):
+    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0):
         self.name = name
         self.status = status  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
         self.duration = duration
         self.log_file = log_file
         self.error_msg = error_msg
         self.folder_id = folder_id
+        self.uvm_errors = uvm_errors
+        self.uvm_fatals = uvm_fatals
 
 
 class RegressionRunner:
     """Main regression test runner class"""
     
-    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False):
+    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False):
         self.max_parallel = max_parallel  # Will be set to number of tests if None
         self.timeout = timeout
         self.verbose = verbose
         self.use_lsf = use_lsf
+        self.fsdb_dump = fsdb_dump
         self.base_dir = Path.cwd()
         self.results = []
         self.running_tests = {}
@@ -150,8 +153,8 @@ class RegressionRunner:
         """Load test names from regression list file
         
         Supports format:
-        - testname          (run once)
-        - testname N        (run N times with numbered logs: testname_1.log, testname_2.log, etc.)
+        - testname                  (run once)
+        - testname run_cnt=N        (run N times with numbered logs: testname_1.log, testname_2.log, etc.)
         """
         tests = []
         expanded_tests = []
@@ -168,32 +171,47 @@ class RegressionRunner:
             
             # Parse and expand tests that have repetition count
             for test_entry in tests:
-                parts = test_entry.split()
-                if len(parts) == 1:
-                    # Single test, no repetition
-                    expanded_tests.append(parts[0])
-                elif len(parts) == 2:
-                    # Test with repetition count
+                # Check for run_cnt=N format
+                if 'run_cnt=' in test_entry:
+                    # Parse testname run_cnt=N format
+                    parts = test_entry.split()
                     test_name = parts[0]
-                    try:
-                        repeat_count = int(parts[1])
-                        if repeat_count < 1:
-                            raise ValueError(f"Repeat count must be >= 1, got {repeat_count}")
-                        
+                    
+                    # Find and parse run_cnt=N
+                    run_cnt_found = False
+                    repeat_count = 1
+                    
+                    for part in parts[1:]:
+                        if part.startswith('run_cnt='):
+                            try:
+                                repeat_count = int(part.split('=')[1])
+                                if repeat_count < 1:
+                                    raise ValueError(f"run_cnt must be >= 1, got {repeat_count}")
+                                run_cnt_found = True
+                                break
+                            except (ValueError, IndexError) as e:
+                                print(f"⚠️  Warning: Invalid run_cnt format in '{test_entry}': {e}")
+                                print(f"    Expected format: 'testname run_cnt=N'")
+                                print(f"    Treating as single test: {test_name}")
+                                break
+                    
+                    if run_cnt_found:
                         # Add numbered test entries
                         for i in range(1, repeat_count + 1):
                             numbered_test = f"{test_name}_{i}"
                             expanded_tests.append(numbered_test)
                         
                         print(f"📋 Expanded {test_name} into {repeat_count} runs: {test_name}_1 to {test_name}_{repeat_count}")
-                    except ValueError as e:
-                        print(f"⚠️  Warning: Invalid repeat count in '{test_entry}': {e}")
-                        print(f"    Treating as single test: {test_name}")
+                    else:
+                        # Fallback to single test
                         expanded_tests.append(test_name)
                 else:
-                    print(f"⚠️  Warning: Invalid test entry format '{test_entry}' - expected 'testname' or 'testname N'")
-                    print(f"    Treating as single test: {parts[0]}")
-                    expanded_tests.append(parts[0])
+                    # Single test, no repetition
+                    parts = test_entry.split()
+                    if len(parts) >= 1:
+                        expanded_tests.append(parts[0])
+                    else:
+                        print(f"⚠️  Warning: Empty test entry, skipping")
                 
             self.total_tests = len(expanded_tests)
             print(f"📋 Loaded {len(tests)} test entries from {test_list_file}")
@@ -334,7 +352,9 @@ class RegressionRunner:
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
             f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
-            f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
+            f.write(f'+nospecify +no_timing_check ')
+            if self.fsdb_dump:
+                f.write(f'+define+DUMP_FSDB ')
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
@@ -617,7 +637,9 @@ class RegressionRunner:
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
             f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
-            f.write(f'+nospecify +no_timing_check +define+DUMP_FSDB ')
+            f.write(f'+nospecify +no_timing_check ')
+            if self.fsdb_dump:
+                f.write(f'+define+DUMP_FSDB ')
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
@@ -675,7 +697,7 @@ class RegressionRunner:
                             print(f"    VCS stdout (first 500 chars): {stdout[:500]}")
                 
                 # Check if test passed or failed  
-                status, error_msg = self._analyze_test_result(log_file, stdout)
+                status, error_msg, uvm_errors, uvm_fatals = self._analyze_test_result(log_file, stdout)
                 
                 # Special handling for TIMEOUT status from analysis
                 if status == 'TIMEOUT':
@@ -705,7 +727,9 @@ class RegressionRunner:
                     duration=duration,
                     log_file=str(log_file),
                     error_msg=error_msg,
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    uvm_errors=uvm_errors,
+                    uvm_fatals=uvm_fatals
                 )
                     
             except subprocess.TimeoutExpired:
@@ -766,7 +790,9 @@ class RegressionRunner:
             os.chdir(original_cwd)
     
     def _analyze_test_result(self, log_file, stdout):
-        """Analyze test output to determine pass/fail status and extract error message"""
+        """Analyze test output to determine pass/fail status and extract error message
+        Returns: (status, error_msg, uvm_errors, uvm_fatals)
+        """
         error_msg = None
         
         try:
@@ -842,13 +868,13 @@ class RegressionRunner:
                 # If any line appears more than 20 times in recent output, it's likely stuck
                 for line, count in line_counts.items():
                     if count > 20:
-                        return 'TIMEOUT', f"Excessive repetition detected - simulation likely stuck"
+                        return 'TIMEOUT', f"Excessive repetition detected - simulation likely stuck", 0, 0
             
             # Look for success indicators 
             for pattern in success_patterns:
                 matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
                 if matches:
-                    return 'PASS', None
+                    return 'PASS', None, 0, 0
             
             # Double-check feature: Analyze UVM report summary for more accurate pass/fail detection
             uvm_summary_found = False
@@ -872,7 +898,11 @@ class RegressionRunner:
                 
                 # If UVM summary exists and shows 0 errors/fatals, and simulation completed, it's a pass
                 if uvm_errors == 0 and uvm_fatals == 0 and (simulation_completed or test_done):
-                    return 'PASS', None
+                    return 'PASS', None, uvm_errors, uvm_fatals
+                elif uvm_errors > 0 or uvm_fatals > 0:
+                    # Found UVM errors or fatals
+                    error_msg = f"UVM_ERROR Count: {uvm_errors}, UVM_FATAL Count: {uvm_fatals}"
+                    return 'FAIL', error_msg, uvm_errors, uvm_fatals
             
             # Look for failure indicators
             for pattern in failure_patterns:
@@ -890,22 +920,29 @@ class RegressionRunner:
                     else:
                         error_msg = f"Failed with pattern: {pattern}"
                     
-                    return 'FAIL', error_msg
+                    # If we have UVM summary info, include it in the error message
+                    if uvm_summary_found and (uvm_errors > 0 or uvm_fatals > 0):
+                        error_msg = f"{error_msg} (UVM_ERROR Count: {uvm_errors}, UVM_FATAL Count: {uvm_fatals})"
+                    return 'FAIL', error_msg, uvm_errors, uvm_fatals
             
             # Success patterns already checked above
             
             # If no explicit pass/fail found, check simulation completion
             if 'CPU TIME' in full_output or 'Total simulation time' in full_output:
                 # Simulation completed, assume pass if no errors found
-                return 'PASS', None
+                return 'PASS', None, 0, 0
             elif log_content == "" and not log_file.exists():
                 # No log file was created - VCS likely failed to run
-                return 'ERROR', f"VCS failed to create log file: {self._to_relative_path(log_file)}"
+                return 'ERROR', f"VCS failed to create log file: {self._to_relative_path(log_file)}", 0, 0
             else:
-                return 'FAIL', "Simulation did not complete properly"
+                # If we have UVM summary info, include it in the error message
+                if uvm_summary_found and (uvm_errors > 0 or uvm_fatals > 0):
+                    return 'FAIL', f"Simulation did not complete properly (UVM_ERROR Count: {uvm_errors}, UVM_FATAL Count: {uvm_fatals})", uvm_errors, uvm_fatals
+                else:
+                    return 'FAIL', "Simulation did not complete properly", 0, 0
                 
         except Exception as e:
-            return 'ERROR', f"Could not analyze results: {str(e)}"
+            return 'ERROR', f"Could not analyze results: {str(e)}", 0, 0
     
     def _update_progress(self, test_result):
         """Update progress statistics and display"""
@@ -1060,9 +1097,9 @@ class RegressionRunner:
         results_file = self.results_folder / f"regression_results_{self.timestamp}.txt"
         self._save_detailed_results(results_file)
         
-        # Copy regression log to results folder
+        # Create regression summary with all test records and detailed error info
         regression_log = self.results_folder / "regression_summary.txt"
-        shutil.copy2(results_file, regression_log)
+        self._save_regression_summary(regression_log)
         
         print(f"\n📄 Detailed results saved to: {self._to_relative_path(results_file)}")
         print(f"📁 All results in folder: {self._to_relative_path(self.results_folder)}")
@@ -1137,6 +1174,81 @@ class RegressionRunner:
                     f.write(f"Folder:   {result.folder_id}\n")
                     f.write(f"Log:      {self._to_relative_path(self.pass_logs_folder / f'{result.name}.log')}\n")
                     f.write(f"\n")
+    
+    def _save_regression_summary(self, summary_file: Path):
+        """Save comprehensive summary with all test records and detailed error information"""
+        with open(summary_file, 'w') as f:
+            f.write(f"AXI4 Regression Summary Report\n")
+            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"="*80 + "\n\n")
+            
+            # Overall statistics
+            f.write(f"Overall Statistics:\n")
+            f.write(f"  Total Tests:     {self.total_tests}\n")
+            f.write(f"  Passed:          {self.passed_tests} ({(self.passed_tests/self.total_tests)*100:.1f}%)\n")
+            f.write(f"  Failed:          {self.failed_tests} ({(self.failed_tests/self.total_tests)*100:.1f}%)\n")
+            elapsed = time.time() - self.start_time
+            f.write(f"  Total Time:      {str(timedelta(seconds=int(elapsed)))}\n")
+            f.write(f"  Average per Test: {elapsed/self.total_tests:.1f}s\n\n")
+            
+            # Detailed results for ALL tests (not just failed)
+            f.write(f"Detailed Test Results:\n")
+            f.write(f"="*80 + "\n\n")
+            
+            # Sort results: TIMEOUT first, FAIL/ERROR second, PASS last
+            timeout_results = [r for r in self.results if r.status == 'TIMEOUT']
+            fail_results = [r for r in self.results if r.status in ['FAIL', 'ERROR']]
+            pass_results = [r for r in self.results if r.status == 'PASS']
+            
+            test_num = 1
+            
+            # Show TIMEOUT tests
+            for result in timeout_results:
+                f.write(f"[{test_num:3d}] Test: {result.name}\n")
+                f.write(f"      Status:     {result.status}\n")
+                f.write(f"      Duration:   {result.duration:.1f}s\n")
+                f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
+                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                if result.error_msg:
+                    f.write(f"      Error:      {result.error_msg}\n")
+                f.write(f"\n")
+                test_num += 1
+            
+            # Show FAIL/ERROR tests
+            for result in fail_results:
+                f.write(f"[{test_num:3d}] Test: {result.name}\n")
+                f.write(f"      Status:     {result.status}\n")
+                f.write(f"      Duration:   {result.duration:.1f}s\n")
+                f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
+                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                if result.error_msg:
+                    f.write(f"      Error:      {result.error_msg}\n")
+                if result.uvm_errors > 0 or result.uvm_fatals > 0:
+                    f.write(f"      UVM Counts: UVM_ERROR: {result.uvm_errors}, UVM_FATAL: {result.uvm_fatals}\n")
+                f.write(f"\n")
+                test_num += 1
+            
+            # Show PASS tests
+            for result in pass_results:
+                f.write(f"[{test_num:3d}] Test: {result.name}\n")
+                f.write(f"      Status:     {result.status}\n")
+                f.write(f"      Duration:   {result.duration:.1f}s\n")
+                f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
+                f.write(f"      Log:        {self._to_relative_path(self.pass_logs_folder / f'{result.name}.log')}\n")
+                f.write(f"\n")
+                test_num += 1
+            
+            # Summary of failed tests
+            if fail_results or timeout_results:
+                f.write(f"\n" + "="*80 + "\n")
+                f.write(f"Failed Test Summary:\n")
+                f.write(f"-"*80 + "\n")
+                for result in timeout_results + fail_results:
+                    f.write(f"{result.status:8s} {result.name:50s} ({result.duration:6.1f}s)\n")
+                    if result.error_msg:
+                        f.write(f"         └─ {result.error_msg}\n")
+                    if result.uvm_errors > 0 or result.uvm_fatals > 0:
+                        f.write(f"         └─ UVM_ERROR Count: {result.uvm_errors}, UVM_FATAL Count: {result.uvm_fatals}\n")
     
     def run_regression(self, test_list_file) :
         """Main method to run the regression"""
@@ -1237,18 +1349,24 @@ class RegressionRunner:
                 if job_info['status'] == 'TIMEOUT':
                     status = 'TIMEOUT'
                     error_msg = f"LSF job timed out after {self.timeout}s"
+                    uvm_errors = 0
+                    uvm_fatals = 0
                 elif job_info['status'] == 'EXIT':
                     status = 'FAIL'
                     error_msg = "LSF job exited with error"
+                    uvm_errors = 0
+                    uvm_fatals = 0
                 else:
                     # Analyze log file for actual test result
                     if log_file.exists():
                         with open(log_file, 'r') as f:
                             log_content = f.read()
-                        status, error_msg = self._analyze_test_result(log_file, log_content)
+                        status, error_msg, uvm_errors, uvm_fatals = self._analyze_test_result(log_file, log_content)
                     else:
                         status = 'ERROR'
                         error_msg = "Log file not found"
+                        uvm_errors = 0
+                        uvm_fatals = 0
                 
                 result = TestResult(
                     name=test_name,
@@ -1256,7 +1374,9 @@ class RegressionRunner:
                     duration=duration,
                     log_file=str(log_file),
                     error_msg=error_msg,
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    uvm_errors=uvm_errors,
+                    uvm_fatals=uvm_fatals
                 )
                 
                 self._update_progress(result)
@@ -1412,6 +1532,7 @@ Examples:
   python3 axi4_regression.py -p 5                 # Limit to 5 parallel workers
   python3 axi4_regression.py --timeout 900        # 15min timeout per test
   python3 axi4_regression.py --verbose            # Verbose execution output
+  python3 axi4_regression.py --fsdb-dump          # Enable FSDB waveform dumping
   python3 axi4_regression.py --lsf                # Use LSF job submission
   python3 axi4_regression.py --lsf -p 10          # LSF mode with 10 parallel jobs
         """
@@ -1449,6 +1570,12 @@ Examples:
         help='Path to test list file (default: axi4_transfers_regression.list)'
     )
     
+    parser.add_argument(
+        '--fsdb-dump',
+        action='store_true',
+        help='Enable FSDB waveform dumping by adding +define+DUMP_FSDB to VCS command (default: disabled)'
+    )
+    
     args = parser.parse_args()
     
     # Validate arguments
@@ -1471,7 +1598,8 @@ Examples:
         max_parallel=args.max_parallel,
         timeout=args.timeout,
         verbose=args.verbose,
-        use_lsf=args.lsf
+        use_lsf=args.lsf,
+        fsdb_dump=args.fsdb_dump
     )
     
     try:
