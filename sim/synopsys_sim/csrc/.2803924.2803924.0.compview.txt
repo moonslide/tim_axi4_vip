@@ -1,9 +1,0 @@
-{"vcs1":{"timestamp_begin":1752026750.744968093, "rt":26.35, "ut":27.19, "st":1.08}}
-{"vcselab":{"timestamp_begin":1752026777.286855553, "rt":0.43, "ut":0.30, "st":0.14}}
-{"link":{"timestamp_begin":1752026777.860966161, "rt":1.00, "ut":0.62, "st":0.40}}
-{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1752026748.373779806}
-{"VCS_COMP_START_TIME": 1752026748.373779806}
-{"VCS_COMP_END_TIME": 1752026785.343958675}
-{"VCS_USER_OPTIONS": "-full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_tc_053_exclusive_read_success_test +UVM_VERBOSITY=MEDIUM +UVM_VERDI_TRACE=UVM_AWARE+HIER+COMPWAVE +plusarg_ignore -l axi4_tc_053_exclusive_read_success_test.log"}
-{"vcs1": {"peak_mem": 610952}}
-{"vcselab": {"peak_mem": 187592}}
