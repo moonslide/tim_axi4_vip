@@ -99,8 +99,8 @@ class RegressionRunner:
             
             # Try to make path relative to current working directory
             return path.relative_to(Path.cwd())
-        except (ValueError, TypeError):
-            # If can't make relative, return the path name only
+        except (ValueError, TypeError, OSError, FileNotFoundError):
+            # If can't make relative or cwd fails, return the path name only
             return path.name if hasattr(path, 'name') else str(path)
     
     def _extract_base_test_name(self, test_name):
@@ -238,9 +238,14 @@ class RegressionRunner:
         self.pass_logs_folder.mkdir(exist_ok=True)
         self.no_pass_logs_folder.mkdir(exist_ok=True)
         print(f"📁 Created results folder: {self._to_relative_path(self.results_folder)}")
-        print(f"📁 Created logs folder: {self._to_relative_path(self.logs_folder)}")
-        print(f"📁 Created pass_logs folder: {self._to_relative_path(self.pass_logs_folder)}")
-        print(f"📁 Created no_pass_logs folder: {self._to_relative_path(self.no_pass_logs_folder)}")
+        
+        # Verify the folder was actually created
+        if not self.results_folder.exists():
+            raise RuntimeError(f"Failed to create results folder: {self.results_folder}")
+        
+        print(f"   └─ logs folder: {self._to_relative_path(self.logs_folder)}")
+        print(f"       ├─ pass_logs folder: {self._to_relative_path(self.pass_logs_folder)}")
+        print(f"       └─ no_pass_logs folder: {self._to_relative_path(self.no_pass_logs_folder)}")
         
         # Always set up parallel folders based on number of tests
         num_folders = min(self.max_parallel, self.total_tests)
@@ -495,16 +500,29 @@ class RegressionRunner:
             print(f"           Results: {self.passed_tests} PASS, {self.failed_tests} FAIL")
     
     def _cleanup_all_folders(self):
-        """Clean up all test execution folders"""
-        print("🧹 Cleaning up execution folders...")
+        """Clean up all test execution folders except the last one"""
+        print("🧹 Cleaning up execution folders (keeping last folder for debugging)...")
+        # Keep track of the highest numbered folder that exists
+        highest_folder_id = -1
+        existing_folders = []
+        
         for i in range(self.max_parallel):
             folder_name = f"run_folder_{i:02d}"
             folder_path = self.base_dir.parent / folder_name
             if folder_path.exists():
+                existing_folders.append((i, folder_path))
+                highest_folder_id = max(highest_folder_id, i)
+        
+        # Remove all folders except the highest numbered one
+        for folder_id, folder_path in existing_folders:
+            if folder_id != highest_folder_id:
                 try:
                     shutil.rmtree(folder_path)
+                    print(f"🧹 Removed {folder_path.name}")
                 except Exception as e:
                     print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
+            else:
+                print(f"📁 Keeping last execution folder: {folder_path.name} for debugging")
     
     def _cleanup_vcs_artifacts(self, folder_path):
         """Clean up VCS compilation artifacts before running a test"""
@@ -1153,13 +1171,18 @@ class RegressionRunner:
             print(f"\n💥 Fatal error during regression: {e}")
             return 1
         finally:
-            # Only clean up if successful
+            # Clean up execution folders but keep the last one
             if hasattr(self, '_regression_success') and self._regression_success:
                 self._cleanup_all_folders()
-                print("🧹 Cleaned up execution folders")
             else:
-                print("⚠️  Keeping execution folders for debugging (run_folder_*)")
+                print("⚠️  Keeping all execution folders for debugging (run_folder_*)")
                 print("💡 Manually remove with: rm -rf run_folder_*")
+            
+            # Always report the regression result folder location
+            if hasattr(self, 'results_folder') and self.results_folder.exists():
+                print(f"\n📊 Regression results saved in: {self._to_relative_path(self.results_folder)}")
+                print(f"   View summary: cat {self._to_relative_path(self.results_folder / 'regression_summary.txt')}")
+                print(f"   View detailed results: cat {self._to_relative_path(self.results_folder / f'regression_results_{self.timestamp}.txt')}")
     
     def _run_lsf_regression(self, tests, folders):
         """Run regression using LSF job submission"""
