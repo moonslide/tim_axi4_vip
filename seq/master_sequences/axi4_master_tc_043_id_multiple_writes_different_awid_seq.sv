@@ -44,8 +44,8 @@ task axi4_master_tc_043_id_multiple_writes_different_awid_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_043: Sent T1 - AWID=0x%0x, AWADDR=0x%16h, WDATA=0x%8h", 
            req.awid, req.awaddr, req.wdata[0]), UVM_LOW);
   
-  // Small delay before second transaction
-  #10;
+  // Wait for first transaction to complete before sending second
+  #100;
   
   // Transaction T2: Second write with different AWID=0xD
   req = axi4_master_tx::type_id::create("req");

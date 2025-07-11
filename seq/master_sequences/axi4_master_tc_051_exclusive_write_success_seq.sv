@@ -21,6 +21,7 @@ function axi4_master_tc_051_exclusive_write_success_seq::new(string name = "axi4
 endfunction : new
 
 task axi4_master_tc_051_exclusive_write_success_seq::body();
+  axi4_master_tx rsp;
   
   // Step 1: Exclusive Read Transaction (required to set up exclusive monitor)
   req = axi4_master_tx::type_id::create("req");
@@ -40,8 +41,9 @@ task axi4_master_tc_051_exclusive_write_success_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_051: Sent Exclusive Read - ARID=0x%0x, ARADDR=0x%16h, ARLOCK=%0d", 
            req.arid, req.araddr, req.arlock), UVM_LOW);
 
-  // Wait for exclusive read to complete before sending exclusive write
-  #50;
+  // Wait for exclusive read to complete and monitor to be established
+  // Conservative timing to ensure read completes and monitor is set up
+  #1000;
   
   // Step 2: Exclusive Write Transaction (should succeed with EXOKAY)
   req = axi4_master_tx::type_id::create("req");
