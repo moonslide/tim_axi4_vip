@@ -26,43 +26,41 @@ task axi4_master_tc_043_id_multiple_writes_different_awid_seq::body();
   // Transaction T1: First write with AWID=0xC
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == WRITE;
-    req.awid == AWID_12;
-    req.awaddr == 64'h0000_0100_0000_10C0; // DDR Memory range
-    req.awlen == 4'h0;  // 1 beat
-    req.awsize == WRITE_4_BYTES;
-    req.awburst == WRITE_INCR;
-    req.wdata.size() == 1;
-    req.wdata[0] == 32'hDEAD0001; // D1
-    req.wstrb.size() == 1;
-    req.wstrb[0] == 4'hF;
-    req.wuser == 4'h0;
-  });
+  // Direct assignment to avoid constraint conflicts (following TC_044 pattern)
+  req.tx_type = WRITE;
+  req.awid = AWID_12;
+  req.awaddr = 64'h0000_0100_0000_10C0; // DDR Memory range
+  req.awlen = 4'h0;  // 1 beat
+  req.awsize = WRITE_4_BYTES;
+  req.awburst = WRITE_INCR;
+  req.wdata.delete();
+  req.wdata.push_back(32'hDEAD0001); // D1
+  req.wstrb.delete();
+  req.wstrb.push_back(4'hF);
+  req.wuser = 4'h0;
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_043: Sent T1 - AWID=0x%0x, AWADDR=0x%16h, WDATA=0x%8h", 
            req.awid, req.awaddr, req.wdata[0]), UVM_LOW);
   
-  // Wait for first transaction to complete before sending second
-  #100;
+  // Small delay to avoid race condition but allow concurrent outstanding transactions
+  #5;
   
-  // Transaction T2: Second write with different AWID=0xD
+  // Transaction T2: Second write with different AWID=0xD (overlapping with T1)
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
-  assert(req.randomize() with {
-    req.tx_type == WRITE;
-    req.awid == AWID_13;
-    req.awaddr == 64'h0000_0100_0000_10D0; // DDR Memory range
-    req.awlen == 4'h0;  // 1 beat
-    req.awsize == WRITE_4_BYTES;
-    req.awburst == WRITE_INCR;
-    req.wdata.size() == 1;
-    req.wdata[0] == 32'hBEEF0002; // D2
-    req.wstrb.size() == 1;
-    req.wstrb[0] == 4'hF;
-    req.wuser == 4'h0;
-  });
+  // Direct assignment to avoid constraint conflicts (following TC_044 pattern)
+  req.tx_type = WRITE;
+  req.awid = AWID_13;
+  req.awaddr = 64'h0000_0100_0000_10D0; // DDR Memory range
+  req.awlen = 4'h0;  // 1 beat
+  req.awsize = WRITE_4_BYTES;
+  req.awburst = WRITE_INCR;
+  req.wdata.delete();
+  req.wdata.push_back(32'hBEEF0002); // D2
+  req.wstrb.delete();
+  req.wstrb.push_back(4'hF);
+  req.wuser = 4'h0;
   finish_item(req);
   
   `uvm_info(get_type_name(), $sformatf("TC_043: Sent T2 - AWID=0x%0x, AWADDR=0x%16h, WDATA=0x%8h", 
