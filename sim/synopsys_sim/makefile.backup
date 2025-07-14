@@ -3,8 +3,7 @@ all:
 
 
 sim:
-	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=$(if $(findstring tc_044,$(test)),LOW,$(if $(findstring tc_045,$(test)),LOW,$(if $(findstring tc_050,$(test)),LOW,MEDIUM))) +UVM_VERDI_TRACE="UVM_AWARE+HIER+COMPWAVE" +plusarg_ignore -l $(test).log
-
+	vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 +ntb_random_seed_automatic -override_timescale=1ps/1ps +nospecify +no_timing_check +define+DUMP_FSDB +define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=$(test) +UVM_VERBOSITY=MEDIUM +UVM_VERDI_TRACE="UVM_AWARE+HIER+COMPWAVE" +plusarg_ignore -l $(test).log
 verdi:
 	verdi -ssf default.fsdb -elab simv.daidir/kdb &
 

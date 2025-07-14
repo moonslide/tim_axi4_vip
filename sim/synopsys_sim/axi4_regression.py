@@ -39,7 +39,7 @@ import json
 
 class TestResult:
     """Container for test execution results"""
-    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0):
+    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0, seed=None, command_add=None):
         self.name = name
         self.status = status  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
         self.duration = duration
@@ -48,17 +48,20 @@ class TestResult:
         self.folder_id = folder_id
         self.uvm_errors = uvm_errors
         self.uvm_fatals = uvm_fatals
+        self.seed = seed
+        self.command_add = command_add
 
 
 class RegressionRunner:
     """Main regression test runner class"""
     
-    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False):
+    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False):
         self.max_parallel = max_parallel  # Will be set to number of tests if None
         self.timeout = timeout
         self.verbose = verbose
         self.use_lsf = use_lsf
         self.fsdb_dump = fsdb_dump
+        self.coverage = coverage
         self.base_dir = Path.cwd()
         self.results = []
         self.running_tests = {}
@@ -77,6 +80,12 @@ class RegressionRunner:
         self.logs_folder = self.results_folder / "logs"
         self.pass_logs_folder = self.logs_folder / "pass_logs"
         self.no_pass_logs_folder = self.logs_folder / "no_pass_logs"
+        
+        # Coverage collection folder
+        if self.coverage:
+            self.coverage_folder = self.results_folder / "coverage_collect"
+        else:
+            self.coverage_folder = None
         
         # Statistics
         self.total_tests = 0
@@ -153,8 +162,11 @@ class RegressionRunner:
         """Load test names from regression list file
         
         Supports format:
-        - testname                  (run once)
-        - testname run_cnt=N        (run N times with numbered logs: testname_1.log, testname_2.log, etc.)
+        - testname                                 (run once)
+        - testname run_cnt=N                       (run N times with numbered logs)
+        - testname seed=123                        (run once with custom seed)
+        - testname command_add=+define+XXX         (run once with custom VCS command)
+        - testname run_cnt=N seed=123 command_add=+define+XXX  (combine parameters)
         """
         tests = []
         expanded_tests = []
@@ -169,49 +181,87 @@ class RegressionRunner:
             if not tests:
                 raise ValueError(f"No tests found in {test_list_file}")
             
-            # Parse and expand tests that have repetition count
+            # Parse and expand tests with parameters
             for test_entry in tests:
-                # Check for run_cnt=N format
-                if 'run_cnt=' in test_entry:
-                    # Parse testname run_cnt=N format
-                    parts = test_entry.split()
-                    test_name = parts[0]
+                parts = test_entry.split()
+                if not parts:
+                    print(f"⚠️  Warning: Empty test entry, skipping")
+                    continue
                     
-                    # Find and parse run_cnt=N
-                    run_cnt_found = False
-                    repeat_count = 1
+                test_name = parts[0]
+                
+                # Parse parameters
+                repeat_count = 1
+                custom_seed = None
+                command_add = None
+                
+                for part in parts[1:]:
+                    if part.startswith('run_cnt='):
+                        try:
+                            repeat_count = int(part.split('=')[1])
+                            if repeat_count < 1:
+                                raise ValueError(f"run_cnt must be >= 1, got {repeat_count}")
+                        except (ValueError, IndexError) as e:
+                            print(f"⚠️  Warning: Invalid run_cnt format in '{test_entry}': {e}")
+                            print(f"    Expected format: 'testname run_cnt=N'")
+                            repeat_count = 1
+                    elif part.startswith('seed='):
+                        try:
+                            custom_seed = int(part.split('=')[1])
+                            if custom_seed < 0 or custom_seed > 2**31-1:
+                                raise ValueError(f"seed must be 0 <= seed <= 2^31-1, got {custom_seed}")
+                        except (ValueError, IndexError) as e:
+                            print(f"⚠️  Warning: Invalid seed format in '{test_entry}': {e}")
+                            print(f"    Expected format: 'testname seed=123'")
+                            custom_seed = None
+                    elif part.startswith('command_add='):
+                        try:
+                            command_add = part.split('=', 1)[1]  # Use split with maxsplit=1 to handle complex commands
+                            if not command_add:
+                                raise ValueError("command_add cannot be empty")
+                        except (ValueError, IndexError) as e:
+                            print(f"⚠️  Warning: Invalid command_add format in '{test_entry}': {e}")
+                            print(f"    Expected format: 'testname command_add=+define+XXX'")
+                            command_add = None
+                
+                # Create test objects with parameters
+                if repeat_count > 1:
+                    # Add numbered test entries
+                    for i in range(1, repeat_count + 1):
+                        test_obj = {
+                            'name': f"{test_name}_{i}",
+                            'base_name': test_name,
+                            'run_number': i,
+                            'seed': custom_seed,
+                            'command_add': command_add
+                        }
+                        expanded_tests.append(test_obj)
                     
-                    for part in parts[1:]:
-                        if part.startswith('run_cnt='):
-                            try:
-                                repeat_count = int(part.split('=')[1])
-                                if repeat_count < 1:
-                                    raise ValueError(f"run_cnt must be >= 1, got {repeat_count}")
-                                run_cnt_found = True
-                                break
-                            except (ValueError, IndexError) as e:
-                                print(f"⚠️  Warning: Invalid run_cnt format in '{test_entry}': {e}")
-                                print(f"    Expected format: 'testname run_cnt=N'")
-                                print(f"    Treating as single test: {test_name}")
-                                break
-                    
-                    if run_cnt_found:
-                        # Add numbered test entries
-                        for i in range(1, repeat_count + 1):
-                            numbered_test = f"{test_name}_{i}"
-                            expanded_tests.append(numbered_test)
-                        
-                        print(f"📋 Expanded {test_name} into {repeat_count} runs: {test_name}_1 to {test_name}_{repeat_count}")
-                    else:
-                        # Fallback to single test
-                        expanded_tests.append(test_name)
+                    params_str = []
+                    if custom_seed is not None:
+                        params_str.append(f"seed={custom_seed}")
+                    if command_add is not None:
+                        params_str.append(f"command_add={command_add}")
+                    params_info = f" with {', '.join(params_str)}" if params_str else ""
+                    print(f"📋 Expanded {test_name} into {repeat_count} runs: {test_name}_1 to {test_name}_{repeat_count}{params_info}")
                 else:
-                    # Single test, no repetition
-                    parts = test_entry.split()
-                    if len(parts) >= 1:
-                        expanded_tests.append(parts[0])
-                    else:
-                        print(f"⚠️  Warning: Empty test entry, skipping")
+                    # Single test
+                    test_obj = {
+                        'name': test_name,
+                        'base_name': test_name,
+                        'run_number': 1,
+                        'seed': custom_seed,
+                        'command_add': command_add
+                    }
+                    expanded_tests.append(test_obj)
+                    
+                    if custom_seed is not None or command_add is not None:
+                        params_str = []
+                        if custom_seed is not None:
+                            params_str.append(f"seed={custom_seed}")
+                        if command_add is not None:
+                            params_str.append(f"command_add={command_add}")
+                        print(f"📋 Loaded {test_name} with {', '.join(params_str)}")
                 
             self.total_tests = len(expanded_tests)
             print(f"📋 Loaded {len(tests)} test entries from {test_list_file}")
@@ -223,24 +273,153 @@ class RegressionRunner:
         except Exception as e:
             raise Exception(f"Error reading test list file: {e}")
     
+    def _generate_running_list(self, results):
+        """Generate a running_list file with actual test execution parameters"""
+        running_list_file = self.results_folder / "running_list"
+        
+        try:
+            with open(running_list_file, 'w') as f:
+                f.write(f"# Running list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters actually used in this regression run\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total tests: {len(results)}\n")
+                f.write("#\n")
+                
+                for result in results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated running list: {self._to_relative_path(running_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate running list: {e}")
+    
+    def _generate_pass_list(self, results):
+        """Generate a pass_list file with passed test execution parameters"""
+        pass_list_file = self.results_folder / "pass_list"
+        
+        try:
+            passed_results = [r for r in results if r.status == 'PASS']
+            
+            with open(pass_list_file, 'w') as f:
+                f.write(f"# Pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters for passed tests\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total passed tests: {len(passed_results)}\n")
+                f.write("#\n")
+                
+                for result in passed_results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated pass list: {self._to_relative_path(pass_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate pass list: {e}")
+    
+    def _generate_no_pass_list(self, results):
+        """Generate a no_pass_list file with failed test execution parameters"""
+        no_pass_list_file = self.results_folder / "no_pass_list"
+        
+        try:
+            failed_results = [r for r in results if r.status != 'PASS']
+            
+            with open(no_pass_list_file, 'w') as f:
+                f.write(f"# No pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters for failed tests\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total failed tests: {len(failed_results)}\n")
+                f.write("#\n")
+                
+                for result in failed_results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated no pass list: {self._to_relative_path(no_pass_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate no pass list: {e}")
+    
     def _cleanup_existing_folders(self):
-        """Clean up any existing run_folder_xx directories before starting"""
-        print("🧹 Cleaning up existing run_folder_xx directories...")
+        """Clean up old run_folder_xx directories before starting, but keep folders from last run within current range"""
+        print("🧹 Cleaning up old run_folder_xx directories...")
         folders_cleaned = 0
+        folders_kept = 0
         
         # Look for all run_folder_xx patterns in parent directory
         parent_dir = self.base_dir.parent
         for folder_path in parent_dir.glob("run_folder_*"):
             if folder_path.is_dir():
                 try:
-                    shutil.rmtree(folder_path)
-                    folders_cleaned += 1
+                    # Extract folder number from name
+                    folder_name = folder_path.name
+                    folder_num = int(folder_name.split('_')[-1])
+                    
+                    if folder_num >= self.max_parallel:
+                        # This folder is beyond current parallel count, remove it
+                        shutil.rmtree(folder_path)
+                        folders_cleaned += 1
+                    else:
+                        # This folder is within current parallel count, keep it but clean contents
+                        self._cleanup_vcs_artifacts(folder_path)
+                        folders_kept += 1
+                        if self.verbose:
+                            print(f"   Keeping {folder_path.name} (cleaning VCS artifacts only)")
+                            
+                except (ValueError, IndexError):
+                    # Invalid folder name format, remove it
+                    try:
+                        shutil.rmtree(folder_path)
+                        folders_cleaned += 1
+                    except Exception as e:
+                        print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
                 except Exception as e:
-                    print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
+                    print(f"⚠️  Warning: Could not process {folder_path}: {e}")
         
         if folders_cleaned > 0:
-            print(f"✅ Cleaned up {folders_cleaned} existing run folders")
-        else:
+            print(f"✅ Cleaned up {folders_cleaned} old run folders")
+        if folders_kept > 0:
+            print(f"📁 Kept {folders_kept} run folders from previous run (cleaned VCS artifacts)")
+        if folders_cleaned == 0 and folders_kept == 0:
             print("✅ No existing run folders to clean")
 
     def _setup_test_folders(self) :
@@ -255,6 +434,11 @@ class RegressionRunner:
         self.logs_folder.mkdir(exist_ok=True)
         self.pass_logs_folder.mkdir(exist_ok=True)
         self.no_pass_logs_folder.mkdir(exist_ok=True)
+        
+        # Create coverage folder if coverage collection is enabled
+        if self.coverage:
+            self.coverage_folder.mkdir(exist_ok=True)
+        
         print(f"📁 Created results folder: {self._to_relative_path(self.results_folder)}")
         
         # Verify the folder was actually created
@@ -264,6 +448,9 @@ class RegressionRunner:
         print(f"   └─ logs folder: {self._to_relative_path(self.logs_folder)}")
         print(f"       ├─ pass_logs folder: {self._to_relative_path(self.pass_logs_folder)}")
         print(f"       └─ no_pass_logs folder: {self._to_relative_path(self.no_pass_logs_folder)}")
+        
+        if self.coverage:
+            print(f"       └─ coverage_collect folder: {self._to_relative_path(self.coverage_folder)}")
         
         # Always set up parallel folders based on number of tests
         num_folders = min(self.max_parallel, self.total_tests)
@@ -318,8 +505,13 @@ class RegressionRunner:
             except subprocess.CalledProcessError as e:
                 print(f"⚠️  Warning: Could not kill job {job_id}: {e}")
     
-    def _submit_lsf_job(self, test_name, folder_path, folder_id):
+    def _submit_lsf_job(self, test_obj, folder_path, folder_id):
         """Submit a test job to LSF and return job ID"""
+        # Extract test information from test object
+        test_name = test_obj['name']
+        custom_seed = test_obj.get('seed')
+        command_add = test_obj.get('command_add')
+        
         # Create job script
         job_script = folder_path / f'lsf_job_{test_name}.sh'
         log_file_rel = f'{test_name}.log'
@@ -342,22 +534,45 @@ class RegressionRunner:
             f.write('# Clean up VCS artifacts before running test\n')
             f.write('rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++ *.log\n')
             f.write('\n')
-            # Generate a more random seed using multiple entropy sources
-            random_seed = random.randint(1, 2**31-1)
-            random_seed ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
-            random_seed ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
-            random_seed &= 0x7FFFFFFF  # Ensure positive 32-bit value
+            
+            # Use custom seed if provided, otherwise generate random seed
+            if custom_seed is not None:
+                seed_value = custom_seed
+                f.write(f'# Using custom seed: {seed_value}\n')
+            else:
+                # Generate a more random seed using multiple entropy sources
+                seed_value = random.randint(1, 2**31-1)
+                seed_value ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
+                seed_value ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
+                seed_value &= 0x7FFFFFFF  # Ensure positive 32-bit value
+                f.write(f'# Generated random seed: {seed_value}\n')
             
             f.write('# Run VCS\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
-            f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
+            f.write(f'+ntb_random_seed={seed_value} -override_timescale=1ps/1ps ')
             f.write(f'+nospecify +no_timing_check ')
             if self.fsdb_dump:
                 f.write(f'+define+DUMP_FSDB ')
+            
+            # Add coverage flags if coverage collection is enabled
+            if self.coverage:
+                coverage_dir = f"{test_name}.vdb"
+                f.write(f'-cm line+cond+fsm+tgl+branch+assert ')
+                f.write(f'-cm_seqnoconst ')
+                f.write(f'-cm_dir {coverage_dir} ')
+                f.write(f'-cm_name {test_name} ')
+                f.write(f'# Coverage enabled: {coverage_dir}\n')
+            
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
+            
+            # Add custom command if provided
+            if command_add:
+                f.write(f'{command_add} ')
+                f.write(f'# Added custom command: {command_add}\n')
+            
             f.write(f'-l {log_file_rel}\n')
         
         # Make script executable
@@ -384,7 +599,9 @@ class RegressionRunner:
                     'folder_path': folder_path,
                     'folder_id': folder_id,
                     'submit_time': time.time(),
-                    'status': 'PEND'  # LSF job status
+                    'status': 'PEND',  # LSF job status
+                    'seed': seed_value,
+                    'command_add': command_add
                 }
                 
                 self.pending_jobs += 1
@@ -520,29 +737,50 @@ class RegressionRunner:
             print(f"           Results: {self.passed_tests} PASS, {self.failed_tests} FAIL")
     
     def _cleanup_all_folders(self):
-        """Clean up all test execution folders except the last one"""
-        print("🧹 Cleaning up execution folders (keeping last folder for debugging)...")
-        # Keep track of the highest numbered folder that exists
-        highest_folder_id = -1
-        existing_folders = []
+        """Clean up only old execution folders, keep all folders from current run"""
+        print(f"🧹 Cleaning up old execution folders (keeping run_folder_00 to run_folder_{self.max_parallel-1:02d} from current run)...")
         
-        for i in range(self.max_parallel):
-            folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir.parent / folder_name
-            if folder_path.exists():
-                existing_folders.append((i, folder_path))
-                highest_folder_id = max(highest_folder_id, i)
+        # Find all run_folder_* directories
+        all_run_folders = []
+        parent_dir = self.base_dir.parent
+        for folder_path in parent_dir.glob("run_folder_*"):
+            if folder_path.is_dir():
+                # Extract folder number from name
+                try:
+                    folder_name = folder_path.name
+                    folder_num = int(folder_name.split('_')[-1])
+                    all_run_folders.append((folder_num, folder_path))
+                except (ValueError, IndexError):
+                    # Skip folders with invalid naming
+                    continue
         
-        # Remove all folders except the highest numbered one
-        for folder_id, folder_path in existing_folders:
-            if folder_id != highest_folder_id:
+        if not all_run_folders:
+            print("✅ No old run folders to clean up")
+            return
+        
+        # Remove folders that are beyond the current max_parallel range
+        removed_count = 0
+        kept_count = 0
+        
+        for folder_num, folder_path in all_run_folders:
+            if folder_num >= self.max_parallel:
+                # This folder is beyond current parallel count, remove it
                 try:
                     shutil.rmtree(folder_path)
-                    print(f"🧹 Removed {folder_path.name}")
+                    print(f"🧹 Removed old folder: {folder_path.name}")
+                    removed_count += 1
                 except Exception as e:
                     print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
             else:
-                print(f"📁 Keeping last execution folder: {folder_path.name} for debugging")
+                # This folder is within current parallel count, keep it
+                kept_count += 1
+        
+        if kept_count > 0:
+            print(f"📁 Keeping {kept_count} execution folders from current run (run_folder_00 to run_folder_{self.max_parallel-1:02d})")
+        if removed_count > 0:
+            print(f"🧹 Removed {removed_count} old execution folders")
+        else:
+            print("✅ No old folders to remove")
     
     def _cleanup_vcs_artifacts(self, folder_path):
         """Clean up VCS compilation artifacts before running a test"""
@@ -596,9 +834,167 @@ class RegressionRunner:
             if self.verbose:
                 print(f"⚠️  Warning: Could not clean old logs in {folder_path}: {e}")
     
-    def _run_single_test(self, test_name, folder_path, folder_id):
+    def _copy_coverage_files(self, test_name, folder_path, folder_id):
+        """Copy coverage files from test execution folder to central coverage collection folder"""
+        if not self.coverage:
+            return
+        
+        try:
+            coverage_dir = folder_path / f"{test_name}.vdb"
+            
+            # Check if coverage database was generated
+            if not coverage_dir.exists():
+                if self.verbose:
+                    print(f"⚠️  [Folder {folder_id:02d}] No coverage data found for {test_name}")
+                return
+            
+            # Keep .vdb extension in destination name for proper URG processing
+            dest_coverage_dir = self.coverage_folder / f"{test_name}_cov_{folder_id:02d}.vdb"
+            
+            # Copy coverage database to collection folder
+            # Handle compatibility with older Python versions
+            if dest_coverage_dir.exists():
+                shutil.rmtree(dest_coverage_dir)
+            shutil.copytree(coverage_dir, dest_coverage_dir)
+            
+            if self.verbose:
+                print(f"📊 [Folder {folder_id:02d}] Copied coverage data: {coverage_dir.name} -> {dest_coverage_dir.name}")
+            
+            # Also copy any additional coverage files (like .cm files if they exist)
+            for pattern in ['*.cm', '*.ucm', '*.ccf']:
+                for coverage_file in folder_path.glob(pattern):
+                    dest_file = self.coverage_folder / f"{test_name}_{coverage_file.name}"
+                    shutil.copy2(coverage_file, dest_file)
+                    if self.verbose:
+                        print(f"📊 [Folder {folder_id:02d}] Copied coverage file: {coverage_file.name}")
+                        
+        except Exception as e:
+            print(f"⚠️  Warning: Could not copy coverage files for {test_name}: {e}")
+    
+    def _merge_coverage_data(self):
+        """Merge all collected coverage data using VCS urg tool"""
+        if not self.coverage or not self.coverage_folder:
+            return
+        
+        # Create temporary merge folder at synopsys_sim level
+        temp_merge_folder = self.base_dir / "coverage_merge_temp"
+        
+        try:
+            # Create temp folder if it doesn't exist
+            if temp_merge_folder.exists():
+                shutil.rmtree(temp_merge_folder)
+            temp_merge_folder.mkdir()
+            
+            # Copy all coverage databases to temp folder with original .vdb structure
+            coverage_dirs = list(self.coverage_folder.glob("*.vdb"))
+            
+            if not coverage_dirs:
+                print(f"⚠️  No coverage data found in {self.coverage_folder}")
+                return
+            
+            print(f"\n📊 Preparing coverage data from {len(coverage_dirs)} test runs for merge...")
+            
+            # Copy coverage databases to temp folder
+            for cov_dir in coverage_dirs:
+                dest_dir = temp_merge_folder / cov_dir.name
+                shutil.copytree(cov_dir, dest_dir)
+                if self.verbose:
+                    print(f"   Copied {cov_dir.name} to temp merge folder")
+            
+            print(f"📊 Merging coverage data in {temp_merge_folder}...")
+            
+            # Build urg command to merge coverage databases (use absolute paths)
+            urg_cmd = ['urg']
+            
+            # Add all coverage directories
+            temp_coverage_dirs = list(temp_merge_folder.glob("*.vdb"))
+            for cov_dir in temp_coverage_dirs:
+                urg_cmd.extend(['-dir', cov_dir.name])
+            
+            # Set output directory and format
+            urg_cmd.extend([
+                '-dbname', 'merged_coverage.vdb',
+                '-format', 'both',  # Generate both text and HTML reports
+                '-report', 'coverage_report',
+                '-metric', 'line+cond+fsm+tgl+branch+assert',  # Specify metrics for Verdi
+                '-show', 'tests'  # Show test information in coverage database
+            ])
+            
+            if self.verbose:
+                print(f"Running coverage merge command: {' '.join(urg_cmd)}")
+                print(f"Working directory: {temp_merge_folder}")
+            
+            # Execute coverage merge in temp folder
+            result = subprocess.run(
+                urg_cmd,
+                cwd=str(temp_merge_folder),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=600  # 10 minute timeout for coverage merge
+            )
+            
+            if result.returncode == 0:
+                print(f"✅ Coverage merge completed successfully")
+                
+                # Move merged coverage and report to final location
+                merged_coverage_src = temp_merge_folder / "merged_coverage.vdb"
+                coverage_report_src = temp_merge_folder / "coverage_report"
+                
+                if merged_coverage_src.exists():
+                    merged_coverage_dest = self.coverage_folder / "merged_coverage.vdb"
+                    if merged_coverage_dest.exists():
+                        shutil.rmtree(merged_coverage_dest)
+                    shutil.move(str(merged_coverage_src), str(merged_coverage_dest))
+                    print(f"   Merged database: {merged_coverage_dest}")
+                
+                if coverage_report_src.exists():
+                    coverage_report_dest = self.coverage_folder / "coverage_report"
+                    if coverage_report_dest.exists():
+                        shutil.rmtree(coverage_report_dest)
+                    shutil.move(str(coverage_report_src), str(coverage_report_dest))
+                    print(f"   Coverage report: {coverage_report_dest}")
+                
+                # Display coverage summary if available
+                summary_file = self.coverage_folder / "coverage_report" / "summary.txt"
+                if summary_file.exists():
+                    print(f"\n📊 Coverage Summary:")
+                    with open(summary_file, 'r') as f:
+                        # Read first few lines of summary
+                        for i, line in enumerate(f):
+                            if i < 10:  # Show first 10 lines
+                                print(f"   {line.rstrip()}")
+                            else:
+                                break
+                
+            else:
+                print(f"⚠️  Coverage merge failed with return code {result.returncode}")
+                if result.stderr:
+                    stderr_text = result.stderr.decode('utf-8', errors='replace')
+                    print(f"   stderr: {stderr_text}")
+                
+        except subprocess.TimeoutExpired:
+            print(f"⚠️  Coverage merge timed out after 10 minutes")
+        except FileNotFoundError:
+            print(f"⚠️  Coverage merge tool 'urg' not found. Make sure VCS tools are in PATH")
+        except Exception as e:
+            print(f"⚠️  Error during coverage merge: {e}")
+        finally:
+            # Clean up temp folder if it still exists
+            if temp_merge_folder.exists():
+                try:
+                    shutil.rmtree(temp_merge_folder)
+                except:
+                    pass
+    
+    def _run_single_test(self, test_obj, folder_path, folder_id):
         """Execute a single test in the specified folder"""
         start_time = time.time()
+        
+        # Extract test information from test object
+        test_name = test_obj['name']
+        custom_seed = test_obj.get('seed')
+        command_add = test_obj.get('command_add')
+        
         log_file = folder_path / f"{test_name}.log"
         
         # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
@@ -625,24 +1021,51 @@ class RegressionRunner:
         # Create run script that runs VCS directly from within this folder
         with open(run_script, 'w') as f:
             f.write('#!/bin/bash\n')
-            # Generate a more random seed using multiple entropy sources
-            random_seed = random.randint(1, 2**31-1)
-            random_seed ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
-            random_seed ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
-            random_seed &= 0x7FFFFFFF  # Ensure positive 32-bit value
+            
+            # Use custom seed if provided, otherwise generate random seed
+            if custom_seed is not None:
+                seed_value = custom_seed
+                if self.verbose:
+                    print(f"    Using custom seed: {seed_value}")
+            else:
+                # Generate a more random seed using multiple entropy sources
+                seed_value = random.randint(1, 2**31-1)
+                seed_value ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
+                seed_value ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
+                seed_value &= 0x7FFFFFFF  # Ensure positive 32-bit value
+                if self.verbose:
+                    print(f"    Generated random seed: {seed_value}")
             
             f.write('# Clean up VCS artifacts (already done in Python, but ensure completeness)\n')
             f.write('# This is a backup cleanup in case Python cleanup missed anything\n')
             f.write('# Run VCS directly from this folder with adjusted compile file\n')
             f.write(f'vcs -full64 -lca -kdb -sverilog +v2k ')
             f.write(f'-debug_access+all -ntb_opts uvm-1.2 ')
-            f.write(f'+ntb_random_seed={random_seed} -override_timescale=1ps/1ps ')
+            f.write(f'+ntb_random_seed={seed_value} -override_timescale=1ps/1ps ')
             f.write(f'+nospecify +no_timing_check ')
             if self.fsdb_dump:
                 f.write(f'+define+DUMP_FSDB ')
+            
+            # Add coverage flags if coverage collection is enabled
+            if self.coverage:
+                coverage_dir = f"{test_name}.vdb"
+                f.write(f'-cm line+cond+fsm+tgl+branch+assert ')
+                f.write(f'-cm_seqnoconst ')
+                f.write(f'-cm_dir {coverage_dir} ')
+                f.write(f'-cm_name {test_name} ')
+                if self.verbose:
+                    print(f"    Enabling coverage collection: {coverage_dir}")
+            
             f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
+            
+            # Add custom command if provided
+            if command_add:
+                f.write(f'{command_add} ')
+                if self.verbose:
+                    print(f"    Adding custom command: {command_add}")
+            
             f.write(f'-l {log_file_rel}\n')
         
         # Make script executable
@@ -721,6 +1144,10 @@ class RegressionRunner:
                 if not log_copied:
                     print(f"⚠️  Warning: Could not find log file for {test_name} after test completion")
                 
+                # Copy coverage files if coverage collection is enabled
+                if self.coverage:
+                    self._copy_coverage_files(test_name, folder_path, folder_id)
+                
                 return TestResult(
                     name=test_name,
                     status=status,
@@ -729,7 +1156,9 @@ class RegressionRunner:
                     error_msg=error_msg,
                     folder_id=folder_id,
                     uvm_errors=uvm_errors,
-                    uvm_fatals=uvm_fatals
+                    uvm_fatals=uvm_fatals,
+                    seed=seed_value,
+                    command_add=command_add
                 )
                     
             except subprocess.TimeoutExpired:
@@ -772,7 +1201,9 @@ class RegressionRunner:
                     duration=duration,
                     log_file=str(log_file),
                     error_msg=timeout_msg,
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    seed=seed_value,
+                    command_add=command_add
                 )
                 
         except Exception as e:
@@ -783,7 +1214,9 @@ class RegressionRunner:
                 duration=duration,
                 log_file=str(log_file) if log_file else '',
                 error_msg=f"Execution error: {str(e)}",
-                folder_id=folder_id
+                folder_id=folder_id,
+                seed=seed_value if 'seed_value' in locals() else None,
+                command_add=command_add
             )
         finally:
             # Restore original directory
@@ -1057,6 +1490,17 @@ class RegressionRunner:
     
     def _print_summary(self):
         """Print final test summary report"""
+        # Merge coverage data if coverage collection was enabled
+        if self.coverage:
+            self._merge_coverage_data()
+        
+        # Generate running list with actual execution parameters
+        self._generate_running_list(self.results)
+        
+        # Generate pass and no pass lists with actual execution parameters
+        self._generate_pass_list(self.results)
+        self._generate_no_pass_list(self.results)
+        
         total_time = time.time() - self.start_time
         
         print("\n" + "="*80)
@@ -1077,11 +1521,6 @@ class RegressionRunner:
             print(f"\n❌ FAILED TESTS ({len(failed_results)}):")
             print("-" * 80)
             
-            # Create no_pass_list file
-            no_pass_list_file = self.results_folder / "no_pass_list"
-            with open(no_pass_list_file, 'w') as f:
-                for result in failed_results:
-                    f.write(f"{result.name}\n")
             
             for result in failed_results:
                 print(f"   {result.status:8s} {result.name:50s} ({result.duration:6.1f}s)")
@@ -1091,7 +1530,7 @@ class RegressionRunner:
                     print(f"            └─ {error_short}")
                 print(f"            └─ Log: {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}")
             
-            print(f"\n📝 Failed test list saved to: {self._to_relative_path(no_pass_list_file)}")
+            print(f"\n📝 Failed test list saved to: {self._to_relative_path(self.results_folder / 'no_pass_list')}")
         
         # Save detailed results to results folder
         results_file = self.results_folder / f"regression_results_{self.timestamp}.txt"
@@ -1283,7 +1722,7 @@ class RegressionRunner:
             print(f"\n💥 Fatal error during regression: {e}")
             return 1
         finally:
-            # Clean up execution folders but keep the last one
+            # Clean up old execution folders but keep all folders from current run
             if hasattr(self, '_regression_success') and self._regression_success:
                 self._cleanup_all_folders()
             else:
@@ -1299,15 +1738,16 @@ class RegressionRunner:
     def _run_lsf_regression(self, tests, folders):
         """Run regression using LSF job submission"""
         # Submit all jobs
-        for i, test_name in enumerate(tests):
+        for i, test_obj in enumerate(tests):
             if self.stop_all.is_set():
                 break
                 
+            test_name = test_obj['name']
             folder_id = i % len(folders)
             folder_path = folders[folder_id]
             
             try:
-                self._submit_lsf_job(test_name, folder_path, folder_id)
+                self._submit_lsf_job(test_obj, folder_path, folder_id)
             except Exception as e:
                 error_result = TestResult(
                     name=test_name,
@@ -1315,7 +1755,9 @@ class RegressionRunner:
                     duration=0.0,
                     log_file='',
                     error_msg=f"LSF submission error: {str(e)}",
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    seed=test_obj.get('seed'),
+                    command_add=test_obj.get('command_add')
                 )
                 self._update_progress(error_result)
         
@@ -1376,7 +1818,9 @@ class RegressionRunner:
                     error_msg=error_msg,
                     folder_id=folder_id,
                     uvm_errors=uvm_errors,
-                    uvm_fatals=uvm_fatals
+                    uvm_fatals=uvm_fatals,
+                    seed=job_info.get('seed'),
+                    command_add=job_info.get('command_add')
                 )
                 
                 self._update_progress(result)
@@ -1402,9 +1846,11 @@ class RegressionRunner:
             folder_id = 0
             folder_path = folders[0]
             
-            for test_name in tests:
+            for test_obj in tests:
                 if self.stop_all.is_set():
                     break
+                
+                test_name = test_obj['name']
                 
                 # Ensure thorough cleanup before starting new test
                 self._cleanup_vcs_artifacts(folder_path)
@@ -1414,7 +1860,7 @@ class RegressionRunner:
                     print(f"🔄 [Folder {folder_id:02d}] Running {test_name}")
                 
                 try:
-                    result = self._run_single_test(test_name, folder_path, folder_id)
+                    result = self._run_single_test(test_obj, folder_path, folder_id)
                     self._update_progress(result)
                 except Exception as e:
                     error_result = TestResult(
@@ -1423,7 +1869,9 @@ class RegressionRunner:
                         duration=0.0,
                         log_file='',
                         error_msg=f"Test execution error: {str(e)}",
-                        folder_id=folder_id
+                        folder_id=folder_id,
+                        seed=test_obj.get('seed'),
+                        command_add=test_obj.get('command_add')
                     )
                     self._update_progress(error_result)
         else:
@@ -1449,7 +1897,9 @@ class RegressionRunner:
                         with lock:
                             if not pending_tests:
                                 return None
-                            test_name = pending_tests.pop(0)
+                            test_obj = pending_tests.pop(0)
+                        
+                        test_name = test_obj['name']
                         
                         # Wait for available folder
                         folder_id, folder_path = available_folders.get()
@@ -1462,13 +1912,14 @@ class RegressionRunner:
                             print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
                         
                         # Submit test
-                        future = executor.submit(self._run_single_test, test_name, folder_path, folder_id)
+                        future = executor.submit(self._run_single_test, test_obj, folder_path, folder_id)
                         
                         with lock:
                             active_futures[future] = {
                                 'test_name': test_name,
                                 'folder_id': folder_id,
-                                'folder_path': folder_path
+                                'folder_path': folder_path,
+                                'test_obj': test_obj
                             }
                         
                         return future
@@ -1496,13 +1947,16 @@ class RegressionRunner:
                             self._update_progress(result)
                         except Exception as e:
                             test_name = future_info['test_name']
+                            test_obj = future_info['test_obj']
                             error_result = TestResult(
                                 name=test_name,
                                 status='ERROR',
                                 duration=0.0,
                                 log_file='',
                                 error_msg=f"Thread execution error: {str(e)}",
-                                folder_id=folder_id
+                                folder_id=folder_id,
+                                seed=test_obj.get('seed'),
+                                command_add=test_obj.get('command_add')
                             )
                             self._update_progress(error_result)
                         
@@ -1533,8 +1987,9 @@ Examples:
   python3 axi4_regression.py --timeout 900        # 15min timeout per test
   python3 axi4_regression.py --verbose            # Verbose execution output
   python3 axi4_regression.py --fsdb-dump          # Enable FSDB waveform dumping
+  python3 axi4_regression.py --cov                # Enable coverage collection
   python3 axi4_regression.py --lsf                # Use LSF job submission
-  python3 axi4_regression.py --lsf -p 10          # LSF mode with 10 parallel jobs
+  python3 axi4_regression.py --lsf -p 10 --cov    # LSF mode with coverage and 10 parallel jobs
         """
     )
     
@@ -1576,6 +2031,12 @@ Examples:
         help='Enable FSDB waveform dumping by adding +define+DUMP_FSDB to VCS command (default: disabled)'
     )
     
+    parser.add_argument(
+        '--cov',
+        action='store_true',
+        help='Enable coverage collection (function and code coverage) with VCS -cm options'
+    )
+    
     args = parser.parse_args()
     
     # Validate arguments
@@ -1599,7 +2060,8 @@ Examples:
         timeout=args.timeout,
         verbose=args.verbose,
         use_lsf=args.lsf,
-        fsdb_dump=args.fsdb_dump
+        fsdb_dump=args.fsdb_dump,
+        coverage=args.cov
     )
     
     try:

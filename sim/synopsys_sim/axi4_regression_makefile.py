@@ -40,7 +40,7 @@ import json
 
 class TestResult:
     """Container for test execution results"""
-    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0):
+    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0, seed=None, command_add=None):
         self.name = name
         self.status = status  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
         self.duration = duration
@@ -49,6 +49,8 @@ class TestResult:
         self.folder_id = folder_id
         self.uvm_errors = uvm_errors
         self.uvm_fatals = uvm_fatals
+        self.seed = seed
+        self.command_add = command_add
 
 
 class RegressionRunner:
@@ -105,11 +107,11 @@ class RegressionRunner:
         self._check_makefile()
     
     def _check_makefile(self):
-        """Check if Makefile exists in parent directory"""
-        makefile_path = self.base_dir.parent / "Makefile"
+        """Check if Makefile exists in current directory"""
+        makefile_path = self.base_dir / "Makefile"
         if not makefile_path.exists():
             print(f"❌ Error: Makefile not found at {makefile_path}")
-            print("💡 This script requires a Makefile with 'run_test' target")
+            print("💡 This script requires a Makefile with 'sim' target")
             sys.exit(1)
         else:
             print(f"✅ Found Makefile at {makefile_path}")
@@ -285,6 +287,112 @@ class RegressionRunner:
         except Exception as e:
             raise Exception(f"Error reading test list file: {e}")
     
+    def _generate_running_list(self, results):
+        """Generate a running_list file with actual test execution parameters"""
+        running_list_file = self.results_folder / "running_list"
+        
+        try:
+            with open(running_list_file, 'w') as f:
+                f.write(f"# Running list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters actually used in this regression run\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total tests: {len(results)}\n")
+                f.write("#\n")
+                
+                for result in results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated running list: {self._to_relative_path(running_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate running list: {e}")
+    
+    def _generate_pass_list(self, results):
+        """Generate a pass_list file with passed test execution parameters"""
+        pass_list_file = self.results_folder / "pass_list"
+        
+        try:
+            passed_results = [r for r in results if r.status == 'PASS']
+            
+            with open(pass_list_file, 'w') as f:
+                f.write(f"# Pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters for passed tests\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total passed tests: {len(passed_results)}\n")
+                f.write("#\n")
+                
+                for result in passed_results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated pass list: {self._to_relative_path(pass_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate pass list: {e}")
+    
+    def _generate_no_pass_list(self, results):
+        """Generate a no_pass_list file with failed test execution parameters"""
+        no_pass_list_file = self.results_folder / "no_pass_list"
+        
+        try:
+            failed_results = [r for r in results if r.status != 'PASS']
+            
+            with open(no_pass_list_file, 'w') as f:
+                f.write(f"# No pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Test execution parameters for failed tests\n")
+                f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
+                f.write(f"# Total failed tests: {len(failed_results)}\n")
+                f.write("#\n")
+                
+                for result in failed_results:
+                    test_name = result.name
+                    actual_seed = result.seed
+                    command_add = result.command_add
+                    
+                    # Build the parameter line with actual execution parameters
+                    params = []
+                    if actual_seed is not None:
+                        params.append(f"seed={actual_seed}")
+                    if command_add is not None:
+                        params.append(f"command_add={command_add}")
+                    
+                    if params:
+                        f.write(f"{test_name} {' '.join(params)}\n")
+                    else:
+                        f.write(f"{test_name}\n")
+            
+            print(f"📋 Generated no pass list: {self._to_relative_path(no_pass_list_file)}")
+            
+        except Exception as e:
+            print(f"⚠️  Warning: Could not generate no pass list: {e}")
+    
     def _cleanup_existing_folders(self):
         """Clean up any existing run_folder_xx directories before starting"""
         print("🧹 Cleaning up existing run_folder_xx directories...")
@@ -309,8 +417,8 @@ class RegressionRunner:
         """Create and setup test execution folders"""
         folders = []
         
-        # Clean up existing run folders first
-        self._cleanup_existing_folders()
+        # Keep existing run folders for debugging/reference
+        # self._cleanup_existing_folders()  # Commented out to preserve last run data
         
         # Create results folder and logs subfolders
         self.results_folder.mkdir(exist_ok=True)
@@ -343,16 +451,16 @@ class RegressionRunner:
             folder_name = f"run_folder_{i:02d}"
             folder_path = self.base_dir.parent / folder_name
             
-            # Clean existing folder (additional safety check)
-            if folder_path.exists():
-                shutil.rmtree(folder_path)
-            
-            # Create new folder
-            folder_path.mkdir(exist_ok=True)
+            # Create folder if it doesn't exist, but keep existing content
+            if not folder_path.exists():
+                folder_path.mkdir(exist_ok=True)
+            else:
+                # Keep existing folder content for reference
+                pass
             
             folders.append(folder_path)
             
-        print(f"✅ Created {len(folders)} execution folders")
+        print(f"✅ Set up {len(folders)} execution folders (existing data preserved)")
             
         return folders
     
@@ -410,11 +518,9 @@ class RegressionRunner:
             
             # Build make command with appropriate variables
             f.write('# Run test using make\n')
-            f.write(f'make -C .. run_test ')
-            f.write(f'TEST_NAME={base_test_name} ')
+            f.write(f'cd {folder_path} && ')
+            f.write(f'make -f {self.base_dir}/Makefile sim test={base_test_name} ')
             f.write(f'SEED={seed_value} ')
-            f.write(f'LOG_FILE={log_file_rel} ')
-            f.write(f'RUN_DIR={folder_path} ')
             
             if self.fsdb_dump:
                 f.write(f'FSDB_DUMP=1 ')
@@ -452,7 +558,9 @@ class RegressionRunner:
                     'folder_path': folder_path,
                     'folder_id': folder_id,
                     'submit_time': time.time(),
-                    'status': 'PEND'  # LSF job status
+                    'status': 'PEND',  # LSF job status
+                    'seed': seed_value,
+                    'command_add': command_add
                 }
                 
                 self.pending_jobs += 1
@@ -746,14 +854,12 @@ class RegressionRunner:
             print(f"    Working directory: {self._to_relative_path(folder_path)}")
             print(f"    Expected log file: {self._to_relative_path(log_file)}")
         
-        # Build make command
-        make_cmd = ['make', '-C', str(self.base_dir.parent), 'run_test']
+        # Build make command using -f flag to reference Makefile from current directory
+        make_cmd = ['make', '-f', str(self.base_dir / 'Makefile'), 'sim']
         
         # Add make variables
         make_vars = {
-            'TEST_NAME': base_test_name,
-            'LOG_FILE': f'{test_name}.log',
-            'RUN_DIR': str(folder_path)
+            'test': base_test_name
         }
         
         # Use custom seed if provided, otherwise generate random seed
@@ -794,6 +900,10 @@ class RegressionRunner:
             make_cmd.append(f'{var}={value}')
 
         try:
+            # Change to the run folder before executing
+            original_dir = os.getcwd()
+            os.chdir(str(folder_path))
+            
             # Run make command with timeout
             process = subprocess.Popen(
                 make_cmd,
@@ -850,7 +960,9 @@ class RegressionRunner:
                     error_msg=error_msg,
                     folder_id=folder_id,
                     uvm_errors=uvm_errors,
-                    uvm_fatals=uvm_fatals
+                    uvm_fatals=uvm_fatals,
+                    seed=seed_value,
+                    command_add=command_add
                 )
                     
             except subprocess.TimeoutExpired:
@@ -871,7 +983,9 @@ class RegressionRunner:
                     duration=duration,
                     log_file=str(log_file),
                     error_msg=timeout_msg,
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    seed=seed_value,
+                    command_add=command_add
                 )
                 
         except Exception as e:
@@ -882,8 +996,13 @@ class RegressionRunner:
                 duration=duration,
                 log_file=str(log_file) if log_file else '',
                 error_msg=f"Execution error: {str(e)}",
-                folder_id=folder_id
+                folder_id=folder_id,
+                seed=seed_value if 'seed_value' in locals() else None,
+                command_add=command_add
             )
+        finally:
+            # Always change back to original directory
+            os.chdir(original_dir)
     
     def _analyze_test_result(self, log_file, stdout):
         """Analyze test output to determine pass/fail status and extract error message
@@ -1155,6 +1274,13 @@ class RegressionRunner:
         if self.coverage:
             self._merge_coverage_data()
         
+        # Generate running list with actual execution parameters
+        self._generate_running_list(self.results)
+        
+        # Generate pass and no pass lists with actual execution parameters
+        self._generate_pass_list(self.results)
+        self._generate_no_pass_list(self.results)
+        
         total_time = time.time() - self.start_time
         
         print("\n" + "="*80)
@@ -1175,11 +1301,6 @@ class RegressionRunner:
             print(f"\n❌ FAILED TESTS ({len(failed_results)}):")
             print("-" * 80)
             
-            # Create no_pass_list file
-            no_pass_list_file = self.results_folder / "no_pass_list"
-            with open(no_pass_list_file, 'w') as f:
-                for result in failed_results:
-                    f.write(f"{result.name}\n")
             
             for result in failed_results:
                 print(f"   {result.status:8s} {result.name:50s} ({result.duration:6.1f}s)")
@@ -1189,7 +1310,7 @@ class RegressionRunner:
                     print(f"            └─ {error_short}")
                 print(f"            └─ Log: {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}")
             
-            print(f"\n📝 Failed test list saved to: {self._to_relative_path(no_pass_list_file)}")
+            print(f"\n📝 Failed test list saved to: {self._to_relative_path(self.results_folder / 'no_pass_list')}")
         
         # Save detailed results to results folder
         results_file = self.results_folder / f"regression_results_{self.timestamp}.txt"
@@ -1381,12 +1502,10 @@ class RegressionRunner:
             print(f"\n💥 Fatal error during regression: {e}")
             return 1
         finally:
-            # Clean up execution folders but keep the last one
-            if hasattr(self, '_regression_success') and self._regression_success:
-                self._cleanup_all_folders()
-            else:
-                print("⚠️  Keeping all execution folders for debugging (run_folder_*)")
-                print("💡 Manually remove with: rm -rf run_folder_*")
+            # Always keep all execution folders for reference
+            print("\n⚠️  Keeping all execution folders from this run (run_folder_*)")
+            print("💡 These folders contain the actual test execution data and logs")
+            print("💡 To manually remove them: rm -rf run_folder_*")
             
             # Always report the regression result folder location
             if hasattr(self, 'results_folder') and self.results_folder.exists():
@@ -1414,7 +1533,9 @@ class RegressionRunner:
                     duration=0.0,
                     log_file='',
                     error_msg=f"LSF submission error: {str(e)}",
-                    folder_id=folder_id
+                    folder_id=folder_id,
+                    seed=test_obj.get('seed'),
+                    command_add=test_obj.get('command_add')
                 )
                 self._update_progress(error_result)
         
@@ -1475,7 +1596,9 @@ class RegressionRunner:
                     error_msg=error_msg,
                     folder_id=folder_id,
                     uvm_errors=uvm_errors,
-                    uvm_fatals=uvm_fatals
+                    uvm_fatals=uvm_fatals,
+                    seed=job_info.get('seed'),
+                    command_add=job_info.get('command_add')
                 )
                 
                 self._update_progress(result)
@@ -1520,7 +1643,9 @@ class RegressionRunner:
                         duration=0.0,
                         log_file='',
                         error_msg=f"Test execution error: {str(e)}",
-                        folder_id=folder_id
+                        folder_id=folder_id,
+                        seed=test_obj.get('seed'),
+                        command_add=test_obj.get('command_add')
                     )
                     self._update_progress(error_result)
         else:
@@ -1563,7 +1688,8 @@ class RegressionRunner:
                             active_futures[future] = {
                                 'test_name': test_name,
                                 'folder_id': folder_id,
-                                'folder_path': folder_path
+                                'folder_path': folder_path,
+                                'test_obj': test_obj
                             }
                         
                         return future
@@ -1591,13 +1717,16 @@ class RegressionRunner:
                             self._update_progress(result)
                         except Exception as e:
                             test_name = future_info['test_name']
+                            test_obj = future_info['test_obj']
                             error_result = TestResult(
                                 name=test_name,
                                 status='ERROR',
                                 duration=0.0,
                                 log_file='',
                                 error_msg=f"Thread execution error: {str(e)}",
-                                folder_id=folder_id
+                                folder_id=folder_id,
+                                seed=test_obj.get('seed'),
+                                command_add=test_obj.get('command_add')
                             )
                             self._update_progress(error_result)
                         
