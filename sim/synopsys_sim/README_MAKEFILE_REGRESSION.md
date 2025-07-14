@@ -131,7 +131,7 @@ axi4_write_read_test
 axi4_blocking_8b_write_read_test
 
 # Tests with custom seeds
-axi4_tc_054_exclusive_read_fail_test seed=12345
+axi4_tc_058_exclusive_read_fail_test seed=12345
 axi4_wstrb_single_bit_test seed=67890
 
 # Tests with custom VCS commands
@@ -144,7 +144,7 @@ axi4_wstrb_all_ones_test run_cnt=3
 # Combined parameters
 axi4_blocking_32b_write_read_test run_cnt=3 seed=99999
 axi4_wstrb_test seed=55555 command_add=+define+SPECIAL_TEST
-axi4_tc_053_test run_cnt=2 seed=33333 command_add=+define+MULTI_PARAM_TEST
+axi4_tc_057_test run_cnt=2 seed=33333 command_add=+define+MULTI_PARAM_TEST
 ```
 
 ### Parameter Support
