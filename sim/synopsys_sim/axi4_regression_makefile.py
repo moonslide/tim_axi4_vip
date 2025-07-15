@@ -505,7 +505,7 @@ class RegressionRunner:
             
             for i in range(num_folders):
                 folder_name = f"run_folder_{i:02d}"
-                folder_path = self.base_dir / folder_name
+                folder_path = self.base_dir.parent / folder_name
                 
                 # Create folder if it doesn't exist, preserve existing content
                 folder_path.mkdir(exist_ok=True)
@@ -540,7 +540,7 @@ class RegressionRunner:
             
             for i in range(num_folders):
                 folder_name = f"run_folder_{i:02d}"
-                folder_path = self.base_dir / folder_name
+                folder_path = self.base_dir.parent / folder_name
                 
                 # Create folder if it doesn't exist, preserve existing content
                 folder_path.mkdir(exist_ok=True)
@@ -814,7 +814,7 @@ class RegressionRunner:
         
         for i in range(num_folders_to_check):
             folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir / folder_name
+            folder_path = self.base_dir.parent / folder_name
             if folder_path.exists():
                 existing_folders.append((i, folder_path))
         
@@ -833,7 +833,9 @@ class RegressionRunner:
             return
         
         try:
-            coverage_dir = folder_path / f"{test_name}.vdb"
+            # For numbered tests like test_name_1, the VDB is created with base name (test_name without _N)
+            base_test_name = self._extract_base_test_name(test_name)
+            coverage_dir = folder_path / f"{base_test_name}.vdb"
             
             # Check if coverage database was generated
             if not coverage_dir.exists():
@@ -879,18 +881,28 @@ class RegressionRunner:
             
             print(f"\n📊 Merging coverage data from {len(coverage_dirs)} test runs...")
             
-            # Create merged coverage directory
-            merged_coverage_dir = self.coverage_folder / "merged_coverage.vdb"
+            # Create temporary coverage folder at sim level (same as reference script)
+            temp_coverage_folder = self.base_dir.parent / "coverage_temp"
+            temp_coverage_folder.mkdir(exist_ok=True)
             
-            # Build urg command to merge coverage databases (use absolute paths)
+            # Copy all coverage databases to temp folder
+            temp_coverage_dirs = []
+            for i, cov_dir in enumerate(coverage_dirs):
+                temp_cov_dir = temp_coverage_folder / cov_dir.name
+                if temp_cov_dir.exists():
+                    shutil.rmtree(temp_cov_dir)
+                shutil.copytree(cov_dir, temp_cov_dir)
+                temp_coverage_dirs.append(temp_cov_dir)
+            
+            # Build urg command to merge coverage databases (use relative paths in temp folder)
             urg_cmd = [
                 'urg',
-                '-dir', str(coverage_dirs[0])  # Start with first database (absolute path)
+                '-dir', temp_coverage_dirs[0].name  # Start with first database (relative name)
             ]
             
             # Add additional coverage databases
-            for cov_dir in coverage_dirs[1:]:
-                urg_cmd.extend(['-dir', str(cov_dir)])
+            for temp_cov_dir in temp_coverage_dirs[1:]:
+                urg_cmd.extend(['-dir', temp_cov_dir.name])
             
             # Set output directory and format with additional options
             urg_cmd.extend([
@@ -904,10 +916,10 @@ class RegressionRunner:
             if self.verbose:
                 print(f"Running coverage merge command: {' '.join(urg_cmd)}")
             
-            # Execute coverage merge
+            # Execute coverage merge in temp folder
             result = subprocess.run(
                 urg_cmd,
-                cwd=str(self.coverage_folder),
+                cwd=str(temp_coverage_folder),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=600  # 10 minute timeout for coverage merge
@@ -915,11 +927,31 @@ class RegressionRunner:
             
             if result.returncode == 0:
                 print(f"✅ Coverage merge completed successfully")
-                print(f"   Merged database: {merged_coverage_dir}")
-                print(f"   Coverage report: {self.coverage_folder / 'coverage_report'}")
+                
+                # Move merged results to regression results folder
+                temp_merged_vdb = temp_coverage_folder / "merged_coverage.vdb"
+                temp_coverage_report = temp_coverage_folder / "coverage_report"
+                
+                final_merged_vdb = self.coverage_folder / "merged_coverage.vdb"
+                final_coverage_report = self.coverage_folder / "coverage_report"
+                
+                # Move merged VDB
+                if temp_merged_vdb.exists():
+                    if final_merged_vdb.exists():
+                        shutil.rmtree(final_merged_vdb)
+                    shutil.move(str(temp_merged_vdb), str(final_merged_vdb))
+                
+                # Move coverage report
+                if temp_coverage_report.exists():
+                    if final_coverage_report.exists():
+                        shutil.rmtree(final_coverage_report)
+                    shutil.move(str(temp_coverage_report), str(final_coverage_report))
+                
+                print(f"   Merged database: {final_merged_vdb}")
+                print(f"   Coverage report: {final_coverage_report}")
                 
                 # Display coverage summary if available
-                summary_file = self.coverage_folder / "coverage_report" / "summary.txt"
+                summary_file = final_coverage_report / "summary.txt"
                 if summary_file.exists():
                     print(f"\n📊 Coverage Summary:")
                     with open(summary_file, 'r') as f:
@@ -929,6 +961,14 @@ class RegressionRunner:
                                 print(f"   {line.rstrip()}")
                             else:
                                 break
+                
+                # Clean up temporary coverage folder
+                try:
+                    shutil.rmtree(temp_coverage_folder)
+                    if self.verbose:
+                        print(f"🗑️  Cleaned up temporary coverage folder: {temp_coverage_folder}")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not clean up temp folder {temp_coverage_folder}: {e}")
             else:
                 print(f"⚠️  Coverage merge failed with return code {result.returncode}")
                 if result.stderr:
@@ -1330,9 +1370,9 @@ class RegressionRunner:
             with open(orig_compile_file, 'r') as f:
                 content = f.read()
             
-            # Adjust paths since run_folder_XX is now inside synopsys_sim directory
-            # Need to add one more level up for paths to work correctly
-            adjusted_content = content.replace("../../", "../../../")
+            # No path adjustment needed since run_folder_XX is at same level as synopsys_sim
+            # Both are at sim/ level, so ../../pkg/ works from both locations
+            adjusted_content = content
             
             with open(new_compile_file, 'w') as f:
                 f.write(adjusted_content)
