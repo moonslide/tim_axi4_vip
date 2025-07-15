@@ -5,6 +5,7 @@ This document describes the new Makefile-based regression runner that provides a
 ## Table of Contents
 
 - [Overview](#overview)
+- [Enhanced Features for UltraThink Requirements](#enhanced-features-for-ultrathink-requirements)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Command Line Options](#command-line-options)
@@ -30,6 +31,88 @@ The `axi4_regression_makefile.py` script is a new version of the AXI4 regression
 - ✅ **Real-time Progress**: Live progress tracking with ETA and job status
 - ✅ **Comprehensive Logging**: Detailed logs for each test with automatic organization
 - ✅ **Test Execution Lists**: Automatic generation of running_list, pass_list, and no_pass_list with actual execution parameters
+
+## Enhanced Features for UltraThink Requirements
+
+The Makefile-based regression script includes the same three key enhancements as the original script, specifically designed for advanced test validation and coverage analysis:
+
+### 🎯 Group Failure Logic
+**When using `run_cnt=10`, if one test fails, all 10 instances are marked as FAIL** in:
+- `regression_result_xxxxx.txt` - All 10 instances marked as FAIL  
+- `regression_summary.txt` - Complete failure tracking
+- Group failure logic ensures consistent test stability reporting
+
+**Implementation**:
+- Automatic test group tracking for `run_cnt > 1` tests
+- If any test in a group fails, entire group is marked as FAIL
+- Provides clear indication of test stability issues
+
+**Example**:
+```bash
+# Test list entry
+axi4_wstrb_test run_cnt=10
+
+# If axi4_wstrb_test_3 fails, then axi4_wstrb_test_1 through axi4_wstrb_test_10 
+# will ALL be marked as FAIL for consistent failure reporting
+```
+
+### 🎯 Individual Run Tracking in List Files
+**List files show individual runs with actual seeds** for better debugging and reproduction:
+- `pass_list` shows each individual run with its actual seed
+- `no_pass_list` shows each failed run with its actual seed and status info
+- `running_list` shows all runs with actual execution parameters
+
+**Benefits**:
+- Perfect seed tracking for reproduction
+- Individual run visibility for debugging
+- Clean test names without `_xx` suffixes
+
+**Example**:
+```bash
+# Test list entry:
+axi4_wstrb_test run_cnt=3
+
+# pass_list shows:
+axi4_wstrb_test seed=1518832966
+axi4_wstrb_test seed=150298808
+axi4_wstrb_test seed=987654321
+```
+
+### 🎯 Pattern Recognition for Different Settings
+**Same pattern name with different settings gets unique names** for proper coverage and log collection:
+- Automatically detects duplicate patterns with different settings
+- Generates unique names with `_configN` suffix
+- Ensures proper coverage collection and log separation
+
+**Example**:
+```bash
+# Test list entries:
+axi4_wstrb_test seed=123
+axi4_wstrb_test seed=456 command_add=+define+DEBUG  
+axi4_wstrb_test seed=789
+
+# Results in unique test names:
+axi4_wstrb_test           # First occurrence
+axi4_wstrb_test_config2   # Second occurrence with different settings
+axi4_wstrb_test_config3   # Third occurrence with different settings
+```
+
+**Benefits**:
+- Accurate coverage collection for each configuration
+- Separate log files for each test variant  
+- Proper identification of different test scenarios
+- Prevents coverage data corruption from mixed configurations
+
+### Testing Enhanced Features
+Use the provided test file to verify all enhancements:
+```bash
+python3 axi4_regression_makefile.py --test-list test_enhanced_features.list
+```
+
+This demonstrates:
+1. **Group failure logic** with `run_cnt=3`
+2. **Pattern recognition** with different seeds/commands
+3. **Clean list generation** with suffix removal
 
 ## Architecture
 
@@ -93,21 +176,24 @@ python3 axi4_regression_makefile.py --lsf --test-list test_single_quick.list
 
 ## Command Line Options
 
-The script supports all the same options as the original regression script:
+The script supports all the same options as the original regression script, plus additional timing controls:
 
 ```bash
 Usage: axi4_regression_makefile.py [-h] [--max-parallel MAX_PARALLEL]
                                    [--timeout TIMEOUT] [--verbose] [--lsf]
                                    [--test-list TEST_LIST] [--fsdb-dump] [--cov]
+                                   [--log-wait-timeout SECONDS] [--cleanup-delay SECONDS]
 
 Options:
-  --max-parallel N     Maximum parallel executions (1-50, default: auto)
-  --timeout N          Test timeout in seconds (min: 60, default: 600)
-  --verbose            Enable verbose output
-  --lsf                Use LSF (Load Sharing Facility) for job submission
-  --test-list FILE     Path to test list file (default: axi4_transfers_regression.list)
-  --fsdb-dump          Enable FSDB waveform dumping
-  --cov                Enable coverage collection (function and code coverage)
+  --max-parallel N       Maximum parallel executions (1-50, default: auto)
+  --timeout N            Test timeout in seconds (min: 60, default: 600)
+  --verbose              Enable verbose output
+  --lsf                  Use LSF (Load Sharing Facility) for job submission
+  --test-list FILE       Path to test list file (default: axi4_transfers_regression.list)
+  --fsdb-dump            Enable FSDB waveform dumping
+  --cov                  Enable coverage collection (function and code coverage)
+  --log-wait-timeout N   Wait time for log file creation in seconds (default: 30)
+  --cleanup-delay N      Delay after cleanup before VCS execution in seconds (default: 5)
 
 Examples:
   python3 axi4_regression_makefile.py                    # Auto parallel, local mode
@@ -118,6 +204,8 @@ Examples:
   python3 axi4_regression_makefile.py --cov              # Enable coverage collection
   python3 axi4_regression_makefile.py --lsf              # Use LSF job submission
   python3 axi4_regression_makefile.py --lsf -p 10 --cov  # LSF mode with coverage
+  python3 axi4_regression_makefile.py --log-wait-timeout 60  # Large design timeout
+  python3 axi4_regression_makefile.py --cleanup-delay 10     # Extra VCS cleanup delay
 ```
 
 ## Test List Format
@@ -172,6 +260,7 @@ The Makefile must accept these variables:
 |----------|-------------|---------|
 | `test` | Base test name | `axi4_wstrb_test` |
 | `SEED` | Random seed value | `12345` |
+| `LOG_FILE` | Expected log file name | `axi4_wstrb_test_1.log` |
 
 #### 3. Optional Variables
 | Variable | Description | When Set |
@@ -187,6 +276,7 @@ The Makefile must accept these variables:
 # Default values for regression script
 test ?= axi4_default_test
 SEED ?= 12345
+LOG_FILE ?= $(test).log
 FSDB_DUMP ?= 0
 COVERAGE ?= 0
 COMMAND_ADD ?=
@@ -220,8 +310,8 @@ ifneq ($(COMMAND_ADD),)
 VCS_FLAGS += $(COMMAND_ADD)
 endif
 
-# Add log file
-VCS_FLAGS += -l $(test).log
+# Add log file (use LOG_FILE variable passed from regression script)
+VCS_FLAGS += -l $(LOG_FILE)
 
 .PHONY: sim clean help
 
@@ -250,13 +340,13 @@ When the regression script runs a test, it executes commands like:
 
 ```bash
 # Basic test (executed from run_folder_XX in sim directory)
-make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=12345
+make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=12345 LOG_FILE=axi4_test_1.log
 
 # Test with coverage
-make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=67890 COVERAGE=1
+make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=67890 LOG_FILE=axi4_test_2.log COVERAGE=1
 
 # Test with FSDB and custom commands
-make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=99999 FSDB_DUMP=1 COMMAND_ADD="+define+DEBUG_MODE"
+make -f ../synopsys_sim/Makefile sim test=axi4_test SEED=99999 LOG_FILE=axi4_test_3.log FSDB_DUMP=1 COMMAND_ADD="+define+DEBUG_MODE"
 ```
 
 ## Features
@@ -514,13 +604,13 @@ python3 axi4_regression_makefile.py --test-list exact_reproduction.list
 #### Test Makefile Directly
 ```bash
 # Test basic execution (from synopsys_sim directory)
-make sim test=axi4_test SEED=12345
+make sim test=axi4_test SEED=12345 LOG_FILE=test.log
 
 # Test with coverage
-make sim test=axi4_test SEED=67890 COVERAGE=1
+make sim test=axi4_test SEED=67890 LOG_FILE=test_cov.log COVERAGE=1
 
 # Test with all options
-make sim test=axi4_test SEED=99999 FSDB_DUMP=1 COVERAGE=1 COMMAND_ADD="+define+DEBUG_MODE"
+make sim test=axi4_test SEED=99999 LOG_FILE=test_debug.log FSDB_DUMP=1 COVERAGE=1 COMMAND_ADD="+define+DEBUG_MODE"
 ```
 
 ## Comparison with Original Script
@@ -680,8 +770,47 @@ cd ../ && make -n run_test TEST_NAME=test SEED=1
 The Makefile-based regression runner provides a cleaner architecture while maintaining full feature compatibility with the original script. It's ideal for projects that want better build system integration and more maintainable VCS command organization.
 
 **Key Benefits:**
-- ✅ **Same Features**: All functionality preserved
+- ✅ **Same Features**: All functionality preserved with latest enhancements
+- ✅ **Individual Run Tracking**: List files show actual seeds for each run
+- ✅ **Parallel Execution**: Folder isolation prevents VCS conflicts
 - ✅ **Better Architecture**: Cleaner separation of concerns  
 - ✅ **Build Integration**: Natural make workflow integration
 - ✅ **Maintainability**: VCS commands centralized in Makefile
 - ✅ **Flexibility**: Easy to customize per project needs
+
+## Timing Parameters for Large Designs
+
+The script includes configurable timing parameters to handle large designs and prevent database conflicts:
+
+### Log Wait Timeout (`--log-wait-timeout`)
+- **Purpose**: Wait time for log file creation after VCS completes compilation
+- **Default**: 30 seconds
+- **When to increase**: Large designs with slow compilation times
+- **Range**: 5 seconds to unlimited
+
+### Cleanup Delay (`--cleanup-delay`)
+- **Purpose**: Delay after cleanup before starting VCS execution 
+- **Default**: 10 seconds (increased from 5 in original)
+- **When to increase**: Database access conflicts in parallel execution
+- **Range**: 0 seconds to unlimited
+
+### Usage Examples for Large Designs
+```bash
+# Large design with slow compilation
+python3 axi4_regression_makefile.py --log-wait-timeout 60 --cleanup-delay 15
+
+# Very large design requiring extra time
+python3 axi4_regression_makefile.py --log-wait-timeout 120 --cleanup-delay 20
+
+# Fast designs can use shorter timeouts
+python3 axi4_regression_makefile.py --log-wait-timeout 10 --cleanup-delay 3
+```
+
+## Recent Updates
+
+### Version 2025.01.15
+- ✅ **Fixed List Generation**: List files now show individual runs with actual seeds
+- ✅ **Improved Parallel Execution**: Simplified VCS approach using folder isolation
+- ✅ **Enhanced Debugging**: Individual seed tracking for perfect reproduction
+- ✅ **Clean Test Names**: Removed `_xx` suffixes from list files
+- ✅ **Added Timing Controls**: Configurable log-wait-timeout and cleanup-delay parameters

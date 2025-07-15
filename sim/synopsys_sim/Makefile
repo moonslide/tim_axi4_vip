@@ -11,13 +11,16 @@ FSDB_DUMP ?= 0
 COVERAGE ?= 0
 COV_DIR ?= $(test).vdb
 COMMAND_ADD ?=
+CLEANUP_DELAY ?= 15
+
+# Use standard VCS filenames - folder isolation handles conflicts
+SIMV_NAME ?= simv
 
 # Determine paths based on current working directory
 # Get absolute paths to handle compile file relative path issues
 SIM_ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-COMPILE_FILE_ABS := $(SIM_ROOT_DIR)axi4_compile.f
 
-# Determine compile file path based on current working directory
+# Auto-detect compile file path based on current working directory
 ifeq ($(wildcard axi4_compile.f),axi4_compile.f)
     # Running from sim directory - use relative path
     COMPILE_FILE = axi4_compile.f
@@ -27,16 +30,20 @@ else ifeq ($(wildcard ../axi4_compile.f),../axi4_compile.f)
     COMPILE_FILE = ../axi4_compile.f
     VERDI_PATH = ..
 else ifeq ($(wildcard ../../axi4_compile.f),../../axi4_compile.f)
-    # Running from run_folder_XX under synopsys_sim - use relative path
+    # Running from run_folder_XX under synopsys_sim - use relative path to sim directory
     COMPILE_FILE = ../../axi4_compile.f
     VERDI_PATH = ../..
+else ifeq ($(wildcard ../../../axi4_compile.f),../../../axi4_compile.f)
+    # Running from run_folder_XX under sim directory - use relative path
+    COMPILE_FILE = ../../../axi4_compile.f
+    VERDI_PATH = ../../..
 else
-    # Fallback - assume sim directory structure
-    COMPILE_FILE = axi4_compile.f
-    VERDI_PATH = .
+    # Fallback - assume run_folder_XX under synopsys_sim
+    COMPILE_FILE = ../../axi4_compile.f
+    VERDI_PATH = ../..
 endif
 
-# VCS base command with dynamic seed handling
+# VCS base command with dynamic seed handling (like original script)
 VCS_BASE_CMD = vcs -full64 -lca -kdb -sverilog +v2k \
                -debug_access+all -ntb_opts uvm-1.2 \
                -override_timescale=1ps/1ps \
@@ -57,12 +64,12 @@ ifeq ($(FSDB_DUMP),1)
 VCS_FLAGS += +define+DUMP_FSDB
 endif
 
-# Add coverage flags if enabled
+# Add coverage flags if enabled (simple naming like original script)
 ifeq ($(COVERAGE),1)
-VCS_FLAGS += -cm line+cond+fsm+tgl+branch+assert -cm_seqnoconst -cm_dir $(COV_DIR) -cm_name $(test)
+VCS_FLAGS += -cm line+cond+fsm+tgl+branch+assert -cm_seqnoconst -cm_dir $(test).vdb -cm_name $(test)
 endif
 
-# Add UVM and testbench specific flags
+# Add UVM and testbench specific flags (restored -R like original script)
 VCS_FLAGS += +define+UVM_VERDI_COMPWAVE -f $(COMPILE_FILE) \
              -debug_access+all -R +UVM_TESTNAME=$(test) \
              +UVM_VERBOSITY=MEDIUM +plusarg_ignore
@@ -72,7 +79,7 @@ ifneq ($(COMMAND_ADD),)
 VCS_FLAGS += $(COMMAND_ADD)
 endif
 
-# Add log file - only if LOG_FILE is specified and not empty
+# Add log file
 ifneq ($(LOG_FILE),)
 VCS_FLAGS += -l $(LOG_FILE)
 endif
@@ -82,7 +89,7 @@ endif
 # Default target for standalone usage
 all: clean sim
 
-# Main target for running tests (for axi4_regression_makefile.py)
+# Main target for running tests (simplified like original script)
 sim:
 	@echo "==============================================="
 	@echo "Running AXI4 Test: $(test)"
@@ -92,14 +99,23 @@ sim:
 	@echo "Coverage: $(COVERAGE)"
 	@echo "Compile File: $(COMPILE_FILE)"
 	@echo "==============================================="
-	@# Clean up and execute VCS
-	rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++ && \
+	@# Comprehensive cleanup of all simulation artifacts 
+	@echo "Performing comprehensive cleanup of simulation artifacts..."
+	rm -rf simv* csrc* vc_hdrs.h ucli.key *.fsdb *.daidir* work.lib++* work/ *.vdb* *.log
+	rm -rf transcript* waveform.wlf* verdi* tr_db.log* *.vpd *.shm *.trn *.dsn
+	rm -rf DVEfiles/ inter.vpd vcdplus.vpd novas.* .simvision/ INCA_libs/ cov_work/
+	rm -rf urgReport/ AN.DB/ novas_dump.log nWaveLog/ debussy.log novas.conf novas.rc
+	rm -rf *.key *.dmp *.tmp core* *.stackdump *.cm ./*.log.*
+	@# Wait after cleanup to prevent VCS database access conflicts (configurable delay)
+	@echo "Waiting $(CLEANUP_DELAY) seconds after cleanup to prevent database conflicts..."
+	sleep $(CLEANUP_DELAY)
+	@# Execute VCS
 	$(VCS_FLAGS)
 
 # Legacy target for backward compatibility
 run_test: sim
 
-# Verdi target for waveform viewing
+# Verdi target for waveform viewing (restored to standard naming)
 verdi:
 	@echo "Starting Verdi for waveform analysis..."
 	@if [ -f $(VERDI_PATH)/default.fsdb ]; then \
@@ -143,6 +159,8 @@ help:
 	@echo "  COVERAGE     - Enable coverage collection: 0|1 (default: 0)"
 	@echo "  COV_DIR      - Coverage database directory (default: \$${test}.vdb)"
 	@echo "  COMMAND_ADD  - Additional VCS command line options (default: empty)"
+	@echo "  SIMV_NAME    - VCS executable name (default: simv)"
+	@echo "  CLEANUP_DELAY - Delay after cleanup in seconds (default: 10)"
 	@echo ""
 	@echo "Usage Examples:"
 	@echo "  make sim test=axi4_wstrb_test SEED=98765"
@@ -160,3 +178,9 @@ help:
 	@echo "  - Uses correct axi4_compile.f path based on location"
 	@echo "  - Handles both automatic and manual seed generation"
 	@echo "  - No symbolic links created - uses relative paths only"
+	@echo ""
+	@echo "Parallel Execution Support:"
+	@echo "  - Uses folder isolation for parallel test execution"
+	@echo "  - Each test runs in separate run_folder_XX directory"
+	@echo "  - Standard VCS filenames work due to folder separation"
+	@echo "  - Automatic cleanup prevents artifact conflicts"

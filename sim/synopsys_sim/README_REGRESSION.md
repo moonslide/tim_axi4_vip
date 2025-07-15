@@ -50,6 +50,102 @@ This directory contains a comprehensive parallel regression test system for AXI4
 - ✅ **Detailed Reports**: Summary statistics and failure analysis with timestamped results
 - ✅ **Test Execution Lists**: Automatic generation of running_list, pass_list, and no_pass_list with actual execution parameters
 
+## Enhanced Features for UltraThink Requirements
+
+The regression script includes three key enhancements specifically designed for advanced test validation and coverage analysis:
+
+### 🎯 Group Failure Logic
+**When using `run_cnt=10`, if one test fails, all 10 instances are marked as FAIL** in:
+- `regression_result_xxxxx.txt` - All 10 instances marked as FAIL
+- `regression_summary.txt` - Complete failure tracking
+- Group failure logic ensures consistent test stability reporting
+
+**Implementation**:
+- Automatic test group tracking for `run_cnt > 1` tests
+- If any test in a group fails, entire group is marked as FAIL
+- Provides clear indication of test stability issues
+
+**Example**:
+```bash
+# Test list entry
+axi4_wstrb_test run_cnt=10
+
+# If axi4_wstrb_test_3 fails, then axi4_wstrb_test_1 through axi4_wstrb_test_10 
+# will ALL be marked as FAIL for consistent failure reporting
+```
+
+### 🎯 Individual Run Tracking in List Files
+**List files show individual runs with actual seeds** for better debugging and reproduction:
+- `pass_list` shows each individual run with its actual seed
+- `no_pass_list` shows each failed run with its actual seed
+- `running_list` shows all runs with actual execution parameters
+
+**Benefits**:
+- Perfect seed tracking for reproduction
+- Individual run visibility for debugging
+- Clean test names without `_xx` suffixes
+
+**Example**:
+```bash
+# Test list entry:
+axi4_wstrb_test run_cnt=3
+
+# pass_list shows:
+axi4_wstrb_test seed=1518832966
+axi4_wstrb_test seed=150298808
+axi4_wstrb_test seed=987654321
+```
+
+### 🎯 Pattern Recognition for Different Settings
+**Same pattern name with different settings gets unique names** for proper coverage and log collection:
+- Automatically detects duplicate patterns with different settings
+- Generates unique names with `_configN` suffix
+- Ensures proper coverage collection and log separation
+
+**Example**:
+```bash
+# Test list entries:
+axi4_wstrb_test seed=123
+axi4_wstrb_test seed=456 command_add=+define+DEBUG  
+axi4_wstrb_test seed=789
+
+# Results in unique test names:
+axi4_wstrb_test           # First occurrence
+axi4_wstrb_test_config2   # Second occurrence with different settings
+axi4_wstrb_test_config3   # Third occurrence with different settings
+```
+
+**Benefits**:
+- Accurate coverage collection for each configuration
+- Separate log files for each test variant
+- Proper identification of different test scenarios
+- Prevents coverage data corruption from mixed configurations
+
+### Testing Enhanced Features
+Use the provided test file to verify all three enhancements:
+```bash
+python3 axi4_regression.py --test-list test_enhanced_features.list
+```
+
+This will demonstrate:
+1. **Group failure logic** with `run_cnt=3` tests
+2. **Pattern recognition** with multiple `axi4_wstrb_all_ones_test` entries using different settings
+3. **Clean list generation** with suffix removal in the generated list files
+
+The test file includes:
+```bash
+# Group failure test - if one fails, all should be marked as failed
+axi4_tc_046_id_multiple_writes_same_awid_test run_cnt=3
+
+# Pattern recognition test - should get unique names
+axi4_wstrb_all_ones_test seed=123
+axi4_wstrb_all_ones_test seed=456 command_add=+define+DEBUG
+axi4_wstrb_all_ones_test seed=789
+
+# Clean list test - check suffix removal in pass_list/no_pass_list
+axi4_wstrb_all_zero_test run_cnt=2 seed=111
+```
+
 ## Files
 
 - `axi4_regression.py` - Main regression runner with advanced features
@@ -1493,12 +1589,13 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 
 ### Version 2025.01 Major Features
 
-#### Test Execution Lists
-- ✅ **running_list**: Captures all test execution parameters actually used during regression
-- ✅ **pass_list**: Contains only passed tests with their execution parameters for rerun
-- ✅ **no_pass_list**: Contains only failed tests with their execution parameters for debugging
-- ✅ **Actual Seeds**: Shows real generated seeds used, not just custom ones from test list
-- ✅ **Perfect Reproduction**: Use lists to reproduce exact regression runs with same parameters
+#### Test Execution Lists (Enhanced)
+- ✅ **running_list**: Shows individual runs with actual seeds (no `_xx` suffixes)
+- ✅ **pass_list**: Shows individual passed runs with actual seeds (no consolidation)
+- ✅ **no_pass_list**: Shows individual failed runs with actual seeds and status info
+- ✅ **Individual Run Tracking**: Each test run tracked separately, not consolidated
+- ✅ **Clean Test Names**: Removed `_xx` suffixes for better readability
+- ✅ **Perfect Reproduction**: Use exact seeds from lists to reproduce specific test runs
 
 #### Test Repetition System
 - ✅ **New Syntax**: `testname run_cnt=N` format for explicit test repetition
@@ -1528,6 +1625,13 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 - ✅ **Status Grouping**: Tests organized by priority (TIMEOUT → FAIL/ERROR → PASS)
 - ✅ **Detailed Error Context**: Complete error information with UVM counts for each failed test
 
+#### UltraThink Advanced Features
+- ✅ **Group Failure Logic**: When `run_cnt=10` and one test fails, all 10 are marked as FAIL
+- ✅ **Clean List Files**: Suffix removal (`_xx`) for consolidated test entries in lists
+- ✅ **Pattern Recognition**: Unique names for same test with different settings (`_configN`)
+- ✅ **Enhanced Coverage**: Proper coverage collection for each test configuration
+- ✅ **Smart Test Grouping**: Automatic tracking and management of test groups
+
 #### Advanced Features
 - ✅ **FSDB Waveform Control**: Optional `--fsdb-dump` flag for debugging (default: disabled)
 - ✅ **Enhanced Random Seeds**: Multiple entropy sources (time, test name hash, random)
@@ -1546,7 +1650,15 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 
 ## Version History
 
-### v2025.01 (Current) - Major Feature Release
+### v2025.01.15 (Current) - Enhanced List Generation & Parallel Execution
+- **Fixed List Generation**: List files now show individual runs with actual seeds for perfect debugging
+- **Group Failure Logic**: When using `run_cnt=N`, if one test fails, all N instances are marked as FAIL
+- **Clean Test Names**: Removed `_xx` suffixes from list files for cleaner output
+- **Pattern Recognition**: Same test name with different settings gets unique names for proper coverage
+- **Improved Parallel Execution**: Better folder isolation and VCS conflict prevention
+- **Individual Run Tracking**: Each test run shows its actual seed and parameters in lists
+
+### v2025.01 - Major Feature Release  
 - **Test Execution Lists**: Automatic generation of running_list, pass_list, and no_pass_list with actual execution parameters
 - **Test Repetition**: New `run_cnt=N` syntax for explicit test repetition
 - **Custom Seed Support**: Load custom seeds from test list (`seed=123`)
@@ -1564,6 +1676,16 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 - **Real-time Progress**: Live ETA and status tracking
 - **VCS Artifact Cleanup**: Automatic cleanup between tests
 - **Comprehensive Logging**: Automatic log organization
+
+## Additional Features
+
+### Makefile Version
+For users who prefer Makefile-based execution, see `axi4_regression_makefile.py` which includes:
+- **Timing Controls**: Configurable `--log-wait-timeout` and `--cleanup-delay` parameters for large designs
+- **Makefile Integration**: VCS commands centralized in Makefile for better maintainability
+- **Build System Integration**: Natural integration with existing make-based workflows
+
+See `README_MAKEFILE_REGRESSION.md` for complete documentation.
 
 ## Support and Troubleshooting
 
