@@ -505,7 +505,7 @@ class RegressionRunner:
             
             for i in range(num_folders):
                 folder_name = f"run_folder_{i:02d}"
-                folder_path = self.base_dir.parent / folder_name
+                folder_path = self.base_dir / folder_name
                 
                 # Create folder if it doesn't exist, preserve existing content
                 folder_path.mkdir(exist_ok=True)
@@ -540,7 +540,7 @@ class RegressionRunner:
             
             for i in range(num_folders):
                 folder_name = f"run_folder_{i:02d}"
-                folder_path = self.base_dir.parent / folder_name
+                folder_path = self.base_dir / folder_name
                 
                 # Create folder if it doesn't exist, preserve existing content
                 folder_path.mkdir(exist_ok=True)
@@ -814,7 +814,7 @@ class RegressionRunner:
         
         for i in range(num_folders_to_check):
             folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir.parent / folder_name
+            folder_path = self.base_dir / folder_name
             if folder_path.exists():
                 existing_folders.append((i, folder_path))
         
@@ -1330,9 +1330,9 @@ class RegressionRunner:
             with open(orig_compile_file, 'r') as f:
                 content = f.read()
             
-            # No path adjustment needed since run_folder_XX is at same level as synopsys_sim
-            # Both are at sim/ level, so ../../pkg/ works from both locations
-            adjusted_content = content
+            # Adjust paths since run_folder_XX is now inside synopsys_sim directory
+            # Need to add one more level up for paths to work correctly
+            adjusted_content = content.replace("../../", "../../../")
             
             with open(new_compile_file, 'w') as f:
                 f.write(adjusted_content)
@@ -2231,6 +2231,10 @@ class RegressionRunner:
                     seed=job_info.get('seed'),
                     command_add=job_info.get('command_add')
                 )
+                
+                # Copy coverage files if coverage collection is enabled
+                if self.coverage:
+                    self._copy_coverage_files(test_name, folder_path, folder_id)
                 
                 self._update_progress(result)
             
