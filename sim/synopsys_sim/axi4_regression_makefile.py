@@ -626,7 +626,7 @@ class RegressionRunner:
             # Build make command with appropriate variables
             f.write('# Run test using make\n')
             f.write(f'cd {folder_path} && ')
-            f.write(f'make sim test={base_test_name} ')  # Use local Makefile in folder
+            f.write(f'make -f ../synopsys_sim/Makefile sim test={base_test_name} ')  # Reference Makefile in synopsys_sim
             f.write(f'LOG_FILE={test_name}.log ')  # Pass the expected log file name to Makefile
             f.write(f'SEED={seed_value} ')
             
@@ -1241,11 +1241,7 @@ class RegressionRunner:
             # STEP 5: Recreate fresh folder
             folder_path.mkdir(parents=True, exist_ok=True)
             
-            # STEP 6: Copy Makefile to new folder
-            makefile_src = self.base_dir / "Makefile"
-            makefile_dst = folder_path / "Makefile"
-            if makefile_src.exists():
-                shutil.copy2(makefile_src, makefile_dst)
+            # STEP 6: Makefile is now referenced from synopsys_sim directory (no copying needed)
             
             # STEP 7: Create compile file for folder (matching original axi4_regression.py approach)
             self._create_compile_file_for_folder(folder_path, folder_id)
@@ -1493,10 +1489,10 @@ class RegressionRunner:
                     print(f"    Base test: {base_test_name}")
                 print(f"    Working directory: {self._to_relative_path(folder_path)}")
                 print(f"    Expected log file: {self._to_relative_path(log_file)}")
-                print(f"    Makefile location: {self._to_relative_path(folder_path / 'Makefile')}")
+                print(f"    Makefile location: ../synopsys_sim/Makefile")
             
-            # Build make command using local Makefile in the run folder
-            make_cmd = ['make', 'sim']
+            # Build make command using Makefile in synopsys_sim directory
+            make_cmd = ['make', '-f', '../synopsys_sim/Makefile', 'sim']
             
             # Add make variables
             make_vars = {
@@ -1543,7 +1539,7 @@ class RegressionRunner:
                 make_cmd.append(f'{var}={value}')
 
             if self.verbose:
-                print(f"    Make command: {' '.join(make_cmd)} (using local Makefile)")
+                print(f"    Make command: {' '.join(make_cmd)} (using synopsys_sim/Makefile)")
 
             # Change to the run folder before executing
             original_dir = os.getcwd()

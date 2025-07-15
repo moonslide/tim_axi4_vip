@@ -808,7 +808,15 @@ python3 axi4_regression_makefile.py --log-wait-timeout 10 --cleanup-delay 3
 
 ## Recent Updates
 
-### Version 2025.01.15
+### Version 2025.01.15 (Latest)
+- ✅ **Fixed LSF Compilation Issues**: Corrected compile file paths for run folders at sim level
+- ✅ **Implemented Coverage Temp Folder**: Added `/sim/coverage_temp` for coverage merging process
+- ✅ **Enhanced Coverage Collection**: Fixed VDB naming to use base test names for numbered tests  
+- ✅ **Improved Folder Structure**: Run folders now properly created at `/sim/run_folder_XX` level
+- ✅ **Coverage Merge Workflow**: Matches reference script with temp folder, merge, move, and cleanup
+- ✅ **Complete LSF+Coverage Support**: Both log naming and coverage collection work correctly in LSF mode
+
+### Version 2025.01.14
 - ✅ **Fixed List Generation**: List files now show individual runs with actual seeds
 - ✅ **Improved Parallel Execution**: Simplified VCS approach using folder isolation
 - ✅ **Enhanced Debugging**: Individual seed tracking for perfect reproduction
