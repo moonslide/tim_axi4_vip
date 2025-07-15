@@ -193,7 +193,7 @@ Options:
   --fsdb-dump            Enable FSDB waveform dumping
   --cov                  Enable coverage collection (function and code coverage)
   --log-wait-timeout N   Wait time for log file creation in seconds (default: 30)
-  --cleanup-delay N      Delay after cleanup before VCS execution in seconds (default: 5)
+  --cleanup-delay N      Delay after cleanup before VCS execution in seconds (default: 15)
 
 Examples:
   python3 axi4_regression_makefile.py                    # Auto parallel, local mode
@@ -205,7 +205,7 @@ Examples:
   python3 axi4_regression_makefile.py --lsf              # Use LSF job submission
   python3 axi4_regression_makefile.py --lsf -p 10 --cov  # LSF mode with coverage
   python3 axi4_regression_makefile.py --log-wait-timeout 60  # Large design timeout
-  python3 axi4_regression_makefile.py --cleanup-delay 10     # Extra VCS cleanup delay
+  python3 axi4_regression_makefile.py --cleanup-delay 20     # Extra VCS cleanup delay
 ```
 
 ## Test List Format
@@ -790,7 +790,7 @@ The script includes configurable timing parameters to handle large designs and p
 
 ### Cleanup Delay (`--cleanup-delay`)
 - **Purpose**: Delay after cleanup before starting VCS execution 
-- **Default**: 10 seconds (increased from 5 in original)
+- **Default**: 15 seconds (increased from 5 in original)
 - **When to increase**: Database access conflicts in parallel execution
 - **Range**: 0 seconds to unlimited
 
@@ -814,3 +814,4 @@ python3 axi4_regression_makefile.py --log-wait-timeout 10 --cleanup-delay 3
 - ✅ **Enhanced Debugging**: Individual seed tracking for perfect reproduction
 - ✅ **Clean Test Names**: Removed `_xx` suffixes from list files
 - ✅ **Added Timing Controls**: Configurable log-wait-timeout and cleanup-delay parameters
+- ✅ **Updated Default Values**: Cleanup delay increased to 15 seconds for better VCS stability
