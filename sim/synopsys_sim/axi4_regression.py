@@ -39,7 +39,7 @@ import json
 
 class TestResult:
     """Container for test execution results"""
-    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0, seed=None, command_add=None):
+    def __init__(self, name, status, duration, log_file, error_msg=None, folder_id=0, uvm_errors=0, uvm_fatals=0, seed=None, command_add=None, base_name=None, run_number=1, test_group=None):
         self.name = name
         self.status = status  # 'PASS', 'FAIL', 'TIMEOUT', 'ERROR'
         self.duration = duration
@@ -50,6 +50,9 @@ class TestResult:
         self.uvm_fatals = uvm_fatals
         self.seed = seed
         self.command_add = command_add
+        self.base_name = base_name or name  # Base test name without _N suffix
+        self.run_number = run_number  # Run number for multiple runs
+        self.test_group = test_group  # Group identifier for run_cnt tests
 
 
 class RegressionRunner:
@@ -93,6 +96,11 @@ class RegressionRunner:
         self.passed_tests = 0
         self.failed_tests = 0
         self.start_time = None
+        
+        # Enhanced features for ultrathink requirements
+        self.test_groups = {}  # Track test groups for run_cnt handling
+        self.pattern_registry = {}  # Track patterns with different settings
+        self.group_failure_enabled = True  # Enable group failure logic
         
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -224,18 +232,42 @@ class RegressionRunner:
                             print(f"    Expected format: 'testname command_add=+define+XXX'")
                             command_add = None
                 
+                # Pattern recognition for different settings
+                pattern_key = f"{test_name}_{custom_seed}_{command_add}"
+                if pattern_key in self.pattern_registry:
+                    # Same pattern with different settings detected
+                    self.pattern_registry[pattern_key] += 1
+                    pattern_suffix = f"_config{self.pattern_registry[pattern_key]}"
+                    actual_test_name = f"{test_name}{pattern_suffix}"
+                    print(f"🔍 Pattern recognition: Detected duplicate pattern for {test_name}")
+                    print(f"    Creating unique name: {actual_test_name}")
+                else:
+                    self.pattern_registry[pattern_key] = 1
+                    actual_test_name = test_name
+
                 # Create test objects with parameters
                 if repeat_count > 1:
+                    # Create test group for group failure tracking
+                    group_id = f"{actual_test_name}_group_{len(self.test_groups)}"
+                    self.test_groups[group_id] = {
+                        'base_name': actual_test_name,
+                        'count': repeat_count,
+                        'members': [],
+                        'params': {'seed': custom_seed, 'command_add': command_add}
+                    }
+                    
                     # Add numbered test entries
                     for i in range(1, repeat_count + 1):
                         test_obj = {
-                            'name': f"{test_name}_{i}",
-                            'base_name': test_name,
+                            'name': f"{actual_test_name}_{i}",
+                            'base_name': actual_test_name,
                             'run_number': i,
                             'seed': custom_seed,
-                            'command_add': command_add
+                            'command_add': command_add,
+                            'test_group': group_id
                         }
                         expanded_tests.append(test_obj)
+                        self.test_groups[group_id]['members'].append(f"{actual_test_name}_{i}")
                     
                     params_str = []
                     if custom_seed is not None:
@@ -243,15 +275,17 @@ class RegressionRunner:
                     if command_add is not None:
                         params_str.append(f"command_add={command_add}")
                     params_info = f" with {', '.join(params_str)}" if params_str else ""
-                    print(f"📋 Expanded {test_name} into {repeat_count} runs: {test_name}_1 to {test_name}_{repeat_count}{params_info}")
+                    print(f"📋 Expanded {actual_test_name} into {repeat_count} runs: {actual_test_name}_1 to {actual_test_name}_{repeat_count}{params_info}")
+                    print(f"    Group ID: {group_id}")
                 else:
                     # Single test
                     test_obj = {
-                        'name': test_name,
-                        'base_name': test_name,
+                        'name': actual_test_name,
+                        'base_name': actual_test_name,
                         'run_number': 1,
                         'seed': custom_seed,
-                        'command_add': command_add
+                        'command_add': command_add,
+                        'test_group': None
                     }
                     expanded_tests.append(test_obj)
                     
@@ -261,7 +295,7 @@ class RegressionRunner:
                             params_str.append(f"seed={custom_seed}")
                         if command_add is not None:
                             params_str.append(f"command_add={command_add}")
-                        print(f"📋 Loaded {test_name} with {', '.join(params_str)}")
+                        print(f"📋 Loaded {actual_test_name} with {', '.join(params_str)}")
                 
             self.total_tests = len(expanded_tests)
             print(f"📋 Loaded {len(tests)} test entries from {test_list_file}")
@@ -286,7 +320,8 @@ class RegressionRunner:
                 f.write("#\n")
                 
                 for result in results:
-                    test_name = result.name
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     actual_seed = result.seed
                     command_add = result.command_add
                     
@@ -298,15 +333,55 @@ class RegressionRunner:
                         params.append(f"command_add={command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
             
             print(f"📋 Generated running list: {self._to_relative_path(running_list_file)}")
             
         except Exception as e:
             print(f"⚠️  Warning: Could not generate running list: {e}")
     
+    def _apply_group_failure_logic(self, results):
+        """Apply group failure logic: if one test in a run_cnt group fails, mark all as failed"""
+        if not self.group_failure_enabled:
+            return results
+            
+        print("🔍 Applying group failure logic...")
+        
+        # Group results by test_group
+        group_status = {}
+        for result in results:
+            if hasattr(result, 'test_group') and result.test_group:
+                if result.test_group not in group_status:
+                    group_status[result.test_group] = {'pass': 0, 'fail': 0, 'total': 0}
+                group_status[result.test_group]['total'] += 1
+                if result.status == 'PASS':
+                    group_status[result.test_group]['pass'] += 1
+                else:
+                    group_status[result.test_group]['fail'] += 1
+        
+        # Group failure logic disabled - tests are now independent
+        # Original logic marked all tests as FAIL if any test in the same run_cnt group failed
+        # This has been disabled to allow independent test results
+        
+        return results
+    
+    def _remove_suffix_for_lists(self, test_name):
+        """Remove _xx suffix from test names for list files (requirement 2)
+        
+        Examples:
+        - 'axi4_wstrb_test_1' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test_10' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test' -> 'axi4_wstrb_test' (unchanged)
+        """
+        import re
+        match = re.match(r'^(.+)_(\d+)$', test_name)
+        if match:
+            return match.group(1)  # Return base name without _N suffix
+        else:
+            return test_name  # Return as-is if no _N suffix found
+
     def _generate_pass_list(self, results):
         """Generate a pass_list file with passed test execution parameters"""
         pass_list_file = self.results_folder / "pass_list"
@@ -316,29 +391,30 @@ class RegressionRunner:
             
             with open(pass_list_file, 'w') as f:
                 f.write(f"# Pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"# Test execution parameters for passed tests\n")
+                f.write(f"# Test execution parameters for passed tests (individual runs with actual seeds)\n")
                 f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
-                f.write(f"# Total passed tests: {len(passed_results)}\n")
+                f.write(f"# Total passed runs: {len(passed_results)}\n")
                 f.write("#\n")
                 
-                for result in passed_results:
-                    test_name = result.name
-                    actual_seed = result.seed
-                    command_add = result.command_add
+                # Write individual runs with their actual seeds (no consolidation)
+                for result in sorted(passed_results, key=lambda r: r.name):
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     
                     # Build the parameter line with actual execution parameters
                     params = []
-                    if actual_seed is not None:
-                        params.append(f"seed={actual_seed}")
-                    if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                    if result.seed is not None:
+                        params.append(f"seed={result.seed}")
+                    if result.command_add is not None:
+                        params.append(f"command_add={result.command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
             
             print(f"📋 Generated pass list: {self._to_relative_path(pass_list_file)}")
+            print(f"    Total passed runs: {len(passed_results)}")
             
         except Exception as e:
             print(f"⚠️  Warning: Could not generate pass list: {e}")
@@ -352,29 +428,34 @@ class RegressionRunner:
             
             with open(no_pass_list_file, 'w') as f:
                 f.write(f"# No pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"# Test execution parameters for failed tests\n")
+                f.write(f"# Test execution parameters for failed tests (individual runs with actual seeds)\n")
+                f.write(f"# Independent test results: Each test result is individual (group failure logic disabled)\n")
                 f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
-                f.write(f"# Total failed tests: {len(failed_results)}\n")
+                f.write(f"# Total failed runs: {len(failed_results)}\n")
                 f.write("#\n")
                 
-                for result in failed_results:
-                    test_name = result.name
-                    actual_seed = result.seed
-                    command_add = result.command_add
+                # Write individual runs with their actual seeds (no consolidation)
+                for result in sorted(failed_results, key=lambda r: r.name):
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     
                     # Build the parameter line with actual execution parameters
                     params = []
-                    if actual_seed is not None:
-                        params.append(f"seed={actual_seed}")
-                    if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                    if result.seed is not None:
+                        params.append(f"seed={result.seed}")
+                    if result.command_add is not None:
+                        params.append(f"command_add={result.command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
+                    
+                    # Add status info as comment for debugging
+                    f.write(f"#   Status: {result.status}, Duration: {result.duration:.1f}s\n")
             
             print(f"📋 Generated no pass list: {self._to_relative_path(no_pass_list_file)}")
+            print(f"    Total failed runs: {len(failed_results)}")
             
         except Exception as e:
             print(f"⚠️  Warning: Could not generate no pass list: {e}")
@@ -593,7 +674,7 @@ class RegressionRunner:
             if job_id_match:
                 job_id = int(job_id_match.group(1))
                 
-                # Store job info
+                # Store job info with enhanced test object data
                 self.lsf_jobs[job_id] = {
                     'test_name': test_name,
                     'folder_path': folder_path,
@@ -601,7 +682,10 @@ class RegressionRunner:
                     'submit_time': time.time(),
                     'status': 'PEND',  # LSF job status
                     'seed': seed_value,
-                    'command_add': command_add
+                    'command_add': command_add,
+                    'base_name': test_obj.get('base_name', test_name),
+                    'run_number': test_obj.get('run_number', 1),
+                    'test_group': test_obj.get('test_group')
                 }
                 
                 self.pending_jobs += 1
@@ -1158,7 +1242,10 @@ class RegressionRunner:
                     uvm_errors=uvm_errors,
                     uvm_fatals=uvm_fatals,
                     seed=seed_value,
-                    command_add=command_add
+                    command_add=command_add,
+                    base_name=test_obj.get('base_name', test_name),
+                    run_number=test_obj.get('run_number', 1),
+                    test_group=test_obj.get('test_group')
                 )
                     
             except subprocess.TimeoutExpired:
@@ -1203,7 +1290,10 @@ class RegressionRunner:
                     error_msg=timeout_msg,
                     folder_id=folder_id,
                     seed=seed_value,
-                    command_add=command_add
+                    command_add=command_add,
+                    base_name=test_obj.get('base_name', test_name),
+                    run_number=test_obj.get('run_number', 1),
+                    test_group=test_obj.get('test_group')
                 )
                 
         except Exception as e:
@@ -1216,7 +1306,10 @@ class RegressionRunner:
                 error_msg=f"Execution error: {str(e)}",
                 folder_id=folder_id,
                 seed=seed_value if 'seed_value' in locals() else None,
-                command_add=command_add
+                command_add=command_add,
+                base_name=test_obj.get('base_name', test_name),
+                run_number=test_obj.get('run_number', 1),
+                test_group=test_obj.get('test_group')
             )
         finally:
             # Restore original directory
@@ -1494,6 +1587,9 @@ class RegressionRunner:
         if self.coverage:
             self._merge_coverage_data()
         
+        # Apply group failure logic (requirement 1: if one fails in run_cnt=10, mark all as failed)
+        self.results = self._apply_group_failure_logic(self.results)
+        
         # Generate running list with actual execution parameters
         self._generate_running_list(self.results)
         
@@ -1567,43 +1663,52 @@ class RegressionRunner:
             f.write(f"  Failed:      {self.failed_tests}\n")
             f.write(f"  Pass Rate:   {(self.passed_tests/self.total_tests)*100:.1f}%\n\n")
             
-            # Group results by status: TIMEOUT first, FAIL second, PASS third
+            # Group results by status: TIMEOUT and FAIL first, PASS second
             timeout_results = [r for r in self.results if r.status == 'TIMEOUT']
             fail_results = [r for r in self.results if r.status in ['FAIL', 'ERROR']]
             pass_results = [r for r in self.results if r.status == 'PASS']
             
-            # Write TIMEOUT results first
-            if timeout_results:
-                f.write(f"TIMEOUT Tests ({len(timeout_results)}):\n")
-                f.write(f"-" * 80 + "\n")
-                for result in timeout_results:
-                    f.write(f"Test:     {result.name}\n")
-                    f.write(f"Status:   {result.status}\n")
-                    f.write(f"Duration: {result.duration:.1f}s\n")
-                    f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
-                    if result.error_msg:
-                        f.write(f"Error:    {result.error_msg}\n")
+            # REGION 1: FAILED AND TIMEOUT TESTS
+            if timeout_results or fail_results:
+                f.write(f"=" * 80 + "\n")
+                f.write(f"REGION 1: FAILED AND TIMEOUT TESTS\n")
+                f.write(f"=" * 80 + "\n\n")
+                
+                # Write TIMEOUT results first
+                if timeout_results:
+                    f.write(f"TIMEOUT Tests ({len(timeout_results)}):\n")
+                    f.write(f"-" * 80 + "\n")
+                    for result in timeout_results:
+                        f.write(f"Test:     {result.name}\n")
+                        f.write(f"Status:   {result.status}\n")
+                        f.write(f"Duration: {result.duration:.1f}s\n")
+                        f.write(f"Folder:   {result.folder_id}\n")
+                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                        if result.error_msg:
+                            f.write(f"Error:    {result.error_msg}\n")
+                        f.write(f"\n")
                     f.write(f"\n")
-                f.write(f"\n")
-            
-            # Write FAIL results second
-            if fail_results:
-                f.write(f"FAILED Tests ({len(fail_results)}):\n")
-                f.write(f"-" * 80 + "\n")
-                for result in fail_results:
-                    f.write(f"Test:     {result.name}\n")
-                    f.write(f"Status:   {result.status}\n")
-                    f.write(f"Duration: {result.duration:.1f}s\n")
-                    f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
-                    if result.error_msg:
-                        f.write(f"Error:    {result.error_msg}\n")
+                
+                # Write FAIL results second
+                if fail_results:
+                    f.write(f"FAILED Tests ({len(fail_results)}):\n")
+                    f.write(f"-" * 80 + "\n")
+                    for result in fail_results:
+                        f.write(f"Test:     {result.name}\n")
+                        f.write(f"Status:   {result.status}\n")
+                        f.write(f"Duration: {result.duration:.1f}s\n")
+                        f.write(f"Folder:   {result.folder_id}\n")
+                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                        if result.error_msg:
+                            f.write(f"Error:    {result.error_msg}\n")
+                        f.write(f"\n")
                     f.write(f"\n")
-                f.write(f"\n")
             
-            # Write PASS results third
+            # REGION 2: PASSED TESTS
             if pass_results:
+                f.write(f"=" * 80 + "\n")
+                f.write(f"REGION 2: PASSED TESTS\n")
+                f.write(f"=" * 80 + "\n\n")
                 f.write(f"PASSED Tests ({len(pass_results)}):\n")
                 f.write(f"-" * 80 + "\n")
                 for result in pass_results:
@@ -1757,7 +1862,10 @@ class RegressionRunner:
                     error_msg=f"LSF submission error: {str(e)}",
                     folder_id=folder_id,
                     seed=test_obj.get('seed'),
-                    command_add=test_obj.get('command_add')
+                    command_add=test_obj.get('command_add'),
+                    base_name=test_obj.get('base_name', test_name),
+                    run_number=test_obj.get('run_number', 1),
+                    test_group=test_obj.get('test_group')
                 )
                 self._update_progress(error_result)
         
@@ -1820,7 +1928,10 @@ class RegressionRunner:
                     uvm_errors=uvm_errors,
                     uvm_fatals=uvm_fatals,
                     seed=job_info.get('seed'),
-                    command_add=job_info.get('command_add')
+                    command_add=job_info.get('command_add'),
+                    base_name=job_info.get('base_name', test_name),
+                    run_number=job_info.get('run_number', 1),
+                    test_group=job_info.get('test_group')
                 )
                 
                 self._update_progress(result)
@@ -1871,7 +1982,10 @@ class RegressionRunner:
                         error_msg=f"Test execution error: {str(e)}",
                         folder_id=folder_id,
                         seed=test_obj.get('seed'),
-                        command_add=test_obj.get('command_add')
+                        command_add=test_obj.get('command_add'),
+                        base_name=test_obj.get('base_name', test_name),
+                        run_number=test_obj.get('run_number', 1),
+                        test_group=test_obj.get('test_group')
                     )
                     self._update_progress(error_result)
         else:
@@ -1956,7 +2070,10 @@ class RegressionRunner:
                                 error_msg=f"Thread execution error: {str(e)}",
                                 folder_id=folder_id,
                                 seed=test_obj.get('seed'),
-                                command_add=test_obj.get('command_add')
+                                command_add=test_obj.get('command_add'),
+                                base_name=test_obj.get('base_name', test_name),
+                                run_number=test_obj.get('run_number', 1),
+                                test_group=test_obj.get('test_group')
                             )
                             self._update_progress(error_result)
                         

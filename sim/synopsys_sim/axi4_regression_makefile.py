@@ -3,12 +3,12 @@
 AXI4 Regression Test Runner - Makefile Version
 ==============================================
 
-This script runs AXI4 testcases in parallel using Makefile targets.
+This script runs AXI4 testcases sequentially using Makefile targets.
 It provides the same functionality as axi4_regression.py but delegates
 VCS execution to make targets instead of generating commands directly.
 
 Features:
-- Parallel execution using make targets
+- Sequential execution using make targets
 - Each test runs in isolated run_folder_XX directory
 - Progress tracking and real-time status
 - Comprehensive logging and error analysis
@@ -16,9 +16,17 @@ Features:
 - Generates no_pass_list for failed tests
 - Timeout handling for stuck tests
 - Summary report with failure details
+- Configurable log file wait timeout for large designs
+
+Configuration Notes:
+- Default log wait timeout: 30 seconds (suitable for most designs)
+- Default cleanup delay: 15 seconds (enhanced for VCS database corruption prevention)
+- For large designs with slow compilation: use --log-wait-timeout 60 or higher
+- Log wait timeout can be configured from 5 seconds to unlimited
+- Data preservation: Last test data is kept in each folder until a new test starts (for debugging)
 
 Usage:
-    python3 axi4_regression_makefile.py [-p NUM_WORKERS] [--timeout SECONDS] [--verbose]
+    python3 axi4_regression_makefile.py [--timeout SECONDS] [--verbose] [--log-wait-timeout SECONDS]
 """
 
 import os
@@ -28,10 +36,10 @@ import threading
 import time
 import re
 import argparse
-import queue
 import shutil
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import fcntl
+import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
 import signal
@@ -56,24 +64,26 @@ class TestResult:
 class RegressionRunner:
     """Main regression test runner class using Makefile"""
     
-    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False):
+    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False, log_wait_timeout=30, cleanup_delay=15):
         self.max_parallel = max_parallel  # Will be set to number of tests if None
         self.timeout = timeout
         self.verbose = verbose
         self.use_lsf = use_lsf
         self.fsdb_dump = fsdb_dump
         self.coverage = coverage
+        self.log_wait_timeout = log_wait_timeout  # Configurable log file wait timeout
+        self.cleanup_delay = cleanup_delay  # Configurable delay after cleanup
         self.base_dir = Path.cwd()
         self.results = []
-        self.running_tests = {}
-        self.test_queue = queue.Queue()
-        self.results_lock = threading.Lock()
         self.stop_all = threading.Event()
         
         # LSF job tracking
         self.lsf_jobs = {}  # job_id -> test_info
         self.pending_jobs = 0
         self.running_jobs = 0
+        
+        # VCS startup serialization lock to prevent database corruption in parallel mode
+        self.vcs_startup_lock = threading.Lock()
         
         # Results folder with timestamp
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -169,7 +179,8 @@ class RegressionRunner:
         if self.use_lsf:
             self._kill_all_lsf_jobs()
         
-        self._cleanup_all_folders()
+        # Note: Removed _cleanup_all_folders() call to preserve run_folder data
+        print("💡 Keeping all execution folders (run_folder_*) for debugging")
         sys.exit(1)
     
     def _load_test_list(self, test_list_file):
@@ -287,6 +298,21 @@ class RegressionRunner:
         except Exception as e:
             raise Exception(f"Error reading test list file: {e}")
     
+    def _remove_suffix_for_lists(self, test_name):
+        """Remove _xx suffix from test names for list files (requirement 2)
+        
+        Examples:
+        - 'axi4_wstrb_test_1' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test_10' -> 'axi4_wstrb_test'
+        - 'axi4_wstrb_test' -> 'axi4_wstrb_test' (unchanged)
+        """
+        import re
+        match = re.match(r'^(.+)_(\d+)$', test_name)
+        if match:
+            return match.group(1)  # Return base name without _N suffix
+        else:
+            return test_name  # Return as-is if no _N suffix found
+    
     def _generate_running_list(self, results):
         """Generate a running_list file with actual test execution parameters"""
         running_list_file = self.results_folder / "running_list"
@@ -300,7 +326,8 @@ class RegressionRunner:
                 f.write("#\n")
                 
                 for result in results:
-                    test_name = result.name
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     actual_seed = result.seed
                     command_add = result.command_add
                     
@@ -312,9 +339,9 @@ class RegressionRunner:
                         params.append(f"command_add={command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
             
             print(f"📋 Generated running list: {self._to_relative_path(running_list_file)}")
             
@@ -330,13 +357,14 @@ class RegressionRunner:
             
             with open(pass_list_file, 'w') as f:
                 f.write(f"# Pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"# Test execution parameters for passed tests\n")
+                f.write(f"# Test execution parameters for passed tests (individual runs with actual seeds)\n")
                 f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
-                f.write(f"# Total passed tests: {len(passed_results)}\n")
+                f.write(f"# Total passed runs: {len(passed_results)}\n")
                 f.write("#\n")
                 
-                for result in passed_results:
-                    test_name = result.name
+                for result in sorted(passed_results, key=lambda r: r.name):
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     actual_seed = result.seed
                     command_add = result.command_add
                     
@@ -348,9 +376,9 @@ class RegressionRunner:
                         params.append(f"command_add={command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
             
             print(f"📋 Generated pass list: {self._to_relative_path(pass_list_file)}")
             
@@ -366,13 +394,14 @@ class RegressionRunner:
             
             with open(no_pass_list_file, 'w') as f:
                 f.write(f"# No pass list generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"# Test execution parameters for failed tests\n")
+                f.write(f"# Test execution parameters for failed tests (individual runs with actual seeds)\n")
                 f.write(f"# Format: test_name [seed=XXX] [command_add=XXX]\n")
-                f.write(f"# Total failed tests: {len(failed_results)}\n")
+                f.write(f"# Total failed runs: {len(failed_results)}\n")
                 f.write("#\n")
                 
-                for result in failed_results:
-                    test_name = result.name
+                for result in sorted(failed_results, key=lambda r: r.name):
+                    # Remove _N suffix from test name for cleaner display
+                    base_name = self._remove_suffix_for_lists(result.name)
                     actual_seed = result.seed
                     command_add = result.command_add
                     
@@ -384,9 +413,12 @@ class RegressionRunner:
                         params.append(f"command_add={command_add}")
                     
                     if params:
-                        f.write(f"{test_name} {' '.join(params)}\n")
+                        f.write(f"{base_name} {' '.join(params)}\n")
                     else:
-                        f.write(f"{test_name}\n")
+                        f.write(f"{base_name}\n")
+                    
+                    # Add status info as comment for debugging
+                    f.write(f"#   Status: {result.status}, Duration: {result.duration:.1f}s\n")
             
             print(f"📋 Generated no pass list: {self._to_relative_path(no_pass_list_file)}")
             
@@ -394,8 +426,8 @@ class RegressionRunner:
             print(f"⚠️  Warning: Could not generate no pass list: {e}")
     
     def _cleanup_existing_folders(self):
-        """Clean up any existing run_folder_xx directories before starting"""
-        print("🧹 Cleaning up existing run_folder_xx directories...")
+        """Clean up any existing run_folder_xx directories and all artifacts before starting"""
+        print("🧹 Performing initial cleanup of all run folders and simulation artifacts...")
         folders_cleaned = 0
         
         # Look for all run_folder_xx patterns in parent directory
@@ -408,17 +440,40 @@ class RegressionRunner:
                 except Exception as e:
                     print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
         
+        # Also clean current directory of any leftover artifacts
+        try:
+            cleanup_patterns = [
+                'simv*', 'csrc*', '*.daidir*', '*.vdb*', '*.fsdb*',
+                'vc_hdrs.h', 'ucli.key', 'work.lib++*', 'work/', 
+                'transcript*', 'waveform.wlf*', 'verdi*', 'tr_db.log*',
+                '*.log', '*.vpd', '*.shm', '*.trn', '*.dsn', 
+                'DVEfiles/', 'inter.vpd', 'vcdplus.vpd', 'novas.*',
+                'urgReport/', 'AN.DB/', 'novas_dump.log', 'nWaveLog/'
+            ]
+            
+            for pattern in cleanup_patterns:
+                for artifact in self.base_dir.glob(pattern):
+                    try:
+                        if artifact.is_dir():
+                            shutil.rmtree(artifact, ignore_errors=True)
+                        else:
+                            artifact.unlink()
+                    except (FileNotFoundError, PermissionError):
+                        pass
+        except Exception as e:
+            print(f"⚠️  Warning: Could not clean current directory: {e}")
+        
         if folders_cleaned > 0:
-            print(f"✅ Cleaned up {folders_cleaned} existing run folders")
+            print(f"✅ Cleaned up {folders_cleaned} existing run folders and all simulation artifacts")
         else:
-            print("✅ No existing run folders to clean")
+            print("✅ Cleaned up all simulation artifacts (no existing run folders found)")
 
     def _setup_test_folders(self) :
         """Create and setup test execution folders"""
         folders = []
         
-        # Keep existing run folders for debugging/reference
-        # self._cleanup_existing_folders()  # Commented out to preserve last run data
+        # Keep existing run folders to preserve last run data for debugging
+        # Only clean up artifacts when folder is reused during this regression
         
         # Create results folder and logs subfolders
         self.results_folder.mkdir(exist_ok=True)
@@ -443,26 +498,42 @@ class RegressionRunner:
         if self.coverage:
             print(f"       └─ coverage_collect folder: {self._to_relative_path(self.coverage_folder)}")
         
-        # Always set up parallel folders based on number of tests
+        # Always set up parallel folders based on number of tests and max_parallel
         num_folders = min(self.max_parallel, self.total_tests)
-        print(f"🔧 Setting up {num_folders} parallel execution folders...")
+        print(f"🔧 Setting up {num_folders} parallel execution folders (max_parallel={self.max_parallel}, total_tests={self.total_tests})...")
         
         for i in range(num_folders):
             folder_name = f"run_folder_{i:02d}"
             folder_path = self.base_dir.parent / folder_name
             
-            # Create folder if it doesn't exist, but keep existing content
-            if not folder_path.exists():
-                folder_path.mkdir(exist_ok=True)
-            else:
-                # Keep existing folder content for reference
-                pass
+            # Create folder if it doesn't exist, preserve existing content
+            folder_path.mkdir(exist_ok=True)
+            
+            # Copy Makefile to each run folder for proper isolation
+            makefile_src = self.base_dir / "Makefile"
+            makefile_dst = folder_path / "Makefile"
+            
+            try:
+                shutil.copy2(makefile_src, makefile_dst)
+                if self.verbose:
+                    print(f"📋 [Folder {i:02d}] Copied Makefile for isolated execution")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not copy Makefile to {folder_path}: {e}")
+            
+            # Create compile file with adjusted paths for this run folder
+            try:
+                self._create_compile_file_for_folder(folder_path, i)
+                if self.verbose:
+                    print(f"📋 [Folder {i:02d}] Created compile file for isolated execution")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not create compile file for {folder_path}: {e}")
             
             folders.append(folder_path)
             
         print(f"✅ Set up {len(folders)} execution folders (existing data preserved)")
             
         return folders
+    
     
     def _kill_all_lsf_jobs(self):
         """Kill all LSF jobs associated with this regression"""
@@ -696,10 +767,8 @@ class RegressionRunner:
             print(f"           Results: {self.passed_tests} PASS, {self.failed_tests} FAIL")
     
     def _cleanup_all_folders(self):
-        """Clean up all test execution folders except the last one"""
-        print("🧹 Cleaning up execution folders (keeping last folder for debugging)...")
-        # Keep track of the highest numbered folder that exists
-        highest_folder_id = -1
+        """Keep all test execution folders (DISABLED cleanup to preserve data permanently)"""
+        print("📁 Preserving all execution folders permanently...")
         existing_folders = []
         
         for i in range(self.max_parallel):
@@ -707,18 +776,15 @@ class RegressionRunner:
             folder_path = self.base_dir.parent / folder_name
             if folder_path.exists():
                 existing_folders.append((i, folder_path))
-                highest_folder_id = max(highest_folder_id, i)
         
-        # Remove all folders except the highest numbered one
+        # Report existing folders but do not remove any
         for folder_id, folder_path in existing_folders:
-            if folder_id != highest_folder_id:
-                try:
-                    shutil.rmtree(folder_path)
-                    print(f"🧹 Removed {folder_path.name}")
-                except Exception as e:
-                    print(f"⚠️  Warning: Could not remove {folder_path}: {e}")
-            else:
-                print(f"📁 Keeping last execution folder: {folder_path.name} for debugging")
+            print(f"📁 Keeping execution folder: {folder_path.name} (data preserved)")
+        
+        if existing_folders:
+            print(f"💡 All {len(existing_folders)} execution folders preserved for analysis")
+        else:
+            print("💡 No execution folders found to preserve")
     
     def _copy_coverage_files(self, test_name, folder_path, folder_id):
         """Copy coverage files from test execution folder to central coverage collection folder"""
@@ -833,8 +899,490 @@ class RegressionRunner:
         except Exception as e:
             print(f"⚠️  Error during coverage merge: {e}")
     
-    def _run_single_test(self, test_obj, folder_path, folder_id):
-        """Execute a single test using make in the specified folder"""
+    def _monitor_test_completion(self, folder_path, folder_id, test_name, process):
+        """Monitor test completion and ensure proper log completion before unlocking"""
+        try:
+            # Wait for process to complete
+            stdout, _ = process.communicate(timeout=self.timeout)
+            
+            # Additional wait to ensure all file operations are complete
+            time.sleep(2.0)
+            
+            # Wait for complete log file with proper completion markers
+            log_file = folder_path / f"{test_name}.log"
+            if self._wait_for_complete_log(log_file, folder_id, test_name):
+                if self.verbose:
+                    print(f"✅ [Folder {folder_id:02d}] Test {test_name} completed with verified log")
+            else:
+                if self.verbose:
+                    print(f"⚠️  [Folder {folder_id:02d}] Test {test_name} completed but log verification failed")
+                
+            return stdout
+            
+        except subprocess.TimeoutExpired:
+            # Kill the process and cleanup
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                process.communicate()
+            except:
+                pass
+            
+            if self.verbose:
+                print(f"⏰ [Folder {folder_id:02d}] Test {test_name} timed out")
+            
+            raise
+
+    def _wait_for_complete_log(self, log_file, folder_id, test_name):
+        """Wait for log file to be created and contain completion markers"""
+        max_wait = self.log_wait_timeout  # Use configurable timeout
+        waited = 0
+        
+        # Phase 1: Wait for log file to be created
+        while waited < max_wait and not log_file.exists():
+            time.sleep(1.0)
+            waited += 1
+            
+        if not log_file.exists():
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Log file {log_file.name} was not created after {max_wait}s")
+            return False
+        
+        # Phase 2: Wait for log file to contain completion markers
+        completion_waited = 0
+        max_completion_wait = min(30, max_wait)  # Maximum 30 seconds for completion check
+        
+        while completion_waited < max_completion_wait:
+            if self._verify_log_completion(log_file, folder_id, test_name):
+                if self.verbose:
+                    print(f"📋 [Folder {folder_id:02d}] Log completion verified after {waited + completion_waited}s total wait")
+                return True
+                
+            time.sleep(2.0)  # Check every 2 seconds for completion
+            completion_waited += 2
+            
+        if self.verbose:
+            print(f"⚠️  [Folder {folder_id:02d}] Log file exists but completion markers not found after {max_completion_wait}s")
+        return False
+
+    def _verify_log_completion(self, log_file, folder_id, test_name):
+        """Verify that log file contains proper completion markers"""
+        try:
+            if not log_file.exists() or log_file.stat().st_size == 0:
+                return False
+                
+            # Read the last portion of the log file to check for completion
+            with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                # Read last 2KB to check for completion markers
+                f.seek(0, 2)  # Go to end
+                file_size = f.tell()
+                
+                # Read last 2KB or entire file if smaller
+                read_size = min(2048, file_size)
+                f.seek(max(0, file_size - read_size))
+                last_content = f.read()
+                
+            # Look for various completion indicators
+            completion_patterns = [
+                r'TEST_DONE.*run.*phase.*ready',  # Standard UVM completion
+                r'TestCase.*PASSED!!!',  # Success completion
+                r'TEST PASSED',  # Simple test pass
+                r'\$finish called',  # VCS finish call
+                r'Simulation complete',  # Simulation end
+                r'UVM_INFO.*TEST.*PASSED',  # UVM test passed
+                r'TESTDONE',  # Generic test done marker (case-insensitive)
+                r'Test completed',  # Generic completion
+                r'## Simulation End',  # Formatted end marker
+                r'Exit code.*[0-9]+',  # Exit with code
+                r'.*run completed',  # Run completion
+            ]
+            
+            # Look for error/fatal patterns that also indicate completion
+            error_completion_patterns = [
+                r'UVM_FATAL.*Stopping further execution',
+                r'FATAL.*Terminating',
+                r'Error.*VCS.*terminating',
+                r'\$finish called.*error',
+                r'Simulation terminated',
+            ]
+            
+            # Check for completion patterns (case-insensitive)
+            last_content_lower = last_content.lower()
+            
+            for pattern in completion_patterns:
+                if re.search(pattern, last_content, re.IGNORECASE | re.MULTILINE):
+                    if self.verbose:
+                        print(f"📝 [Folder {folder_id:02d}] Found completion marker: {pattern}")
+                    return True
+                    
+            for pattern in error_completion_patterns:
+                if re.search(pattern, last_content, re.IGNORECASE | re.MULTILINE):
+                    if self.verbose:
+                        print(f"📝 [Folder {folder_id:02d}] Found error completion marker: {pattern}")
+                    return True
+            
+            # Additional check: Look for VCS session end patterns
+            if ('vcs' in last_content_lower and 
+                any(end_word in last_content_lower for end_word in 
+                    ['completed', 'finished', 'terminated', 'done', 'exit'])):
+                if self.verbose:
+                    print(f"📝 [Folder {folder_id:02d}] Found VCS session end indication")
+                return True
+                
+            return False
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Error verifying log completion: {e}")
+            return False
+
+    def _copy_verified_log(self, log_file, target_folder, test_name, folder_id):
+        """Copy log file only after verifying it's complete with retry mechanism"""
+        max_retries = 3
+        retry_delay = 2.0
+        
+        for attempt in range(max_retries):
+            try:
+                # Check if log file exists and is complete
+                if not log_file.exists():
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Log file {log_file.name} does not exist")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        return False
+                
+                # Verify log file is complete before copying
+                if not self._verify_log_completion(log_file, folder_id, test_name):
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Log file incomplete, waiting...")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        # Copy anyway even if completion verification failed
+                        if self.verbose:
+                            print(f"⚠️  [Folder {folder_id:02d}] Copying incomplete log file as final attempt")
+                
+                # Ensure log file is not empty and not being written to
+                file_size = log_file.stat().st_size
+                if file_size == 0:
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Log file is empty")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        return False
+                
+                # Wait a bit then check if file size is stable (not being written to)
+                time.sleep(1.0)
+                new_file_size = log_file.stat().st_size
+                if new_file_size != file_size:
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Log file still being written ({file_size} -> {new_file_size} bytes)")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                
+                # Create target directory if it doesn't exist
+                target_folder.mkdir(parents=True, exist_ok=True)
+                
+                # Copy the log file
+                target_file = target_folder / f"{test_name}.log"
+                shutil.copy2(log_file, target_file)
+                
+                # Verify the copy was successful
+                if target_file.exists() and target_file.stat().st_size == log_file.stat().st_size:
+                    if self.verbose:
+                        print(f"✅ [Folder {folder_id:02d}] Successfully copied log file ({log_file.stat().st_size} bytes)")
+                    return True
+                else:
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Copy verification failed")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        return False
+                        
+            except Exception as e:
+                if self.verbose:
+                    print(f"⚠️  [Folder {folder_id:02d}] Attempt {attempt+1}: Error copying log file: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    return False
+        
+        return False
+    
+    def _comprehensive_cleanup_folder(self, folder_path, folder_id):
+        """Remove and recreate folder ensuring previous test completion"""
+        if self.verbose:
+            print(f"🗂️  [Folder {folder_id:02d}] Preparing folder for new test...")
+        
+        try:
+            # STEP 1: Check if previous test is complete (if folder exists)
+            if folder_path.exists():
+                if not self._verify_previous_test_completion(folder_path, folder_id):
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Previous test may still be running, waiting...")
+                    # Wait for previous test to complete
+                    self._wait_for_test_completion_in_folder(folder_path, folder_id)
+            
+            # STEP 2: Terminate any VCS processes that might be using this folder
+            self._terminate_vcs_processes_for_folder(folder_path, folder_id)
+            
+            # STEP 3: Archive previous test data if folder exists
+            if folder_path.exists():
+                archive_path = self._archive_previous_test_data(folder_path, folder_id)
+                if self.verbose and archive_path:
+                    print(f"📦 [Folder {folder_id:02d}] Previous test data archived to {archive_path.name}")
+            
+            # STEP 4: Remove existing folder completely
+            if folder_path.exists():
+                try:
+                    shutil.rmtree(folder_path, ignore_errors=False)
+                    if self.verbose:
+                        print(f"🗑️  [Folder {folder_id:02d}] Removed existing folder")
+                except Exception as e:
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Warning during folder removal: {e}")
+                    # Force removal with system command if needed
+                    try:
+                        subprocess.run(['rm', '-rf', str(folder_path)], check=True)
+                    except:
+                        pass
+            
+            # STEP 5: Recreate fresh folder
+            folder_path.mkdir(parents=True, exist_ok=True)
+            
+            # STEP 6: Copy Makefile to new folder
+            makefile_src = self.base_dir / "Makefile"
+            makefile_dst = folder_path / "Makefile"
+            if makefile_src.exists():
+                shutil.copy2(makefile_src, makefile_dst)
+            
+            # STEP 7: Create compile file for folder (matching original axi4_regression.py approach)
+            self._create_compile_file_for_folder(folder_path, folder_id)
+            
+            # STEP 8: Brief pause for filesystem stability
+            time.sleep(1.0)
+            
+            if self.verbose:
+                print(f"✅ [Folder {folder_id:02d}] Fresh folder created and ready for new test")
+                
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Folder preparation warning: {e}")
+            # Ensure folder exists even if there were issues
+            folder_path.mkdir(parents=True, exist_ok=True)
+
+    def _verify_previous_test_completion(self, folder_path, folder_id):
+        """Check if previous test in this folder has completed"""
+        try:
+            # Look for signs that a test is still running
+            # 1. Check for VCS processes using this folder
+            result = subprocess.run(['pgrep', '-f', str(folder_path)], 
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            if result.returncode == 0:
+                if self.verbose:
+                    print(f"⚠️  [Folder {folder_id:02d}] Found active VCS processes")
+                return False
+            
+            # 2. Check for VCS lock files
+            vcs_lock_patterns = ['*.lck', '.vcs.lck', 'simv.daidir/.*.lck', '*.vdb/.*.lck']
+            for pattern in vcs_lock_patterns:
+                if list(folder_path.glob(pattern)):
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Found VCS lock files")
+                    return False
+            
+            # 3. Check if log file exists and has completion markers
+            log_files = list(folder_path.glob("*.log"))
+            if log_files:
+                latest_log = max(log_files, key=lambda x: x.stat().st_mtime)
+                if self._verify_log_completion(latest_log, folder_id, "previous_test"):
+                    if self.verbose:
+                        print(f"✅ [Folder {folder_id:02d}] Previous test completed successfully")
+                    return True
+                else:
+                    if self.verbose:
+                        print(f"⚠️  [Folder {folder_id:02d}] Previous test log incomplete")
+                    return False
+            
+            # If no log files found, assume no previous test or it's very old
+            return True
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Error checking previous test completion: {e}")
+            return True  # Assume it's safe to proceed
+
+    def _wait_for_test_completion_in_folder(self, folder_path, folder_id):
+        """Wait for previous test in folder to complete"""
+        max_wait = 300  # 5 minutes maximum wait
+        waited = 0
+        
+        while waited < max_wait:
+            if self._verify_previous_test_completion(folder_path, folder_id):
+                if self.verbose:
+                    print(f"✅ [Folder {folder_id:02d}] Previous test completed after {waited}s wait")
+                return
+            
+            time.sleep(5.0)  # Check every 5 seconds
+            waited += 5
+            
+            if waited % 30 == 0:  # Print status every 30 seconds
+                if self.verbose:
+                    print(f"⏳ [Folder {folder_id:02d}] Still waiting for previous test completion ({waited}s)...")
+        
+        if self.verbose:
+            print(f"⚠️  [Folder {folder_id:02d}] Previous test completion wait timed out after {max_wait}s")
+
+    def _archive_previous_test_data(self, folder_path, folder_id):
+        """Archive previous test data before removing folder"""
+        try:
+            # Create archive directory if it doesn't exist
+            archive_base = self.base_dir / "test_archives"
+            archive_base.mkdir(exist_ok=True)
+            
+            # Generate archive name with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            archive_name = f"run_folder_{folder_id:02d}_{timestamp}"
+            archive_path = archive_base / archive_name
+            
+            # Copy the entire folder to archive
+            try:
+                shutil.copytree(folder_path, archive_path)
+            except OSError:
+                # If destination exists, try to remove it first
+                if archive_path.exists():
+                    shutil.rmtree(archive_path)
+                shutil.copytree(folder_path, archive_path)
+            
+            if self.verbose:
+                print(f"📦 [Folder {folder_id:02d}] Test data archived to {archive_path}")
+            
+            return archive_path
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Failed to archive previous test data: {e}")
+            return None
+
+    def _create_compile_file_for_folder(self, folder_path, folder_id):
+        """Create a compile file with paths adjusted for running from the folder (matches original axi4_regression.py)"""
+        try:
+            # Read the original compile file from parent directory
+            orig_compile_file = self.base_dir.parent / 'axi4_compile.f'
+            new_compile_file = folder_path / 'axi4_compile.f'
+            
+            if not orig_compile_file.exists():
+                if self.verbose:
+                    print(f"⚠️  [Folder {folder_id:02d}] Original compile file not found at {orig_compile_file}")
+                return
+            
+            with open(orig_compile_file, 'r') as f:
+                content = f.read()
+            
+            # No path adjustment needed since run_folder_XX is at same level as synopsys_sim
+            # Both are at sim/ level, so ../../pkg/ works from both locations
+            adjusted_content = content
+            
+            with open(new_compile_file, 'w') as f:
+                f.write(adjusted_content)
+            
+            if self.verbose:
+                print(f"📋 [Folder {folder_id:02d}] Created local axi4_compile.f file")
+                
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  [Folder {folder_id:02d}] Failed to create compile file: {e}")
+
+    def _terminate_vcs_processes_for_folder(self, folder_path, folder_id):
+        """Terminate any VCS processes that might be using this folder"""
+        try:
+            # Check for VCS processes with this folder path
+            result = subprocess.run(['pgrep', '-f', str(folder_path)], 
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            if result.returncode == 0:
+                pids = result.stdout.strip().split('\n')
+                for pid in pids:
+                    if pid.isdigit():
+                        try:
+                            # Send SIGTERM first, then SIGKILL if needed
+                            os.kill(int(pid), signal.SIGTERM)
+                            time.sleep(0.5)
+                            try:
+                                os.kill(int(pid), 0)  # Check if still alive
+                                os.kill(int(pid), signal.SIGKILL)  # Force kill
+                            except ProcessLookupError:
+                                pass  # Process already terminated
+                        except (ProcessLookupError, PermissionError):
+                            pass
+                if self.verbose:
+                    print(f"🔪 [Folder {folder_id:02d}] Terminated {len(pids)} VCS processes")
+        except Exception:
+            pass  # Don't fail cleanup due to process termination issues
+
+    def _wait_for_vcs_locks_release(self, folder_path, folder_id):
+        """Wait for VCS-specific lock files to be released"""
+        vcs_lock_patterns = ['*.lck', '.vcs.lck', 'simv.daidir/.*.lck', '*.vdb/.*.lck']
+        max_wait = 10  # Maximum 10 seconds wait for locks
+        waited = 0
+        
+        while waited < max_wait:
+            locks_found = False
+            for pattern in vcs_lock_patterns:
+                if list(folder_path.glob(pattern)):
+                    locks_found = True
+                    break
+            
+            if not locks_found:
+                break
+                
+            time.sleep(0.5)
+            waited += 0.5
+            
+        if self.verbose and waited > 0:
+            print(f"🔒 [Folder {folder_id:02d}] Waited {waited:.1f}s for VCS locks to release")
+
+    def _force_filesystem_sync(self):
+        """Force filesystem sync to ensure all changes are committed"""
+        try:
+            os.sync()  # Force filesystem sync
+        except:
+            pass  # Sync might not be available on all systems
+
+    def _verify_critical_artifacts_removed(self, folder_path, folder_id):
+        """Verify that critical VCS artifacts that could cause corruption are removed"""
+        critical_patterns = ['simv', 'simv.daidir', '*.vdb', '*.sdb']
+        remaining_artifacts = []
+        
+        for pattern in critical_patterns:
+            artifacts = list(folder_path.glob(pattern))
+            remaining_artifacts.extend(artifacts)
+        
+        if remaining_artifacts and self.verbose:
+            artifact_names = [str(a.name) for a in remaining_artifacts[:3]]  # Show first 3
+            print(f"⚠️  [Folder {folder_id:02d}] Some critical artifacts remain: {artifact_names}")
+            
+        # Try one more aggressive cleanup pass if critical artifacts remain
+        if remaining_artifacts:
+            time.sleep(1.0)
+            for artifact in remaining_artifacts:
+                try:
+                    if artifact.is_dir():
+                        shutil.rmtree(artifact, ignore_errors=True)
+                    else:
+                        artifact.unlink()
+                except:
+                    pass
+
+    def _run_single_test_with_lock(self, test_obj, folder_path, folder_id):
+        """Execute a single test using make in the specified folder with proper locking"""
         start_time = time.time()
         
         # Extract test information from test object
@@ -842,111 +1390,144 @@ class RegressionRunner:
         custom_seed = test_obj.get('seed')
         command_add = test_obj.get('command_add')
         
-        log_file = folder_path / f"{test_name}.log"
+        # Simple approach: just run the test without complex locking
         
-        # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
-        base_test_name = self._extract_base_test_name(test_name)
-        
-        if self.verbose:
-            print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
-            if test_name != base_test_name:
-                print(f"    Base test: {base_test_name}")
-            print(f"    Working directory: {self._to_relative_path(folder_path)}")
-            print(f"    Expected log file: {self._to_relative_path(log_file)}")
-        
-        # Build make command using -f flag to reference Makefile from current directory
-        make_cmd = ['make', '-f', str(self.base_dir / 'Makefile'), 'sim']
-        
-        # Add make variables
-        make_vars = {
-            'test': base_test_name
-        }
-        
-        # Use custom seed if provided, otherwise generate random seed
-        if custom_seed is not None:
-            seed_value = custom_seed
-            if self.verbose:
-                print(f"    Using custom seed: {seed_value}")
-        else:
-            # Generate a more random seed using multiple entropy sources
-            seed_value = random.randint(1, 2**31-1)
-            seed_value ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
-            seed_value ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
-            seed_value &= 0x7FFFFFFF  # Ensure positive 32-bit value
-            if self.verbose:
-                print(f"    Generated random seed: {seed_value}")
-        
-        make_vars['SEED'] = str(seed_value)
-        
-        # Add optional parameters
-        if self.fsdb_dump:
-            make_vars['FSDB_DUMP'] = '1'
-            if self.verbose:
-                print(f"    FSDB dumping enabled")
-        
-        if self.coverage:
-            make_vars['COVERAGE'] = '1'
-            make_vars['COV_DIR'] = f"{test_name}.vdb"
-            if self.verbose:
-                print(f"    Coverage collection enabled: {test_name}.vdb")
-        
-        if command_add:
-            make_vars['COMMAND_ADD'] = command_add
-            if self.verbose:
-                print(f"    Adding custom command: {command_add}")
-        
-        # Add variables to make command
-        for var, value in make_vars.items():
-            make_cmd.append(f'{var}={value}')
-
         try:
+            # PREPARE FOLDER FOR NEW TEST (removes and recreates folder after ensuring previous test completion)
+            # This approach archives previous test data and creates a fresh folder for the new test
+            if self.verbose:
+                print(f"🗂️  [Folder {folder_id:02d}] Preparing folder for {test_name}")
+            self._comprehensive_cleanup_folder(folder_path, folder_id)
+            
+            log_file = folder_path / f"{test_name}.log"
+            
+            # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
+            base_test_name = self._extract_base_test_name(test_name)
+            
+            if self.verbose:
+                print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
+                if test_name != base_test_name:
+                    print(f"    Base test: {base_test_name}")
+                print(f"    Working directory: {self._to_relative_path(folder_path)}")
+                print(f"    Expected log file: {self._to_relative_path(log_file)}")
+                print(f"    Makefile location: {self._to_relative_path(folder_path / 'Makefile')}")
+            
+            # Build make command using local Makefile in the run folder
+            make_cmd = ['make', 'sim']
+            
+            # Add make variables
+            make_vars = {
+                'test': base_test_name,
+                'LOG_FILE': f"{test_name}.log",  # Pass the expected log file name to Makefile
+                'CLEANUP_DELAY': str(self.cleanup_delay)  # Pass cleanup delay to Makefile
+            }
+            
+            # Use custom seed if provided, otherwise generate random seed
+            if custom_seed is not None:
+                seed_value = custom_seed
+                if self.verbose:
+                    print(f"    Using custom seed: {seed_value}")
+            else:
+                # Generate a more random seed using multiple entropy sources
+                seed_value = random.randint(1, 2**31-1)
+                seed_value ^= int(time.time() * 1000000) & 0x7FFFFFFF  # Mix with microsecond timestamp
+                seed_value ^= hash(test_name) & 0x7FFFFFFF  # Mix with test name hash
+                seed_value &= 0x7FFFFFFF  # Ensure positive 32-bit value
+                if self.verbose:
+                    print(f"    Generated random seed: {seed_value}")
+            
+            make_vars['SEED'] = str(seed_value)
+            
+            # Add optional parameters
+            if self.fsdb_dump:
+                make_vars['FSDB_DUMP'] = '1'
+                if self.verbose:
+                    print(f"    FSDB dumping enabled")
+            
+            if self.coverage:
+                make_vars['COVERAGE'] = '1'
+                make_vars['COV_DIR'] = f"{test_name}.vdb"
+                if self.verbose:
+                    print(f"    Coverage collection enabled: {test_name}.vdb")
+            
+            if command_add:
+                make_vars['COMMAND_ADD'] = command_add
+                if self.verbose:
+                    print(f"    Adding custom command: {command_add}")
+            
+            # Add variables to make command
+            for var, value in make_vars.items():
+                make_cmd.append(f'{var}={value}')
+
+            if self.verbose:
+                print(f"    Make command: {' '.join(make_cmd)} (using local Makefile)")
+
             # Change to the run folder before executing
             original_dir = os.getcwd()
             os.chdir(str(folder_path))
             
-            # Run make command with timeout
-            process = subprocess.Popen(
-                make_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                preexec_fn=os.setsid  # Create new process group
-            )
-            
-            # Wait for completion with timeout
-            try:
-                stdout, _ = process.communicate(timeout=self.timeout)
-                duration = time.time() - start_time
-                
-                # Wait a moment for log file to be written
-                time.sleep(0.5)
-                
-                # Check if log file exists
-                if not log_file.exists():
-                    # Check alternative locations
-                    alt_log = self.base_dir / f"{test_name}.log"
-                    if alt_log.exists():
-                        shutil.move(str(alt_log), str(log_file))
+            # SERIALIZE VCS STARTUP in parallel mode to prevent database corruption
+            if self.max_parallel > 1:
+                with self.vcs_startup_lock:
+                    if self.verbose:
+                        print(f"🔐 [Folder {folder_id:02d}] Acquired VCS startup lock for database protection")
+                    
+                    # Run make command with timeout
+                    process = subprocess.Popen(
+                        make_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                        preexec_fn=os.setsid  # Create new process group
+                    )
+                    
+                    # Wait for VCS compilation/elaboration to complete before releasing lock
+                    # This prevents database corruption during the critical startup phase
+                    startup_timeout = 15  # 15 seconds for compilation/elaboration in parallel mode
+                    try:
+                        # Poll process to check if compilation phase is done
+                        waited = 0
+                        while waited < startup_timeout and process.poll() is None:
+                            time.sleep(1.0)
+                            waited += 1
+                            
+                            # After reasonable time, assume compilation is likely done
+                            if waited >= 8:  # After 8 seconds in parallel mode
+                                break
+                        
                         if self.verbose:
-                            print(f"📋 Moved log from {self._to_relative_path(alt_log)} to {self._to_relative_path(log_file)}")
+                            print(f"🔓 [Folder {folder_id:02d}] Released VCS startup lock after {waited}s")
+                            
+                    except Exception:
+                        if self.verbose:
+                            print(f"🔓 [Folder {folder_id:02d}] Released VCS startup lock (exception)")
+            else:
+                # Sequential mode - no startup serialization needed
+                process = subprocess.Popen(
+                    make_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                    preexec_fn=os.setsid  # Create new process group
+                )
+            
+            # Monitor test completion with proper synchronization
+            try:
+                stdout = self._monitor_test_completion(folder_path, folder_id, test_name, process)
+                duration = time.time() - start_time
                 
                 # Check if test passed or failed  
                 status, error_msg, uvm_errors, uvm_fatals = self._analyze_test_result(log_file, stdout)
                 
-                # Special handling for TIMEOUT status from analysis
-                if status == 'TIMEOUT':
-                    # Kill the process if it's still running
-                    if process.poll() is None:
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-                        process.communicate()
-                
-                # Copy log to appropriate logs subfolder based on test status
+                # Enhanced log copying with completion verification
                 target_folder = self.pass_logs_folder if status == 'PASS' else self.no_pass_logs_folder
                 
-                if log_file.exists():
-                    shutil.copy2(log_file, target_folder / f"{test_name}.log")
+                # Copy log with verification and retry mechanism
+                if self._copy_verified_log(log_file, target_folder, test_name, folder_id):
+                    if self.verbose:
+                        print(f"📋 Copied verified log to {target_folder.name}: {test_name}.log")
                 else:
-                    print(f"⚠️  Warning: Could not find log file for {test_name} after test completion")
+                    print(f"⚠️  Warning: Could not copy verified log file for {test_name}")
                 
                 # Copy coverage files if coverage collection is enabled
                 if self.coverage:
@@ -966,16 +1547,13 @@ class RegressionRunner:
                 )
                     
             except subprocess.TimeoutExpired:
-                # Kill the entire process group
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-                process.communicate()  # Clean up
-                
                 duration = time.time() - start_time
                 timeout_msg = f"Test timed out after {self.timeout} seconds"
                 
-                # Copy log to no_pass_logs folder for timeout cases
-                if log_file.exists():
-                    shutil.copy2(log_file, self.no_pass_logs_folder / f"{test_name}.log")
+                # Copy log to no_pass_logs folder for timeout cases using enhanced mechanism
+                if not self._copy_verified_log(log_file, self.no_pass_logs_folder, test_name, folder_id):
+                    if self.verbose:
+                        print(f"⚠️  Warning: Could not copy verified log file for timeout case {test_name}")
                 
                 return TestResult(
                     name=test_name,
@@ -994,7 +1572,7 @@ class RegressionRunner:
                 name=test_name,
                 status='ERROR',
                 duration=duration,
-                log_file=str(log_file) if log_file else '',
+                log_file=str(log_file) if 'log_file' in locals() else '',
                 error_msg=f"Execution error: {str(e)}",
                 folder_id=folder_id,
                 seed=seed_value if 'seed_value' in locals() else None,
@@ -1003,6 +1581,10 @@ class RegressionRunner:
         finally:
             # Always change back to original directory
             os.chdir(original_dir)
+
+    def _run_single_test(self, test_obj, folder_path, folder_id):
+        """Simplified test execution without complex locking"""
+        return self._run_single_test_with_lock(test_obj, folder_path, folder_id)
     
     def _analyze_test_result(self, log_file, stdout):
         """Analyze test output to determine pass/fail status and extract error message
@@ -1159,17 +1741,16 @@ class RegressionRunner:
     
     def _update_progress(self, test_result):
         """Update progress statistics and display"""
-        with self.results_lock:
-            self.results.append(test_result)
-            self.completed_tests += 1
-            
-            # Ensure log is copied to results folder
-            self._ensure_log_copied(test_result)
-            
-            if test_result.status == 'PASS':
-                self.passed_tests += 1
-            else:
-                self.failed_tests += 1
+        self.results.append(test_result)
+        self.completed_tests += 1
+        
+        # Ensure log is copied to results folder
+        self._ensure_log_copied(test_result)
+        
+        if test_result.status == 'PASS':
+            self.passed_tests += 1
+        else:
+            self.failed_tests += 1
             
             # Calculate progress
             progress = (self.completed_tests / self.total_tests) * 100
@@ -1482,7 +2063,13 @@ class RegressionRunner:
                 self.max_parallel = len(tests)
             
             execution_mode = "LSF" if self.use_lsf else "Local"
-            print(f"⚙️  Configuration: {execution_mode} mode, {self.max_parallel} parallel workers, {self.timeout}s timeout")
+            if self.use_lsf:
+                print(f"⚙️  Configuration: {execution_mode} mode, {self.max_parallel} parallel workers, {self.timeout}s timeout")
+            else:
+                if self.max_parallel == 1:
+                    print(f"⚙️  Configuration: {execution_mode} mode (sequential execution), {self.timeout}s timeout")
+                else:
+                    print(f"⚙️  Configuration: {execution_mode} mode ({self.max_parallel} parallel workers), {self.timeout}s timeout")
             
             # Setup test folders
             folders = self._setup_test_folders()
@@ -1505,6 +2092,7 @@ class RegressionRunner:
             # Always keep all execution folders for reference
             print("\n⚠️  Keeping all execution folders from this run (run_folder_*)")
             print("💡 These folders contain the actual test execution data and logs")
+            print("💡 The last test data is preserved for debugging purposes")
             print("💡 To manually remove them: rm -rf run_folder_*")
             
             # Always report the regression result folder location
@@ -1615,27 +2203,33 @@ class RegressionRunner:
         return exit_code
     
     def _run_local_regression(self, tests, folders):
-        """Run regression using local parallel execution with proper folder management"""
-        # For now, let's use a simpler sequential approach to verify the fix works
-        # We can re-enable parallelism once we confirm isolation is working
+        """Run regression with parallel execution and proper race condition prevention"""
+        # Smart parallel approach: multiple tests can run simultaneously 
+        # but each has exclusive folder access until log completion
         
         if self.max_parallel == 1:
-            # Sequential execution - use only first folder
-            folder_id = 0
-            folder_path = folders[0]
+            print(f"🔄 Running {len(tests)} tests sequentially...")
+            # Sequential execution for max_parallel=1
+            total_folders = len(folders)
             
-            for test_obj in tests:
+            for i, test_obj in enumerate(tests):
                 if self.stop_all.is_set():
                     break
                 
+                folder_id = i % total_folders
+                folder_path = folders[folder_id]
                 test_name = test_obj['name']
                 
                 if self.verbose:
-                    print(f"🔄 [Folder {folder_id:02d}] Running {test_name}")
+                    print(f"🔄 [Folder {folder_id:02d}] Running {test_name} (test {i+1}/{len(tests)})")
                 
                 try:
                     result = self._run_single_test(test_obj, folder_path, folder_id)
                     self._update_progress(result)
+                    
+                    if self.verbose:
+                        print(f"✅ [Folder {folder_id:02d}] Test {test_name} completed")
+                        
                 except Exception as e:
                     error_result = TestResult(
                         name=test_name,
@@ -1648,94 +2242,97 @@ class RegressionRunner:
                         command_add=test_obj.get('command_add')
                     )
                     self._update_progress(error_result)
+                
+                time.sleep(1.0)
         else:
-            # Parallel execution with proper folder management
-            from queue import Queue
+            # Parallel execution with race condition prevention
+            print(f"🚀 Running {len(tests)} tests in parallel with {self.max_parallel} workers...")
+            print(f"📁 Using {len(folders)} execution folders with proper isolation...")
+            
+            from concurrent.futures import ThreadPoolExecutor, as_completed
             import threading
             
-            # Create a queue of available folders
-            available_folders = Queue()
-            for i, folder_path in enumerate(folders):
-                available_folders.put((i, folder_path))
+            # Track folder availability - a folder is only available when:
+            # 1. No test is running in it
+            # 2. Previous test's log has been completely copied
+            folder_status = {i: 'available' for i in range(len(folders))}
+            folder_lock = threading.Lock()
             
-            # Track active futures
-            active_futures = {}
-            pending_tests = list(tests)
-            lock = threading.Lock()
+            def get_available_folder():
+                """Get an available folder atomically"""
+                with folder_lock:
+                    for folder_id, status in folder_status.items():
+                        if status == 'available':
+                            folder_status[folder_id] = 'in_use'
+                            return folder_id, folders[folder_id]
+                return None, None
             
+            def release_folder(folder_id):
+                """Mark folder as available after ensuring log completion"""
+                with folder_lock:
+                    folder_status[folder_id] = 'available'
+                    if self.verbose:
+                        print(f"📁 [Folder {folder_id:02d}] Released and available for next test")
+            
+            def run_test_with_exclusive_folder(test_obj):
+                """Run a test with exclusive folder access until log completion"""
+                # Wait for an available folder
+                folder_id = None
+                folder_path = None
+                
+                while folder_id is None:
+                    folder_id, folder_path = get_available_folder()
+                    if folder_id is None:
+                        time.sleep(0.1)  # Short wait and retry
+                        if self.stop_all.is_set():
+                            return None
+                
+                test_name = test_obj['name']
+                
+                try:
+                    if self.verbose:
+                        print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
+                    
+                    # Run test (this includes log completion waiting and copying)
+                    result = self._run_single_test(test_obj, folder_path, folder_id)
+                    
+                    # The test is complete and log has been copied
+                    # Now safe to release the folder
+                    release_folder(folder_id)
+                    
+                    return result
+                    
+                except Exception as e:
+                    release_folder(folder_id)
+                    return TestResult(
+                        name=test_name,
+                        status='ERROR',
+                        duration=0.0,
+                        log_file='',
+                        error_msg=f"Test execution error: {str(e)}",
+                        folder_id=folder_id,
+                        seed=test_obj.get('seed'),
+                        command_add=test_obj.get('command_add')
+                    )
+            
+            # Run tests in parallel
             with ThreadPoolExecutor(max_workers=self.max_parallel) as executor:
-                
-                def submit_test_when_folder_available():
-                    """Submit next test when a folder becomes available"""
-                    while True:
-                        with lock:
-                            if not pending_tests:
-                                return None
-                            test_obj = pending_tests.pop(0)
-                        
-                        test_name = test_obj['name']
-                        
-                        # Wait for available folder
-                        folder_id, folder_path = available_folders.get()
-                        
-                        if self.verbose:
-                            print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
-                        
-                        # Submit test
-                        future = executor.submit(self._run_single_test, test_obj, folder_path, folder_id)
-                        
-                        with lock:
-                            active_futures[future] = {
-                                'test_name': test_name,
-                                'folder_id': folder_id,
-                                'folder_path': folder_path,
-                                'test_obj': test_obj
-                            }
-                        
-                        return future
-                
-                # Submit initial tests
-                while len(active_futures) < self.max_parallel and pending_tests:
-                    submit_test_when_folder_available()
-                
-                # Process completions
-                while active_futures:
+                # Submit all tests
+                future_to_test = {}
+                for test_obj in tests:
                     if self.stop_all.is_set():
                         break
-                    
-                    for future in as_completed(active_futures):
-                        with lock:
-                            if future not in active_futures:
-                                continue
-                            future_info = active_futures.pop(future)
-                        
-                        folder_id = future_info['folder_id']
-                        folder_path = future_info['folder_path']
-                        
-                        try:
-                            result = future.result()
-                            self._update_progress(result)
-                        except Exception as e:
-                            test_name = future_info['test_name']
-                            test_obj = future_info['test_obj']
-                            error_result = TestResult(
-                                name=test_name,
-                                status='ERROR',
-                                duration=0.0,
-                                log_file='',
-                                error_msg=f"Thread execution error: {str(e)}",
-                                folder_id=folder_id,
-                                seed=test_obj.get('seed'),
-                                command_add=test_obj.get('command_add')
-                            )
-                            self._update_progress(error_result)
-                        
-                        # Return folder to queue
-                        available_folders.put((folder_id, folder_path))
-                        
-                        # Submit next test
-                        submit_test_when_folder_available()
+                    future = executor.submit(run_test_with_exclusive_folder, test_obj)
+                    future_to_test[future] = test_obj
+                
+                # Process completed tests
+                for future in as_completed(future_to_test):
+                    if self.stop_all.is_set():
                         break
+                        
+                    result = future.result()
+                    if result:
+                        self._update_progress(result)
         
         # Copy all logs to logs folder and print summary
         self._copy_all_logs_to_logs_folder()
@@ -1752,22 +2349,24 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 axi4_regression_makefile.py                      # Auto parallel (# of tests), local mode
-  python3 axi4_regression_makefile.py -p 5                 # Limit to 5 parallel workers
+  python3 axi4_regression_makefile.py                      # Sequential execution (default)
+  python3 axi4_regression_makefile.py -p 4                 # Parallel execution with 4 workers
+  python3 axi4_regression_makefile.py -p 8 --verbose       # 8 parallel workers with verbose output
   python3 axi4_regression_makefile.py --timeout 900        # 15min timeout per test
-  python3 axi4_regression_makefile.py --verbose            # Verbose execution output
   python3 axi4_regression_makefile.py --fsdb-dump          # Enable FSDB waveform dumping
   python3 axi4_regression_makefile.py --cov                # Enable coverage collection
   python3 axi4_regression_makefile.py --lsf                # Use LSF job submission
-  python3 axi4_regression_makefile.py --lsf -p 10 --cov    # LSF mode with coverage and 10 parallel jobs
+  python3 axi4_regression_makefile.py --lsf --cov          # LSF mode with coverage
+  python3 axi4_regression_makefile.py --log-wait-timeout 60 # Wait up to 60s for log files (large designs)
+  python3 axi4_regression_makefile.py --cleanup-delay 10   # Wait 10s after cleanup (fix database conflicts)
         """
     )
     
     parser.add_argument(
         '--max-parallel', '-p',
         type=int,
-        default=None,
-        help='Maximum number of parallel test executions (default: number of test cases)'
+        default=1,
+        help='Maximum number of parallel workers (default: 1 for sequential execution, use -p 4 for parallel)'
     )
     
     parser.add_argument(
@@ -1807,6 +2406,20 @@ Examples:
         help='Enable coverage collection by passing COVERAGE=1 to make'
     )
     
+    parser.add_argument(
+        '--log-wait-timeout',
+        type=int,
+        default=30,
+        help='Maximum time to wait for log file creation in seconds (default: 30, increase for large designs)'
+    )
+    
+    parser.add_argument(
+        '--cleanup-delay',
+        type=int,
+        default=10,
+        help='Delay in seconds after cleanup before starting VCS (default: 10, increase if database conflicts occur)'
+    )
+    
     args = parser.parse_args()
     
     # Validate arguments
@@ -1816,6 +2429,14 @@ Examples:
     
     if args.timeout < 60:
         print("❌ Error: timeout must be at least 60 seconds")
+        return 1
+    
+    if args.log_wait_timeout < 5:
+        print("❌ Error: log-wait-timeout must be at least 5 seconds")
+        return 1
+    
+    if args.cleanup_delay < 0:
+        print("❌ Error: cleanup-delay must be non-negative")
         return 1
     
     # Check if test list file exists
@@ -1831,7 +2452,9 @@ Examples:
         verbose=args.verbose,
         use_lsf=args.lsf,
         fsdb_dump=args.fsdb_dump,
-        coverage=args.cov
+        coverage=args.cov,
+        log_wait_timeout=args.log_wait_timeout,
+        cleanup_delay=args.cleanup_delay
     )
     
     try:
