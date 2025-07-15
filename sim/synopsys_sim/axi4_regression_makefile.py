@@ -498,39 +498,75 @@ class RegressionRunner:
         if self.coverage:
             print(f"       └─ coverage_collect folder: {self._to_relative_path(self.coverage_folder)}")
         
-        # Always set up parallel folders based on number of tests and max_parallel
-        num_folders = min(self.max_parallel, self.total_tests)
-        print(f"🔧 Setting up {num_folders} parallel execution folders (max_parallel={self.max_parallel}, total_tests={self.total_tests})...")
+        # LSF mode: Create one folder per test for complete isolation
+        if self.use_lsf:
+            num_folders = self.total_tests
+            print(f"🔧 Setting up {num_folders} execution folders for LSF mode (one per test)...")
+            
+            for i in range(num_folders):
+                folder_name = f"run_folder_{i:02d}"
+                folder_path = self.base_dir.parent / folder_name
+                
+                # Create folder if it doesn't exist, preserve existing content
+                folder_path.mkdir(exist_ok=True)
+                
+                # Copy Makefile to each run folder for proper isolation
+                makefile_src = self.base_dir / "Makefile"
+                makefile_dst = folder_path / "Makefile"
+                
+                try:
+                    shutil.copy2(makefile_src, makefile_dst)
+                    if self.verbose:
+                        print(f"📋 [Folder {i:02d}] Copied Makefile for isolated execution")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not copy Makefile to {folder_path}: {e}")
+                
+                # Create compile file with adjusted paths for this run folder
+                try:
+                    self._create_compile_file_for_folder(folder_path, i)
+                    if self.verbose:
+                        print(f"📋 [Folder {i:02d}] Created compile file for isolated execution")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not create compile file for {folder_path}: {e}")
+                
+                folders.append(folder_path)
+                
+            print(f"✅ Set up {len(folders)} execution folders for LSF mode (complete isolation)")
         
-        for i in range(num_folders):
-            folder_name = f"run_folder_{i:02d}"
-            folder_path = self.base_dir.parent / folder_name
+        else:
+            # Local mode: Set up parallel folders based on number of tests and max_parallel
+            num_folders = min(self.max_parallel, self.total_tests)
+            print(f"🔧 Setting up {num_folders} parallel execution folders (max_parallel={self.max_parallel}, total_tests={self.total_tests})...")
             
-            # Create folder if it doesn't exist, preserve existing content
-            folder_path.mkdir(exist_ok=True)
-            
-            # Copy Makefile to each run folder for proper isolation
-            makefile_src = self.base_dir / "Makefile"
-            makefile_dst = folder_path / "Makefile"
-            
-            try:
-                shutil.copy2(makefile_src, makefile_dst)
-                if self.verbose:
-                    print(f"📋 [Folder {i:02d}] Copied Makefile for isolated execution")
-            except Exception as e:
-                print(f"⚠️  Warning: Could not copy Makefile to {folder_path}: {e}")
-            
-            # Create compile file with adjusted paths for this run folder
-            try:
-                self._create_compile_file_for_folder(folder_path, i)
-                if self.verbose:
-                    print(f"📋 [Folder {i:02d}] Created compile file for isolated execution")
-            except Exception as e:
-                print(f"⚠️  Warning: Could not create compile file for {folder_path}: {e}")
-            
-            folders.append(folder_path)
-            
-        print(f"✅ Set up {len(folders)} execution folders (existing data preserved)")
+            for i in range(num_folders):
+                folder_name = f"run_folder_{i:02d}"
+                folder_path = self.base_dir.parent / folder_name
+                
+                # Create folder if it doesn't exist, preserve existing content
+                folder_path.mkdir(exist_ok=True)
+                
+                # Copy Makefile to each run folder for proper isolation
+                makefile_src = self.base_dir / "Makefile"
+                makefile_dst = folder_path / "Makefile"
+                
+                try:
+                    shutil.copy2(makefile_src, makefile_dst)
+                    if self.verbose:
+                        print(f"📋 [Folder {i:02d}] Copied Makefile for isolated execution")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not copy Makefile to {folder_path}: {e}")
+                
+                # Create compile file with adjusted paths for this run folder
+                try:
+                    self._create_compile_file_for_folder(folder_path, i)
+                    if self.verbose:
+                        print(f"📋 [Folder {i:02d}] Created compile file for isolated execution")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not create compile file for {folder_path}: {e}")
+                
+                folders.append(folder_path)
+                
+            print(f"✅ Set up {len(folders)} execution folders (existing data preserved)")
             
         return folders
     
@@ -590,7 +626,8 @@ class RegressionRunner:
             # Build make command with appropriate variables
             f.write('# Run test using make\n')
             f.write(f'cd {folder_path} && ')
-            f.write(f'make -f {self.base_dir}/Makefile sim test={base_test_name} ')
+            f.write(f'make sim test={base_test_name} ')  # Use local Makefile in folder
+            f.write(f'LOG_FILE={test_name}.log ')  # Pass the expected log file name to Makefile
             f.write(f'SEED={seed_value} ')
             
             if self.fsdb_dump:
@@ -599,6 +636,7 @@ class RegressionRunner:
             if self.coverage:
                 f.write(f'COVERAGE=1 ')
                 f.write(f'COV_DIR={test_name}.vdb ')
+                f.write(f'COVERAGE_FLAGS=1 ')
             
             if command_add:
                 f.write(f'COMMAND_ADD="{command_add}" ')
@@ -771,7 +809,10 @@ class RegressionRunner:
         print("📁 Preserving all execution folders permanently...")
         existing_folders = []
         
-        for i in range(self.max_parallel):
+        # LSF mode: Check for all test folders, local mode: Check for parallel folders
+        num_folders_to_check = self.total_tests if self.use_lsf else self.max_parallel
+        
+        for i in range(num_folders_to_check):
             folder_name = f"run_folder_{i:02d}"
             folder_path = self.base_dir.parent / folder_name
             if folder_path.exists():
@@ -801,7 +842,7 @@ class RegressionRunner:
                 return
             
             # Create unique coverage directory name in collection folder
-            dest_coverage_dir = self.coverage_folder / f"{test_name}_cov_{folder_id:02d}"
+            dest_coverage_dir = self.coverage_folder / f"{test_name}_cov_{folder_id:02d}.vdb"
             
             # Copy coverage database to collection folder
             # Handle compatibility with older Python versions
@@ -841,21 +882,23 @@ class RegressionRunner:
             # Create merged coverage directory
             merged_coverage_dir = self.coverage_folder / "merged_coverage.vdb"
             
-            # Build urg command to merge coverage databases (use relative paths)
+            # Build urg command to merge coverage databases (use absolute paths)
             urg_cmd = [
                 'urg',
-                '-dir', coverage_dirs[0].name  # Start with first database (relative name)
+                '-dir', str(coverage_dirs[0])  # Start with first database (absolute path)
             ]
             
             # Add additional coverage databases
             for cov_dir in coverage_dirs[1:]:
-                urg_cmd.extend(['-dir', cov_dir.name])
+                urg_cmd.extend(['-dir', str(cov_dir)])
             
-            # Set output directory and format (relative paths)
+            # Set output directory and format with additional options
             urg_cmd.extend([
                 '-dbname', 'merged_coverage.vdb',
                 '-format', 'both',  # Generate both text and HTML reports
-                '-report', 'coverage_report'
+                '-report', 'coverage_report',
+                '-metric', 'line+cond+fsm+tgl+branch+assert',  # Match reference script
+                '-show', 'tests'  # Show test information
             ])
             
             if self.verbose:
@@ -2103,13 +2146,13 @@ class RegressionRunner:
     
     def _run_lsf_regression(self, tests, folders):
         """Run regression using LSF job submission"""
-        # Submit all jobs
+        # Submit all jobs - LSF mode uses one folder per test for complete isolation
         for i, test_obj in enumerate(tests):
             if self.stop_all.is_set():
                 break
                 
             test_name = test_obj['name']
-            folder_id = i % len(folders)
+            folder_id = i  # LSF mode: one folder per test
             folder_path = folders[folder_id]
             
             try:
