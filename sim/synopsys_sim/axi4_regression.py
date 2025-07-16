@@ -1099,7 +1099,8 @@ class RegressionRunner:
         
         # Always use parallel VCS execution now
         # VCS command - use script wrapper to handle directory changes
-        run_script = folder_path / 'run_test.sh'
+        # Use unique script name per test to avoid "Text file busy" conflicts
+        run_script = folder_path / f'run_{test_name}.sh'
         log_file_rel = f'{test_name}.log'
         
         # Create run script that runs VCS directly from within this folder
@@ -1161,8 +1162,9 @@ class RegressionRunner:
             os.chdir(folder_path)
             
             # Run the test with timeout and early hang detection
+            script_name = f'./run_{test_name}.sh'
             process = subprocess.Popen(
-                ['./run_test.sh'],
+                [script_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
