@@ -638,14 +638,16 @@ class RegressionRunner:
             
             # Add coverage flags if coverage collection is enabled
             if self.coverage:
-                coverage_dir = f"{test_name}.vdb"
+                # Use base test name for VDB directory to match expected naming
+                base_test_name_for_vdb = self._extract_base_test_name(test_name)
+                coverage_dir = f"{base_test_name_for_vdb}.vdb"
                 f.write(f'-cm line+cond+fsm+tgl+branch+assert ')
                 f.write(f'-cm_seqnoconst ')
                 f.write(f'-cm_dir {coverage_dir} ')
-                f.write(f'-cm_name {test_name} ')
+                f.write(f'-cm_name {base_test_name_for_vdb} ')
                 f.write(f'# Coverage enabled: {coverage_dir}\n')
             
-            f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../../axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             
@@ -654,7 +656,7 @@ class RegressionRunner:
                 f.write(f'{command_add} ')
                 f.write(f'# Added custom command: {command_add}\n')
             
-            f.write(f'-l {log_file_rel}\n')
+            f.write(f'-l {test_name}.log\n')
         
         # Make script executable
         os.chmod(job_script, 0o755)
@@ -1935,6 +1937,10 @@ class RegressionRunner:
                     run_number=job_info.get('run_number', 1),
                     test_group=job_info.get('test_group')
                 )
+                
+                # Copy coverage files if coverage collection is enabled
+                if self.coverage:
+                    self._copy_coverage_files(test_name, folder_path, folder_id)
                 
                 self._update_progress(result)
             
