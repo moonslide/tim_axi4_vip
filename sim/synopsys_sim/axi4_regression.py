@@ -630,7 +630,6 @@ class RegressionRunner:
                 f.write(f'-cm_seqnoconst ')
                 f.write(f'-cm_dir {coverage_dir} ')
                 f.write(f'-cm_name {base_test_name_for_vdb} ')
-                f.write(f'# Coverage enabled: {coverage_dir}\n')
             
             f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
@@ -639,7 +638,6 @@ class RegressionRunner:
             # Add custom command if provided
             if command_add:
                 f.write(f'{command_add} ')
-                f.write(f'# Added custom command: {command_add}\n')
             
             f.write(f'-l {test_name}.log\n')
         

@@ -128,8 +128,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   // Issue multiple writes with different AWIDs in quick succession
   for (int i = 0; i < 4; i++) begin
     awid_val = get_awid_for_scenario(i, master_id);
-    wuser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-    awuser_val = 1'b0; // Set to 0 for consistent master-slave comparison
     data_val = 32'h10000000 + (master_id << 24) + (i << 16) + awid_val;
     
     // Determine target slave based on master permissions and scenario
@@ -156,10 +154,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       req.wdata[0] == data_val;
       req.wstrb.size() == 1;
       req.wstrb[0] == 4'hF;
+      req.wuser == 4'h0; // Set to 0 for consistent master-slave comparison
+      req.awuser == 1'b0; // Set to 0 for consistent master-slave comparison
     });
-    // Explicitly set USER values after randomization to ensure consistency
-    req.wuser = wuser_val;
-    req.awuser = awuser_val;
     finish_item(req);
     
     // Track write for verification
@@ -181,8 +178,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   
   for (int i = 0; i < 3; i++) begin
     awid_val = get_awid_for_scenario(i + 4, master_id); // Use scenarios 4-6
-    wuser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-    awuser_val = 1'b0; // Set to 0 for consistent master-slave comparison
     burst_len = i + 1; // 2, 3, 4 beats
     
     // Select target slave based on master capabilities
@@ -209,10 +204,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       req.wstrb.size() == burst_len + 1;
       foreach(req.wdata[j]) req.wdata[j] == 32'h20000000 + (master_id << 24) + (i << 16) + (j << 8) + awid_val;
       foreach(req.wstrb[j]) req.wstrb[j] == 4'hF;
+      req.wuser == 4'h0; // Set to 0 for consistent master-slave comparison
+      req.awuser == 1'b0; // Set to 0 for consistent master-slave comparison
     });
-    // Explicitly set USER values after randomization to ensure consistency
-    req.wuser = wuser_val;
-    req.awuser = awuser_val;
     finish_item(req);
     
     // Track all burst writes for verification
@@ -244,8 +238,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   
   for (int i = 0; i < 4; i++) begin
     awid_val = (i % 2 == 0) ? base_awid : alt_awid;
-    wuser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-    awuser_val = 1'b0; // Set to 0 for consistent master-slave comparison
     data_val = 32'h30000000 + (master_id << 24) + (i << 16) + awid_val;
     
     // Vary target slaves to test cross-slave scenarios
@@ -272,10 +264,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       req.wdata[0] == data_val;
       req.wstrb.size() == 1;
       req.wstrb[0] == 4'hF;
+      req.wuser == 4'h0; // Set to 0 for consistent master-slave comparison
+      req.awuser == 1'b0; // Set to 0 for consistent master-slave comparison
     });
-    // Explicitly set USER values after randomization to ensure consistency
-    req.wuser = wuser_val;
-    req.awuser = awuser_val;
     finish_item(req);
     
     // Track write for verification
@@ -298,8 +289,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   
   for (int i = 0; i < 2; i++) begin
     awid_val = 15 - i; // Use AWID 15, 14, etc.
-    wuser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-    awuser_val = 1'b0; // Set to 0 for consistent master-slave comparison
     data_val = 32'h40000000 + (master_id << 24) + (i << 16) + awid_val;
     target_slave = 0; // Use DDR for all masters
     
@@ -321,10 +310,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       req.wstrb.size() == 2;
       req.wstrb[0] == 4'hF;
       req.wstrb[1] == 4'hF;
+      req.wuser == 4'h0; // Set to 0 for consistent master-slave comparison
+      req.awuser == 1'b0; // Set to 0 for consistent master-slave comparison
     });
-    // Explicitly set USER values after randomization to ensure consistency
-    req.wuser = wuser_val;
-    req.awuser = awuser_val;
     finish_item(req);
     
     // Track writes for verification
@@ -357,8 +345,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     
     for (int i = 0; i < 2; i++) begin
       arid_val = get_awid_for_scenario(i, master_id); // Use same ID generation for reads
-      ruser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-      aruser_val = 1'b0; // Set to 0 for consistent master-slave comparison
       addr = get_slave_address(3, master_id, 'h10 + (i * 'h8)); // S3: HW_Fuse
       
       req = axi4_master_tx::type_id::create("req");
@@ -371,10 +357,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
         req.arsize == READ_4_BYTES;
         req.arburst == READ_INCR;
         req.arcache == 4'b0010;
+        req.ruser == 4'h0; // Set to 0 for consistent master-slave comparison
+        req.aruser == 1'b0; // Set to 0 for consistent master-slave comparison
       });
-      // Explicitly set USER values after randomization to ensure consistency
-      req.ruser = ruser_val;
-      req.aruser = aruser_val;
       finish_item(req);
       
       `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] S6.%0d - ARID=0x%0x to S3 (HW_Fuse READ), ARADDR=0x%16h", 
@@ -410,8 +395,6 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::perform_read_afte
       total_reads++;
       
       // Issue read transaction
-      ruser_val = 4'h0; // Set to 0 for consistent master-slave comparison
-      aruser_val = 1'b0; // Set to 0 for consistent master-slave comparison
       req = axi4_master_tx::type_id::create("req");
       start_item(req);
       assert(req.randomize() with {
@@ -422,10 +405,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::perform_read_afte
         req.arsize == READ_4_BYTES;
         req.arburst == READ_INCR;
         req.arcache == 4'b0010;
+        req.ruser == 4'h0; // Set to 0 for consistent master-slave comparison
+        req.aruser == 1'b0; // Set to 0 for consistent master-slave comparison
       });
-      // Explicitly set USER values after randomization to ensure consistency
-      req.ruser = ruser_val;
-      req.aruser = aruser_val;
       finish_item(req);
       
       `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] Verify read %0d/%0d - ARID=0x%0x, ADDR=0x%16h, Expected=0x%8h", 
