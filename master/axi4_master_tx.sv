@@ -324,6 +324,18 @@ class axi4_master_tx extends uvm_sequence_item;
   //Adding constraint to select the endianess
   constraint endian_c1 { soft endian == LITTLE_ENDIAN;}
 
+  //Constraint : wuser_c1
+  //Adding constraint to set wuser to 0 by default for consistent master-slave comparison
+  constraint wuser_c1 { soft wuser == 4'h0;}
+
+  //Constraint : awuser_c1
+  //Adding constraint to set awuser to 0 by default for consistent master-slave comparison
+  constraint awuser_c1 { soft awuser == 1'b0;}
+
+  //Constraint : aruser_c1
+  //Adding constraint to set aruser to 0 by default for consistent master-slave comparison
+  constraint aruser_c1 { soft aruser == 1'b0;}
+
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
