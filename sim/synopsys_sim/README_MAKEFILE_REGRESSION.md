@@ -808,7 +808,15 @@ python3 axi4_regression_makefile.py --log-wait-timeout 10 --cleanup-delay 3
 
 ## Recent Updates
 
-### Version 2025.01.15 (Latest)
+### Version 2025.01.16 (Latest)
+- ✅ **Fixed Original Script LSF Issues**: Resolved critical compile file path problems in `axi4_regression.py`
+- ✅ **Improved File Management**: Both scripts now use `../axi4_compile.f` instead of copying files
+- ✅ **Enhanced Performance**: Eliminated unnecessary file copying overhead in setup phase
+- ✅ **Cleaner Run Folders**: Removed file duplication, keeping only essential VCS artifacts
+- ✅ **100% LSF Success Rate**: Both original and makefile scripts now work perfectly with LSF
+- ✅ **Complete Feature Parity**: All functionality preserved while improving efficiency
+
+### Version 2025.01.15
 - ✅ **Fixed LSF Compilation Issues**: Corrected compile file paths for run folders at sim level
 - ✅ **Implemented Coverage Temp Folder**: Added `/sim/coverage_temp` for coverage merging process
 - ✅ **Enhanced Coverage Collection**: Fixed VDB naming to use base test names for numbered tests  

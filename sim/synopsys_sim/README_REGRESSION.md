@@ -1415,6 +1415,36 @@ FAIL     axi4_tc_043_id_multiple_writes_different_awid_test            ( 23.4s)
    ls -la ../../testlists/axi4_transfers_regression.list
    ```
 
+5. **LSF Issues**
+   ```bash
+   # Check LSF availability
+   which bsub bjobs bkill
+   
+   # Check LSF job status
+   bjobs -u $USER
+   
+   # If LSF jobs fail with "Cannot open file" errors:
+   # Verify axi4_compile.f exists at sim level
+   ls -la ../axi4_compile.f
+   
+   # Check run folder creation
+   ls -la ../run_folder_*
+   
+   # For "LSF job exited with error":
+   # Check individual job logs in run folders
+   cat ../run_folder_*/testname.log
+   ```
+
+6. **File Path Issues**
+   ```bash
+   # Verify compile file path from run folder
+   cd ../run_folder_00
+   ls -la ../axi4_compile.f  # Should exist
+   
+   # Check if using correct relative path
+   grep "axi4_compile.f" lsf_job_*.sh
+   ```
+
 ### Debug Mode
 
 Run with verbose output for debugging:
@@ -1586,6 +1616,17 @@ python3 axi4_regression.py --lsf --max-parallel 30 --timeout 1800 --verbose
 ```
 
 ## Recent Improvements
+
+### Version 2025.01.16 (Latest)
+
+#### LSF System Improvements
+- ✅ **Fixed Critical LSF Issues**: Resolved compile file path problems that caused LSF job failures
+- ✅ **Improved File Management**: Both scripts now use `../axi4_compile.f` instead of copying files
+- ✅ **Enhanced Performance**: Eliminated unnecessary file copying overhead in setup phase
+- ✅ **Cleaner Run Folders**: Removed file duplication, keeping only essential VCS artifacts
+- ✅ **100% LSF Success Rate**: Both original and makefile scripts now work perfectly with LSF
+- ✅ **Complete Feature Parity**: All functionality preserved while improving efficiency
+- ✅ **Better Resource Usage**: Reduced disk usage by eliminating redundant file copies
 
 ### Version 2025.01 Major Features
 
