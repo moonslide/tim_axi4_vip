@@ -647,7 +647,7 @@ class RegressionRunner:
                 f.write(f'-cm_name {base_test_name_for_vdb} ')
                 f.write(f'# Coverage enabled: {coverage_dir}\n')
             
-            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../../axi4_compile.f ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             
