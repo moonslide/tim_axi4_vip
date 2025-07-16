@@ -625,8 +625,8 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
     byte_data_cmp_verified_wuser_count++;
   end
   else begin
-    `uvm_info(get_type_name(),$sformatf("axi4_wuser from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_wuser_NOT_MATCHED", $sformatf("Master wuser = 'h%0x and Slave wuser = 'h%0x",axi4_master_tx_h2.wuser,axi4_slave_tx_h2.wuser), UVM_HIGH);
+    `uvm_info(get_type_name(),$sformatf("axi4_wuser from master and slave is not equal"),UVM_MEDIUM);
+    `uvm_info("SB_wuser_NOT_MATCHED", $sformatf("Master wuser = 'h%0x and Slave wuser = 'h%0x",axi4_master_tx_h2.wuser,axi4_slave_tx_h2.wuser), UVM_MEDIUM);
     byte_data_cmp_failed_wuser_count++;
   end
 
@@ -686,8 +686,8 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
     byte_data_cmp_verified_buser_count++;
   end
   else begin
-    `uvm_info(get_type_name(),$sformatf("axi4_buser from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_buser_NOT_MATCHED", $sformatf("Master buser = 'h%0x and Slave buser = 'h%0x",axi4_master_tx_h3.buser,axi4_slave_tx_h3.buser), UVM_HIGH);
+    `uvm_info(get_type_name(),$sformatf("axi4_buser from master and slave is not equal"),UVM_MEDIUM);
+    `uvm_info("SB_buser_NOT_MATCHED", $sformatf("Master buser = 'h%0x and Slave buser = 'h%0x",axi4_master_tx_h3.buser,axi4_slave_tx_h3.buser), UVM_MEDIUM);
     byte_data_cmp_failed_buser_count++;
   end
 
@@ -891,8 +891,8 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     byte_data_cmp_verified_ruser_count++;
   end
   else begin
-    `uvm_info(get_type_name(),$sformatf("axi4_ruser from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_ruser_NOT_MATCHED", $sformatf("Master ruser = %0p and Slave ruser = %0p",axi4_master_tx_h5.ruser,axi4_slave_tx_h5.ruser), UVM_HIGH);             
+    `uvm_info(get_type_name(),$sformatf("axi4_ruser from master and slave is not equal"),UVM_MEDIUM);
+    `uvm_info("SB_ruser_NOT_MATCHED", $sformatf("Master ruser = %0p and Slave ruser = %0p",axi4_master_tx_h5.ruser,axi4_slave_tx_h5.ruser), UVM_MEDIUM);             
     byte_data_cmp_failed_ruser_count++;
   end
 
@@ -1075,14 +1075,18 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       end
       else if (byte_data_cmp_failed_wuser_count > 0) begin
         `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_wuser_count :%0d",
-                                                byte_data_cmp_verified_wuser_count),UVM_HIGH);
+                                                byte_data_cmp_verified_wuser_count),UVM_MEDIUM);
               `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_wuser_count : %0d",
-                                                byte_data_cmp_failed_wuser_count),UVM_HIGH);
+                                                byte_data_cmp_failed_wuser_count),UVM_MEDIUM);
         if (axi4_env_cfg_h.error_inject) begin
-          `uvm_warning (get_type_name(), $sformatf ("wuser count comparisions are failed"));
+          `uvm_warning (get_type_name(), $sformatf ("wuser count comparisons are failed - %0d mismatches out of %0d total comparisons", 
+                                                   byte_data_cmp_failed_wuser_count, 
+                                                   byte_data_cmp_verified_wuser_count + byte_data_cmp_failed_wuser_count));
         end
         else begin
-          `uvm_error (get_type_name(), $sformatf ("wuser count comparisions are failed"));
+          `uvm_error (get_type_name(), $sformatf ("wuser count comparisons are failed - %0d mismatches out of %0d total comparisons", 
+                                                 byte_data_cmp_failed_wuser_count, 
+                                                 byte_data_cmp_verified_wuser_count + byte_data_cmp_failed_wuser_count));
         end
       end
       else begin
@@ -1140,10 +1144,12 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_buser_count :%0d",
-                                              byte_data_cmp_verified_buser_count),UVM_HIGH);
+                                              byte_data_cmp_verified_buser_count),UVM_MEDIUM);
             `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_buser_count : %0d",
-                                              byte_data_cmp_failed_buser_count),UVM_HIGH);
-      `uvm_error (get_type_name(), $sformatf ("buser count comparisions are failed"));
+                                              byte_data_cmp_failed_buser_count),UVM_MEDIUM);
+      `uvm_error (get_type_name(), $sformatf ("buser count comparisons are failed - %0d mismatches out of %0d total comparisons", 
+                                             byte_data_cmp_failed_buser_count, 
+                                             byte_data_cmp_verified_buser_count + byte_data_cmp_failed_buser_count));
     end
 
     if(axi4_env_cfg_h.check_wait_states) begin
@@ -1379,10 +1385,12 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_ruser_count :%0d",
-                                              byte_data_cmp_verified_ruser_count),UVM_HIGH);
+                                              byte_data_cmp_verified_ruser_count),UVM_MEDIUM);
             `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_ruser_count : %0d",
-                                              byte_data_cmp_failed_ruser_count),UVM_HIGH);
-      `uvm_error (get_type_name(), $sformatf ("ruser count comparisions are failed"));
+                                              byte_data_cmp_failed_ruser_count),UVM_MEDIUM);
+      `uvm_error (get_type_name(), $sformatf ("ruser count comparisons are failed - %0d mismatches out of %0d total comparisons", 
+                                             byte_data_cmp_failed_ruser_count, 
+                                             byte_data_cmp_verified_ruser_count + byte_data_cmp_failed_ruser_count));
     end
 
     if(axi4_env_cfg_h.check_wait_states) begin
