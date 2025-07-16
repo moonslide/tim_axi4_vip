@@ -548,8 +548,7 @@ class RegressionRunner:
             # Create new folder
             folder_path.mkdir(exist_ok=True)
             
-            # Create modified compile file with adjusted paths for this run folder
-            self._create_compile_file_for_folder(folder_path)
+# Using ../axi4_compile.f directly from run folders - no file copying needed
             
             folders.append(folder_path)
             
@@ -557,21 +556,7 @@ class RegressionRunner:
             
         return folders
     
-    def _create_compile_file_for_folder(self, folder_path):
-        """Create a compile file with paths adjusted for running from the folder"""
-        # Read the original compile file
-        orig_compile_file = self.base_dir.parent / 'axi4_compile.f'
-        new_compile_file = folder_path / 'axi4_compile.f'
-        
-        with open(orig_compile_file, 'r') as f:
-            content = f.read()
-        
-        # No path adjustment needed since run_folder_XX is at same level as synopsys_sim
-        # Both are at sim/ level, so ../../pkg/ works from both locations
-        adjusted_content = content
-        
-        with open(new_compile_file, 'w') as f:
-            f.write(adjusted_content)
+# Removed _create_compile_file_for_folder - using ../axi4_compile.f directly
     
     def _kill_all_lsf_jobs(self):
         """Kill all LSF jobs associated with this regression"""
@@ -647,7 +632,7 @@ class RegressionRunner:
                 f.write(f'-cm_name {base_test_name_for_vdb} ')
                 f.write(f'# Coverage enabled: {coverage_dir}\n')
             
-            f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             
@@ -1143,7 +1128,7 @@ class RegressionRunner:
                 if self.verbose:
                     print(f"    Enabling coverage collection: {coverage_dir}")
             
-            f.write(f'+define+UVM_VERDI_COMPWAVE -f axi4_compile.f ')
+            f.write(f'+define+UVM_VERDI_COMPWAVE -f ../axi4_compile.f ')
             f.write(f'-debug_access+all -R +UVM_TESTNAME={base_test_name} ')
             f.write(f'+UVM_VERBOSITY=MEDIUM +plusarg_ignore ')
             
