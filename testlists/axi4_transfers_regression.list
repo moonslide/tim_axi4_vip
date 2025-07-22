@@ -1,100 +1,118 @@
-# Regression list for AXI4 WRITE AND READ TRANSFERS
+# Comprehensive Regression list for AXI4 WRITE AND READ TRANSFERS
+# Updated to include all available test patterns
 
-# Directed testcases
+# Basic Read/Write Tests
 axi4_write_read_test
+axi4_write_test
+axi4_read_test
+
+# Blocking Write-Read Tests (Different Data Widths)
+axi4_blocking_write_read_test
 axi4_blocking_8b_write_read_test 
 axi4_blocking_16b_write_read_test 
 axi4_blocking_32b_write_read_test 
-axi4_blocking_incr_burst_write_read_test 
-axi4_blocking_wrap_burst_write_read_test 
-axi4_blocking_slave_error_write_read_test 
-axi4_blocking_unaligned_addr_write_read_test 
-axi4_blocking_fixed_burst_write_read_test 
-
-# Blocking Rand testcase
+axi4_blocking_64b_write_read_test
 axi4_blocking_write_read_rand_test 
 
-# Blocking Cross testcase
-axi4_blocking_cross_write_read_test 
+# Blocking Burst Type Tests
+axi4_blocking_incr_burst_write_read_test 
+axi4_blocking_wrap_burst_write_read_test 
+axi4_blocking_fixed_burst_write_read_test 
 
-# Non Blocking Write Read Transfers
+# Blocking Special Cases
+axi4_blocking_cross_write_read_test 
+axi4_blocking_slave_error_write_read_test 
+axi4_blocking_unaligned_addr_write_read_test 
+axi4_blocking_outstanding_transfer_write_read_test
+axi4_blocking_okay_response_write_read_test
+
+# Non-Blocking Write-Read Tests (Different Data Widths)
+axi4_non_blocking_write_read_test
 axi4_non_blocking_8b_write_read_test 
 axi4_non_blocking_16b_write_read_test 
 axi4_non_blocking_32b_write_read_test 
+axi4_non_blocking_64b_write_read_test
+axi4_non_blocking_write_read_rand_test 
+
+# Non-Blocking Burst Type Tests
 axi4_non_blocking_incr_burst_write_read_test 
 axi4_non_blocking_wrap_burst_write_read_test 
-axi4_non_blocking_okay_response_write_read_test 
 axi4_non_blocking_fixed_burst_write_read_test 
+
+# Non-Blocking Special Cases
+axi4_non_blocking_cross_write_read_test 
+axi4_non_blocking_okay_response_write_read_test 
 axi4_non_blocking_outstanding_transfer_write_read_test 
 axi4_non_blocking_slave_error_write_read_test 
 axi4_non_blocking_unaligned_addr_write_read_test 
 
-# Non Blocking Rand testcase
-axi4_non_blocking_write_read_rand_test 
-
-# Non Blocking Cross testcase
-axi4_non_blocking_cross_write_read_test 
-
-#read tests
+# Blocking Read-Only Tests
+axi4_blocking_8b_data_read_test
 axi4_blocking_16b_data_read_test
 axi4_blocking_32b_data_read_test
 axi4_blocking_64b_data_read_test
-axi4_blocking_8b_data_read_test
-axi4_blocking_exokay_response_read_test
 axi4_blocking_incr_burst_read_test
-axi4_blocking_okay_response_read_test
 axi4_blocking_wrap_burst_read_test
+axi4_blocking_okay_response_read_test
+axi4_blocking_exokay_response_read_test
+
+# Non-Blocking Read-Only Tests
+axi4_non_blocking_8b_data_read_test 
 axi4_non_blocking_16b_data_read_test 
 axi4_non_blocking_32b_data_read_test 
 axi4_non_blocking_64b_data_read_test 
-axi4_non_blocking_8b_data_read_test 
-axi4_non_blocking_exokay_response_read_test 
 axi4_non_blocking_incr_burst_read_test 
+axi4_non_blocking_wrap_burst_read_test
 axi4_non_blocking_okay_response_read_test 
-axi4_non_blocking_wrap_burst_read_test 
+axi4_non_blocking_exokay_response_read_test 
 
-#write test case 
-axi4_non_blocking_wrap_burst_write_test
-axi4_non_blocking_okay_write_response_test
-axi4_non_blocking_incr_burst_write_test
-axi4_non_blocking_exokay_write_response_test
-axi4_non_blocking_8b_write_data_test
-axi4_non_blocking_64b_write_data_test
-axi4_non_blocking_32b_write_data_test
-axi4_non_blocking_16b_write_data_test
+# Blocking Write-Only Tests
+axi4_blocking_8b_write_data_test
+axi4_blocking_16b_write_data_test
+axi4_blocking_32b_write_data_test
+axi4_blocking_64b_write_data_test
+axi4_blocking_incr_burst_write_test
 axi4_blocking_wrap_burst_write_test
 axi4_blocking_okay_response_write_test
-axi4_blocking_incr_burst_write_test
 axi4_blocking_exokay_response_write_test
-axi4_blocking_8b_write_data_test
-axi4_blocking_64b_write_data_test
-axi4_blocking_32b_write_data_test
-axi4_blocking_16b_write_data_test
 
-#Slave_memory_testcases
+# Non-Blocking Write-Only Tests
+axi4_non_blocking_8b_write_data_test
+axi4_non_blocking_16b_write_data_test
+axi4_non_blocking_32b_write_data_test
+axi4_non_blocking_64b_write_data_test
+axi4_non_blocking_incr_burst_write_test
+axi4_non_blocking_wrap_burst_write_test
+axi4_non_blocking_okay_write_response_test
+axi4_non_blocking_exokay_write_response_test
+axi4_non_blocking_rand_incr_burst_write_test
+
+# Slave Memory Mode Tests
+axi4_non_blocking_slave_mem_mode_incr_burst_write_read_test
 axi4_non_blocking_slave_mem_mode_wrap_burst_write_read_test
 axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test
-axi4_non_blocking_slave_mem_mode_incr_burst_write_read_test
 
-
-#out_of_order testcases 
+# Out-of-Order Response Tests
 axi4_non_blocking_only_write_response_out_of_order_test
 axi4_non_blocking_only_read_response_out_of_order_test
 axi4_non_blocking_write_read_response_out_of_order_test
 
-#QOS
+# QOS Test
 axi4_non_blocking_qos_write_read_test
 
-
+# Bus Width and Configuration Tests
 axi4_width_check_test
 axi4_width_config_test
-#delay and handshake
+
+# Ready Signal Delay Tests
 axi4_aw_ready_delay_test
 axi4_w_ready_delay_test
 axi4_b_ready_delay_test
 axi4_ar_ready_delay_test
 axi4_r_ready_delay_test
 axi4_aw_w_channel_separation_test
+
+# Write Strobe Tests
 axi4_wstrb_all_zero_test
 axi4_wstrb_all_ones_test
 axi4_wstrb_upper_half_test
@@ -103,7 +121,8 @@ axi4_wstrb_alternating_test
 axi4_wstrb_single_bit_test
 axi4_wstrb_random_burst_test
 axi4_wstrb_illegal_test
-axi4_all_master_slave_access_test
+
+# Boundary and Access Tests
 axi4_upper_boundary_write_test
 axi4_lower_boundary_write_test
 axi4_upper_boundary_read_test
@@ -111,18 +130,31 @@ axi4_lower_boundary_read_test
 axi4_4k_boundary_cross_test
 axi4_unaligned_access_test
 
+# Master-Slave Access Test
+axi4_all_master_slave_access_test
+
+# Enhanced Bus Matrix Test (claude.md compliance)
+axi4_enhanced_bus_matrix_test
+
+# Claude.md Test Cases: 10x10 Enhanced Bus Matrix Verification
+axi4_tc_001_concurrent_reads_test
+axi4_tc_002_concurrent_writes_raw_test
+axi4_tc_003_sequential_mixed_ops_test
+axi4_tc_004_concurrent_error_stress_test
+axi4_tc_005_exhaustive_random_reads_test
+
 # TC_046~TC_058: AXI4 ID Management and Protocol Violation Tests
-axi4_tc_046_id_multiple_writes_same_awid_test run_cnt=20
-axi4_tc_047_id_multiple_writes_different_awid_test run_cnt=20 
-axi4_tc_048_id_multiple_reads_same_arid_test run_cnt=20
-axi4_tc_049_id_multiple_reads_different_arid_test run_cnt=20
-axi4_tc_050_wid_awid_mismatch_test run_cnt=20
-axi4_tc_051_wlast_too_early_test run_cnt=20
-axi4_tc_052_wlast_too_late_test run_cnt=20
-axi4_tc_053_awlen_out_of_spec_test run_cnt=20
-axi4_tc_054_arlen_out_of_spec_test run_cnt=20
-axi4_tc_055_exclusive_write_success_test run_cnt=20
-axi4_tc_056_exclusive_write_fail_test run_cnt=20
-axi4_tc_057_exclusive_read_success_test run_cnt=20
-axi4_tc_058_exclusive_read_fail_test run_cnt=20
+axi4_tc_046_id_multiple_writes_same_awid_test 
+axi4_tc_047_id_multiple_writes_different_awid_test  
+axi4_tc_048_id_multiple_reads_same_arid_test 
+axi4_tc_049_id_multiple_reads_different_arid_test 
+axi4_tc_050_wid_awid_mismatch_test 
+axi4_tc_051_wlast_too_early_test 
+axi4_tc_052_wlast_too_late_test 
+axi4_tc_053_awlen_out_of_spec_test 
+axi4_tc_054_arlen_out_of_spec_test 
+axi4_tc_055_exclusive_write_success_test 
+axi4_tc_056_exclusive_write_fail_test 
+axi4_tc_057_exclusive_read_success_test 
+axi4_tc_058_exclusive_read_fail_test 
 

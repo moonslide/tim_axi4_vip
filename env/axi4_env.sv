@@ -132,6 +132,9 @@ function void axi4_env::build_phase(uvm_phase phase);
 
   axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
   
+  // Pass bus matrix mode from environment config to bus matrix reference model
+  uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "axi4_bus_matrix_h", "bus_matrix_mode", axi4_env_cfg_h.bus_matrix_mode);
+  
   // Set bus matrix reference globally for access by sequences
   uvm_config_db#(axi4_bus_matrix_ref)::set(null, "*", "bus_matrix_ref", axi4_bus_matrix_h);
   
@@ -143,6 +146,10 @@ function void axi4_env::build_phase(uvm_phase phase);
   
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i].axi4_master_agent_cfg_h = axi4_master_agent_cfg_h[i];
+    // Pass write_read_mode to master driver proxies
+    uvm_config_db#(write_read_data_mode_e)::set(this, 
+                        $sformatf("axi4_master_agent_h[%0d].axi4_master_drv_proxy_h*", i),
+                        "write_read_mode", axi4_env_cfg_h.write_read_mode_h);
   end
   
   foreach(axi4_slave_agent_h[i]) begin

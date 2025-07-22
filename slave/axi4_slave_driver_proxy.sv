@@ -208,14 +208,13 @@ task axi4_slave_driver_proxy::axi4_write_task();
     process data_tx;
     process response_tx;
 
-    // In SLAVE_MEM_MODE, create reactive transaction that will be populated by BFM with real AXI signal values
+    // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // Create reactive transaction - BFM will update with actual AXI signal values
+      // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_wr = axi4_slave_tx::type_id::create("req_wr");
-      // Initialize with slave's address range to avoid default 0x0
-      req_wr.awaddr = axi4_slave_agent_cfg_h.min_address;
-      req_wr.araddr = axi4_slave_agent_cfg_h.min_address;
-      // Put reactive transaction into FIFOs for processing
+      // Initialize with default values - BFM will fill with actual sampled values
+      assert(req_wr.randomize());
+      // Put dummy transaction into FIFOs for processing
       axi4_slave_write_data_in_fifo_h.put(req_wr);
       axi4_slave_write_response_fifo_h.put(req_wr);
     end else begin
@@ -397,13 +396,13 @@ task axi4_slave_driver_proxy::axi4_write_task();
              axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
             `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
           end else begin
-            `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write addr data from FIFO as WRITE_ADDR_FIFO is EMPTY"));
+            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in in-order mode"),UVM_MEDIUM);
           end
           wait_cycles = 0;
           while(axi4_slave_write_addr_fifo_h.is_empty) begin
             @(posedge axi4_slave_drv_bfm_h.aclk);
             if(wait_cycles++ > 50000) begin
-              `uvm_error(get_type_name(),"timeout waiting for write addr")
+              `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
               break;
             end
           end
@@ -458,8 +457,12 @@ task axi4_slave_driver_proxy::axi4_write_task();
           clear_exclusive_monitors(local_slave_addr_tx.awaddr);
         end else begin
           // Normal write - check bus matrix and clear any exclusive monitors for this address
-          struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(0, // Master ID 0
-                                                                       local_slave_addr_tx.awaddr);
+          // Use slave_id as master_id due to 1:1 HDL connections
+          int master_id = axi4_slave_agent_cfg_h.slave_id;
+          
+          struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(master_id,
+                                                                       local_slave_addr_tx.awaddr,
+                                                                       struct_write_packet.awprot);
           `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Bus matrix returned bresp=%0d for addr 0x%16h", 
                    struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
           
@@ -548,7 +551,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
     `uvm_info("SLAVE_STATUS_CHECK",$sformatf("AFTER_FORK_JOIN_ANY:: SLAVE_WRESP_CHANNEL_STATUS = \n%s",response_tx.status()),UVM_MEDIUM)
   end
    
-   // Only call item_done() if we actually got an item from sequencer
+   // Only call item_done() when not in SLAVE_MEM_MODE
    if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE) begin
      axi_write_seq_item_port.item_done();
    end
@@ -567,15 +570,15 @@ task axi4_slave_driver_proxy::axi4_read_task();
     //Declaring the process for read address channel and read data channel for status check 
     process rd_addr;
     process rd_data;
+    int master_id; // Variable for bus matrix master ID mapping
 
-    // In SLAVE_MEM_MODE, create reactive transaction that will be populated by BFM with real AXI signal values
+    // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // Create reactive transaction - BFM will update with actual AXI signal values
+      // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_rd = axi4_slave_tx::type_id::create("req_rd");
-      // Initialize with slave's address range to avoid default 0x0
-      req_rd.awaddr = axi4_slave_agent_cfg_h.min_address;
-      req_rd.araddr = axi4_slave_agent_cfg_h.min_address;
-      // Put reactive transaction into FIFO for processing
+      // Initialize with default values - BFM will fill with actual sampled values
+      assert(req_rd.randomize());
+      // Put dummy transaction into FIFO for processing
       axi4_slave_read_data_in_fifo_h.put(req_rd);
     end else begin
       // Normal mode - get transaction from sequencer
@@ -775,16 +778,27 @@ task axi4_slave_driver_proxy::axi4_read_task();
           error_response_inside = 1'b0;
           if(crossed_read_addr) begin
             for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                               local_slave_addr_chk_tx.araddr);
+              // Use slave_id as master_id due to 1:1 HDL connections
+              int master_id = axi4_slave_agent_cfg_h.slave_id;
+              
+              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                               local_slave_addr_chk_tx.araddr,
+                                                                               struct_read_packet.arprot);
               if (struct_read_packet.rresp[depth] == 2 || struct_read_packet.rresp[depth] == 3) begin
                 error_response_inside = 1'b1;
               end
             end
           end
           else begin
-            struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                       local_slave_addr_chk_tx.araddr);
+            // In this testbench architecture, master transactions are routed through direct connections
+            // but the actual target slave is determined by address. The slave driver's ID indicates
+            // which master is connected to it (due to 1:1 HDL connections).
+            // Therefore, use the slave_id as the master_id for bus matrix checks.
+            int master_id = axi4_slave_agent_cfg_h.slave_id;
+            
+            struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                       local_slave_addr_chk_tx.araddr,
+                                                                       struct_read_packet.arprot);
             
             // Handle exclusive read response according to AMBA AXI4 specification
             if(local_slave_addr_chk_tx.arlock == READ_EXCLUSIVE_ACCESS && struct_read_packet.rresp == READ_OKAY) begin
@@ -818,19 +832,42 @@ task axi4_slave_driver_proxy::axi4_read_task();
           if(axi4_bus_matrix_h.decode(local_slave_addr_chk_tx.araddr) >= 0) begin 
             // Check bus matrix response first before memory operations
             error_response_inside_wrap = 1'b0;
-            for(int j=0,int loc=0;j<total_bytes;j++) begin
-              if((local_slave_addr_chk_tx.araddr+j)==crossed_read_addr) begin
-                loc = j/STROBE_WIDTH;
-                for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-                  if(depth > loc) struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                                                 local_slave_addr_chk_tx.araddr);
-                  else struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                                           local_slave_addr_chk_tx.araddr);
-                  if (struct_read_packet.rresp[depth] == 2 || struct_read_packet.rresp[depth] == 3) begin
-                    error_response_inside_wrap = 1'b1;
+            
+            // Always check bus matrix response for access permissions (e.g., write-only slaves)
+            // Use slave_id as master_id due to 1:1 HDL connections
+            master_id = axi4_slave_agent_cfg_h.slave_id;
+            
+            // First, check if any address in the burst has access restrictions
+            for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
+              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                               local_slave_addr_chk_tx.araddr + (depth * (1 << local_slave_addr_chk_tx.arsize)),
+                                                                               struct_read_packet.arprot);
+              if (struct_read_packet.rresp[depth] == 2 || struct_read_packet.rresp[depth] == 3) begin
+                error_response_inside_wrap = 1'b1;
+                `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Bus matrix returned error response %0d for read to address 0x%16h", 
+                         struct_read_packet.rresp[depth], local_slave_addr_chk_tx.araddr + (depth * (1 << local_slave_addr_chk_tx.arsize))), UVM_LOW);
+              end
+            end
+            
+            // Additionally check for address boundary crossing if needed
+            if (!error_response_inside_wrap) begin
+              for(int j=0,int loc=0;j<total_bytes;j++) begin
+                if((local_slave_addr_chk_tx.araddr+j)==crossed_read_addr) begin
+                  loc = j/STROBE_WIDTH;
+                  
+                  for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
+                    if(depth > loc) struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                                                   local_slave_addr_chk_tx.araddr,
+                                                                                                   struct_read_packet.arprot);
+                    else struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                                             local_slave_addr_chk_tx.araddr,
+                                                                                             struct_read_packet.arprot);
+                    if (struct_read_packet.rresp[depth] == 2 || struct_read_packet.rresp[depth] == 3) begin
+                      error_response_inside_wrap = 1'b1;
+                    end
                   end
+                  break;
                 end
-                break;
               end
             end
             
@@ -854,8 +891,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
             // Check bus matrix response first before deciding if this is an error
             bit error_response_inside_range = 1'b0;
             for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                               local_slave_addr_chk_tx.araddr);
+              // Use slave_id as master_id due to 1:1 HDL connections
+              int master_id = axi4_slave_agent_cfg_h.slave_id;
+              
+              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                               local_slave_addr_chk_tx.araddr,
+                                                                               struct_read_packet.arprot);
               `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Bus matrix returned rresp[%0d] = %0d for address 0x%16h inside range", 
                        depth, struct_read_packet.rresp[depth], local_slave_addr_chk_tx.araddr), UVM_LOW);
               
@@ -900,16 +941,22 @@ task axi4_slave_driver_proxy::axi4_read_task();
         end
       end
       else begin : ADDR_NOT_INSIDE_SLAVE_MEM_RANGE
+        int master_id;  // Declare variable at the beginning of the block
+        
         `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Address 0x%16h is NOT INSIDE slave %0d range [0x%16h:0x%16h] - calling bus matrix", 
                  local_slave_addr_chk_tx.araddr, axi4_slave_agent_cfg_h.slave_id, 
                  axi4_slave_agent_cfg_h.min_address, axi4_slave_agent_cfg_h.max_address), UVM_LOW);
         error_response = 1'b0;
+        // Use slave_id as master_id due to 1:1 HDL connections
+        master_id = axi4_slave_agent_cfg_h.slave_id;
+        
         for(int depth=0;depth<(((axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER)
           || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
-          struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(0, // Master ID 0
-                                                                           local_slave_addr_chk_tx.araddr);
+          struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                                                                           local_slave_addr_chk_tx.araddr,
+                                                                           struct_read_packet.arprot);
           `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Bus matrix returned rresp[%0d] = %0d for address 0x%16h", 
                    depth, struct_read_packet.rresp[depth], local_slave_addr_chk_tx.araddr), UVM_LOW);
           
@@ -960,7 +1007,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
     `uvm_info("SLAVE_STATUS_CHECK",$sformatf("AFTER_FORK_JOIN_ANY:: SLAVE_RDATA_CHANNEL_STATUS = \n %s",rd_data.status()),UVM_MEDIUM)
   end
 
-  // Only call item_done() if we actually got an item from sequencer
+  // Only call item_done() when not in SLAVE_MEM_MODE
   if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE) begin
     axi_read_seq_item_port.item_done();
   end

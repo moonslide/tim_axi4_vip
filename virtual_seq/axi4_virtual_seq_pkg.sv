@@ -134,6 +134,13 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_tc_057_exclusive_read_success_seq.sv"
   `include "axi4_virtual_tc_058_exclusive_read_fail_seq.sv"
 
+  // Claude.md Test Case Virtual Sequences
+  `include "axi4_tc_001_concurrent_reads_virtual_seq.sv"
+  `include "axi4_tc_002_concurrent_writes_raw_virtual_seq.sv"
+  `include "axi4_tc_003_sequential_mixed_ops_virtual_seq.sv"
+  `include "axi4_tc_004_concurrent_error_stress_virtual_seq.sv"
+  `include "axi4_tc_005_exhaustive_random_reads_virtual_seq.sv"
+
 endpackage : axi4_virtual_seq_pkg
 
 `endif

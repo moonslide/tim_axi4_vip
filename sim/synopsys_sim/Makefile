@@ -64,6 +64,19 @@ ifeq ($(FSDB_DUMP),1)
 VCS_FLAGS += +define+DUMP_FSDB
 endif
 
+# Interface configuration based on test name
+# TC046-TC058 and boundary tests use 4x4 configuration
+ifneq ($(filter %tc_04% %tc_05% %boundary% %unaligned% %4k% %all_master_slave_access% %base_matrix_test%,$(test)),)
+VCS_FLAGS += +define+RUN_4X4_CONFIG
+$(info Configuring for 4x4 interface matrix based on test: $(test))
+endif
+
+# TC001-TC005 and enhanced matrix test use 10x10 configuration
+ifneq ($(filter %tc_00% %enhanced_bus_matrix_test%,$(test)),)
+VCS_FLAGS += +define+RUN_10X10_CONFIG
+$(info Configuring for 10x10 interface matrix based on test: $(test))
+endif
+
 # Add coverage flags if enabled (simple naming like original script)
 ifeq ($(COVERAGE),1)
 VCS_FLAGS += -cm line+cond+fsm+tgl+branch+assert -cm_seqnoconst -cm_dir $(test).vdb -cm_name $(test)

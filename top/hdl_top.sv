@@ -64,8 +64,12 @@ module hdl_top;
   end
 
   // Variables : master_intf and slave_intf
-  // Separate interface arrays are used for masters and slaves so that
-  // each agent drives its own instance directly.
+  // HDL always creates maximum interfaces (10x10) for flexibility
+  // HVL dynamically uses only required interfaces based on test configuration:
+  // - Enhanced matrix tests (TC01-TC05): Use all 10 masters/10 slaves
+  // - Boundary tests (TC046-TC058): Use only 4 masters/4 slaves
+  // - Default tests: Use only 4 masters/4 slaves
+  // This approach avoids recompilation between different test configurations
   axi4_if master_intf[NO_OF_MASTERS] (.aclk(aclk),
                                      .aresetn(aresetn));
   axi4_if slave_intf[NO_OF_SLAVES]   (.aclk(aclk),

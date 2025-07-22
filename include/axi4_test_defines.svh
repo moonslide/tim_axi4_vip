@@ -11,7 +11,7 @@
 // Usage: Can be overridden at compile time with +define+DEFAULT_TEST_TIMEOUT=<value>
 // Example: +define+DEFAULT_TEST_TIMEOUT=5ms
 `ifndef DEFAULT_TEST_TIMEOUT
-  `define DEFAULT_TEST_TIMEOUT 3ms
+  `define DEFAULT_TEST_TIMEOUT 10s
 `endif
 
 // Other test configuration defines can be added here

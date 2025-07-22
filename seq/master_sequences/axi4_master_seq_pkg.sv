@@ -143,6 +143,10 @@ package axi4_master_seq_pkg;
   `include "axi4_master_tc_056_exclusive_write_fail_seq.sv"
   `include "axi4_master_tc_057_exclusive_read_success_seq.sv"
   `include "axi4_master_tc_058_exclusive_read_fail_seq.sv"
+  
+  // Claude.md Test Case Sequences
+  `include "axi4_tc_001_master_sequences.sv"
+  `include "axi4_tc_002_master_sequences.sv"
 
 endpackage : axi4_master_seq_pkg
 

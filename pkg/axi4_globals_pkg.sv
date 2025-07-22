@@ -1,6 +1,9 @@
 `ifndef AXI4_GLOBALS_PKG_INCLUDED_
 `define AXI4_GLOBALS_PKG_INCLUDED_
 
+// Include compile-time configuration defines
+`include "axi4_defines.svh"
+
 //--------------------------------------------------------------------------------------------
 // Package: axi4_globals_pkg
 // Used for storing enums, parameters and defining the structs
@@ -19,12 +22,12 @@ package axi4_globals_pkg;
   parameter bit SLAVE_AGENT_ACTIVE = 1;
 
   //Parameter: NO_OF_MASTERS
-  //Used to set number of masters required
-  parameter int NO_OF_MASTERS = 4;
+  //Used to set number of masters required (Configurable via compile-time defines)
+  parameter int NO_OF_MASTERS = `AXI4_NUM_MASTERS;
 
   //Parameter: NO_OF_SLAVES
-  //Used to set number of slaves required
-  parameter int NO_OF_SLAVES = 4;
+  //Used to set number of slaves required (Configurable via compile-time defines)
+  parameter int NO_OF_SLAVES = `AXI4_NUM_SLAVES;
 
   //Parameter: ADDRESS_WIDTH
   //Used to set the address width to the address bus

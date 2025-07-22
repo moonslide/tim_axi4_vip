@@ -137,6 +137,12 @@ function void axi4_master_driver_proxy::build_phase(uvm_phase phase);
   if(!uvm_config_db #(virtual axi4_master_driver_bfm)::get(this,"","axi4_master_driver_bfm",axi4_master_drv_bfm_h)) begin
     `uvm_fatal("FATAL_MDP_CANNOT_GET_AXI4_MASTER_DRIVER_BFM","cannot get() axi4_master_drv_bfm_h");
   end
+  
+  // Get write_read_mode from config_db if available, default to WRITE_READ_DATA
+  if(!uvm_config_db #(write_read_data_mode_e)::get(this,"","write_read_mode",write_read_mode_h)) begin
+    write_read_mode_h = WRITE_READ_DATA; // Default to mixed mode
+    `uvm_info(get_type_name(),"write_read_mode not found in config_db, defaulting to WRITE_READ_DATA", UVM_MEDIUM);
+  end
 endfunction : build_phase
 
 //--------------------------------------------------------------------------------------------
@@ -575,7 +581,9 @@ task axi4_master_driver_proxy::axi4_read_task();
     axi_read_seq_item_port.get_next_item(req_rd);
     `uvm_info(get_type_name(),$sformatf("READ_TASK:: Before Sending_req_read_packet = \n %s",req_rd.sprint()),UVM_NONE); 
 
-    if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && write_read_mode_h != ONLY_READ_DATA) begin 
+    // Skip SLAVE_MEM_MODE logic for independent read operations
+    // This was causing reads to hang waiting for write addresses in mixed operation tests
+    if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && write_read_mode_h == ONLY_WRITE_DATA) begin 
       wait(wait_for_wr_addr);
       req_rd.araddr = address;
       req_rd.arlen  = length;

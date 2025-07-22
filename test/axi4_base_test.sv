@@ -13,6 +13,10 @@ class axi4_base_test extends uvm_test;
   
   `uvm_component_utils(axi4_base_test)
 
+  // Variable: test_config
+  // Test configuration for dynamic bus matrix mode and interface configuration
+  axi4_test_config test_config;
+
   // Variable: e_cfg_h
   // Declaring environment config handle
   axi4_env_config axi4_env_cfg_h;
@@ -26,10 +30,15 @@ class axi4_base_test extends uvm_test;
   //-------------------------------------------------------
   extern function new(string name = "axi4_base_test", uvm_component parent = null);
   extern virtual function void build_phase(uvm_phase phase);
+  extern virtual function void setup_test_configuration();
   extern virtual function void setup_axi4_env_cfg();
   extern virtual function void setup_axi4_master_agent_cfg();
+  extern virtual function void setup_enhanced_master_agent_cfg();
+  extern virtual function void setup_base_master_agent_cfg();
   extern virtual local function void set_and_display_master_config();
   extern virtual function void setup_axi4_slave_agent_cfg();
+  extern virtual function void setup_enhanced_slave_agent_cfg();
+  extern virtual function void setup_base_slave_agent_cfg();
   extern virtual local function void set_and_display_slave_config();
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
@@ -58,12 +67,30 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
-  // Setup the environemnt cfg 
+  // Setup test configuration based on test name
+  setup_test_configuration();
+  // Setup the environment cfg 
   setup_axi4_env_cfg();
   // Create the environment
   axi4_env_h = axi4_env::type_id::create("axi4_env_h",this);
 endfunction : build_phase
 
+//--------------------------------------------------------------------------------------------
+// Function: setup_test_configuration
+// Setup test configuration based on test name for dynamic bus matrix mode and interface config
+//--------------------------------------------------------------------------------------------
+function void axi4_base_test::setup_test_configuration();
+  test_config = axi4_test_config::type_id::create("test_config");
+  
+  // Configure based on current test name
+  test_config.configure_for_test(get_type_name());
+  
+  // Store in config_db for use by environment and other components
+  uvm_config_db#(axi4_test_config)::set(this, "*", "test_config", test_config);
+  uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "*", "bus_matrix_mode", test_config.bus_matrix_mode);
+  
+  `uvm_info(get_type_name(), $sformatf("Test configuration set: %s", test_config.get_config_summary()), UVM_MEDIUM)
+endfunction : setup_test_configuration
 
 //--------------------------------------------------------------------------------------------
 // Function: setup_axi4_env_cfg
@@ -80,8 +107,12 @@ function void axi4_base_test:: setup_axi4_env_cfg();
   
   axi4_env_cfg_h.has_scoreboard = 1;
   axi4_env_cfg_h.has_virtual_seqr = 1;
-  axi4_env_cfg_h.no_of_masters = NO_OF_MASTERS;
-  axi4_env_cfg_h.no_of_slaves = NO_OF_SLAVES;
+  
+  // Use dynamic configuration from test_config
+  axi4_env_cfg_h.no_of_masters = test_config.num_masters;
+  axi4_env_cfg_h.no_of_slaves = test_config.num_slaves;
+  axi4_env_cfg_h.bus_matrix_mode = test_config.bus_matrix_mode;
+  
   axi4_env_cfg_h.ready_delay_cycles = 100;
 
   // Setup the axi4_master agent cfg 
@@ -105,9 +136,10 @@ endfunction: setup_axi4_env_cfg
 // and store the handle into the config_db
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::setup_axi4_master_agent_cfg();
-  bit [63:0]local_min_address;
-  bit [63:0]local_max_address;
+  // Create master agent configs array based on dynamic configuration
   axi4_env_cfg_h.axi4_master_agent_cfg_h = new[axi4_env_cfg_h.no_of_masters];
+  
+  // Initialize common configuration for all masters
   foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i])begin
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i] =
     axi4_master_agent_config::type_id::create($sformatf("axi4_master_agent_cfg_h[%0d]",i));
@@ -115,47 +147,117 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1; 
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
   end
-
-  // Configure address ranges for each master based on bus matrix configuration
-  // S0: DDR_Memory (0x0000_0100_0000_0000 - 0x0000_0107_FFFF_FFFF) - R/W for all masters
-  // S1: Boot_ROM (0x0000_0000_0000_0000 - 0x0000_0000_0001_FFFF) - R only, no masters have access
-  // S2: Peripheral_Regs (0x0000_0010_0000_0000 - 0x0000_0010_000F_FFFF) - R/W for M0,M1,M2
-  // S3: HW_Fuse_Box (0x0000_0020_0000_0000 - 0x0000_0020_0000_0FFF) - R only for M0,M3
   
-  // Master 0 (CPU_Core_A) - accesses S0, S2, S3(read-only)
-  if (axi4_env_cfg_h.no_of_masters > 0) begin
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(0, 64'h0000_0100_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(1, 64'h0000_0010_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_min_addr_range(2, 64'h0000_0020_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[0].master_max_addr_range(2, 64'h0000_0020_0000_0FFF);
-  end
-  
-  // Master 1 (CPU_Core_B) - accesses S0, S2
-  if (axi4_env_cfg_h.no_of_masters > 1) begin
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_min_addr_range(0, 64'h0000_0100_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_min_addr_range(1, 64'h0000_0010_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[1].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
-  end
-  
-  // Master 2 (DMA_Controller) - accesses S0, S2
-  if (axi4_env_cfg_h.no_of_masters > 2) begin
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_min_addr_range(0, 64'h0000_0100_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_min_addr_range(1, 64'h0000_0010_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[2].master_max_addr_range(1, 64'h0000_0010_000F_FFFF);
-  end
-  
-  // Master 3 (GPU) - accesses S0, S3(read-only)
-  if (axi4_env_cfg_h.no_of_masters > 3) begin
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_min_addr_range(0, 64'h0000_0100_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_min_addr_range(1, 64'h0000_0020_0000_0000);
-    axi4_env_cfg_h.axi4_master_agent_cfg_h[3].master_max_addr_range(1, 64'h0000_0020_0000_0FFF);
-  end
+  // Configure address ranges based on bus matrix mode
+  case(test_config.bus_matrix_mode)
+    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: setup_enhanced_master_agent_cfg();
+    axi4_bus_matrix_ref::BASE_BUS_MATRIX: setup_base_master_agent_cfg();
+    axi4_bus_matrix_ref::NONE: begin
+      // For NONE mode, set very wide address ranges to allow any address
+      for (int i = 0; i < axi4_env_cfg_h.no_of_masters; i++) begin
+        for (int j = 0; j < axi4_env_cfg_h.no_of_slaves; j++) begin
+          axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(j, 64'h0000_0000_0000_0000);
+          axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(j, 64'hFFFF_FFFF_FFFF_FFFF);
+        end
+      end
+      `uvm_info(get_type_name(), "Configured NONE mode master ranges - all addresses allowed", UVM_MEDIUM)
+    end
+  endcase
 endfunction: setup_axi4_master_agent_cfg
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_enhanced_master_agent_cfg
+// Configure master address ranges for 10x10 enhanced bus matrix per claude.md
+//--------------------------------------------------------------------------------------------
+function void axi4_base_test::setup_enhanced_master_agent_cfg();
+  // Configure address ranges per claude.md Enhanced Bus Matrix
+  // S0: DDR Secure Kernel    (0x0000_0008_0000_0000 - 0x0000_0008_3FFF_FFFF) 1GB
+  // S1: DDR Non-Secure User  (0x0000_0008_4000_0000 - 0x0000_0008_7FFF_FFFF) 1GB
+  // S2: DDR Shared Buffer    (0x0000_0008_8000_0000 - 0x0000_0008_BFFF_FFFF) 1GB
+  // S3: Illegal Address Hole (0x0000_0008_C000_0000 - 0x0000_0008_FFFF_FFFF) 1GB
+  // S4: XOM Instruction-Only (0x0000_0009_0000_0000 - 0x0000_0009_3FFF_FFFF) 1GB
+  // S5: RO Peripheral        (0x0000_000A_0000_0000 - 0x0000_000A_0000_FFFF) 64KB
+  // S6: Privileged-Only      (0x0000_000A_0001_0000 - 0x0000_000A_0001_FFFF) 64KB
+  // S7: Secure-Only          (0x0000_000A_0002_0000 - 0x0000_000A_0002_FFFF) 64KB
+  // S8: Scratchpad           (0x0000_000A_0003_0000 - 0x0000_000A_0003_FFFF) 64KB
+  // S9: Attribute Monitor    (0x0000_000A_0004_0000 - 0x0000_000A_0004_FFFF) 64KB
+
+  for (int i = 0; i < axi4_env_cfg_h.no_of_masters; i++) begin
+    // S0: DDR Secure Kernel
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(0, 64'h0000_0008_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(0, 64'h0000_0008_3FFF_FFFF);
+    
+    // S1: DDR Non-Secure User
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(1, 64'h0000_0008_4000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(1, 64'h0000_0008_7FFF_FFFF);
+    
+    // S2: DDR Shared Buffer
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(2, 64'h0000_0008_8000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(2, 64'h0000_0008_BFFF_FFFF);
+    
+    // S3: Illegal Address Hole
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(3, 64'h0000_0008_C000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(3, 64'h0000_0008_FFFF_FFFF);
+    
+    // S4: XOM Instruction-Only
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(4, 64'h0000_0009_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(4, 64'h0000_0009_3FFF_FFFF);
+    
+    // S5: RO Peripheral
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(5, 64'h0000_000A_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(5, 64'h0000_000A_0000_FFFF);
+    
+    // S6: Privileged-Only
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(6, 64'h0000_000A_0001_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(6, 64'h0000_000A_0001_FFFF);
+    
+    // S7: Secure-Only
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(7, 64'h0000_000A_0002_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(7, 64'h0000_000A_0002_FFFF);
+    
+    // S8: Scratchpad
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(8, 64'h0000_000A_0003_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(8, 64'h0000_000A_0003_FFFF);
+    
+    // S9: Attribute Monitor
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(9, 64'h0000_000A_0004_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(9, 64'h0000_000A_0004_FFFF);
+  end
+  
+  `uvm_info(get_type_name(), "Configured Enhanced Bus Matrix master address ranges per claude.md", UVM_MEDIUM)
+endfunction: setup_enhanced_master_agent_cfg
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_base_master_agent_cfg
+// Configure master address ranges for 4x4 base bus matrix per AXI_MATRIX.txt
+//--------------------------------------------------------------------------------------------
+function void axi4_base_test::setup_base_master_agent_cfg();
+  // Configure address ranges per AXI_MATRIX.txt Base Bus Matrix
+  // S0: DDR_Memory      (0x0000_0100_0000_0000 - 0x0000_0107_FFFF_FFFF) 32GB
+  // S1: Boot_ROM        (0x0000_0000_0000_0000 - 0x0000_0000_0001_FFFF) 128KB
+  // S2: Peripheral_Regs (0x0000_0010_0000_0000 - 0x0000_0010_000F_FFFF) 1MB
+  // S3: HW_Fuse_Box     (0x0000_0020_0000_0000 - 0x0000_0020_0000_0FFF) 4KB
+
+  for (int i = 0; i < axi4_env_cfg_h.no_of_masters; i++) begin
+    // S0: DDR_Memory
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(0, 64'h0000_0100_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(0, 64'h0000_0107_FFFF_FFFF);
+    
+    // S1: Boot_ROM
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(1, 64'h0000_0000_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(1, 64'h0000_0000_0001_FFFF);
+    
+    // S2: Peripheral_Regs
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(2, 64'h0000_0010_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(2, 64'h0000_0010_000F_FFFF);
+    
+    // S3: HW_Fuse_Box
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_min_addr_range(3, 64'h0000_0020_0000_0000);
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_max_addr_range(3, 64'h0000_0020_0000_0FFF);
+  end
+  
+  `uvm_info(get_type_name(), "Configured Base Bus Matrix master address ranges per AXI_MATRIX.txt", UVM_MEDIUM)
+endfunction: setup_base_master_agent_cfg
 
 //--------------------------------------------------------------------------------------------
 // Using this function for setting the master config to database
@@ -175,38 +277,19 @@ endfunction: set_and_display_master_config
 // and store the handle into the config_db
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::setup_axi4_slave_agent_cfg();
+  // Create slave agent configs array based on dynamic configuration
   axi4_env_cfg_h.axi4_slave_agent_cfg_h = new[axi4_env_cfg_h.no_of_slaves];
+  
+  // Initialize common configuration for all slaves
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])begin
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i] =
     axi4_slave_agent_config::type_id::create($sformatf("axi4_slave_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_id = i;
-    
-    // Configure slave address ranges based on bus matrix configuration
-    case(i)
-      0: begin // S0: DDR_Memory
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0100_0000_0000;
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0107_FFFF_FFFF;
-      end
-      1: begin // S1: Boot_ROM (read-only)
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0000_0001_FFFF;
-      end
-      2: begin // S2: Peripheral_Regs
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0010_0000_0000;
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0010_000F_FFFF;
-      end
-      3: begin // S3: HW_Fuse_Box (read-only)
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0020_0000_0000;
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0020_0000_0FFF;
-      end
-    endcase
-    
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 3;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
 
-    
     if(SLAVE_AGENT_ACTIVE === 1) begin
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active = uvm_active_passive_enum'(UVM_ACTIVE);
     end
@@ -214,9 +297,114 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active = uvm_active_passive_enum'(UVM_PASSIVE);
     end 
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].has_coverage = 1; 
-    
   end
+  
+  // Configure address ranges based on bus matrix mode
+  case(test_config.bus_matrix_mode)
+    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: setup_enhanced_slave_agent_cfg();
+    axi4_bus_matrix_ref::BASE_BUS_MATRIX: setup_base_slave_agent_cfg();
+    axi4_bus_matrix_ref::NONE: begin 
+      // For NONE mode, set very wide address ranges to accept any address
+      foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'hFFFF_FFFF_FFFF_FFFF;
+      end
+      `uvm_info(get_type_name(), "Configured NONE mode - all addresses accepted by all slaves", UVM_MEDIUM)
+    end
+  endcase
 endfunction: setup_axi4_slave_agent_cfg
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_enhanced_slave_agent_cfg
+// Configure slave address ranges for 10x10 enhanced bus matrix per claude.md
+//--------------------------------------------------------------------------------------------
+function void axi4_base_test::setup_enhanced_slave_agent_cfg();
+  // Configure address ranges per claude.md Enhanced Bus Matrix
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    case(i)
+      0: begin // S0: DDR Secure Kernel
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0008_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0008_3FFF_FFFF;
+      end
+      1: begin // S1: DDR Non-Secure User
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0008_4000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0008_7FFF_FFFF;
+      end
+      2: begin // S2: DDR Shared Buffer
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0008_8000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0008_BFFF_FFFF;
+      end
+      3: begin // S3: Illegal Address Hole
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0008_C000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0008_FFFF_FFFF;
+      end
+      4: begin // S4: XOM Instruction-Only
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0009_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0009_3FFF_FFFF;
+      end
+      5: begin // S5: RO Peripheral
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_000A_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_000A_0000_FFFF;
+      end
+      6: begin // S6: Privileged-Only
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_000A_0001_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_000A_0001_FFFF;
+      end
+      7: begin // S7: Secure-Only
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_000A_0002_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_000A_0002_FFFF;
+      end
+      8: begin // S8: Scratchpad
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_000A_0003_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_000A_0003_FFFF;
+      end
+      9: begin // S9: Attribute Monitor
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_000A_0004_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_000A_0004_FFFF;
+      end
+      default: begin // Default case for safety
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'hFFFF_FFFF;
+      end
+    endcase
+  end
+  
+  `uvm_info(get_type_name(), "Configured Enhanced Bus Matrix slave address ranges per claude.md", UVM_MEDIUM)
+endfunction: setup_enhanced_slave_agent_cfg
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_base_slave_agent_cfg  
+// Configure slave address ranges for 4x4 base bus matrix per AXI_MATRIX.txt
+//--------------------------------------------------------------------------------------------
+function void axi4_base_test::setup_base_slave_agent_cfg();
+  // Configure address ranges per AXI_MATRIX.txt Base Bus Matrix
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    case(i)
+      0: begin // S0: DDR_Memory
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0100_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0107_FFFF_FFFF;
+      end
+      1: begin // S1: Boot_ROM
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0000_0001_FFFF;
+      end
+      2: begin // S2: Peripheral_Regs
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0010_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0010_000F_FFFF;
+      end
+      3: begin // S3: HW_Fuse_Box
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0020_0000_0000;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0020_0000_0FFF;
+      end
+      default: begin // Default case for safety
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'hFFFF_FFFF;
+      end
+    endcase
+  end
+  
+  `uvm_info(get_type_name(), "Configured Base Bus Matrix slave address ranges per AXI_MATRIX.txt", UVM_MEDIUM)
+endfunction: setup_base_slave_agent_cfg
 
 //--------------------------------------------------------------------------------------------
 // Using this function for setting the slave config to database

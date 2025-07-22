@@ -52,6 +52,19 @@ class axi4_env_config extends uvm_object;
   // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
   bit error_inject = 0;
 
+  // Variable: axprot_chk_cfg
+  // Enable AxPROT attribute checking and monitoring (Claude.md requirement)
+  bit axprot_chk_cfg = 1;
+
+  // Variable: axcache_chk_cfg  
+  // Enable AxCACHE attribute checking and monitoring (Claude.md requirement)
+  bit axcache_chk_cfg = 1;
+
+  // Variable: bus_matrix_mode
+  // Bus matrix reference model mode: BASE_BUS_MATRIX (4x4), BUS_ENHANCED_MATRIX (10x10), NONE
+  // Import the enum type from bus matrix package
+  axi4_bus_matrix_ref::bus_matrix_mode_e bus_matrix_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+
 //-------------------------------------------------------
 // Externally defined Tasks and Functions
 //-------------------------------------------------------
@@ -87,6 +100,9 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_field ("wstrb_compare_enable",wstrb_compare_enable,1, UVM_DEC);
   printer.print_field ("ready_delay_cycles",ready_delay_cycles,32, UVM_DEC);
   printer.print_field ("error_inject",error_inject,1, UVM_DEC);
+  printer.print_field ("axprot_chk_cfg",axprot_chk_cfg,1, UVM_DEC);
+  printer.print_field ("axcache_chk_cfg",axcache_chk_cfg,1, UVM_DEC);
+  printer.print_string ("bus_matrix_mode",bus_matrix_mode.name());
 
 endfunction : do_print
 

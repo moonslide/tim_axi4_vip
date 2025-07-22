@@ -16,11 +16,15 @@ package axi4_test_pkg;
   import axi4_globals_pkg::*;
   import axi4_master_pkg::*;
   import axi4_slave_pkg::*;
+  import axi4_bus_matrix_pkg::*;
   import axi4_env_pkg::*;
   import axi4_master_seq_pkg::*;
   import axi4_slave_seq_pkg::*;
   import axi4_virtual_seq_pkg::*;
 
+  //including test configuration class
+  `include "axi4_test_config.sv"
+  
   //including base_test for testing
   `include "axi4_base_test.sv"
   `include "assertion_base_test.sv"
@@ -141,6 +145,20 @@ package axi4_test_pkg;
   `include "axi4_tc_056_exclusive_write_fail_test.sv"
   `include "axi4_tc_057_exclusive_read_success_test.sv"
   `include "axi4_tc_058_exclusive_read_fail_test.sv"
+  
+  // Enhanced Bus Matrix Test for claude.md compliance
+  `include "axi4_enhanced_bus_matrix_test.sv"
+
+  // Claude.md Test Cases
+  `include "axi4_tc_001_concurrent_reads_test.sv"
+  `include "axi4_tc_002_concurrent_writes_raw_test.sv"
+  `include "axi4_tc_003_sequential_mixed_ops_test.sv"
+  `include "axi4_tc_004_concurrent_error_stress_test.sv"
+  `include "axi4_tc_005_exhaustive_random_reads_test.sv"
+  
+  // Example tests for different bus matrix modes
+  `include "axi4_base_matrix_test.sv"
+  `include "axi4_none_matrix_test.sv"
 
 endpackage : axi4_test_pkg
 
