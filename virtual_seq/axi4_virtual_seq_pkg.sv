@@ -140,6 +140,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_tc_003_sequential_mixed_ops_virtual_seq.sv"
   `include "axi4_tc_004_concurrent_error_stress_virtual_seq.sv"
   `include "axi4_tc_005_exhaustive_random_reads_virtual_seq.sv"
+  `include "axi4_enhanced_bus_matrix_virtual_seq.sv"
 
 endpackage : axi4_virtual_seq_pkg
 

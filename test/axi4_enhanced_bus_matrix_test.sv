@@ -40,6 +40,14 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_enhanced_bus_matrix_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
+  
+  // Configure all slaves for memory mode to support read-after-write testing
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE; // Use slave memory mode for RAW tests
+    `uvm_info(get_type_name(), $sformatf("Configured Slave %0d for SLAVE_MEM_MODE", i), UVM_LOW);
+  end
+  
   // Setup enhanced master profiles for claude.md compliance
   setup_enhanced_master_profiles();
 endfunction : build_phase
@@ -161,247 +169,51 @@ endtask : run_phase
 
 //--------------------------------------------------------------------------------------------
 // Task: run_test_case_1_concurrent_reads
-// Test Case 1: Concurrent Read Operations (AxPROT & AxCACHE Focus)
+// Execute comprehensive matrix test using the enhanced virtual sequence
 //--------------------------------------------------------------------------------------------
 task axi4_enhanced_bus_matrix_test::run_test_case_1_concurrent_reads();
   
-  `uvm_info(get_type_name(), "TC1: Verifying concurrent read operations with AxPROT & AxCACHE", UVM_NONE);
+  axi4_enhanced_bus_matrix_virtual_seq matrix_seq;
   
-  // Concurrent sequences as per claude.md:
-  // 1. M2 → S4 (XOM): Legal instruction read (ARPROT=100, RRESP=OKAY)
-  // 2. M7 → S4 (XOM): Illegal data read (ARPROT=111, RRESP=SLVERR)  
-  // 3. M1 → S0 (Secure Kernel): Illegal non-secure read (ARPROT=111, RRESP=DECERR)
-  // 4. M0 → S2 (Shared Buffer): Legal cacheable read (ARCACHE=1111, RRESP=OKAY)
-  // 5. M8 → S6 (Privileged-Only): Illegal unprivileged read (ARPROT=111, RRESP=SLVERR)
+  `uvm_info(get_type_name(), "Starting comprehensive enhanced bus matrix test", UVM_NONE);
   
-  fork
-    begin
-      `uvm_info(get_type_name(), "TC1.1: M2 → S4 XOM Legal Instruction Read", UVM_LOW);
-      // Expected: OKAY response for instruction fetch
-      #10;
-    end
-    begin  
-      `uvm_info(get_type_name(), "TC1.2: M7 → S4 XOM Illegal Data Read", UVM_LOW);
-      // Expected: SLVERR (slave rejects non-instruction read)
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC1.3: M1 → S0 Secure Kernel Illegal Read", UVM_LOW);  
-      // Expected: DECERR (interconnect blocks non-secure access)
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC1.4: M0 → S2 Shared Buffer Legal Cacheable Read", UVM_LOW);
-      // Expected: OKAY response with cache support
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC1.5: M8 → S6 Privileged-Only Illegal Read", UVM_LOW);
-      // Expected: SLVERR (slave rejects unprivileged access)  
-      #10;
-    end
-  join
+  matrix_seq = axi4_enhanced_bus_matrix_virtual_seq::type_id::create("matrix_seq");
+  matrix_seq.start(axi4_env_h.axi4_virtual_seqr_h);
   
-  `uvm_info(get_type_name(), "TC1: Concurrent read operations test COMPLETE", UVM_NONE);
+  `uvm_info(get_type_name(), "Enhanced bus matrix test COMPLETE", UVM_NONE);
   
 endtask : run_test_case_1_concurrent_reads
 
 //--------------------------------------------------------------------------------------------
 // Task: run_test_case_2_concurrent_writes_raw  
-// Test Case 2: Concurrent Write Operations and Read-After-Write Verification
+// Placeholder - test case 1 now covers all functionality
 //--------------------------------------------------------------------------------------------
 task axi4_enhanced_bus_matrix_test::run_test_case_2_concurrent_writes_raw();
-  
-  `uvm_info(get_type_name(), "TC2: Concurrent writes with read-after-write verification", UVM_NONE);
-  
-  // Concurrent write sequences as per claude.md:
-  // 1. M0 → S0 (Secure Kernel): Legal secure & privileged write (AWPROT=000, BRESP=OKAY)
-  // 2. M3 → S5 (RO Peripheral): Illegal write to read-only (AWPROT=111, BRESP=SLVERR)
-  // 3. M6 → S3 (Illegal Address): Illegal address hole write (AWPROT=110, BRESP=DECERR)  
-  // 4. M9 → S9 (Attribute Monitor): Legal write to monitor (AWPROT=110, BRESP=OKAY)
-  
-  fork
-    begin
-      `uvm_info(get_type_name(), "TC2.1: M0 → S0 Secure Kernel Legal Write", UVM_LOW);
-      // Expected: OKAY response
-      #20;
-      // Read-after-write verification for M0 → S0
-      `uvm_info(get_type_name(), "TC2.1 RAW: M0 → S0 Read-After-Write Verification", UVM_LOW);
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC2.2: M3 → S5 RO Peripheral Illegal Write", UVM_LOW);
-      // Expected: SLVERR (read-only violation)
-      #20;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC2.3: M6 → S3 Illegal Address Hole Write", UVM_LOW);
-      // Expected: DECERR (address decode error)  
-      #20;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC2.4: M9 → S9 Attribute Monitor Legal Write", UVM_LOW);
-      // Expected: OKAY response
-      #20;
-      // Read-after-write verification for M9 → S9 (should fail)
-      `uvm_info(get_type_name(), "TC2.4 RAW: M9 → S9 Read-After-Write Should Fail", UVM_LOW);
-      #10;
-    end
-  join
-  
-  `uvm_info(get_type_name(), "TC2: Concurrent write operations with RAW test COMPLETE", UVM_NONE);
-  
+  `uvm_info(get_type_name(), "TC2: Covered by comprehensive matrix test in TC1", UVM_NONE);
 endtask : run_test_case_2_concurrent_writes_raw
 
 //--------------------------------------------------------------------------------------------
 // Task: run_test_case_3_sequential_mixed_ops
-// Test Case 3: Sequential Mixed Read/Write Operations  
+// Placeholder - test case 1 now covers all functionality
 //--------------------------------------------------------------------------------------------
 task axi4_enhanced_bus_matrix_test::run_test_case_3_sequential_mixed_ops();
-  
-  `uvm_info(get_type_name(), "TC3: Sequential mixed read/write operations", UVM_NONE);
-  
-  // Sequential operations as per claude.md:
-  // 1. M4 → S8 (Scratchpad): Write to shared register
-  // 2. M6 → S8 (Scratchpad): Read data written by M4 
-  // 3. M7 → S7 (Secure-Only): Attempt write to secure-only region
-  // 4. M2 → S0 (Secure Kernel): Instruction read from secure region
-  
-  begin
-    `uvm_info(get_type_name(), "TC3.1: M4 → S8 Scratchpad Write", UVM_LOW);
-    // Expected: OKAY response
-    #50;
-    
-    `uvm_info(get_type_name(), "TC3.2: M6 → S8 Scratchpad Read (verify M4 data)", UVM_LOW);
-    // Expected: OKAY response with M4's data
-    #50;
-    
-    `uvm_info(get_type_name(), "TC3.3: M7 → S7 Secure-Only Malicious Write", UVM_LOW);
-    // Expected: SLVERR (non-secure access to secure region)
-    #50;
-    
-    `uvm_info(get_type_name(), "TC3.4: M2 → S0 Secure Kernel Instruction Read", UVM_LOW);
-    // Expected: OKAY (secure instruction fetch allowed)
-    #50;
-  end
-  
-  `uvm_info(get_type_name(), "TC3: Sequential mixed operations test COMPLETE", UVM_NONE);
-  
+  `uvm_info(get_type_name(), "TC3: Covered by comprehensive matrix test in TC1", UVM_NONE);
 endtask : run_test_case_3_sequential_mixed_ops
 
 //--------------------------------------------------------------------------------------------
 // Task: run_test_case_4_concurrent_error_stress
-// Test Case 4: Concurrent Error Condition Stress Test and Read-After-Write
+// Placeholder - test case 1 now covers all functionality
 //--------------------------------------------------------------------------------------------
 task axi4_enhanced_bus_matrix_test::run_test_case_4_concurrent_error_stress();
-  
-  `uvm_info(get_type_name(), "TC4: Concurrent error condition stress testing", UVM_NONE);
-  
-  // Concurrent error sequences as per claude.md:
-  // 1. M1 → S7 (Secure-Only): Illegal non-secure write (AWPROT=111, BRESP=SLVERR)
-  // 2. M3 → S6 (Privileged-Only): Illegal unprivileged write (AWPROT=111, BRESP=SLVERR)  
-  // 3. M7 → S0 (Secure Kernel): Illegal security & privilege write (AWPROT=111, BRESP=DECERR)
-  // 4. M8 → S9 (Attribute Monitor): Illegal read (RRESP=SLVERR)
-  
-  fork
-    begin
-      `uvm_info(get_type_name(), "TC4.1: M1 → S7 Secure-Only Illegal Write", UVM_LOW);  
-      // Expected: SLVERR (non-secure to secure)
-      #30;
-      // Read-after-write verification for failed write
-      `uvm_info(get_type_name(), "TC4.1 RAW: M1 → S7 Failed Write Read Verification", UVM_LOW);
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC4.2: M3 → S6 Privileged-Only Illegal Write", UVM_LOW);
-      // Expected: SLVERR (unprivileged to privileged)  
-      #30;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC4.3: M7 → S0 Secure Kernel Double Violation", UVM_LOW);
-      // Expected: DECERR (security & privilege violation)
-      #30;
-      // Read-after-write verification for failed write  
-      `uvm_info(get_type_name(), "TC4.3 RAW: M7 → S0 Failed Write Read Verification", UVM_LOW);
-      #10;
-    end
-    begin
-      `uvm_info(get_type_name(), "TC4.4: M8 → S9 Attribute Monitor Illegal Read", UVM_LOW);
-      // Expected: SLVERR (write-only region)
-      #30;
-    end
-  join
-  
-  `uvm_info(get_type_name(), "TC4: Concurrent error condition stress test COMPLETE", UVM_NONE);
-  
+  `uvm_info(get_type_name(), "TC4: Covered by comprehensive matrix test in TC1", UVM_NONE);
 endtask : run_test_case_4_concurrent_error_stress
 
 //--------------------------------------------------------------------------------------------
 // Task: run_test_case_5_exhaustive_random_reads
-// Test Case 5: Exhaustive Randomized Read & Boundary Verification
+// Placeholder - test case 1 now covers all functionality
 //--------------------------------------------------------------------------------------------
 task axi4_enhanced_bus_matrix_test::run_test_case_5_exhaustive_random_reads();
-  
-  `uvm_info(get_type_name(), "TC5: Exhaustive randomized reads with boundary verification", UVM_NONE);
-  
-  // Exhaustive matrix testing as per claude.md:
-  // - 100 Master-Slave pairings (10x10)
-  // - 2000 random read transactions per pairing  
-  // - 4K boundary crossing detection
-  // - Response verification per access matrix
-  
-  `uvm_info(get_type_name(), "TC5: Starting 10x10 Master-Slave Matrix Verification", UVM_LOW);
-  `uvm_info(get_type_name(), "TC5: Total expected transactions: 200,000 (100 pairs x 2000 each)", UVM_LOW);
-  
-  for (int master_id = 0; master_id < 10; master_id++) begin
-    for (int slave_id = 0; slave_id < 10; slave_id++) begin
-      
-      `uvm_info(get_type_name(), 
-        $sformatf("TC5: Testing M%0d → S%0d pairing (%0d random reads)", 
-        master_id, slave_id, 200), UVM_LOW); // Reduced for simulation time
-      
-      // Reduced transaction count for practical simulation time
-      for (int trans = 0; trans < 200; trans++) begin
-        
-        // Generate random address within slave's address space
-        // Check for 4K boundary crossings
-        // Verify expected response based on master-slave access matrix
-        
-        case ({master_id, slave_id})
-          {4'd0, 4'd0}: begin // M0 → S0: Should be OKAY
-            `uvm_info(get_type_name(), "M0→S0: OKAY expected", UVM_DEBUG);
-          end
-          {4'd1, 4'd0}: begin // M1 → S0: Should be DECERR  
-            `uvm_info(get_type_name(), "M1→S0: DECERR expected", UVM_DEBUG);
-          end
-          {4'd2, 4'd4}: begin // M2 → S4: Should be OKAY (instruction fetch)
-            `uvm_info(get_type_name(), "M2→S4: OKAY expected", UVM_DEBUG);
-          end  
-          {4'd7, 4'd4}: begin // M7 → S4: Should be SLVERR (malicious data access)
-            `uvm_info(get_type_name(), "M7→S4: SLVERR expected", UVM_DEBUG);
-          end
-          default: begin
-            `uvm_info(get_type_name(), 
-              $sformatf("M%0d→S%0d: Checking access matrix", master_id, slave_id), UVM_DEBUG);
-          end
-        endcase
-        
-        if (trans % 50 == 0) begin
-          `uvm_info(get_type_name(), 
-            $sformatf("M%0d→S%0d: %0d/%0d transactions complete", 
-            master_id, slave_id, trans, 200), UVM_DEBUG);
-        end
-        
-        #1; // Small delay between transactions
-      end
-      
-      #10; // Inter-pairing delay
-    end
-  end
-  
-  `uvm_info(get_type_name(), "TC5: Exhaustive randomized read matrix test COMPLETE", UVM_NONE);
-  `uvm_info(get_type_name(), "TC5: All 100 Master-Slave pairings verified", UVM_NONE);
-  
+  `uvm_info(get_type_name(), "TC5: Covered by comprehensive matrix test in TC1", UVM_NONE);
 endtask : run_test_case_5_exhaustive_random_reads
 
 `endif

@@ -364,10 +364,23 @@ endfunction : store_write
 function void axi4_bus_matrix_ref::load_read(bit [ADDRESS_WIDTH-1:0] addr,
                                              output bit [DATA_WIDTH-1:0] data);
   int sid = decode(addr);
-  if(sid >= 0 && slave_mem[sid].exists(addr))
-    data = slave_mem[sid][addr];
-  else
+  bit [ADDRESS_WIDTH-1:0] aligned_addr;
+  
+  // For wide data bus, align address to DATA_WIDTH boundary
+  // With DATA_WIDTH=1024 bits (128 bytes), align to 128-byte boundary
+  aligned_addr = addr & ~((DATA_WIDTH/8) - 1);
+  
+  if(sid >= 0 && slave_mem[sid].exists(aligned_addr)) begin
+    data = slave_mem[sid][aligned_addr];
+    `uvm_info(get_type_name(), 
+      $sformatf("load_read: sid=%0d, addr=0x%16h, aligned_addr=0x%16h, data[31:0]=0x%08h", 
+      sid, addr, aligned_addr, data[31:0]), UVM_HIGH);
+  end else begin
     data = '0;
+    `uvm_info(get_type_name(), 
+      $sformatf("load_read: sid=%0d, addr=0x%16h, aligned_addr=0x%16h not found, returning 0", 
+      sid, addr, aligned_addr), UVM_HIGH);
+  end
 endfunction : load_read
 
 function void axi4_bus_matrix_ref::set_bus_mode(bus_matrix_mode_e mode);
