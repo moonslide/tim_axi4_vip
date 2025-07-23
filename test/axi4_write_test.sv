@@ -19,7 +19,7 @@ class axi4_write_test extends axi4_base_test;
   extern function new(string name = "axi4_write_test", uvm_component parent = null);
 
   
-  extern function void setup_axi4_env_cfg();
+  extern virtual function void setup_axi4_env_cfg();
   extern virtual task run_phase(uvm_phase phase);
 
 

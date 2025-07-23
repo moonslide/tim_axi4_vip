@@ -16,6 +16,7 @@ class axi4_read_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_read_test", uvm_component parent = null);
+  extern virtual function void setup_axi4_env_cfg();
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_read_test
@@ -31,6 +32,19 @@ function axi4_read_test::new(string name = "axi4_read_test",
                                  uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_axi4_env_cfg
+// Configure environment for read-only test
+//--------------------------------------------------------------------------------------------
+function void axi4_read_test::setup_axi4_env_cfg();
+  super.setup_axi4_env_cfg();
+  axi4_env_cfg_h.write_read_mode_h = ONLY_READ_DATA;
+  
+  // For read test, slaves must remain ACTIVE to provide read responses
+  // The ONLY_READ_DATA mode will prevent write channel comparisons in scoreboard
+  `uvm_info(get_type_name(), "Configured for ONLY_READ_DATA mode", UVM_MEDIUM)
+endfunction : setup_axi4_env_cfg
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase
