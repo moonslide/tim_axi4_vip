@@ -182,16 +182,32 @@ function void axi4_env::connect_phase(uvm_phase phase);
       axi4_virtual_seqr_h.axi4_master_read_seqr_h_all[i]  = axi4_master_agent_h[i].axi4_master_read_seqr_h;
     end
     foreach(axi4_slave_agent_h[i]) begin
-      axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i] = axi4_slave_agent_h[i].axi4_slave_write_seqr_h;
-      axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[i]  = axi4_slave_agent_h[i].axi4_slave_read_seqr_h;
+      // Only connect sequencers if agent is active
+      if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) begin
+        axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i] = axi4_slave_agent_h[i].axi4_slave_write_seqr_h;
+        axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[i]  = axi4_slave_agent_h[i].axi4_slave_read_seqr_h;
+      end else begin
+        axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i] = null;
+        axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[i]  = null;
+      end
     end
     if(axi4_env_cfg_h.no_of_masters > 0) begin
       axi4_virtual_seqr_h.axi4_master_write_seqr_h = axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0];
       axi4_virtual_seqr_h.axi4_master_read_seqr_h  = axi4_virtual_seqr_h.axi4_master_read_seqr_h_all[0];
     end
     if(axi4_env_cfg_h.no_of_slaves > 0) begin
-      axi4_virtual_seqr_h.axi4_slave_write_seqr_h = axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[0];
-      axi4_virtual_seqr_h.axi4_slave_read_seqr_h  = axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[0];
+      // Find first active slave for default sequencer assignment
+      foreach(axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i]) begin
+        if(axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i] != null) begin
+          axi4_virtual_seqr_h.axi4_slave_write_seqr_h = axi4_virtual_seqr_h.axi4_slave_write_seqr_h_all[i];
+          axi4_virtual_seqr_h.axi4_slave_read_seqr_h  = axi4_virtual_seqr_h.axi4_slave_read_seqr_h_all[i];
+          break;
+        end
+      end
+      // If all slaves are passive, set to null
+      if(axi4_virtual_seqr_h.axi4_slave_write_seqr_h == null) begin
+        `uvm_info(get_type_name(), "All slaves are PASSIVE - no slave sequencers available", UVM_MEDIUM)
+      end
     end
   end
   
@@ -221,7 +237,10 @@ function void axi4_env::connect_phase(uvm_phase phase);
       axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_address_analysis_fifo.analysis_export);
       axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_data_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_data_analysis_fifo.analysis_export);
     end
-    axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
+    // Only set driver proxy configuration if agent is active
+    if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) begin
+      axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
+    end
   end
   
   // Set scoreboard configuration only if scoreboard is enabled

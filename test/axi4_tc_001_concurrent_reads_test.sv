@@ -17,6 +17,7 @@ class axi4_tc_001_concurrent_reads_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_tc_001_concurrent_reads_test", uvm_component parent = null);
+  extern virtual function void setup_axi4_slave_agent_cfg();
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_tc_001_concurrent_reads_test
@@ -27,6 +28,22 @@ endclass : axi4_tc_001_concurrent_reads_test
 function axi4_tc_001_concurrent_reads_test::new(string name = "axi4_tc_001_concurrent_reads_test", uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: setup_axi4_slave_agent_cfg
+// Override to configure slaves with SLAVE_MEM_MODE for consistent responses
+//--------------------------------------------------------------------------------------------
+function void axi4_tc_001_concurrent_reads_test::setup_axi4_slave_agent_cfg();
+  // Call parent implementation first
+  super.setup_axi4_slave_agent_cfg();
+  
+  // Configure all slaves to use SLAVE_MEM_MODE
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+    `uvm_info(get_type_name(), $sformatf("TC001: Configured slave[%0d] with SLAVE_MEM_MODE", i), UVM_MEDIUM);
+  end
+endfunction : setup_axi4_slave_agent_cfg
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase

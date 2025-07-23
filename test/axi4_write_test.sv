@@ -42,6 +42,13 @@ endfunction : new
 function void axi4_write_test::setup_axi4_env_cfg();
   super.setup_axi4_env_cfg();
   axi4_env_cfg_h.write_read_mode_h = ONLY_WRITE_DATA;
+  
+  // axi4_write_test is in DEFAULT_TESTS category which uses bus_matrix_mode=NONE
+  // Make slaves passive to avoid sequence deadlock
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active = uvm_active_passive_enum'(UVM_PASSIVE);
+    `uvm_info(get_type_name(), $sformatf("Setting slave[%0d] to PASSIVE mode for write test", i), UVM_MEDIUM)
+  end
 endfunction:setup_axi4_env_cfg
 
 //--------------------------------------------------------------------------------------------

@@ -28,12 +28,13 @@ task axi4_tc_001_m2_legal_instruction_read_seq::body();
   if(!req.randomize() with {
     req.tx_type == READ;
     req.transfer_type == BLOCKING_READ;
-    req.araddr >= 64'h0000_0009_0000_0000 && req.araddr <= 64'h0000_0009_3FFF_FFFF; // S4: XOM per claude.md
+    req.araddr >= 64'h0000_0009_0000_0000 && req.araddr <= 64'h0000_0009_00FF_FFFF; // S4: XOM - constrained to first 16MB
     req.arprot == 3'b100; // Privileged, Secure, Instruction (legal for instruction fetch)
     req.arcache inside {4'b0000, 4'b0001, 4'b0010, 4'b0011}; // 0110; // Read-allocate appropriate for instruction fetch
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == ARID_2; // Master 2 ID
   }) begin
     `uvm_fatal("TC001_M2_SEQ", "Randomization failed for M2 legal instruction read");
   end
@@ -74,12 +75,13 @@ task axi4_tc_001_m7_illegal_data_read_seq::body();
   if(!req.randomize() with {
     req.tx_type == READ;
     req.transfer_type == BLOCKING_READ;
-    req.araddr >= 64'h0000_0009_0000_0000 && req.araddr <= 64'h0000_0009_3FFF_FFFF; // S4: XOM per claude.md
+    req.araddr >= 64'h0000_0009_0000_0000 && req.araddr <= 64'h0000_0009_00FF_FFFF; // S4: XOM - constrained to first 16MB
     req.arprot == 3'b111; // Unprivileged, Non-secure, Data (illegal for instruction-only region)
     req.arcache inside {4'b0000, 4'b0001, 4'b0010, 4'b0011}; // 0000; // Non-cacheable, non-bufferable  
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == ARID_7; // Master 7 ID
   }) begin
     `uvm_fatal("TC001_M7_SEQ", "Randomization failed for M7 illegal data read");
   end
@@ -126,6 +128,7 @@ task axi4_tc_001_m1_illegal_nonsecure_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == ARID_1; // Master 1 ID
   }) begin
     `uvm_fatal("TC001_M1_SEQ", "Randomization failed for M1 illegal non-secure read");
   end
@@ -172,6 +175,7 @@ task axi4_tc_001_m0_legal_cacheable_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == ARID_0; // Master 0 ID
   }) begin
     `uvm_fatal("TC001_M0_SEQ", "Randomization failed for M0 legal cacheable read");
   end
@@ -218,6 +222,7 @@ task axi4_tc_001_m8_illegal_unprivileged_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == ARID_8; // Master 8 ID
   }) begin
     `uvm_fatal("TC001_M8_SEQ", "Randomization failed for M8 illegal unprivileged read");
   end

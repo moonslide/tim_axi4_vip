@@ -11,7 +11,7 @@ FSDB_DUMP ?= 0
 COVERAGE ?= 0
 COV_DIR ?= $(test).vdb
 COMMAND_ADD ?=
-CLEANUP_DELAY ?= 15
+CLEANUP_DELAY ?= 5
 
 # Use standard VCS filenames - folder isolation handles conflicts
 SIMV_NAME ?= simv
