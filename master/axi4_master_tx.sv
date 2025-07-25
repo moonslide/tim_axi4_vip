@@ -335,6 +335,16 @@ class axi4_master_tx extends uvm_sequence_item;
   //Constraint : aruser_c1
   //Adding constraint to set aruser to 0 by default for consistent master-slave comparison
   constraint aruser_c1 { soft aruser == 1'b0;}
+  
+  //Constraint : awprot_c1
+  //Adding constraint to set awprot to unprivileged, non-secure, data access by default
+  //This prevents random privilege escalation issues in tests
+  constraint awprot_c1 { soft awprot == WRITE_NORMAL_NONSECURE_DATA;}
+  
+  //Constraint : arprot_c1
+  //Adding constraint to set arprot to unprivileged, non-secure, data access by default
+  //This prevents random privilege escalation issues in tests
+  constraint arprot_c1 { soft arprot == READ_NORMAL_NONSECURE_DATA;}
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions

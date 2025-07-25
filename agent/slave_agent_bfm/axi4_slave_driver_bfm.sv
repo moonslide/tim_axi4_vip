@@ -96,6 +96,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   reg [ 1	: 0]	            mem_wburst  [2**LENGTH];
   reg [ 3	: 0]	            mem_wqos    [2**LENGTH];
   bit                       mem_wlast   [2**LENGTH];
+  reg [ 2	: 0]	            mem_wprot   [2**LENGTH];  // Added for AWPROT
   
   reg [	3 : 0]	            mem_arid	  [2**LENGTH];
   reg [	ADDRESS_WIDTH-1: 0]	mem_raddr	  [2**LENGTH];
@@ -103,6 +104,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
   reg [	2	: 0]	            mem_rsize	  [2**LENGTH];
   reg [ 1	: 0]	            mem_rburst  [2**LENGTH];
   reg [ 3	: 0]	            mem_rqos    [2**LENGTH];
+  reg [ 2	: 0]	            mem_rprot   [2**LENGTH];  // Added for ARPROT
   
   //-------------------------------------------------------
   // Task: wait_for_system_reset
@@ -165,6 +167,7 @@ task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet
 	 mem_wsize	[i] 	= awsize	;	
 	 mem_wburst [i]   = awburst ;	
 	 mem_wqos   [i]   = awqos   ;	
+	 mem_wprot  [i]   = awprot  ;	// Sample AWPROT
    
    data_write_packet.awid    = mem_awid   [i] ;
    data_write_packet.awaddr  = mem_waddr  [i] ;
@@ -172,6 +175,7 @@ task axi4_write_address_phase(inout axi4_write_transfer_char_s data_write_packet
    data_write_packet.awsize  = mem_wsize  [i] ;
    data_write_packet.awburst = mem_wburst [i] ;
    data_write_packet.awqos   = mem_wqos   [i] ;
+   data_write_packet.awprot  = mem_wprot  [i] ; // Assign AWPROT
    
    `uvm_info("struct_pkt_debug",$sformatf("struct_pkt_wr_addr_phase = \n %0p",data_write_packet),UVM_HIGH)
 
@@ -381,6 +385,7 @@ task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, 
 	  mem_rsize	[j] 	= arsize	;	
 	  mem_rburst[j] 	= arburst ;	
 	  mem_rqos[j] 	  = arqos   ;	
+	  mem_rprot[j]    = arprot  ;   // Sample ARPROT
     arready         <= 1      ;
 
     data_read_packet.arid    = mem_arid[j]     ;
@@ -389,6 +394,7 @@ task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, 
     data_read_packet.arsize  = mem_rsize[j]    ;
     data_read_packet.arburst = mem_rburst[j]   ;
     data_read_packet.arqos   = mem_rqos[j]     ;
+    data_read_packet.arprot  = mem_rprot[j]    ; // Assign ARPROT
 	  j = j+1                                    ;
 
     `uvm_info("mem_arid",$sformatf("mem_arid[%0d]=%0d",j,mem_arid[j]),UVM_HIGH)
