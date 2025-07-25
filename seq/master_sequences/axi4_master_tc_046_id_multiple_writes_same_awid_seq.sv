@@ -244,7 +244,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == (master_id * 4);  // SAME AWID - must complete in order
+    req.awid == master_id;  // SAME AWID - must complete in order (valid range 0-3 for 4x4 config)
     req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h500; // DDR
     req.awlen == 4'h3;  // 4 beats
     req.awsize == WRITE_4_BYTES;

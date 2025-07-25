@@ -6,7 +6,7 @@
 // TC_057: Optional Exclusive Read Success
 // Test scenario: Send exclusive read with ARLOCK=1 to establish exclusive monitor
 // Precondition: Write data 0xDATA1260 to address 0x0000_0100_0000_1260
-// ARLOCK=1, ARADDR=0x0000_0100_0000_1260, ARLEN=0, ARSIZE=4bytes, ARID=0xE
+// ARLOCK=1, ARADDR=0x0000_0100_0000_1260, ARLEN=0, ARSIZE=4bytes, ARID=0x2
 // Verification: If slave supports exclusive access, expect RRESP=EXOKAY and setup monitor
 //               If not supported, expect RRESP=OKAY (normal read)
 //--------------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ task axi4_master_tc_057_exclusive_read_success_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == READ;
-    req.arid == ARID_14;  // 0xE
+    req.arid == ARID_2;  // Valid range 0-3 for 4x4 bus matrix configuration
     req.araddr == 64'h0000_0100_0000_1260; // DDR Memory range
     req.arlen == 4'h0;  // 1 beat
     req.arsize == READ_4_BYTES;
