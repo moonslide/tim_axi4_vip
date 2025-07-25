@@ -337,14 +337,12 @@ class axi4_master_tx extends uvm_sequence_item;
   constraint aruser_c1 { soft aruser == 1'b0;}
   
   //Constraint : awprot_c1
-  //Adding constraint to set awprot to unprivileged, non-secure, data access by default
-  //This prevents random privilege escalation issues in tests
-  constraint awprot_c1 { soft awprot == WRITE_NORMAL_NONSECURE_DATA;}
+  //Removed default constraint - let tests control AWPROT based on master type
+  //constraint awprot_c1 { soft awprot == WRITE_NORMAL_NONSECURE_DATA;}
   
   //Constraint : arprot_c1
-  //Adding constraint to set arprot to unprivileged, non-secure, data access by default
-  //This prevents random privilege escalation issues in tests
-  constraint arprot_c1 { soft arprot == READ_NORMAL_NONSECURE_DATA;}
+  //Removed default constraint - let tests control ARPROT based on master type
+  //constraint arprot_c1 { soft arprot == READ_NORMAL_NONSECURE_DATA;}
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
