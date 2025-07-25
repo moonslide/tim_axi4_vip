@@ -88,7 +88,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == (master_id * 4);  // Same AWID for all transactions from this master
+    req.awid == master_id;  // Same AWID for all transactions from this master (valid range 0-3 for 4x4 config)
     req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h100; // DDR with master offset
     req.awlen == 4'h3;  // 4 beats
     req.awsize == WRITE_4_BYTES;
@@ -117,7 +117,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == (master_id * 4);  // SAME AWID - must complete in order
+      req.awid == master_id;  // SAME AWID - must complete in order (valid range 0-3 for 4x4 config)
       req.awaddr == 64'h0000_0010_0000_0000 + (master_id * 'h1000) + 'h200; // Peripheral
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -158,7 +158,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == (master_id * 4);  // SAME AWID - must complete in order after T1 and T2
+    req.awid == master_id;  // SAME AWID - must complete in order after T1 and T2 (valid range 0-3 for 4x4 config)
     req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h300; // DDR with different offset
     req.awlen == 4'h1;  // 2 beats
     req.awsize == WRITE_4_BYTES;
@@ -189,7 +189,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == (master_id * 4);  // SAME AWID - must complete in order
+      req.awid == master_id;  // SAME AWID - must complete in order (valid range 0-3 for 4x4 config)
       req.awaddr == 64'h0000_0010_0000_0000 + (master_id * 'h1000) + 'h400; // Peripheral
       req.awlen == 4'h2;  // 3 beats
       req.awsize == WRITE_4_BYTES;
@@ -215,7 +215,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == (master_id * 4);  // SAME AWID - must complete in order
+      req.awid == master_id;  // SAME AWID - must complete in order (valid range 0-3 for 4x4 config)
       req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h400; // DDR
       req.awlen == 4'h1;  // 2 beats
       req.awsize == WRITE_4_BYTES;

@@ -37,7 +37,9 @@ task axi4_master_upper_boundary_write_seq::body();
                               awburst == WRITE_INCR;
                               awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
-                              transfer_type == NON_BLOCKING_WRITE;})
+                              transfer_type == NON_BLOCKING_WRITE;
+                              // Constrain AWID to valid range for 4x4 configuration
+                              awid inside {AWID_0, AWID_1, AWID_2, AWID_3};})
       `uvm_fatal("axi4","Rand failed for valid address");
     req.wdata.delete();
     req.wdata.push_back($urandom);
@@ -57,7 +59,9 @@ task axi4_master_upper_boundary_write_seq::body();
                               awburst == WRITE_INCR;
                               awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
-                              transfer_type == NON_BLOCKING_WRITE;})
+                              transfer_type == NON_BLOCKING_WRITE;
+                              // Constrain AWID to valid range for 4x4 configuration
+                              awid inside {AWID_0, AWID_1, AWID_2, AWID_3};})
       `uvm_fatal("axi4","Rand failed for invalid address");
     req.wdata.delete();
     req.wdata.push_back($urandom);

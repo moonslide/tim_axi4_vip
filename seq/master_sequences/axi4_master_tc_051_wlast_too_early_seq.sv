@@ -30,7 +30,7 @@ task axi4_master_tc_051_wlast_too_early_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_4;  // 0x4
+    req.awid == AWID_0;  // Use AWID_0 for 4x4 configuration compatibility
     req.awaddr == 64'h0000_0100_0000_1210; // DDR Memory range
     req.awlen == 4'h3;  // 4 beats (0x3 = len-1)
     req.awsize == WRITE_4_BYTES;

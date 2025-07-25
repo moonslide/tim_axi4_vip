@@ -36,7 +36,9 @@ task axi4_master_upper_boundary_read_seq::body();
                               arsize == READ_4_BYTES;
                               arburst == READ_INCR;
                               tx_type == READ;
-                              transfer_type == NON_BLOCKING_READ;})
+                              transfer_type == NON_BLOCKING_READ;
+                              // Constrain ARID to valid range for 4x4 configuration
+                              arid inside {ARID_0, ARID_1, ARID_2, ARID_3};})
       `uvm_fatal("axi4","Rand failed for valid address");
     `uvm_info("UPPER_BOUNDARY_READ", $sformatf("Reading from valid address: 0x%016h", valid_addr_list[i]), UVM_MEDIUM);
     finish_item(req);
@@ -50,7 +52,9 @@ task axi4_master_upper_boundary_read_seq::body();
                               arsize == READ_4_BYTES;
                               arburst == READ_INCR;
                               tx_type == READ;
-                              transfer_type == NON_BLOCKING_READ;})
+                              transfer_type == NON_BLOCKING_READ;
+                              // Constrain ARID to valid range for 4x4 configuration
+                              arid inside {ARID_0, ARID_1, ARID_2, ARID_3};})
       `uvm_fatal("axi4","Rand failed for invalid address");
     `uvm_info("UPPER_BOUNDARY_READ", $sformatf("Reading from invalid address: 0x%016h (expect DECERR)", invalid_addr_list[i]), UVM_MEDIUM);
     finish_item(req);

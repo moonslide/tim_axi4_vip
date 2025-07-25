@@ -2090,22 +2090,18 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
       arid_num = num_str.atoi();
       `uvm_info(get_type_name(), $sformatf("Extracted num_str='%s', arid_num=%0d", num_str, arid_num), UVM_MEDIUM);
       
-      // Map ARID to actual master based on TC001 test topology
-      // TC001 uses specific ARID assignments for different masters
-      case (arid_num)
-        10: inferred_master_id = 0; // M0: Secure CPU uses ARID_10
-        1:  inferred_master_id = 1; // M1: NS CPU uses ARID_1  
-        2:  inferred_master_id = 2; // M2: I-Fetch uses ARID_2
-        11: inferred_master_id = 7; // M7: Malicious uses ARID_11
-        0:  inferred_master_id = 8; // M8: RO Peripheral uses ARID_0
-        default: begin
-          // For other tests, try direct mapping first, then fallback to modulo
-          if (arid_num < axi4_env_cfg_h.no_of_masters) 
-            inferred_master_id = arid_num;
-          else
-            inferred_master_id = arid_num % axi4_env_cfg_h.no_of_masters;
+      // Use configuration-aware modulo mapping to match slave driver
+      // This ensures consistent master ID mapping across all components
+      if (axi4_bus_matrix_h != null) begin
+        if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+          inferred_master_id = arid_num % 4; // 4x4 base matrix
+        end else begin
+          inferred_master_id = arid_num % 10; // 10x10 enhanced matrix
         end
-      endcase
+      end else begin
+        // Fallback to modulo based on configured number of masters
+        inferred_master_id = arid_num % axi4_env_cfg_h.no_of_masters;
+      end
       
       `uvm_info(get_type_name(), $sformatf("ARID parsing: arid_str=%s, arid_num=%0d, no_of_masters=%0d, inferred_master_id=%0d", 
                                            arid_str, arid_num, axi4_env_cfg_h.no_of_masters, inferred_master_id), UVM_MEDIUM);

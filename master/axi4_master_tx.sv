@@ -332,6 +332,29 @@ class axi4_master_tx extends uvm_sequence_item;
   //Adding constraint to set awuser to 0 by default for consistent master-slave comparison
   constraint awuser_c1 { soft awuser == 1'b0;}
 
+  //-------------------------------------------------------
+  // ID Constraints based on bus matrix configuration
+  //-------------------------------------------------------
+  //Constraint : awid_c1
+  //Limit AWID values to valid range based on the ID width
+  // Default constraint allows all 16 values (AWID_0 to AWID_15)
+  // Sequences should override this constraint for specific configurations
+  constraint awid_c1 { 
+    // By default, allow all valid AWID values
+    // Specific tests/sequences should add constraints based on their configuration
+    awid inside {[AWID_0:AWID_15]};
+  }
+
+  //Constraint : arid_c1
+  //Limit ARID values to valid range based on the ID width
+  // Default constraint allows all 16 values (ARID_0 to ARID_15)
+  // Sequences should override this constraint for specific configurations
+  constraint arid_c1 { 
+    // By default, allow all valid ARID values
+    // Specific tests/sequences should add constraints based on their configuration
+    arid inside {[ARID_0:ARID_15]};
+  }
+
   //Constraint : aruser_c1
   //Adding constraint to set aruser to 0 by default for consistent master-slave comparison
   constraint aruser_c1 { soft aruser == 1'b0;}

@@ -74,15 +74,15 @@ endfunction : add_write_tracker
 
 function bit [15:0] axi4_master_tc_047_id_multiple_writes_different_awid_seq::get_awid_for_scenario(int scenario, int master_id);
   // Generate different AWID patterns for out-of-order scenarios
-  // Use full AWID range (0-15) distributed across scenarios and masters
+  // For 4x4 configuration, constrain AWID to valid range (0-3)
   case (scenario)
-    0: return (master_id * 4);        // Base AWID: M0=0, M1=4, M2=8, M3=12
-    1: return (master_id * 4) + 1;    // Offset +1: M0=1, M1=5, M2=9, M3=13  
-    2: return (master_id * 4) + 2;    // Offset +2: M0=2, M1=6, M2=10, M3=14
-    3: return (master_id * 4) + 3;    // Offset +3: M0=3, M1=7, M2=11, M3=15
-    4: return 15 - master_id;         // Reverse pattern: M0=15, M1=14, M2=13, M3=12
-    5: return master_id;              // Sequential: M0=0, M1=1, M2=2, M3=3
-    default: return master_id * 2;    // Fallback pattern
+    0: return master_id % 4;          // Base AWID: M0=0, M1=1, M2=2, M3=3
+    1: return (master_id + 1) % 4;    // Rotated: M0=1, M1=2, M2=3, M3=0  
+    2: return (master_id + 2) % 4;    // Rotated: M0=2, M1=3, M2=0, M3=1
+    3: return (master_id + 3) % 4;    // Rotated: M0=3, M1=0, M2=1, M3=2
+    4: return (3 - master_id) % 4;    // Reverse: M0=3, M1=2, M2=1, M3=0
+    5: return master_id % 4;          // Sequential: M0=0, M1=1, M2=2, M3=3
+    default: return master_id % 4;    // Fallback to master ID
   endcase
 endfunction : get_awid_for_scenario
 

@@ -1,0 +1,10 @@
+Command: vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
+-override_timescale=1ps/1ps +nospecify +no_timing_check +ntb_random_seed=12345 +define+UVM_VERDI_COMPWAVE \
+-f ../axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_tc_001_concurrent_reads_test \
++UVM_VERBOSITY=LOW +plusarg_ignore -l tc001_smart_interconnect_test.log
+
+Error-[P1ARGS-CANTOPN-F] Cannot open file
+  Unable to open '../axi4_compile.f' due to 'No such file or directory'.
+  Please fix the reason mentioned above and continue.
+
+CPU time: .221 seconds to compile

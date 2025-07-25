@@ -51,7 +51,7 @@ task axi4_master_tc_056_exclusive_write_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_13;  // 0xD
+    req.awid == AWID_1;  // Use AWID_1 for 4x4 configuration compatibility
     req.awaddr == 64'h0000_0100_0000_1250; // DDR Memory range
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;

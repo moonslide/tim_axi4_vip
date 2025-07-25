@@ -477,9 +477,17 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // Extract master ID from AWID - assume master ID is encoded in lower bits
           // Common patterns: 
           // - Direct mapping: AWID 0->M0, AWID 1->M1, etc.
-          // Use modulo mapping to handle both 4x4 and 10x10 configurations
-          // This ensures AWID values map to valid master IDs regardless of configuration
-          master_id = awid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
+          // Use modulo mapping based on actual bus matrix configuration
+          // Check bus matrix mode and use appropriate modulo
+          if (axi4_bus_matrix_h != null) begin
+            if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+              master_id = awid_value % 4; // 4x4 base matrix
+            end else begin
+              master_id = awid_value % 10; // 10x10 enhanced matrix
+            end
+          end else begin
+            master_id = awid_value % 4; // Default to 4x4 if no bus matrix
+          end
           
           if (axi4_bus_matrix_h != null) begin
             struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(master_id,
@@ -809,9 +817,17 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Use modulo mapping to handle both 4x4 and 10x10 configurations
-              // This ensures ARID values map to valid master IDs regardless of configuration
-              master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
+              // Use configuration-aware modulo mapping based on actual bus matrix configuration
+              // Check bus matrix mode and use appropriate modulo
+              if (axi4_bus_matrix_h != null) begin
+                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+                  master_id = arid_value % 4; // 4x4 base matrix
+                end else begin
+                  master_id = arid_value % 10; // 10x10 enhanced matrix
+                end
+              end else begin
+                master_id = arid_value % 4; // Default to 4x4 if no bus matrix
+              end
               
               if (axi4_bus_matrix_h != null) begin
                 struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
@@ -832,9 +848,17 @@ task axi4_slave_driver_proxy::axi4_read_task();
             int master_id = 0;
             int arid_value = int'(local_slave_addr_chk_tx.arid);
             
-            // Use modulo mapping to handle both 4x4 and 10x10 configurations
-            // This ensures ARID values map to valid master IDs regardless of configuration
-            master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
+            // Use configuration-aware modulo mapping based on actual bus matrix configuration
+            // Check bus matrix mode and use appropriate modulo
+            if (axi4_bus_matrix_h != null) begin
+              if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+                master_id = arid_value % 4; // 4x4 base matrix
+              end else begin
+                master_id = arid_value % 10; // 10x10 enhanced matrix
+              end
+            end else begin
+              master_id = arid_value % 4; // Default to 4x4 if no bus matrix
+            end
             
             if (axi4_bus_matrix_h != null) begin
               struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(master_id,
@@ -882,12 +906,16 @@ task axi4_slave_driver_proxy::axi4_read_task();
             // Extract master_id from ARID value
             begin
               int arid_value_wrap = int'(local_slave_addr_chk_tx.arid);
-              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
-              if (arid_value_wrap >= 0 && arid_value_wrap <= 15) begin
-                master_id = arid_value_wrap; // Direct mapping for ARID 0-15
+              // Use configuration-aware modulo mapping based on actual bus matrix configuration
+              // Check bus matrix mode and use appropriate modulo
+              if (axi4_bus_matrix_h != null) begin
+                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+                  master_id = arid_value_wrap % 4; // 4x4 base matrix
+                end else begin
+                  master_id = arid_value_wrap % 10; // 10x10 enhanced matrix
+                end
               end else begin
-                // For higher ARID values, fallback to modulo for compatibility
-                master_id = arid_value_wrap % 10; // Modulo 10 for 10x10 matrix
+                master_id = arid_value_wrap % 4; // Default to 4x4 if no bus matrix
               end
             end
             
@@ -954,9 +982,17 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Use modulo mapping to handle both 4x4 and 10x10 configurations
-              // This ensures ARID values map to valid master IDs regardless of configuration
-              master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
+              // Use configuration-aware modulo mapping based on actual bus matrix configuration
+              // Check bus matrix mode and use appropriate modulo
+              if (axi4_bus_matrix_h != null) begin
+                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+                  master_id = arid_value % 4; // 4x4 base matrix
+                end else begin
+                  master_id = arid_value % 10; // 10x10 enhanced matrix
+                end
+              end else begin
+                master_id = arid_value % 4; // Default to 4x4 if no bus matrix
+              end
               
               if (axi4_bus_matrix_h != null) begin
                 struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
@@ -1021,12 +1057,16 @@ task axi4_slave_driver_proxy::axi4_read_task();
         // Extract master_id from ARID value
         begin
           int arid_value_last = int'(local_slave_addr_chk_tx.arid);
-          // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
-          if (arid_value_last >= 0 && arid_value_last <= 15) begin
-            master_id = arid_value_last; // Direct mapping for ARID 0-15
+          // Use configuration-aware modulo mapping based on actual bus matrix configuration
+          // Check bus matrix mode and use appropriate modulo
+          if (axi4_bus_matrix_h != null) begin
+            if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+              master_id = arid_value_last % 4; // 4x4 base matrix
+            end else begin
+              master_id = arid_value_last % 10; // 10x10 enhanced matrix
+            end
           end else begin
-            // For higher ARID values, fallback to modulo for compatibility
-            master_id = arid_value_last % 10; // Modulo 10 for 10x10 matrix
+            master_id = arid_value_last % 4; // Default to 4x4 if no bus matrix
           end
         end
         

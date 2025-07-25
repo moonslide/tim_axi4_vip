@@ -1,0 +1,380 @@
+Command: vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
+-override_timescale=1ps/1ps +nospecify +no_timing_check +ntb_random_seed=12345 +define+UVM_VERDI_COMPWAVE \
+-f ../../tim_axi4_vip/sim/axi4_compile.f -debug_access+all -R +UVM_TESTNAME=axi4_tc_001_concurrent_reads_test \
++UVM_VERBOSITY=LOW +plusarg_ignore -l tc001_fixed.log
+                         Chronologic VCS (TM)
+       Version W-2024.09-SP1_Full64 -- Fri Jul 25 00:04:22 2025
+
+                    Copyright (c) 1991 - 2024 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+
+
+Warning-[LCA_FEATURES_ENABLED] Usage warning
+  LCA features enabled by '-lca' argument on the command line.  For more 
+  information regarding list of LCA features please refer to Chapter "LCA 
+  features" in the VCS Release Notes
+
+
+Warning-[RSPAI] Run simv switch found in command line
+  Directly run simulation switch '-R' found in command line, and all plus 
+  arguments specified will be passed to run-time.
+  So the switch 'plusarg_ignore' will be ignored.
+
+Parsing design file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_version_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_global_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/snps_macros.svp'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_message_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_phase_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_object_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_printer_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_tlm_defines.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_imps.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_tlm_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_sequence_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_callback_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_reg_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/macros/uvm_deprecated_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_dpi.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_hdl.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_dpi.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_svcmd_dpi.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_dpi.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_regex.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dpi/uvm_dpi.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_coreservice.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_version.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_object_globals.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_misc.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_object.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_pool.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_queue.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_factory.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_registry.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_spell_chkr.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_resource.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_resource_specializations.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_resource_db.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_config_db.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_printer.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_comparer.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_packer.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_links.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_tr_database.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_tr_stream.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_recorder.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_event_callback.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_event.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_barrier.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_callback.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_callback.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_report_message.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_report_catcher.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_report_server.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_report_handler.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_report_object.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_transaction.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_phase.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_domain.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_bottomup_phase.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_topdown_phase.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_task_phase.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_common_phases.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_runtime_phases.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_component.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_root.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_component.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_objection.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_heartbeat.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_globals.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_cmdline_processor.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_traversal.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_dap.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_set_get_dap_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_dap.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_simple_lock_dap.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_dap.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_get_to_lock_dap.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_dap.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_set_before_get_dap.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/dap/uvm_dap.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_ifs.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_sqr_ifs.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/base/uvm_port_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_imps.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_imps.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_ports.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_exports.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_analysis_port.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_fifo_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_fifos.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm_req_rsp.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_sqr_connections.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm1/uvm_tlm.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_pair.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_policies.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_in_order_comparator.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_algorithmic_comparator.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_random_stimulus.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_subscriber.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_monitor.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_driver.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_push_driver.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_scoreboard.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_agent.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_env.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_test.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/comps/uvm_comps.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequence_item.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequencer_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequencer_analysis_fifo.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequencer_param_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequencer.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_push_sequencer.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequence_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequence.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequence_library.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_sequence_builtin.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/seq/uvm_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_defines.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_time.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_generic_payload.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_ifs.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_imps.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_ports.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_exports.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_sockets_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2_sockets.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/tlm2/uvm_tlm2.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_item.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_adapter.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_predictor.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_sequence.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_cbs.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_backdoor.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_field.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_vreg_field.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_indirect.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_fifo.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_file.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_mem_mam.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_vreg.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_mem.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_map.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_block.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_hw_reset_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_bit_bash_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_mem_walk_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_mem_access_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_access_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_mem_shared_access_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_mem_built_in_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/sequences/uvm_reg_mem_hdl_paths_seq.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/snps_uvm_reg_bank.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/reg/uvm_reg_model.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/vcs_uvm_alt.sv'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_pkg.sv'.
+Parsing design file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_custom_install_vcs_recorder.sv'
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/msglog.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_custom_install_vcs_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_msglog_report_server.sv'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_custom_install_vcs_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_recorder.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_tr_database.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_tr_stream.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_tr_database.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_recorder.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_custom_install_vcs_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_vcs_record_interface.sv'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/vcs/uvm_custom_install_vcs_recorder.sv'.
+Parsing design file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/uvm_macros.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_recorder.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_pli_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_recorder.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_tr_database.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_tr_stream.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_tr_database.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_recorder.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_reg_map_recording.sv'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_message_catcher.svh'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_pli_base.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_message_catcher.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_factory.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/./dpi/uvm_verdi_dpi.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_reg_recording.sv'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/verdi/W-2024.09-SP1//share/PLI/VCS/include/verdi_trans_recorder_dpi.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing included file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_verdi_pli.svh'.
+Back to file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'.
+Parsing design file '/home/eda_tools/synopsys/vcs/W-2024.09-SP1//etc/uvm-1.2/verdi/uvm_custom_install_verdi_recorder.sv'
+
+Error-[SFCOR] Source file cannot be opened
+  Source file "../../pkg/axi4_globals_pkg.sv" cannot be opened for reading due
+  to 'No such file or directory'.
+  Please fix above issue and compile again.
+  
+  
+
+2 warnings
+1 error
+CPU time: 1.856 seconds to compile
