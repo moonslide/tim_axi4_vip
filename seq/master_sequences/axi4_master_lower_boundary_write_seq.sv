@@ -35,6 +35,7 @@ task axi4_master_lower_boundary_write_seq::body();
                               awlen  == 0;
                               awsize == WRITE_4_BYTES;
                               awburst == WRITE_INCR;
+                              awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
                               transfer_type == NON_BLOCKING_WRITE;})
       `uvm_fatal("axi4","Rand failed for valid address");
@@ -54,6 +55,7 @@ task axi4_master_lower_boundary_write_seq::body();
                               awlen  == 0;
                               awsize == WRITE_4_BYTES;
                               awburst == WRITE_INCR;
+                              awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
                               transfer_type == NON_BLOCKING_WRITE;})
       `uvm_fatal("axi4","Rand failed for invalid address");

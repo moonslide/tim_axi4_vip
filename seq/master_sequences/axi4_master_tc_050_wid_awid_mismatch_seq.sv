@@ -34,6 +34,7 @@ task axi4_master_tc_050_wid_awid_mismatch_seq::body();
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;
     req.awburst == WRITE_INCR;
+    req.awprot == WRITE_NORMAL_NONSECURE_DATA; // Explicitly set for DDR access
     req.wdata.size() == 1;
     req.wdata[0] == 32'hBADC0D00; // Bad WID data
     req.wstrb.size() == 1;
