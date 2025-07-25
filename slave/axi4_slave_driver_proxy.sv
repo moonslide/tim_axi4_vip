@@ -477,17 +477,12 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // Extract master ID from AWID - assume master ID is encoded in lower bits
           // Common patterns: 
           // - Direct mapping: AWID 0->M0, AWID 1->M1, etc.
-          // - Shifted mapping: AWID 0->M0, AWID 4->M1, AWID 8->M2, etc.
-          if (awid_value >= 0 && awid_value < 4) begin
-            master_id = awid_value; // Direct mapping for AWID 0-3
+          // Direct mapping: AWID N -> Master N (supports AWID 0-15 for 10x10 matrix)
+          if (awid_value >= 0 && awid_value <= 15) begin
+            master_id = awid_value; // Direct mapping for AWID 0-15
           end else begin
-            // For higher AWID values, try to extract master ID
-            // Assume AWID encodes master in specific bit positions
-            master_id = awid_value / 4; // Common pattern: master_id * 4
-            if (master_id >= 4) begin
-              // If still too high, mask to get lower 2 bits (supports up to 4 masters)
-              master_id = awid_value & 'h3;
-            end
+            // For higher AWID values, fallback to modulo for compatibility
+            master_id = awid_value % 10; // Modulo 10 for 10x10 matrix
           end
           
           if (axi4_bus_matrix_h != null) begin
@@ -818,14 +813,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Extract master ID from ARID - same logic as AWID
-              if (arid_value >= 0 && arid_value < 4) begin
-                master_id = arid_value; // Direct mapping for ARID 0-3
+              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
+              if (arid_value >= 0 && arid_value <= 15) begin
+                master_id = arid_value; // Direct mapping for ARID 0-15
               end else begin
-                master_id = arid_value / 4; // Common pattern: master_id * 4
-                if (master_id >= 4) begin
-                  master_id = arid_value & 'h3;
-                end
+                // For higher ARID values, fallback to modulo for compatibility
+                master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
               end
               
               if (axi4_bus_matrix_h != null) begin
@@ -847,14 +840,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
             int master_id = 0;
             int arid_value = int'(local_slave_addr_chk_tx.arid);
             
-            // Extract master ID from ARID - same logic as AWID
-            if (arid_value >= 0 && arid_value < 4) begin
-              master_id = arid_value; // Direct mapping for ARID 0-3
+            // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
+            if (arid_value >= 0 && arid_value <= 15) begin
+              master_id = arid_value; // Direct mapping for ARID 0-15
             end else begin
-              master_id = arid_value / 4; // Common pattern: master_id * 4
-              if (master_id >= 4) begin
-                master_id = arid_value & 'h3;
-              end
+              // For higher ARID values, fallback to modulo for compatibility
+              master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
             end
             
             if (axi4_bus_matrix_h != null) begin
@@ -903,14 +894,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
             // Extract master_id from ARID value
             begin
               int arid_value_wrap = int'(local_slave_addr_chk_tx.arid);
-              // Extract master ID from ARID - same logic as AWID
-              if (arid_value_wrap >= 0 && arid_value_wrap < 4) begin
-                master_id = arid_value_wrap; // Direct mapping for ARID 0-3
+              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
+              if (arid_value_wrap >= 0 && arid_value_wrap <= 15) begin
+                master_id = arid_value_wrap; // Direct mapping for ARID 0-15
               end else begin
-                master_id = arid_value_wrap / 4; // Common pattern: master_id * 4
-                if (master_id >= 4) begin
-                  master_id = arid_value_wrap & 'h3;
-                end
+                // For higher ARID values, fallback to modulo for compatibility
+                master_id = arid_value_wrap % 10; // Modulo 10 for 10x10 matrix
               end
             end
             
@@ -977,14 +966,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Extract master ID from ARID - same logic as AWID
-              if (arid_value >= 0 && arid_value < 4) begin
-                master_id = arid_value; // Direct mapping for ARID 0-3
+              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
+              if (arid_value >= 0 && arid_value <= 15) begin
+                master_id = arid_value; // Direct mapping for ARID 0-15
               end else begin
-                master_id = arid_value / 4; // Common pattern: master_id * 4
-                if (master_id >= 4) begin
-                  master_id = arid_value & 'h3;
-                end
+                // For higher ARID values, fallback to modulo for compatibility
+                master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
               end
               
               if (axi4_bus_matrix_h != null) begin
@@ -1050,14 +1037,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
         // Extract master_id from ARID value
         begin
           int arid_value_last = int'(local_slave_addr_chk_tx.arid);
-          // Extract master ID from ARID - same logic as AWID
-          if (arid_value_last >= 0 && arid_value_last < 4) begin
-            master_id = arid_value_last; // Direct mapping for ARID 0-3
+          // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
+          if (arid_value_last >= 0 && arid_value_last <= 15) begin
+            master_id = arid_value_last; // Direct mapping for ARID 0-15
           end else begin
-            master_id = arid_value_last / 4; // Common pattern: master_id * 4
-            if (master_id >= 4) begin
-              master_id = arid_value_last & 'h3;
-            end
+            // For higher ARID values, fallback to modulo for compatibility
+            master_id = arid_value_last % 10; // Modulo 10 for 10x10 matrix
           end
         end
         
