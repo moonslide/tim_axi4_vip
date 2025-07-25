@@ -477,13 +477,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // Extract master ID from AWID - assume master ID is encoded in lower bits
           // Common patterns: 
           // - Direct mapping: AWID 0->M0, AWID 1->M1, etc.
-          // Direct mapping: AWID N -> Master N (supports AWID 0-15 for 10x10 matrix)
-          if (awid_value >= 0 && awid_value <= 15) begin
-            master_id = awid_value; // Direct mapping for AWID 0-15
-          end else begin
-            // For higher AWID values, fallback to modulo for compatibility
-            master_id = awid_value % 10; // Modulo 10 for 10x10 matrix
-          end
+          // Use modulo mapping to handle both 4x4 and 10x10 configurations
+          // This ensures AWID values map to valid master IDs regardless of configuration
+          master_id = awid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
           
           if (axi4_bus_matrix_h != null) begin
             struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(master_id,
@@ -813,13 +809,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
-              if (arid_value >= 0 && arid_value <= 15) begin
-                master_id = arid_value; // Direct mapping for ARID 0-15
-              end else begin
-                // For higher ARID values, fallback to modulo for compatibility
-                master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
-              end
+              // Use modulo mapping to handle both 4x4 and 10x10 configurations
+              // This ensures ARID values map to valid master IDs regardless of configuration
+              master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
               
               if (axi4_bus_matrix_h != null) begin
                 struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
@@ -840,13 +832,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
             int master_id = 0;
             int arid_value = int'(local_slave_addr_chk_tx.arid);
             
-            // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
-            if (arid_value >= 0 && arid_value <= 15) begin
-              master_id = arid_value; // Direct mapping for ARID 0-15
-            end else begin
-              // For higher ARID values, fallback to modulo for compatibility
-              master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
-            end
+            // Use modulo mapping to handle both 4x4 and 10x10 configurations
+            // This ensures ARID values map to valid master IDs regardless of configuration
+            master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
             
             if (axi4_bus_matrix_h != null) begin
               struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(master_id,
@@ -966,13 +954,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int master_id = 0;
               int arid_value = int'(local_slave_addr_chk_tx.arid);
               
-              // Direct mapping: ARID N -> Master N (supports ARID 0-15 for 10x10 matrix)
-              if (arid_value >= 0 && arid_value <= 15) begin
-                master_id = arid_value; // Direct mapping for ARID 0-15
-              end else begin
-                // For higher ARID values, fallback to modulo for compatibility
-                master_id = arid_value % 10; // Modulo 10 for 10x10 matrix
-              end
+              // Use modulo mapping to handle both 4x4 and 10x10 configurations
+              // This ensures ARID values map to valid master IDs regardless of configuration
+              master_id = arid_value % 10; // Modulo 10 supports both 4x4 and 10x10 matrix
               
               if (axi4_bus_matrix_h != null) begin
                 struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
