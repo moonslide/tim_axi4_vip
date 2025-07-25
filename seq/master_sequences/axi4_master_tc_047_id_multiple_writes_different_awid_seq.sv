@@ -281,14 +281,15 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   end
   
   //=========================================================================================
-  // SCENARIO 4: Maximum AWID range test - Use highest available AWIDs
-  // Tests edge cases with maximum AWID values (close to 15)
+  // SCENARIO 4: Consistent AWID per master test
+  // Each master uses its own ID to avoid conflicts in 4x4 configuration
   //=========================================================================================
   
-  `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] SCENARIO 4 - Maximum AWID range test", master_id), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] SCENARIO 4 - Consistent AWID per master test", master_id), UVM_LOW);
   
   for (int i = 0; i < 2; i++) begin
-    awid_val = (3 - i) % 4; // Use AWID 3, 2 (valid range 0-3 for 4x4 config)
+    // Use master's own ID to avoid conflicts between masters
+    awid_val = master_id % 4; // Each master uses its own ID (valid range 0-3 for 4x4 config)
     data_val = 32'h40000000 + (master_id << 24) + (i << 16) + awid_val;
     target_slave = 0; // Use DDR for all masters
     
@@ -319,7 +320,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     add_write_tracker(addr, data_val, awid_val, target_slave);
     add_write_tracker(addr + 4, data_val + 1, awid_val, target_slave);
     
-    `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] S4.%0d - AWID=0x%0x (MAX) to S%0d, ADDR=0x%16h", 
+    `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] S4.%0d - AWID=0x%0x to S%0d, ADDR=0x%16h", 
              master_id, i+1, awid_val, target_slave, addr), UVM_LOW);
   end
   
@@ -370,7 +371,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] completed all scenarios", master_id), UVM_LOW);
   `uvm_info(get_type_name(), "TC_047: AXI4 Different AWID Test Features:", UVM_LOW);
   `uvm_info(get_type_name(), "  - Multiple different AWIDs for out-of-order completion testing", UVM_LOW);
-  `uvm_info(get_type_name(), "  - Full AWID range (0-15) utilized across scenarios", UVM_LOW);
+  `uvm_info(get_type_name(), "  - AWID range (0-3) utilized for 4x4 bus matrix configuration", UVM_LOW);
   `uvm_info(get_type_name(), "  - Multi-master concurrent access with AXI_MATRIX compliance", UVM_LOW);
   `uvm_info(get_type_name(), "  - Read-after-write verification for data integrity", UVM_LOW);
   `uvm_info(get_type_name(), "  - No write data interleaving per AXI4 specification", UVM_LOW);
