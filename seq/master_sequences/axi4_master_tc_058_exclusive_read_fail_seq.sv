@@ -51,7 +51,7 @@ task axi4_master_tc_058_exclusive_read_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == READ;
-    req.arid == ARID_15;  // 0xF
+    req.arid == ARID_3;  // Valid range 0-3 for 4x4 bus matrix configuration
     req.araddr == 64'h0000_0000_0000_1000; // Slave 1 range - not accessible by master 0
     req.arlen == 4'h0;  // 1 beat
     req.arsize == READ_4_BYTES;

@@ -288,7 +288,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] SCENARIO 4 - Maximum AWID range test", master_id), UVM_LOW);
   
   for (int i = 0; i < 2; i++) begin
-    awid_val = 15 - i; // Use AWID 15, 14, etc.
+    awid_val = (3 - i) % 4; // Use AWID 3, 2 (valid range 0-3 for 4x4 config)
     data_val = 32'h40000000 + (master_id << 24) + (i << 16) + awid_val;
     target_slave = 0; // Use DDR for all masters
     

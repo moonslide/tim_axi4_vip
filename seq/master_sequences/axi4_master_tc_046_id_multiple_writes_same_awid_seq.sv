@@ -141,7 +141,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == READ;
-      req.arid == (master_id * 4);  // Same ARID for consistency
+      req.arid == master_id;  // Same ARID for consistency (valid range 0-3 for 4x4 config)
       req.araddr == 64'h0000_0020_0000_0000 + 'h10; // HW_Fuse_Box
       req.arlen == 4'h0;  // 1 beat
       req.arsize == READ_4_BYTES;
