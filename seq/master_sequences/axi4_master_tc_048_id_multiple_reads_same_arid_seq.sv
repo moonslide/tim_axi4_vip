@@ -1,13 +1,15 @@
 `ifndef AXI4_MASTER_TC_048_ID_MULTIPLE_READS_SAME_ARID_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_048_ID_MULTIPLE_READS_SAME_ARID_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_048_id_multiple_reads_same_arid_seq
 // TC_048: ID Multiple Reads Same ARID
-// Test scenario: Setup data then send two read transactions with same ARID=0xE  
+// Test scenario: Setup data then send two read transactions with same ARID (scalable)  
 // Precondition: 0x0000_0100_0000_10E0=D1, 0x0000_0100_0000_10E4=D2
-// T1: ARID=0xE, ARADDR=0x0000_0100_0000_10E0, ARLEN=0
-// T2: ARID=0xE, ARADDR=0x0000_0100_0000_10E4, ARLEN=0
+// T1: ARID=scalable, ARADDR=0x0000_0100_0000_1000, ARLEN=0
+// T2: ARID=scalable, ARADDR=0x0000_0100_0000_1004, ARLEN=0
 // Verification: Slave must respond with RDATA in the order of AR Channel
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_048_id_multiple_reads_same_arid_seq extends axi4_master_base_seq;
@@ -63,12 +65,12 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   
   #50; // Wait for writes to complete
   
-  // TEST PHASE: Read T1 with ARID=0xE from first address  
+  // TEST PHASE: Read T1 with ARID=0x2 from first address  
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_14;
+  req.arid = `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1000; // DDR Memory range - same as write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -81,12 +83,12 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   // Small delay before second read
   #20;
   
-  // TEST PHASE: Read T2 with same ARID=0xE from second address
+  // TEST PHASE: Read T2 with same ARID=0x2 from second address
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_14;
+  req.arid = `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;

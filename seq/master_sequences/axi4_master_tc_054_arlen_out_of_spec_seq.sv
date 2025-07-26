@@ -1,6 +1,8 @@
 `ifndef AXI4_MASTER_TC_054_ARLEN_OUT_OF_SPEC_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_054_ARLEN_OUT_OF_SPEC_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_054_arlen_out_of_spec_seq
 // TC_054: Protocol ARLEN Out Of Spec

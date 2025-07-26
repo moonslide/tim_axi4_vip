@@ -1,9 +1,12 @@
 `ifndef AXI4_MASTER_TC_049_READ_TEST_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_049_READ_TEST_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_049_read_test_seq
-// TC_049: Read Test Phase - Multiple reads with different ARID
+// TC_049: Read Test Phase - Multiple reads with different ARID (Scalable)
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_049_read_test_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_049_read_test_seq)
@@ -22,7 +25,7 @@ task axi4_master_tc_049_read_test_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = READ;
-  req.arid = ARID_10;  // 0xA
+  req.arid = `GET_ARID_ENUM(10 % `ID_MAP_BITS); // Scalable ARID (0xA for 4x4)
   req.araddr = 64'h0000_0100_0000_2000; // DDR Memory range - same as first write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -39,7 +42,7 @@ task axi4_master_tc_049_read_test_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = READ;
-  req.arid = ARID_11;  // 0xB
+  req.arid = `GET_ARID_ENUM(11 % `ID_MAP_BITS); // Scalable ARID (0xB for 4x4)
   req.araddr = 64'h0000_0100_0000_2004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;

@@ -1,9 +1,12 @@
 `ifndef AXI4_MASTER_TC_049_WRITE_SETUP_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_049_WRITE_SETUP_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_049_write_setup_seq
-// TC_049: Write Setup Phase - Prepare test data for different ARID read test
+// TC_049: Write Setup Phase - Prepare test data for different ARID read test (Scalable)
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_049_write_setup_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_049_write_setup_seq)
@@ -22,7 +25,7 @@ task axi4_master_tc_049_write_setup_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = WRITE;
-  req.awid = AWID_0;
+  req.awid = `GET_AWID_ENUM(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2000; // DDR Memory range - simplified aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;
@@ -40,7 +43,7 @@ task axi4_master_tc_049_write_setup_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = WRITE;
-  req.awid = AWID_0;
+  req.awid = `GET_AWID_ENUM(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2004; // DDR Memory range - next aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;

@@ -1,16 +1,19 @@
 `ifndef AXI4_MASTER_TC_051_WLAST_TOO_EARLY_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_051_WLAST_TOO_EARLY_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_051_wlast_too_early_seq
-// TC_051: Protocol WLAST Too Early
+// TC_051: Protocol WLAST Too Early (Scalable)
 // Test scenario: Send burst write with AWLEN=0x3 (4 beats) but WLAST=1 on beat 2
-// AWADDR=0x0000_0100_0000_1210, AWLEN=0x3 (4 beats), AWSIZE=4bytes, AWID=0x4
+// AWADDR=0x0000_0100_0000_1210, AWLEN=0x3 (4 beats), AWSIZE=4bytes, AWID=scalable_id
 // Beat 1: WDATA=D1, WLAST=0
 // Beat 2: WDATA=D2, WLAST=1 (error, should be on beat 4)
 // Beat 3: WDATA=D3, WLAST=0
 // Beat 4: WDATA=D4, WLAST=0
 // Verification: Slave handles WLAST timing violation appropriately
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_051_wlast_too_early_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_051_wlast_too_early_seq)
@@ -30,7 +33,7 @@ task axi4_master_tc_051_wlast_too_early_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_0;  // Use AWID_0 for 4x4 configuration compatibility
+    req.awid == `GET_AWID_ENUM(0); // Scalable AWID - use ID 0
     req.awaddr == 64'h0000_0100_0000_1210; // DDR Memory range
     req.awlen == 4'h3;  // 4 beats (0x3 = len-1)
     req.awsize == WRITE_4_BYTES;

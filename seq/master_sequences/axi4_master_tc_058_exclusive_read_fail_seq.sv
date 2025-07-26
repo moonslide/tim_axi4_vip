@@ -1,6 +1,8 @@
 `ifndef AXI4_MASTER_TC_058_EXCLUSIVE_READ_FAIL_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_058_EXCLUSIVE_READ_FAIL_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_058_exclusive_read_fail_seq
 // TC_058: Optional Exclusive Read Fail
@@ -28,7 +30,7 @@ task axi4_master_tc_058_exclusive_read_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_0;
+    req.awid == `GET_AWID_ENUM(0);  // Using scalable ID mapping
     req.awaddr == 64'h0000_0000_0000_1000; // Slave 1 range - not accessible by master 0
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;
@@ -51,7 +53,7 @@ task axi4_master_tc_058_exclusive_read_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == READ;
-    req.arid == ARID_15;  // 0xF
+    req.arid == `GET_ARID_ENUM(3);  // Use ID 3 for 4x4 configuration, scalable mapping
     req.araddr == 64'h0000_0000_0000_1000; // Slave 1 range - not accessible by master 0
     req.arlen == 4'h0;  // 1 beat
     req.arsize == READ_4_BYTES;

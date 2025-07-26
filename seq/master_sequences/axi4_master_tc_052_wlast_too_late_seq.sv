@@ -1,14 +1,17 @@
 `ifndef AXI4_MASTER_TC_052_WLAST_TOO_LATE_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_052_WLAST_TOO_LATE_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_052_wlast_too_late_seq
-// TC_052: Protocol WLAST Too Late Or Missing
+// TC_052: Protocol WLAST Too Late Or Missing (Scalable)
 // Test scenario: Send burst write with AWLEN=0x1 (2 beats) but WLAST=0 on beat 2
-// AWADDR=0x0000_0100_0000_1220, AWLEN=0x1 (2 beats), AWSIZE=4bytes, AWID=0x4
+// AWADDR=0x0000_0100_0000_1220, AWLEN=0x1 (2 beats), AWSIZE=4bytes, AWID=scalable_id
 // Beat 1: WDATA=D1, WLAST=0
 // Beat 2: WDATA=D2, WLAST=0 (should be 1)
 // Verification: Slave handles WLAST timing violation appropriately
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_052_wlast_too_late_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_052_wlast_too_late_seq)
@@ -28,7 +31,7 @@ task axi4_master_tc_052_wlast_too_late_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_4;  // 0x4
+    req.awid == `GET_AWID_ENUM(4 % `ID_MAP_BITS); // Scalable AWID (0x4 for 4x4)
     req.awaddr == 64'h0000_0100_0000_1220; // DDR Memory range
     req.awlen == 4'h1;  // 2 beats (0x1 = len-1)
     req.awsize == WRITE_4_BYTES;

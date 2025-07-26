@@ -1,6 +1,8 @@
 `ifndef AXI4_TC_002_MASTER_SEQUENCES_INCLUDED_
 `define AXI4_TC_002_MASTER_SEQUENCES_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_tc_002_m0_legal_secure_write_seq
 // M0 (Secure CPU) → S0 (DDR Secure Kernel): Legal secure & privileged write
@@ -37,6 +39,7 @@ task axi4_tc_002_m0_legal_secure_write_seq::body();
     req.awsize == WRITE_4_BYTES;
     req.awlen == 4'h0; // Single beat
     req.awburst == WRITE_INCR;
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(0)); // Master 0 ID (scalable)
     req.wdata.size() == 1;
     req.wstrb.size() == 1;
     foreach(req.wstrb[i]) req.wstrb[i] == 4'hF; // All bytes valid
@@ -91,6 +94,7 @@ task axi4_tc_002_m0_raw_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(0)); // Master 0 ID (scalable)
   }) begin
     `uvm_fatal("TC002_M0_RAW", "Randomization failed for M0 read-after-write");
   end
@@ -137,6 +141,7 @@ task axi4_tc_002_m3_illegal_ro_write_seq::body();
     req.awsize == WRITE_4_BYTES;
     req.awlen == 4'h0; // Single beat
     req.awburst == WRITE_INCR;
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(3)); // Master 3 ID (scalable)
     req.wdata.size() == 1;
     req.wstrb.size() == 1;
     foreach(req.wstrb[i]) req.wstrb[i] == 4'hF; // All bytes valid
@@ -186,6 +191,7 @@ task axi4_tc_002_m6_illegal_hole_write_seq::body();
     req.awsize == WRITE_4_BYTES;
     req.awlen == 4'h0; // Single beat
     req.awburst == WRITE_INCR;
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(6)); // Master 6 ID (scalable)
     req.wdata.size() == 1;
     req.wstrb.size() == 1;
     foreach(req.wstrb[i]) req.wstrb[i] == 4'hF; // All bytes valid
@@ -238,6 +244,7 @@ task axi4_tc_002_m9_legal_monitor_write_seq::body();
     req.awsize == WRITE_4_BYTES;
     req.awlen == 4'h0; // Single beat
     req.awburst == WRITE_INCR;
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(9)); // Master 9 ID (scalable)
     req.wdata.size() == 1;
     req.wstrb.size() == 1;
     // For 32-bit write, only set 4 strobe bits at byte offset 0 within the beat
@@ -299,6 +306,7 @@ task axi4_tc_002_m9_raw_illegal_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(9)); // Master 9 ID (scalable)
   }) begin
     `uvm_fatal("TC002_M9_RAW", "Randomization failed for M9 read-after-write");
   end
