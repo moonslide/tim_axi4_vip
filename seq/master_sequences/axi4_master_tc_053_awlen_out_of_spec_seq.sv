@@ -1,12 +1,15 @@
 `ifndef AXI4_MASTER_TC_053_AWLEN_OUT_OF_SPEC_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_053_AWLEN_OUT_OF_SPEC_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_053_awlen_out_of_spec_seq
-// TC_053: Protocol AWLEN Out Of Spec
+// TC_053: Protocol AWLEN Out Of Spec (Scalable)
 // Test scenario: Send write with AWLEN=0x100 (257 beats) - exceeds AXI4 limit of 256
-// AWID=0x4, AWADDR=0x0000_0100_0000_1230, AWLEN=0x100, AWSIZE=4bytes, AWBURST=INCR
+// AWID=scalable_id, AWADDR=0x0000_0100_0000_1230, AWLEN=0x100, AWSIZE=4bytes, AWBURST=INCR
 // Verification: Slave should reject (AWREADY=0) or respond with SLVERR/DECERR
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_053_awlen_out_of_spec_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_053_awlen_out_of_spec_seq)
@@ -26,7 +29,7 @@ task axi4_master_tc_053_awlen_out_of_spec_seq::body();
   start_item(req);
   assert(req.randomize() with {
     tx_type == WRITE;
-    awid == AWID_0;  // Use AWID_0 for 4x4 configuration compatibility
+    awid == get_awid_enum(0); // Scalable AWID - use ID 0
     awaddr == 64'h0000_0100_0000_1230; // DDR Memory range
     awlen == 8'h100; // 257 beats (0x100 + 1 = 257) - Exceeds AXI4 limit of 256
     awsize == WRITE_4_BYTES;

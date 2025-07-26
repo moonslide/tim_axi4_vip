@@ -1,6 +1,8 @@
 `ifndef AXI4_MASTER_TC_047_ID_MULTIPLE_WRITES_DIFFERENT_AWID_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_047_ID_MULTIPLE_WRITES_DIFFERENT_AWID_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_047_id_multiple_writes_different_awid_seq
 // TC_047: AXI4 Out-of-Order Test with Different AWIDs and Read-After-Write Verification
@@ -74,15 +76,18 @@ endfunction : add_write_tracker
 
 function bit [15:0] axi4_master_tc_047_id_multiple_writes_different_awid_seq::get_awid_for_scenario(int scenario, int master_id);
   // Generate different AWID patterns for out-of-order scenarios
-  // For 4x4 configuration, constrain AWID to valid range (0-3)
+  // Use scalable approach that works for any bus matrix size
+  int base_id = `GET_EFFECTIVE_AWID(master_id);
+  int num_ids = `ID_MAP_BITS;
+  
   case (scenario)
-    0: return master_id % 4;          // Base AWID: M0=0, M1=1, M2=2, M3=3
-    1: return (master_id + 1) % 4;    // Rotated: M0=1, M1=2, M2=3, M3=0  
-    2: return (master_id + 2) % 4;    // Rotated: M0=2, M1=3, M2=0, M3=1
-    3: return (master_id + 3) % 4;    // Rotated: M0=3, M1=0, M2=1, M3=2
-    4: return (3 - master_id) % 4;    // Reverse: M0=3, M1=2, M2=1, M3=0
-    5: return master_id % 4;          // Sequential: M0=0, M1=1, M2=2, M3=3
-    default: return master_id % 4;    // Fallback to master ID
+    0: return base_id;                               // Base AWID
+    1: return (base_id + 1) % num_ids;              // Rotated by 1
+    2: return (base_id + 2) % num_ids;              // Rotated by 2
+    3: return (base_id + 3) % num_ids;              // Rotated by 3
+    4: return (num_ids - 1 - base_id) % num_ids;    // Reverse mapping
+    5: return base_id;                               // Sequential
+    default: return base_id;                         // Fallback to base ID
   endcase
 endfunction : get_awid_for_scenario
 
@@ -144,7 +149,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == awid_val;
+      req.awid == get_awid_enum(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -194,7 +199,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == awid_val;
+      req.awid == get_awid_enum(awid_val);
       req.awaddr == addr;
       req.awlen == burst_len;
       req.awsize == WRITE_4_BYTES;
@@ -254,7 +259,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == awid_val;
+      req.awid == get_awid_enum(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -289,7 +294,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   
   for (int i = 0; i < 2; i++) begin
     // Use master's own ID to avoid conflicts between masters
-    awid_val = master_id % 4; // Each master uses its own ID (valid range 0-3 for 4x4 config)
+    awid_val = `GET_EFFECTIVE_AWID(master_id); // Each master uses its own ID (scalable for any bus size)
     data_val = 32'h40000000 + (master_id << 24) + (i << 16) + awid_val;
     target_slave = 0; // Use DDR for all masters
     
@@ -299,7 +304,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == awid_val;
+      req.awid == get_awid_enum(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h1;  // 2 beats
       req.awsize == WRITE_4_BYTES;
@@ -352,7 +357,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       start_item(req);
       assert(req.randomize() with {
         req.tx_type == READ;
-        req.arid == arid_val;
+        req.arid == get_arid_enum(arid_val);
         req.araddr == addr;
         req.arlen == 4'h0;  // 1 beat
         req.arsize == READ_4_BYTES;
@@ -371,7 +376,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
   `uvm_info(get_type_name(), $sformatf("TC_047: Master[%0d] completed all scenarios", master_id), UVM_LOW);
   `uvm_info(get_type_name(), "TC_047: AXI4 Different AWID Test Features:", UVM_LOW);
   `uvm_info(get_type_name(), "  - Multiple different AWIDs for out-of-order completion testing", UVM_LOW);
-  `uvm_info(get_type_name(), "  - AWID range (0-3) utilized for 4x4 bus matrix configuration", UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  - AWID range (0-%0d) utilized for %0dx%0d bus matrix configuration", `ID_MAP_BITS-1, `NUM_MASTERS, `NUM_SLAVES), UVM_LOW);
   `uvm_info(get_type_name(), "  - Multi-master concurrent access with AXI_MATRIX compliance", UVM_LOW);
   `uvm_info(get_type_name(), "  - Read-after-write verification for data integrity", UVM_LOW);
   `uvm_info(get_type_name(), "  - No write data interleaving per AXI4 specification", UVM_LOW);
@@ -400,7 +405,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::perform_read_afte
       start_item(req);
       assert(req.randomize() with {
         req.tx_type == READ;
-        req.arid == write_tracker[i].awid; // Use same ID for correlation
+        req.arid == get_arid_enum(write_tracker[i].awid); // Use same ID for correlation
         req.araddr == write_tracker[i].addr;
         req.arlen == 4'h0;  // 1 beat read
         req.arsize == READ_4_BYTES;

@@ -1,13 +1,16 @@
 `ifndef AXI4_MASTER_TC_050_WID_AWID_MISMATCH_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_050_WID_AWID_MISMATCH_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_050_wid_awid_mismatch_seq
-// TC_050: WID AWID Mismatch Violation
-// Test scenario: Send write with AWID=0xC but WID=0xD (protocol violation)
-// Master sends AWID=0xC, AWADDR=0x0000_0100_0000_1200, AWLEN=0
-// Then sends WVALID=1, WDATA=0xBADWID00, WID=0xD (should be 0xC), WLAST=1
-// Verification: Slave response to WID/AWID mismatch - expect error or rejection
+// TC_050: WID AWID Mismatch Violation (Scalable)
+// Test scenario: Send write with AWID=scalable_id_12 (0xC for 4x4)
+// Note: AXI4 removes WID, this tests legacy AXI3 behavior simulation
+// Master sends AWID=scalable_id, AWADDR=0x0000_0100_0000_1200, AWLEN=0
+// Verification: Check proper AXI4 write handling (WID removed in AXI4)
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_050_wid_awid_mismatch_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_050_wid_awid_mismatch_seq)
@@ -29,7 +32,7 @@ task axi4_master_tc_050_wid_awid_mismatch_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == AWID_12; // 0xC
+    req.awid == get_awid_enum(12 % `ID_MAP_BITS); // Scalable AWID (0xC for 4x4)
     req.awaddr == 64'h0000_0100_0000_1200; // DDR Memory range
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;

@@ -1,14 +1,17 @@
 `ifndef AXI4_MASTER_TC_049_ID_MULTIPLE_READS_DIFFERENT_ARID_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_049_ID_MULTIPLE_READS_DIFFERENT_ARID_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_049_id_multiple_reads_different_arid_seq
-// TC_049: ID Multiple Reads Different ARID
+// TC_049: ID Multiple Reads Different ARID (Scalable)
 // Test scenario: Setup data then send two read transactions with different ARID  
-// Precondition: 0x0000_0100_0000_10F0=D1, 0x0000_0100_0000_10F4=D2
-// T1: ARID=0xA, ARADDR=0x0000_0100_0000_10F0, ARLEN=0
-// T2: ARID=0xB, ARADDR=0x0000_0100_0000_10F4, ARLEN=0
+// Precondition: Write test data D1 and D2 to memory
+// T1: ARID=scalable_id_1, ARADDR=first_addr, ARLEN=0
+// T2: ARID=scalable_id_2, ARADDR=second_addr, ARLEN=0
 // Verification: Slave can handle different ARID with out-of-order RDATA responses
+// Scalable: Works with 4x4 to 64x64+ bus configurations
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_049_id_multiple_reads_different_arid_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_tc_049_id_multiple_reads_different_arid_seq)
@@ -28,7 +31,7 @@ task axi4_master_tc_049_id_multiple_reads_different_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = WRITE;
-  req.awid = AWID_0;
+  req.awid = get_awid_enum(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2000; // DDR Memory range - simplified aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;
@@ -47,7 +50,7 @@ task axi4_master_tc_049_id_multiple_reads_different_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = WRITE;
-  req.awid = AWID_0;
+  req.awid = get_awid_enum(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2004; // DDR Memory range - next aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;
@@ -68,7 +71,7 @@ task axi4_master_tc_049_id_multiple_reads_different_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_10;  // 0xA
+  req.arid = get_arid_enum(10 % `ID_MAP_BITS); // Scalable ARID (0xA for 4x4)
   req.araddr = 64'h0000_0100_0000_2000; // DDR Memory range - same as first write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -86,7 +89,7 @@ task axi4_master_tc_049_id_multiple_reads_different_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_11;  // 0xB
+  req.arid = get_arid_enum(11 % `ID_MAP_BITS); // Scalable ARID (0xB for 4x4)
   req.araddr = 64'h0000_0100_0000_2004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;

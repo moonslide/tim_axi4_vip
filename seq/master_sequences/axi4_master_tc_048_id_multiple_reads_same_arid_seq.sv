@@ -1,13 +1,15 @@
 `ifndef AXI4_MASTER_TC_048_ID_MULTIPLE_READS_SAME_ARID_SEQ_INCLUDED_
 `define AXI4_MASTER_TC_048_ID_MULTIPLE_READS_SAME_ARID_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_tc_048_id_multiple_reads_same_arid_seq
 // TC_048: ID Multiple Reads Same ARID
-// Test scenario: Setup data then send two read transactions with same ARID=0x2  
+// Test scenario: Setup data then send two read transactions with same ARID (scalable)  
 // Precondition: 0x0000_0100_0000_10E0=D1, 0x0000_0100_0000_10E4=D2
-// T1: ARID=0x2, ARADDR=0x0000_0100_0000_1000, ARLEN=0
-// T2: ARID=0x2, ARADDR=0x0000_0100_0000_1004, ARLEN=0
+// T1: ARID=scalable, ARADDR=0x0000_0100_0000_1000, ARLEN=0
+// T2: ARID=scalable, ARADDR=0x0000_0100_0000_1004, ARLEN=0
 // Verification: Slave must respond with RDATA in the order of AR Channel
 //--------------------------------------------------------------------------------------------
 class axi4_master_tc_048_id_multiple_reads_same_arid_seq extends axi4_master_base_seq;
@@ -68,7 +70,7 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_2;  // Valid range 0-3 for 4x4 bus matrix configuration
+  req.arid = get_arid_enum(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1000; // DDR Memory range - same as write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -86,7 +88,7 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = ARID_2;  // Valid range 0-3 for 4x4 bus matrix configuration
+  req.arid = get_arid_enum(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
