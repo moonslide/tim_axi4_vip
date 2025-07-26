@@ -1,6 +1,8 @@
 `ifndef AXI4_MASTER_LOWER_BOUNDARY_WRITE_SEQ_INCLUDED_
 `define AXI4_MASTER_LOWER_BOUNDARY_WRITE_SEQ_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 class axi4_master_lower_boundary_write_seq extends axi4_master_nbk_base_seq;
   `uvm_object_utils(axi4_master_lower_boundary_write_seq)
   `uvm_declare_p_sequencer(axi4_master_write_sequencer)
@@ -38,8 +40,9 @@ task axi4_master_lower_boundary_write_seq::body();
                               awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
                               transfer_type == NON_BLOCKING_WRITE;
-                              // Constrain AWID to valid range for 4x4 configuration
-                              awid inside {AWID_0, AWID_1, AWID_2, AWID_3};})
+                              // Scalable AWID constraint based on bus matrix configuration
+                              // Using master 0 for boundary tests
+                              awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(0));})
       `uvm_fatal("axi4","Rand failed for valid address");
     req.wdata.delete();
     req.wdata.push_back($urandom);
@@ -60,8 +63,9 @@ task axi4_master_lower_boundary_write_seq::body();
                               awprot == WRITE_NORMAL_NONSECURE_DATA;
                               tx_type == WRITE;
                               transfer_type == NON_BLOCKING_WRITE;
-                              // Constrain AWID to valid range for 4x4 configuration
-                              awid inside {AWID_0, AWID_1, AWID_2, AWID_3};})
+                              // Scalable AWID constraint based on bus matrix configuration
+                              // Using master 0 for boundary tests
+                              awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(0));})
       `uvm_fatal("axi4","Rand failed for invalid address");
     req.wdata.delete();
     req.wdata.push_back($urandom);
