@@ -70,7 +70,7 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = get_arid_enum(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
+  req.arid = `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1000; // DDR Memory range - same as write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -88,7 +88,7 @@ task axi4_master_tc_048_id_multiple_reads_same_arid_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts
   req.tx_type = READ;
-  req.arid = get_arid_enum(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
+  req.arid = `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(2));  // Scalable ID assignment
   req.araddr = 64'h0000_0100_0000_1004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;

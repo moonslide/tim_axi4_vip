@@ -29,7 +29,7 @@ task axi4_master_tc_053_awlen_out_of_spec_seq::body();
   start_item(req);
   assert(req.randomize() with {
     tx_type == WRITE;
-    awid == get_awid_enum(0); // Scalable AWID - use ID 0
+    awid == `GET_AWID_ENUM(0); // Scalable AWID - use ID 0
     awaddr == 64'h0000_0100_0000_1230; // DDR Memory range
     awlen == 8'h100; // 257 beats (0x100 + 1 = 257) - Exceeds AXI4 limit of 256
     awsize == WRITE_4_BYTES;

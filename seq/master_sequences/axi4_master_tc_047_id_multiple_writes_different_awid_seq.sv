@@ -149,7 +149,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(awid_val);
+      req.awid == `GET_AWID_ENUM(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -199,7 +199,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(awid_val);
+      req.awid == `GET_AWID_ENUM(awid_val);
       req.awaddr == addr;
       req.awlen == burst_len;
       req.awsize == WRITE_4_BYTES;
@@ -259,7 +259,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(awid_val);
+      req.awid == `GET_AWID_ENUM(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -304,7 +304,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(awid_val);
+      req.awid == `GET_AWID_ENUM(awid_val);
       req.awaddr == addr;
       req.awlen == 4'h1;  // 2 beats
       req.awsize == WRITE_4_BYTES;
@@ -357,7 +357,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
       start_item(req);
       assert(req.randomize() with {
         req.tx_type == READ;
-        req.arid == get_arid_enum(arid_val);
+        req.arid == `GET_ARID_ENUM(arid_val);
         req.araddr == addr;
         req.arlen == 4'h0;  // 1 beat
         req.arsize == READ_4_BYTES;
@@ -405,7 +405,7 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::perform_read_afte
       start_item(req);
       assert(req.randomize() with {
         req.tx_type == READ;
-        req.arid == get_arid_enum(write_tracker[i].awid); // Use same ID for correlation
+        req.arid == `GET_ARID_ENUM(write_tracker[i].awid); // Use same ID for correlation
         req.araddr == write_tracker[i].addr;
         req.arlen == 4'h0;  // 1 beat read
         req.arsize == READ_4_BYTES;

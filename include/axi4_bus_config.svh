@@ -26,49 +26,42 @@
 `define GET_EFFECTIVE_AWID(master_id) ((master_id) % `ID_MAP_BITS)
 `define GET_EFFECTIVE_ARID(master_id) ((master_id) % `ID_MAP_BITS)
 
-// Helper function to get enum from ID value
-function automatic axi4_master_tx::awid_e get_awid_enum(int id_val);
-  case(id_val % 16)
-    0:  return axi4_master_tx::AWID_0;
-    1:  return axi4_master_tx::AWID_1;
-    2:  return axi4_master_tx::AWID_2;
-    3:  return axi4_master_tx::AWID_3;
-    4:  return axi4_master_tx::AWID_4;
-    5:  return axi4_master_tx::AWID_5;
-    6:  return axi4_master_tx::AWID_6;
-    7:  return axi4_master_tx::AWID_7;
-    8:  return axi4_master_tx::AWID_8;
-    9:  return axi4_master_tx::AWID_9;
-    10: return axi4_master_tx::AWID_10;
-    11: return axi4_master_tx::AWID_11;
-    12: return axi4_master_tx::AWID_12;
-    13: return axi4_master_tx::AWID_13;
-    14: return axi4_master_tx::AWID_14;
-    15: return axi4_master_tx::AWID_15;
-    default: return axi4_master_tx::AWID_0;
-  endcase
-endfunction
+// Helper macros to get enum from ID value
+// These will be expanded as needed in each sequence file
+`define GET_AWID_ENUM(id_val) \
+  ((id_val % 16) == 0  ? AWID_0  : \
+   (id_val % 16) == 1  ? AWID_1  : \
+   (id_val % 16) == 2  ? AWID_2  : \
+   (id_val % 16) == 3  ? AWID_3  : \
+   (id_val % 16) == 4  ? AWID_4  : \
+   (id_val % 16) == 5  ? AWID_5  : \
+   (id_val % 16) == 6  ? AWID_6  : \
+   (id_val % 16) == 7  ? AWID_7  : \
+   (id_val % 16) == 8  ? AWID_8  : \
+   (id_val % 16) == 9  ? AWID_9  : \
+   (id_val % 16) == 10 ? AWID_10 : \
+   (id_val % 16) == 11 ? AWID_11 : \
+   (id_val % 16) == 12 ? AWID_12 : \
+   (id_val % 16) == 13 ? AWID_13 : \
+   (id_val % 16) == 14 ? AWID_14 : \
+   (id_val % 16) == 15 ? AWID_15 : AWID_0)
 
-function automatic axi4_master_tx::arid_e get_arid_enum(int id_val);
-  case(id_val % 16)
-    0:  return axi4_master_tx::ARID_0;
-    1:  return axi4_master_tx::ARID_1;
-    2:  return axi4_master_tx::ARID_2;
-    3:  return axi4_master_tx::ARID_3;
-    4:  return axi4_master_tx::ARID_4;
-    5:  return axi4_master_tx::ARID_5;
-    6:  return axi4_master_tx::ARID_6;
-    7:  return axi4_master_tx::ARID_7;
-    8:  return axi4_master_tx::ARID_8;
-    9:  return axi4_master_tx::ARID_9;
-    10: return axi4_master_tx::ARID_10;
-    11: return axi4_master_tx::ARID_11;
-    12: return axi4_master_tx::ARID_12;
-    13: return axi4_master_tx::ARID_13;
-    14: return axi4_master_tx::ARID_14;
-    15: return axi4_master_tx::ARID_15;
-    default: return axi4_master_tx::ARID_0;
-  endcase
-endfunction
+`define GET_ARID_ENUM(id_val) \
+  ((id_val % 16) == 0  ? ARID_0  : \
+   (id_val % 16) == 1  ? ARID_1  : \
+   (id_val % 16) == 2  ? ARID_2  : \
+   (id_val % 16) == 3  ? ARID_3  : \
+   (id_val % 16) == 4  ? ARID_4  : \
+   (id_val % 16) == 5  ? ARID_5  : \
+   (id_val % 16) == 6  ? ARID_6  : \
+   (id_val % 16) == 7  ? ARID_7  : \
+   (id_val % 16) == 8  ? ARID_8  : \
+   (id_val % 16) == 9  ? ARID_9  : \
+   (id_val % 16) == 10 ? ARID_10 : \
+   (id_val % 16) == 11 ? ARID_11 : \
+   (id_val % 16) == 12 ? ARID_12 : \
+   (id_val % 16) == 13 ? ARID_13 : \
+   (id_val % 16) == 14 ? ARID_14 : \
+   (id_val % 16) == 15 ? ARID_15 : ARID_0)
 
 `endif // AXI4_BUS_CONFIG_SVH

@@ -25,7 +25,7 @@ task axi4_master_tc_049_read_test_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = READ;
-  req.arid = get_arid_enum(10 % `ID_MAP_BITS); // Scalable ARID (0xA for 4x4)
+  req.arid = `GET_ARID_ENUM(10 % `ID_MAP_BITS); // Scalable ARID (0xA for 4x4)
   req.araddr = 64'h0000_0100_0000_2000; // DDR Memory range - same as first write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -42,7 +42,7 @@ task axi4_master_tc_049_read_test_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = READ;
-  req.arid = get_arid_enum(11 % `ID_MAP_BITS); // Scalable ARID (0xB for 4x4)
+  req.arid = `GET_ARID_ENUM(11 % `ID_MAP_BITS); // Scalable ARID (0xB for 4x4)
   req.araddr = 64'h0000_0100_0000_2004; // DDR Memory range - same as second write address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;

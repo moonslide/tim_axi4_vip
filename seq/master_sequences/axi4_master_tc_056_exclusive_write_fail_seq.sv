@@ -30,7 +30,7 @@ task axi4_master_tc_056_exclusive_write_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(0);  // Using scalable ID mapping
+    req.awid == `GET_AWID_ENUM(0);  // Using scalable ID mapping
     req.awaddr == 64'h0000_0100_0000_1250; // Same address as exclusive write
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;
@@ -53,7 +53,7 @@ task axi4_master_tc_056_exclusive_write_fail_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(1);  // Use ID 1 for 4x4 configuration compatibility, scalable mapping
+    req.awid == `GET_AWID_ENUM(1);  // Use ID 1 for 4x4 configuration compatibility, scalable mapping
     req.awaddr == 64'h0000_0100_0000_1250; // DDR Memory range
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;

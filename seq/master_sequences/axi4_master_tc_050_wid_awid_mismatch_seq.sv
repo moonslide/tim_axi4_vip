@@ -32,7 +32,7 @@ task axi4_master_tc_050_wid_awid_mismatch_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(12 % `ID_MAP_BITS); // Scalable AWID (0xC for 4x4)
+    req.awid == `GET_AWID_ENUM(12 % `ID_MAP_BITS); // Scalable AWID (0xC for 4x4)
     req.awaddr == 64'h0000_0100_0000_1200; // DDR Memory range
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;

@@ -90,7 +90,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(`GET_EFFECTIVE_AWID(master_id));  // Same AWID for all transactions from this master
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(master_id));  // Same AWID for all transactions from this master
     req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h100; // DDR with master offset
     req.awlen == 4'h3;  // 4 beats
     req.awsize == WRITE_4_BYTES;
@@ -119,7 +119,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
+      req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
       req.awaddr == 64'h0000_0010_0000_0000 + (master_id * 'h1000) + 'h200; // Peripheral
       req.awlen == 4'h0;  // 1 beat
       req.awsize == WRITE_4_BYTES;
@@ -143,7 +143,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == READ;
-      req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(master_id));  // Same ARID for consistency
+      req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(master_id));  // Same ARID for consistency
       req.araddr == 64'h0000_0020_0000_0000 + 'h10; // HW_Fuse_Box
       req.arlen == 4'h0;  // 1 beat
       req.arsize == READ_4_BYTES;
@@ -160,7 +160,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order after T1 and T2
+    req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order after T1 and T2
     req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h300; // DDR with different offset
     req.awlen == 4'h1;  // 2 beats
     req.awsize == WRITE_4_BYTES;
@@ -191,7 +191,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
+      req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
       req.awaddr == 64'h0000_0010_0000_0000 + (master_id * 'h1000) + 'h400; // Peripheral
       req.awlen == 4'h2;  // 3 beats
       req.awsize == WRITE_4_BYTES;
@@ -217,7 +217,7 @@ task axi4_master_tc_046_id_out_of_order_no_interleaving_seq::body();
     start_item(req);
     assert(req.randomize() with {
       req.tx_type == WRITE;
-      req.awid == get_awid_enum(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
+      req.awid == `GET_AWID_ENUM(`GET_EFFECTIVE_AWID(master_id));  // SAME AWID - must complete in order
       req.awaddr == 64'h0000_0100_0000_0000 + (master_id * 'h1000) + 'h400; // DDR
       req.awlen == 4'h1;  // 2 beats
       req.awsize == WRITE_4_BYTES;

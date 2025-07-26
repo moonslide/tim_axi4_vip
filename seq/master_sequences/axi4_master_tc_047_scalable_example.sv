@@ -43,7 +43,7 @@ class axi4_master_tc_047_id_multiple_writes_different_awid_seq extends axi4_mast
       start_item(req);
       assert(req.randomize() with {
         req.tx_type == WRITE;
-        req.awid == get_awid_enum(awid_val);  // Convert to enum
+        req.awid == `GET_AWID_ENUM(awid_val);  // Convert to enum
         // ... rest of constraints ...
       });
       finish_item(req);

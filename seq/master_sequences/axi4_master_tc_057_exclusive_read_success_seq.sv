@@ -30,7 +30,7 @@ task axi4_master_tc_057_exclusive_read_success_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(0);  // Using scalable ID mapping
+    req.awid == `GET_AWID_ENUM(0);  // Using scalable ID mapping
     req.awaddr == 64'h0000_0100_0000_1260; // DDR Memory range
     req.awlen == 4'h0;  // 1 beat
     req.awsize == WRITE_4_BYTES;
@@ -54,7 +54,7 @@ task axi4_master_tc_057_exclusive_read_success_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == READ;
-    req.arid == get_arid_enum(2);  // Use ID 2 for 4x4 configuration, scalable mapping
+    req.arid == `GET_ARID_ENUM(2);  // Use ID 2 for 4x4 configuration, scalable mapping
     req.araddr == 64'h0000_0100_0000_1260; // DDR Memory range
     req.arlen == 4'h0;  // 1 beat
     req.arsize == READ_4_BYTES;

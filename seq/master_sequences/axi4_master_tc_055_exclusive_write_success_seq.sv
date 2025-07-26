@@ -29,7 +29,7 @@ task axi4_master_tc_055_exclusive_write_success_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts (following TC_044 pattern)
   req.tx_type = WRITE;
-  req.awid = get_awid_enum(0);  // Using scalable ID mapping
+  req.awid = `GET_AWID_ENUM(0);  // Using scalable ID mapping
   req.awaddr = 64'h0000_0100_0000_1250; // DDR Memory range
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;
@@ -52,7 +52,7 @@ task axi4_master_tc_055_exclusive_write_success_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts (following TC_044 pattern)
   req.tx_type = READ;
-  req.arid = get_arid_enum(13);  // 0xD - same master ID, using scalable mapping
+  req.arid = `GET_ARID_ENUM(13);  // 0xD - same master ID, using scalable mapping
   req.araddr = 64'h0000_0100_0000_1250; // DDR Memory range - same address
   req.arlen = 4'h0;  // 1 beat
   req.arsize = READ_4_BYTES;
@@ -72,7 +72,7 @@ task axi4_master_tc_055_exclusive_write_success_seq::body();
   start_item(req);
   // Direct assignment to avoid constraint conflicts (following TC_044 pattern)
   req.tx_type = WRITE;
-  req.awid = get_awid_enum(13);  // 0xD - same master ID as exclusive read, using scalable mapping
+  req.awid = `GET_AWID_ENUM(13);  // 0xD - same master ID as exclusive read, using scalable mapping
   req.awaddr = 64'h0000_0100_0000_1250; // DDR Memory range - same address as exclusive read
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;

@@ -25,7 +25,7 @@ task axi4_master_tc_049_write_setup_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = WRITE;
-  req.awid = get_awid_enum(0); // Use scalable ID 0 for writes
+  req.awid = `GET_AWID_ENUM(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2000; // DDR Memory range - simplified aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;
@@ -43,7 +43,7 @@ task axi4_master_tc_049_write_setup_seq::body();
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   req.tx_type = WRITE;
-  req.awid = get_awid_enum(0); // Use scalable ID 0 for writes
+  req.awid = `GET_AWID_ENUM(0); // Use scalable ID 0 for writes
   req.awaddr = 64'h0000_0100_0000_2004; // DDR Memory range - next aligned address
   req.awlen = 4'h0;  // 1 beat
   req.awsize = WRITE_4_BYTES;

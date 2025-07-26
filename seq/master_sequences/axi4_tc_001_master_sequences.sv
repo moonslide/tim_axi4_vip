@@ -36,7 +36,7 @@ task axi4_tc_001_m2_legal_instruction_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
-    req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(2)); // Master 2 ID (scalable)
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(2)); // Master 2 ID (scalable)
   }) begin
     `uvm_fatal("TC001_M2_SEQ", "Randomization failed for M2 legal instruction read");
   end
@@ -83,7 +83,7 @@ task axi4_tc_001_m7_illegal_data_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
-    req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(7)); // Master 7 ID (scalable)
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(7)); // Master 7 ID (scalable)
   }) begin
     `uvm_fatal("TC001_M7_SEQ", "Randomization failed for M7 illegal data read");
   end
@@ -130,7 +130,7 @@ task axi4_tc_001_m1_illegal_nonsecure_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
-    req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(1)); // Master 1 ID (scalable)
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(1)); // Master 1 ID (scalable)
   }) begin
     `uvm_fatal("TC001_M1_SEQ", "Randomization failed for M1 illegal non-secure read");
   end
@@ -177,7 +177,7 @@ task axi4_tc_001_m0_legal_cacheable_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
-    req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(0)); // Master 0 ID (scalable)
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(0)); // Master 0 ID (scalable)
   }) begin
     `uvm_fatal("TC001_M0_SEQ", "Randomization failed for M0 legal cacheable read");
   end
@@ -224,7 +224,7 @@ task axi4_tc_001_m8_illegal_unprivileged_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 4'h0; // Single beat
     req.arburst == READ_INCR;
-    req.arid == get_arid_enum(`GET_EFFECTIVE_ARID(8)); // Master 8 ID (scalable)
+    req.arid == `GET_ARID_ENUM(`GET_EFFECTIVE_ARID(8)); // Master 8 ID (scalable)
   }) begin
     `uvm_fatal("TC001_M8_SEQ", "Randomization failed for M8 illegal unprivileged read");
   end

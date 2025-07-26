@@ -31,7 +31,7 @@ task axi4_master_tc_052_wlast_too_late_seq::body();
   start_item(req);
   assert(req.randomize() with {
     req.tx_type == WRITE;
-    req.awid == get_awid_enum(4 % `ID_MAP_BITS); // Scalable AWID (0x4 for 4x4)
+    req.awid == `GET_AWID_ENUM(4 % `ID_MAP_BITS); // Scalable AWID (0x4 for 4x4)
     req.awaddr == 64'h0000_0100_0000_1220; // DDR Memory range
     req.awlen == 4'h1;  // 2 beats (0x1 = len-1)
     req.awsize == WRITE_4_BYTES;
