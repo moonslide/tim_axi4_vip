@@ -143,7 +143,7 @@ function void axi4_slave_driver_proxy::build_phase(uvm_phase phase);
   if(!uvm_config_db #(virtual axi4_slave_driver_bfm)::get(this,"","axi4_slave_driver_bfm",axi4_slave_drv_bfm_h)) begin
     `uvm_fatal("FATAL_MDP_CANNOT_GET_tx_DRIVER_BFM","cannot get() axi4_slave_drv_bfm_h");
   end
-  if(!uvm_config_db#(axi4_bus_matrix_ref)::get(this, "", "axi4_bus_matrix_gm", axi4_bus_matrix_h)) begin
+  if(!uvm_config_db#(axi4_bus_matrix_ref)::get(this, "*", "axi4_bus_matrix_gm", axi4_bus_matrix_h)) begin
     `uvm_info("SLAVE_DRIVER_CONFIG", "Bus matrix reference not found in config_db - operating without bus matrix (for tests with bus_matrix_mode=NONE)", UVM_MEDIUM)
     axi4_bus_matrix_h = null;
   end
@@ -218,7 +218,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_wr = axi4_slave_tx::type_id::create("req_wr");
       // Initialize with default values - BFM will fill with actual sampled values
-      assert(req_wr.randomize());
+      // Constrain address to avoid 0x0 which can cause spurious SLVERR responses
+      assert(req_wr.randomize() with {
+        awaddr != 0;  // Avoid address 0x0 to prevent spurious bus matrix errors
+      });
       // Put dummy transaction into FIFOs for processing
       axi4_slave_write_data_in_fifo_h.put(req_wr);
       axi4_slave_write_response_fifo_h.put(req_wr);
@@ -349,6 +352,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       int                        start_sid;
       int                        end_sid;
       int                        wait_cycles;
+      bit [1:0]                  original_bresp;
       
       //returns status of response thread
       response_tx=process::self();
@@ -382,7 +386,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
       
       //Converting transactions into struct data type
       axi4_slave_seq_item_converter::from_write_class(local_slave_response_tx,struct_write_packet);
-      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH); 
+      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH);
+      
+      // Store the original bresp to preserve user-defined response in SLAVE_MEM_MODE
+      original_bresp = struct_write_packet.bresp; 
 
       //Converting configurations into struct config type
       axi4_slave_cfg_converter::from_class(axi4_slave_agent_cfg_h,struct_cfg);
@@ -392,6 +399,26 @@ task axi4_slave_driver_proxy::axi4_write_task();
       if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
         local_slave_addr_tx = local_slave_response_tx;
         struct_write_packet.bid = awid_queue_for_qos.pop_front();
+        
+        // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
+        // The QoS queue transaction may have dummy/randomized addresses
+        if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+          axi4_slave_tx actual_addr_tx;
+          if(!axi4_slave_write_addr_fifo_h.is_empty) begin
+            axi4_slave_write_addr_fifo_h.get(actual_addr_tx);
+            // Copy the actual address to our transaction
+            local_slave_addr_tx.awaddr = actual_addr_tx.awaddr;
+            local_slave_addr_tx.awlen = actual_addr_tx.awlen;
+            local_slave_addr_tx.awsize = actual_addr_tx.awsize;
+            local_slave_addr_tx.awburst = actual_addr_tx.awburst;
+            local_slave_addr_tx.awlock = actual_addr_tx.awlock;
+            local_slave_addr_tx.awid = actual_addr_tx.awid;
+            local_slave_addr_tx.awprot = actual_addr_tx.awprot;
+            `uvm_info("SLAVE_MEM_QOS_DEBUG", $sformatf("Using actual address 0x%16h from BFM instead of QoS queue addr", actual_addr_tx.awaddr), UVM_LOW);
+          end else begin
+            `uvm_error(get_type_name(), "SLAVE_MEM_MODE with QoS: Write address FIFO is empty - cannot get actual address");
+          end
+        end
       end
       else begin
         if(axi4_slave_write_addr_fifo_h.is_empty) begin
@@ -506,6 +533,15 @@ task axi4_slave_driver_proxy::axi4_write_task();
           clear_exclusive_monitors(local_slave_addr_tx.awaddr);
         end
       end
+      
+      // In SLAVE_MEM_MODE, we should always use the bus matrix calculated response
+      // The original dummy transaction's response should be ignored
+      if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && 
+          original_bresp != struct_write_packet.bresp) begin
+        `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("SLAVE_MEM_MODE: Using bus matrix bresp=%0d instead of original bresp=%0d for addr 0x%16h", 
+                 struct_write_packet.bresp, original_bresp, local_slave_addr_tx.awaddr), UVM_LOW);
+      end
+      
       slave_err = (struct_write_packet.bresp != WRITE_OKAY && struct_write_packet.bresp != WRITE_EXOKAY);
 
       `uvm_info("slave_driver_proxy",$sformatf("min_tx=%0d",axi4_slave_agent_cfg_h.get_minimum_transactions),UVM_HIGH)
@@ -613,7 +649,10 @@ task axi4_slave_driver_proxy::axi4_read_task();
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_rd = axi4_slave_tx::type_id::create("req_rd");
       // Initialize with default values - BFM will fill with actual sampled values
-      assert(req_rd.randomize());
+      // Constrain address to avoid 0x0 which can cause spurious DECERR responses
+      assert(req_rd.randomize() with {
+        araddr != 0;  // Avoid address 0x0 to prevent spurious bus matrix errors
+      });
       // Put dummy transaction into FIFO for processing
       axi4_slave_read_data_in_fifo_h.put(req_rd);
     end else begin
