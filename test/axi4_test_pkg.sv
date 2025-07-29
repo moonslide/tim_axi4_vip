@@ -159,6 +159,9 @@ package axi4_test_pkg;
   // Example tests for different bus matrix modes
   `include "axi4_base_matrix_test.sv"
   `include "axi4_none_matrix_test.sv"
+  
+  // QoS and USER Signal Tests
+  `include "axi4_qos_basic_priority_test.sv"
 
 endpackage : axi4_test_pkg
 

@@ -14,6 +14,7 @@ class axi4_slave_base_seq extends uvm_sequence #(axi4_slave_tx);
   // Externally defined Function
   //-------------------------------------------------------
   extern function new(string name = "axi4_slave_base_seq");
+  extern virtual task body();
 endclass : axi4_slave_base_seq
 
 //-----------------------------------------------------------------------------
@@ -26,5 +27,13 @@ endclass : axi4_slave_base_seq
 function axi4_slave_base_seq::new(string name = "axi4_slave_base_seq");
   super.new(name);
 endfunction : new
+
+//-----------------------------------------------------------------------------
+// Task: body
+// Empty body task for base sequence (to be overridden by derived sequences)
+//-----------------------------------------------------------------------------
+task axi4_slave_base_seq::body();
+  // Base sequence body is empty - derived sequences override this
+endtask : body
 
 `endif

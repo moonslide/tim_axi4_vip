@@ -57,7 +57,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Variable : awuser
   //Used to send the write address user
-  rand bit awuser;
+  rand bit [`AXI_AWUSER_WIDTH-1:0] awuser;
 
   //-------------------------------------------------------
    // WRITE DATA CHANNEL SIGNALS
@@ -80,7 +80,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Variable : wuser
   //Used to send the user bit value
-  rand bit [3:0] wuser;
+  rand bit [`AXI_WUSER_WIDTH-1:0] wuser;
 
   //-------------------------------------------------------
   // WRITE RESPONSE CHANNEL SIGNALS
@@ -95,7 +95,7 @@ class axi4_master_tx extends uvm_sequence_item;
   
   //Variable : buser
   //Used to capture the buser
-  bit buser;
+  bit [`AXI_BUSER_WIDTH-1:0] buser;
 
   //-------------------------------------------------------
   // READ ADDRESS CHANNEL SIGNALS
@@ -138,7 +138,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Variable : aruser
   //Used to send the read address user data
-  rand bit aruser;
+  rand bit [`AXI_ARUSER_WIDTH-1:0] aruser;
 
   //Variable : arregion
   //Used to send the read address region data
@@ -167,7 +167,7 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Variable : ruser
   //Used to read the read user value
-  bit ruser;
+  bit [`AXI_RUSER_WIDTH-1:0] ruser;
   
   //Variable : endian
   //Used to differentiate the type of memory storage

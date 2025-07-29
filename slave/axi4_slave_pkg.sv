@@ -15,6 +15,9 @@ package axi4_slave_pkg;
 
   // Import axi4_globals_pkg 
   import axi4_globals_pkg::*;
+  
+  // Include bus configuration parameters
+  `include "axi4_bus_config.svh"
 
   //-------------------------------------------------------
   // Include all other files

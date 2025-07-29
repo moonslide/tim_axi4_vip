@@ -273,7 +273,7 @@ task axi4_read_address_channel_task (inout axi4_read_transfer_char_s data_read_p
   //-------------------------------------------------------
 task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet, input bit error_inject = 0);
 
-    static reg [7:0]i = 0;
+    reg [7:0]i = 0;  // Changed from static to automatic - each task gets its own copy
     int rv_cycles;
     int rv2_cycles;
     `uvm_info(name,$sformatf("data_read_packet in read data Channel=\n%p",data_read_packet),UVM_HIGH)

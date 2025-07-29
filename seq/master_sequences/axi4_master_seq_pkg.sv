@@ -147,6 +147,9 @@ package axi4_master_seq_pkg;
   // Claude.md Test Case Sequences
   `include "axi4_tc_001_master_sequences.sv"
   `include "axi4_tc_002_master_sequences.sv"
+  
+  // QoS and USER Signal Test Sequences
+  `include "axi4_master_qos_basic_priority_order_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

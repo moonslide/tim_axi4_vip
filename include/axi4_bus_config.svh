@@ -64,4 +64,34 @@
    (id_val % 16) == 14 ? ARID_14 : \
    (id_val % 16) == 15 ? ARID_15 : ARID_0)
 
+//--------------------------------------------------------------------------------------------
+// QoS and USER Signal Configuration Parameters
+//--------------------------------------------------------------------------------------------
+
+// QoS Width Configuration (Standard AXI4 = 4 bits)
+`ifndef AXI_QOS_WIDTH
+  `define AXI_QOS_WIDTH 4
+`endif
+
+// USER Signal Width Configuration
+`ifndef AXI_AWUSER_WIDTH
+  `define AXI_AWUSER_WIDTH 32
+`endif
+
+`ifndef AXI_ARUSER_WIDTH
+  `define AXI_ARUSER_WIDTH 32
+`endif
+
+`ifndef AXI_WUSER_WIDTH
+  `define AXI_WUSER_WIDTH 32
+`endif
+
+`ifndef AXI_BUSER_WIDTH
+  `define AXI_BUSER_WIDTH 16
+`endif
+
+`ifndef AXI_RUSER_WIDTH
+  `define AXI_RUSER_WIDTH 16
+`endif
+
 `endif // AXI4_BUS_CONFIG_SVH

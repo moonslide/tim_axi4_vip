@@ -53,6 +53,10 @@ class axi4_slave_tx extends uvm_sequence_item;
   //Used to store data in adress location
   endian_e endian;
   
+  //Variable : awuser
+  //Used to capture the write address user
+  bit [`AXI_AWUSER_WIDTH-1:0] awuser;
+  
   //-------------------------------------------------------
   // WRITE DATA CHANNEL SIGNALS
   //-------------------------------------------------------
@@ -70,7 +74,7 @@ class axi4_slave_tx extends uvm_sequence_item;
 
   //Variable : wuser
   //Used to represent the user type
-  bit [3:0] wuser;
+  bit [`AXI_WUSER_WIDTH-1:0] wuser;
 
   //-------------------------------------------------------
   // WRITE RESPONSE CHANNEL SIGNALS
@@ -85,7 +89,7 @@ class axi4_slave_tx extends uvm_sequence_item;
 
   //Variable : buser
   //Used to send the user signal for the transaction
-  rand bit [3:0] buser;
+  rand bit [`AXI_BUSER_WIDTH-1:0] buser;
 
   //-------------------------------------------------------
   // READ ADDRESS CHANNEL SIGNALS
@@ -129,6 +133,10 @@ class axi4_slave_tx extends uvm_sequence_item;
   //Variable : arqos
   //Used to send the read address quality of service
   bit [3:0] arqos;
+  
+  //Variable : aruser
+  //Used to capture the read address user
+  bit [`AXI_ARUSER_WIDTH-1:0] aruser;
 
   //-------------------------------------------------------
   // READ DATA CHANNEL SIGNALS
@@ -156,7 +164,7 @@ class axi4_slave_tx extends uvm_sequence_item;
 
   //Variable : ruser
   //Used to store the read user
-  rand bit [3:0] ruser;
+  rand bit [`AXI_RUSER_WIDTH-1:0] ruser;
 
   //Variable : aw_wait_states
   //Number of wait states before asserting AWREADY

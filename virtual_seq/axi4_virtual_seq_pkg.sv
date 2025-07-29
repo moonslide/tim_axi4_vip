@@ -141,6 +141,9 @@ package axi4_virtual_seq_pkg;
   `include "axi4_tc_004_concurrent_error_stress_virtual_seq.sv"
   `include "axi4_tc_005_exhaustive_random_reads_virtual_seq.sv"
   `include "axi4_enhanced_bus_matrix_virtual_seq.sv"
+  
+  // QoS and USER Signal Virtual Sequences
+  `include "axi4_virtual_qos_basic_priority_test_seq.sv"
 
 endpackage : axi4_virtual_seq_pkg
 

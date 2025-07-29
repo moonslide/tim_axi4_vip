@@ -411,7 +411,7 @@ task axi4_read_address_phase (inout axi4_read_transfer_char_s data_read_packet, 
   // This task will drive the read data signals
   //-------------------------------------------------------
 task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, input axi4_transfer_cfg_s cfg_packet,response_mode_e out_of_order_enable);
-    int j1;
+    static int j1 = 0;  // Initialize and make static to track across calls
     int rr_cycles;
     int rr_cycles2;
     @(posedge aclk);
@@ -484,6 +484,8 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
       end
      end
     j1++;
+    // Prevent j1 from exceeding array bounds
+    if (j1 >= (2**LENGTH)) j1 = 0;
        
   endtask : axi4_read_data_phase
 
