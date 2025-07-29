@@ -1148,7 +1148,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     //-------------------------------------------------------
 
 
-    if ((byte_data_cmp_verified_bid_count != 0) && (byte_data_cmp_failed_bid_count == 0)) begin
+    if ((byte_data_cmp_verified_bid_count == 0) && (byte_data_cmp_failed_bid_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("bid count comparisons - no transactions processed"),UVM_MEDIUM);
+    end
+    else if ((byte_data_cmp_verified_bid_count != 0) && (byte_data_cmp_failed_bid_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("bid count comparisions are succesful"),UVM_HIGH);
     end
     else begin
@@ -1160,7 +1163,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end 
 
 
-    if ((byte_data_cmp_verified_bresp_count != 0) && (byte_data_cmp_failed_bresp_count == 0)) begin
+    if ((byte_data_cmp_verified_bresp_count == 0) && (byte_data_cmp_failed_bresp_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("bresp count comparisons - no transactions processed"),UVM_MEDIUM);
+    end
+    else if ((byte_data_cmp_verified_bresp_count != 0) && (byte_data_cmp_failed_bresp_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("bresp count comparisions are succesful"),UVM_HIGH);
     end
     else begin
@@ -1172,7 +1178,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end 
 
 
-    if ((byte_data_cmp_verified_buser_count != 0) && (byte_data_cmp_failed_buser_count == 0)) begin
+    if ((byte_data_cmp_verified_buser_count == 0) && (byte_data_cmp_failed_buser_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("buser count comparisons - no transactions processed"),UVM_MEDIUM);
+    end
+    else if ((byte_data_cmp_verified_buser_count != 0) && (byte_data_cmp_failed_buser_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("buser count comparisions are succesful"),UVM_HIGH);
     end
     else begin
