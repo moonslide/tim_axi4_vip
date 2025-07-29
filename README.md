@@ -20,7 +20,7 @@ The AXI4 Verification IP (VIP) is a comprehensive, production-ready UVM-based ve
 ### ✨ Key Features
 
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
-- **✅ 100% Pass Rate**: All 113+ regression tests verified and passing (v2.1)
+- **✅ 100% Pass Rate**: All 127+ regression tests verified and passing (v2.1)
 - **📊 Comprehensive Coverage**: Full functional, code, and assertion coverage
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
@@ -110,7 +110,9 @@ Configure bus matrix size in `include/axi4_bus_config.svh`:
 | **Exclusive Access** | 8 | ✅ Pass |
 | **Error Scenarios** | 12 | ✅ Pass |
 | **Bus Matrix** | 20 | ✅ Pass |
-| **Total** | **113** | **✅ 100% Pass** |
+| **QoS Arbitration** | 8 | ✅ Pass |
+| **USER Signal Features** | 6 | ✅ Pass |
+| **Total** | **127** | **✅ 100% Pass** |
 
 ### Running Tests
 
@@ -148,7 +150,19 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
    - Uses actual BFM addresses instead of dummy addresses
    - Impact: Accurate address decoding
 
-**Result**: 16 previously failing tests → 0 failures (100% pass rate)
+5. **Enhanced Bus Matrix Address Mapping**
+   - Fixed critical address mapping mismatch in QoS/USER test sequences
+   - Updated address calculations to align with bus matrix configuration
+   - Resolved response mismatch errors (READ_DECERR vs READ_OKAY)
+   - Impact: All QoS and USER test cases now pass without errors
+
+6. **QoS and USER Signal Test Coverage**
+   - Added 14 comprehensive QoS and USER signal test cases
+   - Includes priority ordering, fairness, starvation prevention
+   - Added USER signal functionality tests (security, parity, routing)
+   - Impact: Complete QoS/USER protocol coverage validation
+
+**Result**: 16 previously failing tests → 0 failures (100% pass rate with QoS/USER support)
 
 ## 🏗️ Architecture
 
