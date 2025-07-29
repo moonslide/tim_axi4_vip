@@ -14,8 +14,8 @@ class axi4_slave_tx extends uvm_sequence_item;
   // WRITE ADDRESS CHANNEL SIGNALS
   //-------------------------------------------------------
   //Variable : awaddr
-  //Address selected in axi_slave
-  bit [ADDRESS_WIDTH-1:0] awaddr;
+  //Address selected in axi_slave - randomizable to avoid 0x0 conflicts
+  rand bit [ADDRESS_WIDTH-1:0] awaddr;
 
   //Variable : awid
   //Used to identify the write transaction for the adress
