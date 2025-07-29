@@ -28,6 +28,7 @@ package axi4_slave_pkg;
   `include "axi4_slave_seq_item_converter.sv"
   `include "axi4_slave_cfg_converter.sv"
   `include "axi4_slave_coverage.sv"
+  `include "axi4_slave_qos_user_coverage.sv"
   `include "axi4_slave_write_sequencer.sv"
   `include "axi4_slave_read_sequencer.sv"
   `include "axi4_slave_driver_proxy.sv"

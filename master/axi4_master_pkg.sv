@@ -31,6 +31,7 @@ package axi4_master_pkg;
   `include "axi4_master_driver_proxy.sv"
   `include "axi4_master_monitor_proxy.sv"
   `include "axi4_master_coverage.sv"
+  `include "axi4_master_qos_user_coverage.sv"
   `include "axi4_master_agent.sv"
   
 endpackage : axi4_master_pkg
