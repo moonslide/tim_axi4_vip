@@ -1,0 +1,5 @@
+# Test multiple runs with different seeds
+axi4_qos_basic_priority_test seed=12345
+axi4_qos_basic_priority_test seed=67890
+axi4_qos_basic_priority_test seed=11111
+axi4_qos_basic_priority_test  # No seed - will generate random

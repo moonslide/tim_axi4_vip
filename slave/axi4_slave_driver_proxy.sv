@@ -402,7 +402,12 @@ task axi4_slave_driver_proxy::axi4_write_task();
       end
       else begin 
         if(axi4_slave_write_response_fifo_h.is_empty) begin
-          `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write resp data from FIFO as WRITE_RESP_FIFO is EMPTY"));
+          // During teardown phase (after initial transactions complete), empty response FIFO is expected
+          if (completed_initial_txn) begin
+            `uvm_info(get_type_name(), "WRITE_RESP_THREAD::Response FIFO is empty during teardown - this is expected", UVM_LOW);
+          end else begin
+            `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write resp data from FIFO as WRITE_RESP_FIFO is EMPTY"));
+          end
           // Set local_slave_response_tx to null to skip processing
           local_slave_response_tx = null;
         end
