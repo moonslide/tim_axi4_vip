@@ -89,6 +89,8 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
 
   axi4_master_tx qos_queue[$];
   awid_e awid_queue_for_qos[$];
+  
+  // QoS for reads is handled at sequence level
 
   write_read_data_mode_e write_read_mode_h;
 
@@ -623,6 +625,8 @@ task axi4_master_driver_proxy::axi4_read_task();
     axi_read_seq_item_port.get_next_item(req_rd);
     `uvm_info(get_type_name(),$sformatf("READ_TASK:: Before Sending_req_read_packet = \n %s",req_rd.sprint()),UVM_NONE); 
 
+    // QoS for reads is handled at sequence level - no driver-level arbitration needed
+
     // Skip SLAVE_MEM_MODE logic for independent read operations
     // This was causing reads to hang waiting for write addresses in mixed operation tests
     if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && write_read_mode_h == ONLY_WRITE_DATA) begin 
@@ -645,8 +649,9 @@ task axi4_master_driver_proxy::axi4_read_task();
     `uvm_info(get_type_name(),$sformatf("READ_TASK::Checking transfer type outside if= %s",req_rd.transfer_type),UVM_FULL); 
     
     if(req_rd.transfer_type == BLOCKING_READ) begin
+      axi4_master_tx local_read_tx;
       
-      //Converts the req read packet to struct read packet
+      //Converts the read packet to struct read packet - use original request for blocking reads
       axi4_master_seq_item_converter::from_read_class(req_rd,struct_read_packet);
       `uvm_info(get_type_name(),$sformatf("READ_TASK::Checking transfer type in read task = %s",req_rd.transfer_type),UVM_MEDIUM); 
 
@@ -685,6 +690,7 @@ task axi4_master_driver_proxy::axi4_read_task();
       fork
         begin : READ_ADDRESS_CHANNEL  
           axi4_read_transfer_char_s struct_read_address_packet;
+          axi4_master_tx local_master_read_addr_tx;
 
           //Added the read_addr_process to keep track of this read address channel thread
           //self is a static method which creates the read_addr_process of type process
@@ -693,10 +699,9 @@ task axi4_master_driver_proxy::axi4_read_task();
           `uvm_info(get_type_name(),$sformatf("READ_ADDRESS_THREAD::Checking transfer type inside fork = %s",
                                                req_rd.transfer_type),UVM_FULL); 
 
-          `uvm_info(get_type_name(),$sformatf("READ_ADDRESS_THREAD::Checking req_rd = %s",req_rd.sprint()),UVM_FULL); 
-          
-          //Converts the read req packet to struct packet
-          axi4_master_seq_item_converter::from_read_class(req_rd,struct_read_address_packet);
+          // Use original request for read address - QoS handled at sequence level
+          axi4_master_seq_item_converter::from_read_class(req_rd, struct_read_address_packet);
+
           `uvm_info(get_type_name(),$sformatf("READ_ADDRESS_THREAD::Checking struct packet = %p",
                                                struct_read_address_packet),UVM_MEDIUM); 
           

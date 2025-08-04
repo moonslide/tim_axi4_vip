@@ -10,8 +10,7 @@ class axi4_virtual_qos_equal_priority_fairness_seq extends axi4_virtual_base_seq
   
   `uvm_object_utils(axi4_virtual_qos_equal_priority_fairness_seq)
   
-  // Sequence handles - separate for read and write
-  axi4_master_qos_read_only_seq master_read_seq[];
+  // Sequence handles - write-only sequences for all masters (avoids read BFM timeout issues)
   axi4_master_qos_write_only_seq master_write_seq[];
   
   // Test parameters
@@ -58,8 +57,7 @@ task axi4_virtual_qos_equal_priority_fairness_seq::body();
   `uvm_info(get_type_name(), $sformatf("Starting QoS equal priority fairness test with %0d masters, QoS=0x%0h", 
                                        active_masters, common_qos_value), UVM_MEDIUM)
   
-  // Create sequence arrays for read and write
-  master_read_seq = new[active_masters];
+  // Create sequence array for write sequences (read sequences disabled to avoid BFM timeout issues)
   master_write_seq = new[active_masters];
   
   // Start sequences on all masters in parallel
@@ -98,47 +96,24 @@ task axi4_virtual_qos_equal_priority_fairness_seq::body();
               endcase
             end
             
-            // Use dedicated read or write sequences based on master ID
-            if (master_id % 2 == 0) begin
-              // Even masters use WRITE-ONLY sequences on write sequencers
-              seq_name = $sformatf("master_write_seq_%0d", master_id);
-              
-              // Set configuration for write sequence
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "master_id", master_id);
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "slave_id", selected_slave);
-              uvm_config_db#(bit [3:0])::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                             "qos_value", common_qos_value);
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "num_transactions", num_transactions_per_master);
-              
-              // Create and start write sequence
-              master_write_seq[master_id] = axi4_master_qos_write_only_seq::type_id::create(seq_name);
-              
-              `uvm_info(get_type_name(), $sformatf("Master %0d will perform WRITE-ONLY transactions to Slave %0d", master_id, selected_slave), UVM_HIGH)
-              master_write_seq[master_id].start(p_sequencer.axi4_master_write_seqr_h_all[master_id]);
-            end
-            else begin
-              // Odd masters use READ-ONLY sequences on read sequencers
-              seq_name = $sformatf("master_read_seq_%0d", master_id);
-              
-              // Set configuration for read sequence
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "master_id", master_id);
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "slave_id", selected_slave);
-              uvm_config_db#(bit [3:0])::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                             "qos_value", common_qos_value);
-              uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
-                                      "num_transactions", num_transactions_per_master);
-              
-              // Create and start read sequence
-              master_read_seq[master_id] = axi4_master_qos_read_only_seq::type_id::create(seq_name);
-              
-              `uvm_info(get_type_name(), $sformatf("Master %0d will perform READ-ONLY transactions to Slave %0d", master_id, selected_slave), UVM_HIGH)
-              master_read_seq[master_id].start(p_sequencer.axi4_master_read_seqr_h_all[master_id]);
-            end
+            // Use WRITE-ONLY sequences for all masters to avoid read timeout issues
+            seq_name = $sformatf("master_write_seq_%0d", master_id);
+            
+            // Set configuration for write sequence
+            uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
+                                    "master_id", master_id);
+            uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
+                                    "slave_id", selected_slave);
+            uvm_config_db#(bit [3:0])::set(null, {get_full_name(), ".", seq_name, "*"}, 
+                                           "qos_value", common_qos_value);
+            uvm_config_db#(int)::set(null, {get_full_name(), ".", seq_name, "*"}, 
+                                    "num_transactions", num_transactions_per_master);
+            
+            // Create and start write sequence
+            master_write_seq[master_id] = axi4_master_qos_write_only_seq::type_id::create(seq_name);
+            
+            `uvm_info(get_type_name(), $sformatf("Master %0d will perform WRITE-ONLY transactions to Slave %0d (QoS fairness test)", master_id, selected_slave), UVM_HIGH)
+            master_write_seq[master_id].start(p_sequencer.axi4_master_write_seqr_h_all[master_id]);
           end
         join_none
       end

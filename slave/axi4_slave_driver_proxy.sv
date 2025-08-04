@@ -391,6 +391,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
       else begin 
         if(axi4_slave_write_response_fifo_h.is_empty) begin
           `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write resp data from FIFO as WRITE_RESP_FIFO is EMPTY"));
+          // Set local_slave_response_tx to null to skip processing
+          local_slave_response_tx = null;
         end
         else begin
           //getting the data from response fifo
@@ -398,81 +400,82 @@ task axi4_slave_driver_proxy::axi4_write_task();
         end
       end
 
+      // Check if we have valid transaction before processing
+      if(local_slave_response_tx != null) begin
+        //Converting transactions into struct data type
+        axi4_slave_seq_item_converter::from_write_class(local_slave_response_tx,struct_write_packet);
+        `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH);
       
-      //Converting transactions into struct data type
-      axi4_slave_seq_item_converter::from_write_class(local_slave_response_tx,struct_write_packet);
-      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH);
-      
-      // Store the original bresp to preserve user-defined response in SLAVE_MEM_MODE
-      original_bresp = struct_write_packet.bresp; 
+        // Store the original bresp to preserve user-defined response in SLAVE_MEM_MODE
+        original_bresp = struct_write_packet.bresp; 
 
-      //Converting configurations into struct config type
-      axi4_slave_cfg_converter::from_class(axi4_slave_agent_cfg_h,struct_cfg);
-      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_cfg =  \n %0p",struct_cfg),UVM_HIGH);
+        //Converting configurations into struct config type
+        axi4_slave_cfg_converter::from_class(axi4_slave_agent_cfg_h,struct_cfg);
+        `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_cfg =  \n %0p",struct_cfg),UVM_HIGH);
 
-      //check for fifo empty if not get the data 
-      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-        local_slave_addr_tx = local_slave_response_tx;
-        struct_write_packet.bid = awid_queue_for_qos.pop_front();
-        
-        // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
-        // The QoS queue transaction may have dummy/randomized addresses
-        if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-          axi4_slave_tx actual_addr_tx;
-          if(!axi4_slave_write_addr_fifo_h.is_empty) begin
-            axi4_slave_write_addr_fifo_h.get(actual_addr_tx);
-            // Copy the actual address to our transaction
-            local_slave_addr_tx.awaddr = actual_addr_tx.awaddr;
-            local_slave_addr_tx.awlen = actual_addr_tx.awlen;
-            local_slave_addr_tx.awsize = actual_addr_tx.awsize;
-            local_slave_addr_tx.awburst = actual_addr_tx.awburst;
-            local_slave_addr_tx.awlock = actual_addr_tx.awlock;
-            local_slave_addr_tx.awid = actual_addr_tx.awid;
-            local_slave_addr_tx.awprot = actual_addr_tx.awprot;
-            `uvm_info("SLAVE_MEM_QOS_DEBUG", $sformatf("Using actual address 0x%16h from BFM instead of QoS queue addr", actual_addr_tx.awaddr), UVM_LOW);
-          end else begin
-            `uvm_error(get_type_name(), "SLAVE_MEM_MODE with QoS: Write address FIFO is empty - cannot get actual address");
-          end
-        end
-      end
-      else begin
-        if(axi4_slave_write_addr_fifo_h.is_empty) begin
-          `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-          // In out-of-order mode, it's normal for FIFO to be temporarily empty
-          if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || 
-             axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
-          end else begin
-            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in in-order mode"),UVM_MEDIUM);
-          end
-          wait_cycles = 0;
-          while(axi4_slave_write_addr_fifo_h.is_empty) begin
-            @(posedge axi4_slave_drv_bfm_h.aclk);
-            if(wait_cycles++ > 50000) begin
-              `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
-              break;
+        //check for fifo empty if not get the data 
+        if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+          local_slave_addr_tx = local_slave_response_tx;
+          struct_write_packet.bid = awid_queue_for_qos.pop_front();
+          
+          // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
+          // The QoS queue transaction may have dummy/randomized addresses
+          if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+            axi4_slave_tx actual_addr_tx;
+            if(!axi4_slave_write_addr_fifo_h.is_empty) begin
+              axi4_slave_write_addr_fifo_h.get(actual_addr_tx);
+              // Copy the actual address to our transaction
+              local_slave_addr_tx.awaddr = actual_addr_tx.awaddr;
+              local_slave_addr_tx.awlen = actual_addr_tx.awlen;
+              local_slave_addr_tx.awsize = actual_addr_tx.awsize;
+              local_slave_addr_tx.awburst = actual_addr_tx.awburst;
+              local_slave_addr_tx.awlock = actual_addr_tx.awlock;
+              local_slave_addr_tx.awid = actual_addr_tx.awid;
+              local_slave_addr_tx.awprot = actual_addr_tx.awprot;
+              `uvm_info("SLAVE_MEM_QOS_DEBUG", $sformatf("Using actual address 0x%16h from BFM instead of QoS queue addr", actual_addr_tx.awaddr), UVM_LOW);
+            end else begin
+              `uvm_error(get_type_name(), "SLAVE_MEM_MODE with QoS: Write address FIFO is empty - cannot get actual address");
             end
           end
         end
-        if(!axi4_slave_write_addr_fifo_h.is_empty) begin
-          axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
-          `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-          `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
-          
-          // In SLAVE_MEM_MODE without QoS, update the response transaction with actual address from BFM
-          if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-            // Copy the actual address info from BFM-updated transaction to response transaction
-            local_slave_response_tx.awaddr = local_slave_addr_tx.awaddr;
-            local_slave_response_tx.awlen = local_slave_addr_tx.awlen;
-            local_slave_response_tx.awsize = local_slave_addr_tx.awsize;
-            local_slave_response_tx.awburst = local_slave_addr_tx.awburst;
-            local_slave_response_tx.awlock = local_slave_addr_tx.awlock;
-            local_slave_response_tx.awid = local_slave_addr_tx.awid;
-            local_slave_response_tx.awprot = local_slave_addr_tx.awprot;
-            `uvm_info("SLAVE_MEM_DEBUG", $sformatf("Updated response transaction with actual address 0x%16h from BFM", local_slave_addr_tx.awaddr), UVM_LOW);
+        else begin
+          if(axi4_slave_write_addr_fifo_h.is_empty) begin
+            `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+            // In out-of-order mode, it's normal for FIFO to be temporarily empty
+            if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || 
+               axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+              `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
+            end else begin
+              `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in in-order mode"),UVM_MEDIUM);
+            end
+            wait_cycles = 0;
+            while(axi4_slave_write_addr_fifo_h.is_empty) begin
+              @(posedge axi4_slave_drv_bfm_h.aclk);
+              if(wait_cycles++ > 50000) begin
+                `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
+                break;
+              end
+            end
+          end
+          if(!axi4_slave_write_addr_fifo_h.is_empty) begin
+            axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
+            `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+            `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
+            
+            // In SLAVE_MEM_MODE without QoS, update the response transaction with actual address from BFM
+            if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+              // Copy the actual address info from BFM-updated transaction to response transaction
+              local_slave_response_tx.awaddr = local_slave_addr_tx.awaddr;
+              local_slave_response_tx.awlen = local_slave_addr_tx.awlen;
+              local_slave_response_tx.awsize = local_slave_addr_tx.awsize;
+              local_slave_response_tx.awburst = local_slave_addr_tx.awburst;
+              local_slave_response_tx.awlock = local_slave_addr_tx.awlock;
+              local_slave_response_tx.awid = local_slave_addr_tx.awid;
+              local_slave_response_tx.awprot = local_slave_addr_tx.awprot;
+              `uvm_info("SLAVE_MEM_DEBUG", $sformatf("Updated response transaction with actual address 0x%16h from BFM", local_slave_addr_tx.awaddr), UVM_LOW);
+            end
           end
         end
-      end
 
       // In SLAVE_MEM_MODE without QoS, use the response transaction for address calculations
       // since it has been updated with actual BFM values
@@ -668,6 +671,11 @@ task axi4_slave_driver_proxy::axi4_write_task();
      end
      
      semaphore_rsp_write_key.put(1);
+    end else begin
+      // local_slave_response_tx is null, skip processing but still need to release semaphore
+      `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Skipping processing due to null transaction"), UVM_LOW);
+      semaphore_rsp_write_key.put(1);
+      end
    end
  
   join_any
