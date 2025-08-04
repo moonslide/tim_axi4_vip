@@ -580,7 +580,7 @@ class RegressionRunner:
         
         # Create job script
         job_script = folder_path / f'lsf_job_{test_name}.sh'
-        log_file_rel = f'{test_name}.log'
+        log_file_rel = None  # Will be set after seed is determined
         
         # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
         base_test_name = self._extract_base_test_name(test_name)
@@ -639,7 +639,9 @@ class RegressionRunner:
             if command_add:
                 f.write(f'{command_add} ')
             
-            f.write(f'-l {test_name}.log\n')
+            # Generate log file name with seed
+            log_file_with_seed = f'{test_name}_{seed_value}.log'
+            f.write(f'-l {log_file_with_seed}\n')
         
         # Make script executable
         os.chmod(job_script, 0o755)
@@ -667,6 +669,7 @@ class RegressionRunner:
                     'submit_time': time.time(),
                     'status': 'PEND',  # LSF job status
                     'seed': seed_value,
+                'log_file': log_file_with_seed,
                     'command_add': command_add,
                     'base_name': test_obj.get('base_name', test_name),
                     'run_number': test_obj.get('run_number', 1),
@@ -1064,7 +1067,9 @@ class RegressionRunner:
         custom_seed = test_obj.get('seed')
         command_add = test_obj.get('command_add')
         
-        log_file = folder_path / f"{test_name}.log"
+        # log_file will be determined after seed generation
+        log_file = None
+        seed_value = None
         
         # Extract base test name for UVM_TESTNAME (remove _N suffix if present)
         base_test_name = self._extract_base_test_name(test_name)
@@ -1080,13 +1085,14 @@ class RegressionRunner:
             if test_name != base_test_name:
                 print(f"    Base test: {base_test_name}")
             print(f"    Working directory: {self._to_relative_path(folder_path)}")
-            print(f"    Expected log file: {self._to_relative_path(log_file)}")
+            # Log file path will be determined after seed generation
         
         # Always use parallel VCS execution now
         # VCS command - use script wrapper to handle directory changes
         # Use unique script name per test to avoid "Text file busy" conflicts
         run_script = folder_path / f'run_{test_name}.sh'
-        log_file_rel = f'{test_name}.log'
+        # log_file_rel will be set after seed generation
+        log_file_rel = None
         
         # Create run script that runs VCS directly from within this folder
         with open(run_script, 'w') as f:
@@ -1516,18 +1522,31 @@ class RegressionRunner:
         try:
             # Determine target folder based on test status
             target_folder = self.pass_logs_folder if test_result.status == 'PASS' else self.no_pass_logs_folder
-            target_log = target_folder / f"{test_result.name}.log"
+            # Generate target log name with seed if available
+            if test_result.seed:
+                target_log = target_folder / f"{test_result.name}_{test_result.seed}.log"
+            else:
+                target_log = target_folder / f"{test_result.name}.log"
             
             if target_log.exists():
                 return  # Already copied
             
             # Try to find the log file in various locations
+            # Build possible log file names based on whether seed is available
+            if test_result.seed:
+                log_name = f"{test_result.name}_{test_result.seed}.log"
+            else:
+                log_name = f"{test_result.name}.log"
+                
             possible_locations = [
                 # Original log path from test result
                 Path(test_result.log_file) if test_result.log_file else None,
-                # In the run folder
+                # In the run folder with seed
+                self.base_dir.parent / f"run_folder_{test_result.folder_id:02d}" / log_name,
+                # In synopsys_sim directory with seed
+                self.base_dir / log_name,
+                # Fallback: try without seed (for backward compatibility)
                 self.base_dir.parent / f"run_folder_{test_result.folder_id:02d}" / f"{test_result.name}.log",
-                # In synopsys_sim directory  
                 self.base_dir / f"{test_result.name}.log"
             ]
             
@@ -1536,7 +1555,8 @@ class RegressionRunner:
                     shutil.copy2(log_path, target_log)
                     status_folder = "pass_logs" if test_result.status == 'PASS' else "no_pass_logs"
                     if self.verbose:
-                        print(f"📋 Copied log to {status_folder}: {test_result.name}.log")
+                        log_filename = f"{test_result.name}_{test_result.seed}.log" if test_result.seed else f"{test_result.name}.log"
+                        print(f"📋 Copied log to {status_folder}: {log_filename}")
                     return
             
             print(f"⚠️  Warning: Could not find log file for {test_result.name}")
@@ -1552,7 +1572,11 @@ class RegressionRunner:
         for test_result in self.results:
             # Determine target folder based on test status
             target_folder = self.pass_logs_folder if test_result.status == 'PASS' else self.no_pass_logs_folder
-            target_log = target_folder / f"{test_result.name}.log"
+            # Generate target log name with seed if available
+            if test_result.seed:
+                target_log = target_folder / f"{test_result.name}_{test_result.seed}.log"
+            else:
+                target_log = target_folder / f"{test_result.name}.log"
             
             # Check if already properly organized
             if target_log.exists():
@@ -1611,7 +1635,9 @@ class RegressionRunner:
                     # Truncate long error messages
                     error_short = result.error_msg[:100] + "..." if len(result.error_msg) > 100 else result.error_msg
                     print(f"            └─ {error_short}")
-                print(f"            └─ Log: {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}")
+                # Include seed in log filename if available
+                log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                print(f"            └─ Log: {self._to_relative_path(self.no_pass_logs_folder / log_filename)}")
             
             print(f"\n📝 Failed test list saved to: {self._to_relative_path(self.results_folder / 'no_pass_list')}")
         
@@ -1670,7 +1696,8 @@ class RegressionRunner:
                         f.write(f"Status:   {result.status}\n")
                         f.write(f"Duration: {result.duration:.1f}s\n")
                         f.write(f"Folder:   {result.folder_id}\n")
-                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                        log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / log_filename)}\n")
                         if result.error_msg:
                             f.write(f"Error:    {result.error_msg}\n")
                         f.write(f"\n")
@@ -1685,7 +1712,8 @@ class RegressionRunner:
                         f.write(f"Status:   {result.status}\n")
                         f.write(f"Duration: {result.duration:.1f}s\n")
                         f.write(f"Folder:   {result.folder_id}\n")
-                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                        log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                        f.write(f"Log:      {self._to_relative_path(self.no_pass_logs_folder / log_filename)}\n")
                         if result.error_msg:
                             f.write(f"Error:    {result.error_msg}\n")
                         f.write(f"\n")
@@ -1703,7 +1731,8 @@ class RegressionRunner:
                     f.write(f"Status:   {result.status}\n")
                     f.write(f"Duration: {result.duration:.1f}s\n")
                     f.write(f"Folder:   {result.folder_id}\n")
-                    f.write(f"Log:      {self._to_relative_path(self.pass_logs_folder / f'{result.name}.log')}\n")
+                    log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                    f.write(f"Log:      {self._to_relative_path(self.pass_logs_folder / log_filename)}\n")
                     f.write(f"\n")
     
     def _save_regression_summary(self, summary_file: Path):
@@ -1739,7 +1768,8 @@ class RegressionRunner:
                 f.write(f"      Status:     {result.status}\n")
                 f.write(f"      Duration:   {result.duration:.1f}s\n")
                 f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
-                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / log_filename)}\n")
                 if result.error_msg:
                     f.write(f"      Error:      {result.error_msg}\n")
                 f.write(f"\n")
@@ -1751,7 +1781,8 @@ class RegressionRunner:
                 f.write(f"      Status:     {result.status}\n")
                 f.write(f"      Duration:   {result.duration:.1f}s\n")
                 f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
-                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / f'{result.name}.log')}\n")
+                log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                f.write(f"      Log:        {self._to_relative_path(self.no_pass_logs_folder / log_filename)}\n")
                 if result.error_msg:
                     f.write(f"      Error:      {result.error_msg}\n")
                 if result.uvm_errors > 0 or result.uvm_fatals > 0:
@@ -1765,7 +1796,8 @@ class RegressionRunner:
                 f.write(f"      Status:     {result.status}\n")
                 f.write(f"      Duration:   {result.duration:.1f}s\n")
                 f.write(f"      Folder:     run_folder_{result.folder_id:02d}\n")
-                f.write(f"      Log:        {self._to_relative_path(self.pass_logs_folder / f'{result.name}.log')}\n")
+                log_filename = f'{result.name}_{result.seed}.log' if result.seed else f'{result.name}.log'
+                f.write(f"      Log:        {self._to_relative_path(self.pass_logs_folder / log_filename)}\n")
                 f.write(f"\n")
                 test_num += 1
             
@@ -1881,8 +1913,12 @@ class RegressionRunner:
                 # Calculate duration
                 duration = job_info.get('end_time', time.time()) - job_info['submit_time']
                 
-                # Analyze results
-                log_file = folder_path / f"{test_name}.log"
+                # Analyze results - use seed in log filename
+                seed = job_info.get('seed')
+                if seed:
+                    log_file = folder_path / f"{test_name}_{seed}.log"
+                else:
+                    log_file = folder_path / f"{test_name}.log"
                 if job_info['status'] == 'TIMEOUT':
                     status = 'TIMEOUT'
                     error_msg = f"LSF job timed out after {self.timeout}s"
