@@ -1,0 +1,10 @@
+Command: vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
+-override_timescale=1ps/1ps +nospecify +no_timing_check +ntb_random_seed=55375611 \
++define+UVM_VERDI_COMPWAVE -f ../../axi4_compile.f -debug_access+all +UVM_TESTNAME=axi4_qos_equal_priority_fairness_test \
++UVM_VERBOSITY=MEDIUM -l compile.log
+
+Error-[P1ARGS-CANTOPN-F] Cannot open file
+  Unable to open '../../axi4_compile.f' due to 'No such file or directory'.
+  Please fix the reason mentioned above and continue.
+
+CPU time: .202 seconds to compile

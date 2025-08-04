@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1753752551.380095771, "rt":20.16, "ut":19.53, "st":0.47}}
+{"vcselab":{"timestamp_begin":1753752571.691887921, "rt":0.38, "ut":0.28, "st":0.12}}
+{"link":{"timestamp_begin":1753752572.210380673, "rt":0.85, "ut":0.51, "st":0.35}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1753752550.269373384}
+{"VCS_COMP_START_TIME": 1753752550.269373384}
+{"VCS_COMP_END_TIME": 1753752573.229126120}
+{"VCS_USER_OPTIONS": "-sverilog -ntb_opts uvm -timescale=1ns/1ps +vcs+flush+all +define+SVA_CHECKER_COMPILE_OFF -full64 -work work -ncvlog_args,-status -l saturation_stress_compile.log -f axi4_compile_doc.f +UVM_TESTNAME=axi4_qos_saturation_stress_test +ntb_random_seed=123"}
+{"vcs1": {"peak_mem": 467720}}
+{"vcselab": {"peak_mem": 175044}}

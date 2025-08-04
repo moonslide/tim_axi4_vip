@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1753752206.805352850, "rt":19.04, "ut":18.49, "st":0.45}}
+{"vcselab":{"timestamp_begin":1753752226.041233549, "rt":0.39, "ut":0.28, "st":0.13}}
+{"link":{"timestamp_begin":1753752226.561324035, "rt":0.74, "ut":0.41, "st":0.32}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1753752205.904939977}
+{"VCS_COMP_START_TIME": 1753752205.904939977}
+{"VCS_COMP_END_TIME": 1753752228.136937877}
+{"VCS_USER_OPTIONS": "-full64 +v2k -R -sverilog -l axi4_qos_basic_priority_random_masters.log -ntb_opts uvm-1.2 +incdir+../include+../master+../slave+../bm+../intf/axi4_interface+../env+../seq+../test+../virtual_seq+../virtual_seqr -F axi4_compile_doc.f +UVM_TESTNAME=axi4_qos_basic_priority_test +ntb_random_seed=123"}
+{"vcs1": {"peak_mem": 479944}}
+{"vcselab": {"peak_mem": 175056}}

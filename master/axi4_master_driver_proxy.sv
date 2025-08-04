@@ -88,7 +88,7 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   int qos_write_counter;
 
   axi4_master_tx qos_queue[$];
-
+  awid_e awid_queue_for_qos[$];
 
   write_read_data_mode_e write_read_mode_h;
 
@@ -327,11 +327,18 @@ task axi4_master_driver_proxy::axi4_write_task();
           if(((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
             (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))) begin
             if(qos_wait_enable) begin
-              wait(qos_queue.size>=2);
+              // Wait for at least one entry in the queue before proceeding
+              wait(qos_queue.size >= 1);
+              // For better synchronization, wait for 2 entries if this is not the last transaction
+              if(qos_write_counter < 2 || axi4_master_write_fifo_h.used() > 1) begin
+                wait(qos_queue.size >= 2);
+              end
             end
             qos_wait_enable = 1'b0;
-            qos_value_check_1 = qos_queue[$];
-            if(!disable_qos_check) begin
+            if(qos_queue.size() > 0) begin
+              qos_value_check_1 = qos_queue[$];
+              
+              if(!disable_qos_check) begin
               for(int i=0;i<qos_queue.size();i++) begin
                 if(qos_queue[i].awqos >= qos_value_check_1.awqos) begin
                   qos_value_check_1 = qos_queue[i];
@@ -340,7 +347,7 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
               if(qos_queue.size>1 && enable_qos_check_for_initial_txn == -1) begin
                 for(int k=0;k<qos_queue.size();k++) begin
-                  if(qos_queue[$].awid == qos_queue[k].awid) begin
+                  if(qos_queue.size() > 0 && qos_queue[$].awid == qos_queue[k].awid) begin
                     if(k==qos_queue.size-1) disable_b2b_check = 1;
                   end
                   else begin
@@ -348,8 +355,14 @@ task axi4_master_driver_proxy::axi4_write_task();
                   end
                 end
               end
-              temp_awid = qos_queue[queue_index];
-              if(disable_b2b_check == 0) begin
+              if(queue_index >= 0 && queue_index < qos_queue.size() && qos_queue[queue_index] != null) begin
+                temp_awid = qos_queue[queue_index];
+              end
+              else begin
+                `uvm_error(get_type_name(), $sformatf("Invalid queue_index=%0d or null object when accessing temp_awid (qos_queue.size=%0d)", queue_index, qos_queue.size()));
+                temp_awid = null;
+              end
+              if(disable_b2b_check == 0 && temp_awid != null) begin
                 for(int j=0;j<qos_queue.size();j++) begin
                   if(temp_awid.awid == qos_queue[j].awid) begin
                     queue_index = j;
@@ -361,10 +374,12 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
             end
             if(enable_qos_check_for_initial_txn == 0) begin
-              if(qos_queue[$].awid == qos_queue[$-1].awid && awid_queue_for_qos[$] == qos_queue[$-1].awid) begin
-                awid_queue_q = qos_queue.find_last_index with (item.awid == qos_queue[$].awid);
-                queue_index = awid_queue_q[$]; 
-                enable_qos_check_for_initial_txn = -1;
+              if(qos_queue.size() >= 2 && awid_queue_for_qos.size() >= 1) begin
+                if(qos_queue[$].awid == qos_queue[$-1].awid && awid_queue_for_qos[$] == qos_queue[$-1].awid) begin
+                  awid_queue_q = qos_queue.find_last_index with (item.awid == qos_queue[$].awid);
+                  queue_index = awid_queue_q[$]; 
+                  enable_qos_check_for_initial_txn = -1;
+                end
               end
               else begin
                 queue_index = queue_index;
@@ -372,7 +387,7 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
             end
             if(enable_qos_check_for_initial_txn == 1) begin
-              if(qos_queue[$].awid == qos_queue[$-1].awid) begin
+              if(qos_queue.size() >= 2 && qos_queue[$].awid == qos_queue[$-1].awid) begin
                 local_master_data_tx = qos_queue.pop_back;
                 awid_queue_for_qos.push_back(local_master_data_tx.awid);
               end
@@ -383,20 +398,41 @@ task axi4_master_driver_proxy::axi4_write_task();
                   enable_qos_check_for_initial_txn = 0;
                 end
                 else begin
-                  local_master_data_tx = qos_queue[queue_index];
-                  awid_queue_for_qos.push_back(local_master_data_tx.awid);
-                  enable_qos_check_for_initial_txn = 0;
-                  qos_queue.delete(queue_index);
+                  if(queue_index >= 0 && queue_index < qos_queue.size() && qos_queue[queue_index] != null) begin
+                    local_master_data_tx = qos_queue[queue_index];
+                    awid_queue_for_qos.push_back(local_master_data_tx.awid);
+                    enable_qos_check_for_initial_txn = 0;
+                    qos_queue.delete(queue_index);
+                  end
+                  else begin
+                    `uvm_error(get_type_name(), $sformatf("Invalid queue_index=%0d or null object in qos_queue (size=%0d)", queue_index, qos_queue.size()));
+                  end
                 end
               end
             end
             else begin
-                local_master_data_tx = qos_queue[queue_index];
-                awid_queue_for_qos.push_back(local_master_data_tx.awid);
-                qos_queue.delete(queue_index);
+                if(queue_index >= 0 && queue_index < qos_queue.size() && qos_queue[queue_index] != null) begin
+                  local_master_data_tx = qos_queue[queue_index];
+                  awid_queue_for_qos.push_back(local_master_data_tx.awid);
+                  qos_queue.delete(queue_index);
+                end
+                else begin
+                  `uvm_error(get_type_name(), $sformatf("Invalid queue_index=%0d or null object in qos_queue (size=%0d)", queue_index, qos_queue.size()));
+                end
             end
            temp_queue_sz = qos_queue.size();
             qos_wait_enable_for_b2b = 1'b0;
+            end
+            else begin
+              `uvm_error(get_type_name(), "qos_queue is empty when trying to access last element");
+              // When QoS queue is empty, fall back to normal FIFO operation
+              if(!axi4_master_write_fifo_h.is_empty()) begin
+                axi4_master_write_fifo_h.get(local_master_data_tx);
+              end
+              else begin
+                `uvm_error(get_type_name(),$sformatf("WRITE_DATA_THREAD::Cannot peek into FIFO as WRITE_FIFO IS EMPTY"));
+              end
+            end
           end
           else begin
             //Peek method gets the packet from the fifo but the fifo doesn't discard the packet
@@ -435,7 +471,7 @@ task axi4_master_driver_proxy::axi4_write_task();
                end
                else begin
                  diff = qos_queue.size - temp_queue_sz;
-                 if(local_master_data_tx.awid == qos_queue[diff-1].awid) begin
+                 if(diff > 0 && (diff-1) >= 0 && (diff-1) < qos_queue.size() && qos_queue[diff-1] != null && local_master_data_tx.awid == qos_queue[diff-1].awid) begin
                    queue_index = diff-1;
                    disable_qos_check = 1;
                  end
@@ -449,7 +485,7 @@ task axi4_master_driver_proxy::axi4_write_task();
               if(queue_index>=1) begin
                  diff = qos_queue.size - temp_queue_sz;
                  if(diff == 0) begin
-                   if(local_master_data_tx.awid == qos_queue[queue_index-1].awid) begin
+                   if((queue_index-1) >= 0 && (queue_index-1) < qos_queue.size() && qos_queue[queue_index-1] != null && local_master_data_tx.awid == qos_queue[queue_index-1].awid) begin
                      queue_index = queue_index-1;
                      disable_qos_check = 1;
                    end
@@ -458,7 +494,7 @@ task axi4_master_driver_proxy::axi4_write_task();
                    end
                  end
                  else begin
-                   if(local_master_data_tx.awid == qos_queue[diff].awid) begin
+                   if(diff >= 0 && diff < qos_queue.size() && qos_queue[diff] != null && local_master_data_tx.awid == qos_queue[diff].awid) begin
                      modify_qos_index_bit = 1;
                    end
                    else begin
@@ -480,6 +516,12 @@ task axi4_master_driver_proxy::axi4_write_task();
             end
           end
 
+          // Reset qos_wait_enable for next transaction to ensure proper synchronization
+          if((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
+             (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+            qos_wait_enable = 1'b1;
+          end
+          
           //Keeps the key back in the semaphore as the current transaction is completed
           //and the next transacion can be started.
           write_data_channel_key.put(1);

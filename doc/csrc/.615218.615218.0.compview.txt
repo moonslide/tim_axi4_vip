@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1753751288.807984911, "rt":21.07, "ut":20.48, "st":0.46}}
+{"vcselab":{"timestamp_begin":1753751310.064691653, "rt":0.40, "ut":0.28, "st":0.13}}
+{"link":{"timestamp_begin":1753751310.603725671, "rt":0.93, "ut":0.62, "st":0.30}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1753751287.987084012}
+{"VCS_COMP_START_TIME": 1753751287.987084012}
+{"VCS_COMP_END_TIME": 1753751312.361628819}
+{"VCS_USER_OPTIONS": "-full64 +v2k -R -sverilog -l axi4_qos_saturation_stress_test.log -ntb_opts uvm-1.2 +incdir+../include+../master+../slave+../bm+../intf/axi4_interface+../env+../seq+../test+../virtual_seq+../virtual_seqr -F axi4_compile_doc.f +UVM_TESTNAME=axi4_qos_saturation_stress_test"}
+{"vcs1": {"peak_mem": 471684}}
+{"vcselab": {"peak_mem": 175060}}

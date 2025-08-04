@@ -1,0 +1,657 @@
+✅ LSF commands available (bsub, bjobs, bkill)
+🚀 Starting AXI4 Regression Runner
+📋 Expanded axi4_qos_basic_priority_test into 10 runs: axi4_qos_basic_priority_test_1 to axi4_qos_basic_priority_test_10
+    Group ID: axi4_qos_basic_priority_test_group_0
+📋 Expanded axi4_qos_equal_priority_fairness_test into 10 runs: axi4_qos_equal_priority_fairness_test_1 to axi4_qos_equal_priority_fairness_test_10
+    Group ID: axi4_qos_equal_priority_fairness_test_group_1
+📋 Expanded axi4_qos_saturation_stress_test into 10 runs: axi4_qos_saturation_stress_test_1 to axi4_qos_saturation_stress_test_10
+    Group ID: axi4_qos_saturation_stress_test_group_2
+📋 Expanded axi4_qos_starvation_prevention_test into 10 runs: axi4_qos_starvation_prevention_test_1 to axi4_qos_starvation_prevention_test_10
+    Group ID: axi4_qos_starvation_prevention_test_group_3
+📋 Expanded axi4_user_signal_passthrough_test into 10 runs: axi4_user_signal_passthrough_test_1 to axi4_user_signal_passthrough_test_10
+    Group ID: axi4_user_signal_passthrough_test_group_4
+📋 Expanded axi4_user_signal_width_mismatch_test into 10 runs: axi4_user_signal_width_mismatch_test_1 to axi4_user_signal_width_mismatch_test_10
+    Group ID: axi4_user_signal_width_mismatch_test_group_5
+📋 Expanded axi4_user_parity_protection_test into 10 runs: axi4_user_parity_protection_test_1 to axi4_user_parity_protection_test_10
+    Group ID: axi4_user_parity_protection_test_group_6
+📋 Expanded axi4_user_security_tagging_test into 10 runs: axi4_user_security_tagging_test_1 to axi4_user_security_tagging_test_10
+    Group ID: axi4_user_security_tagging_test_group_7
+📋 Expanded axi4_user_transaction_tracing_test into 10 runs: axi4_user_transaction_tracing_test_1 to axi4_user_transaction_tracing_test_10
+    Group ID: axi4_user_transaction_tracing_test_group_8
+📋 Expanded axi4_user_signal_protocol_violation_test into 10 runs: axi4_user_signal_protocol_violation_test_1 to axi4_user_signal_protocol_violation_test_10
+    Group ID: axi4_user_signal_protocol_violation_test_group_9
+📋 Expanded axi4_user_signal_corruption_test into 10 runs: axi4_user_signal_corruption_test_1 to axi4_user_signal_corruption_test_10
+    Group ID: axi4_user_signal_corruption_test_group_10
+📋 Expanded axi4_qos_with_user_priority_boost_test into 10 runs: axi4_qos_with_user_priority_boost_test_1 to axi4_qos_with_user_priority_boost_test_10
+    Group ID: axi4_qos_with_user_priority_boost_test_group_11
+📋 Expanded axi4_user_based_qos_routing_test into 10 runs: axi4_user_based_qos_routing_test_1 to axi4_user_based_qos_routing_test_10
+    Group ID: axi4_user_based_qos_routing_test_group_12
+📋 Loaded 13 test entries from qos_tests_validation.list
+📋 Expanded to 130 total test runs
+⚙️  Configuration: LSF mode, 5 parallel workers, 900s timeout
+🧹 Cleaning up old run_folder_xx directories...
+✅ No existing run folders to clean
+📁 Created results folder: regression_result_20250729_111219
+   └─ logs folder: regression_result_20250729_111219/logs
+       ├─ pass_logs folder: regression_result_20250729_111219/logs/pass_logs
+       └─ no_pass_logs folder: regression_result_20250729_111219/logs/no_pass_logs
+🔧 Setting up 5 parallel execution folders...
+✅ Created 5 execution folders
+
+🏃 Starting regression with 130 tests...
+--------------------------------------------------------------------------------
+📤 [LSF] Submitted axi4_qos_basic_priority_test_1 as job 12527
+📤 [LSF] Submitted axi4_qos_basic_priority_test_2 as job 12528
+📤 [LSF] Submitted axi4_qos_basic_priority_test_3 as job 12529
+📤 [LSF] Submitted axi4_qos_basic_priority_test_4 as job 12530
+📤 [LSF] Submitted axi4_qos_basic_priority_test_5 as job 12531
+📤 [LSF] Submitted axi4_qos_basic_priority_test_6 as job 12532
+📤 [LSF] Submitted axi4_qos_basic_priority_test_7 as job 12533
+📤 [LSF] Submitted axi4_qos_basic_priority_test_8 as job 12534
+📤 [LSF] Submitted axi4_qos_basic_priority_test_9 as job 12535
+📤 [LSF] Submitted axi4_qos_basic_priority_test_10 as job 12536
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_1 as job 12537
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_2 as job 12538
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_3 as job 12539
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_4 as job 12540
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_5 as job 12541
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_6 as job 12542
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_7 as job 12543
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_8 as job 12544
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_9 as job 12545
+📤 [LSF] Submitted axi4_qos_equal_priority_fairness_test_10 as job 12546
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_1 as job 12547
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_2 as job 12548
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_3 as job 12549
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_4 as job 12550
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_5 as job 12551
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_6 as job 12552
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_7 as job 12553
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_8 as job 12554
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_9 as job 12555
+📤 [LSF] Submitted axi4_qos_saturation_stress_test_10 as job 12556
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_1 as job 12557
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_2 as job 12558
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_3 as job 12559
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_4 as job 12560
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_5 as job 12561
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_6 as job 12562
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_7 as job 12563
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_8 as job 12564
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_9 as job 12565
+📤 [LSF] Submitted axi4_qos_starvation_prevention_test_10 as job 12566
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_1 as job 12567
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_2 as job 12568
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_3 as job 12569
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_4 as job 12570
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_5 as job 12571
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_6 as job 12572
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_7 as job 12573
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_8 as job 12574
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_9 as job 12575
+📤 [LSF] Submitted axi4_user_signal_passthrough_test_10 as job 12576
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_1 as job 12577
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_2 as job 12578
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_3 as job 12579
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_4 as job 12580
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_5 as job 12581
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_6 as job 12582
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_7 as job 12583
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_8 as job 12584
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_9 as job 12585
+📤 [LSF] Submitted axi4_user_signal_width_mismatch_test_10 as job 12586
+📤 [LSF] Submitted axi4_user_parity_protection_test_1 as job 12587
+📤 [LSF] Submitted axi4_user_parity_protection_test_2 as job 12588
+📤 [LSF] Submitted axi4_user_parity_protection_test_3 as job 12589
+📤 [LSF] Submitted axi4_user_parity_protection_test_4 as job 12590
+📤 [LSF] Submitted axi4_user_parity_protection_test_5 as job 12591
+📤 [LSF] Submitted axi4_user_parity_protection_test_6 as job 12592
+📤 [LSF] Submitted axi4_user_parity_protection_test_7 as job 12593
+📤 [LSF] Submitted axi4_user_parity_protection_test_8 as job 12594
+📤 [LSF] Submitted axi4_user_parity_protection_test_9 as job 12595
+📤 [LSF] Submitted axi4_user_parity_protection_test_10 as job 12596
+📤 [LSF] Submitted axi4_user_security_tagging_test_1 as job 12597
+📤 [LSF] Submitted axi4_user_security_tagging_test_2 as job 12598
+📤 [LSF] Submitted axi4_user_security_tagging_test_3 as job 12599
+📤 [LSF] Submitted axi4_user_security_tagging_test_4 as job 12600
+📤 [LSF] Submitted axi4_user_security_tagging_test_5 as job 12601
+📤 [LSF] Submitted axi4_user_security_tagging_test_6 as job 12602
+📤 [LSF] Submitted axi4_user_security_tagging_test_7 as job 12603
+📤 [LSF] Submitted axi4_user_security_tagging_test_8 as job 12604
+📤 [LSF] Submitted axi4_user_security_tagging_test_9 as job 12605
+📤 [LSF] Submitted axi4_user_security_tagging_test_10 as job 12606
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_1 as job 12607
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_2 as job 12608
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_3 as job 12609
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_4 as job 12610
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_5 as job 12611
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_6 as job 12612
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_7 as job 12613
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_8 as job 12614
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_9 as job 12615
+📤 [LSF] Submitted axi4_user_transaction_tracing_test_10 as job 12616
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_1 as job 12617
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_2 as job 12618
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_3 as job 12619
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_4 as job 12620
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_5 as job 12621
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_6 as job 12622
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_7 as job 12623
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_8 as job 12624
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_9 as job 12625
+📤 [LSF] Submitted axi4_user_signal_protocol_violation_test_10 as job 12626
+📤 [LSF] Submitted axi4_user_signal_corruption_test_1 as job 12627
+📤 [LSF] Submitted axi4_user_signal_corruption_test_2 as job 12628
+📤 [LSF] Submitted axi4_user_signal_corruption_test_3 as job 12629
+📤 [LSF] Submitted axi4_user_signal_corruption_test_4 as job 12630
+📤 [LSF] Submitted axi4_user_signal_corruption_test_5 as job 12631
+📤 [LSF] Submitted axi4_user_signal_corruption_test_6 as job 12632
+📤 [LSF] Submitted axi4_user_signal_corruption_test_7 as job 12633
+📤 [LSF] Submitted axi4_user_signal_corruption_test_8 as job 12634
+📤 [LSF] Submitted axi4_user_signal_corruption_test_9 as job 12635
+📤 [LSF] Submitted axi4_user_signal_corruption_test_10 as job 12636
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_1 as job 12637
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_2 as job 12638
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_3 as job 12639
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_4 as job 12640
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_5 as job 12641
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_6 as job 12642
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_7 as job 12643
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_8 as job 12644
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_9 as job 12645
+📤 [LSF] Submitted axi4_qos_with_user_priority_boost_test_10 as job 12646
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_1 as job 12647
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_2 as job 12648
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_3 as job 12649
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_4 as job 12650
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_5 as job 12651
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_6 as job 12652
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_7 as job 12653
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_8 as job 12654
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_9 as job 12655
+📤 [LSF] Submitted axi4_user_based_qos_routing_test_10 as job 12656
+📤 [LSF] Submitted 130 jobs, monitoring for completion...
+📊 [LSF Status] Done: 0/130 (0.0%) | Remaining: 130 | Pending: 130 | Running: 0 | ETA: Unknown
+📊 [LSF Status] Done: 0/130 (0.0%) | Remaining: 130 | Pending: 118 | Running: 12 | ETA: Unknown
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_7
+❌ [  1/130] axi4_qos_equal_priority_fairness_test_7            (  15.9s) Progress:   0.8% ETA: 3:38:35 [Remaining:129 P:118 R:12]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_10
+❌ [  2/130] axi4_qos_equal_priority_fairness_test_10           (  18.2s) Progress:   1.5% ETA: 1:48:26 [Remaining:128 P:118 R:12]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_saturation_stress_test_4
+❌ [  3/130] axi4_qos_saturation_stress_test_4                  (  21.0s) Progress:   2.3% ETA: 1:11:43 [Remaining:127 P:118 R:12]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_saturation_stress_test_6
+❌ [  4/130] axi4_qos_saturation_stress_test_6                  (  22.4s) Progress:   3.1% ETA: 0:53:22 [Remaining:126 P:118 R:12]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_saturation_stress_test_8
+❌ [  5/130] axi4_qos_saturation_stress_test_8                  (  23.8s) Progress:   3.8% ETA: 0:42:21 [Remaining:125 P:118 R:12]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_2
+❌ [  6/130] axi4_qos_starvation_prevention_test_2              (  26.8s) Progress:   4.6% ETA: 0:35:01 [Remaining:124 P:118 R:12]
+    └─ Error: LSF job exited with error
+📊 [LSF Status] Done: 6/130 (4.6%) | Remaining: 124 | Pending: 111 | Running: 19 | ETA: 1:07:49
+           Results: 0 PASS, 6 FAIL
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_1
+❌ [  7/130] axi4_qos_basic_priority_test_1                     ( 104.4s) Progress:   5.4% ETA: 0:57:39 [Remaining:123 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_2
+❌ [  8/130] axi4_qos_basic_priority_test_2                     ( 105.1s) Progress:   6.2% ETA: 0:50:02 [Remaining:122 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_3
+❌ [  9/130] axi4_qos_basic_priority_test_3                     ( 105.9s) Progress:   6.9% ETA: 0:44:07 [Remaining:121 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_4
+❌ [ 10/130] axi4_qos_basic_priority_test_4                     ( 106.6s) Progress:   7.7% ETA: 0:39:22 [Remaining:120 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_5
+❌ [ 11/130] axi4_qos_basic_priority_test_5                     ( 107.4s) Progress:   8.5% ETA: 0:35:30 [Remaining:119 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_6
+❌ [ 12/130] axi4_qos_basic_priority_test_6                     ( 108.1s) Progress:   9.2% ETA: 0:32:16 [Remaining:118 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_7
+❌ [ 13/130] axi4_qos_basic_priority_test_7                     ( 108.9s) Progress:  10.0% ETA: 0:29:32 [Remaining:117 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_8
+❌ [ 14/130] axi4_qos_basic_priority_test_8                     ( 109.6s) Progress:  10.8% ETA: 0:27:11 [Remaining:116 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_9
+❌ [ 15/130] axi4_qos_basic_priority_test_9                     ( 110.3s) Progress:  11.5% ETA: 0:25:09 [Remaining:115 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_basic_priority_test_10
+❌ [ 16/130] axi4_qos_basic_priority_test_10                    ( 111.0s) Progress:  12.3% ETA: 0:23:22 [Remaining:114 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_1
+❌ [ 17/130] axi4_qos_equal_priority_fairness_test_1            ( 111.7s) Progress:  13.1% ETA: 0:21:48 [Remaining:113 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_2
+❌ [ 18/130] axi4_qos_equal_priority_fairness_test_2            ( 112.4s) Progress:  13.8% ETA: 0:20:25 [Remaining:112 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_3
+❌ [ 19/130] axi4_qos_equal_priority_fairness_test_3            ( 113.1s) Progress:  14.6% ETA: 0:19:10 [Remaining:111 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_4
+❌ [ 20/130] axi4_qos_equal_priority_fairness_test_4            ( 113.8s) Progress:  15.4% ETA: 0:18:02 [Remaining:110 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_5
+❌ [ 21/130] axi4_qos_equal_priority_fairness_test_5            ( 114.5s) Progress:  16.2% ETA: 0:17:02 [Remaining:109 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_equal_priority_fairness_test_9
+❌ [ 22/130] axi4_qos_equal_priority_fairness_test_9            ( 117.2s) Progress:  16.9% ETA: 0:16:06 [Remaining:108 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_3
+❌ [ 23/130] axi4_qos_starvation_prevention_test_3              ( 123.5s) Progress:  17.7% ETA: 0:15:16 [Remaining:107 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_4
+❌ [ 24/130] axi4_qos_starvation_prevention_test_4              ( 124.2s) Progress:  18.5% ETA: 0:14:29 [Remaining:106 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_5
+❌ [ 25/130] axi4_qos_starvation_prevention_test_5              ( 124.9s) Progress:  19.2% ETA: 0:13:46 [Remaining:105 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_6
+❌ [ 26/130] axi4_qos_starvation_prevention_test_6              ( 125.7s) Progress:  20.0% ETA: 0:13:07 [Remaining:104 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_7
+❌ [ 27/130] axi4_qos_starvation_prevention_test_7              ( 126.4s) Progress:  20.8% ETA: 0:12:31 [Remaining:103 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_8
+❌ [ 28/130] axi4_qos_starvation_prevention_test_8              ( 127.2s) Progress:  21.5% ETA: 0:11:57 [Remaining:102 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_9
+❌ [ 29/130] axi4_qos_starvation_prevention_test_9              ( 127.9s) Progress:  22.3% ETA: 0:11:25 [Remaining:101 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_starvation_prevention_test_10
+❌ [ 30/130] axi4_qos_starvation_prevention_test_10             ( 128.7s) Progress:  23.1% ETA: 0:10:56 [Remaining:100 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_1
+❌ [ 31/130] axi4_user_signal_passthrough_test_1                ( 129.4s) Progress:  23.8% ETA: 0:10:28 [Remaining:99 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_2
+❌ [ 32/130] axi4_user_signal_passthrough_test_2                ( 130.1s) Progress:  24.6% ETA: 0:10:03 [Remaining:98 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_3
+❌ [ 33/130] axi4_user_signal_passthrough_test_3                ( 130.8s) Progress:  25.4% ETA: 0:09:38 [Remaining:97 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_4
+❌ [ 34/130] axi4_user_signal_passthrough_test_4                ( 131.5s) Progress:  26.2% ETA: 0:09:15 [Remaining:96 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_5
+❌ [ 35/130] axi4_user_signal_passthrough_test_5                ( 132.2s) Progress:  26.9% ETA: 0:08:54 [Remaining:95 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_6
+❌ [ 36/130] axi4_user_signal_passthrough_test_6                ( 132.9s) Progress:  27.7% ETA: 0:08:34 [Remaining:94 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_7
+❌ [ 37/130] axi4_user_signal_passthrough_test_7                ( 133.6s) Progress:  28.5% ETA: 0:08:14 [Remaining:93 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_9
+❌ [ 38/130] axi4_user_signal_passthrough_test_9                ( 135.0s) Progress:  29.2% ETA: 0:07:56 [Remaining:92 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_10
+❌ [ 39/130] axi4_user_signal_passthrough_test_10               ( 135.8s) Progress:  30.0% ETA: 0:07:39 [Remaining:91 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_1
+❌ [ 40/130] axi4_user_signal_width_mismatch_test_1             ( 136.5s) Progress:  30.8% ETA: 0:07:23 [Remaining:90 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_2
+❌ [ 41/130] axi4_user_signal_width_mismatch_test_2             ( 137.3s) Progress:  31.5% ETA: 0:07:07 [Remaining:89 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_3
+❌ [ 42/130] axi4_user_signal_width_mismatch_test_3             ( 138.1s) Progress:  32.3% ETA: 0:06:52 [Remaining:88 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_4
+❌ [ 43/130] axi4_user_signal_width_mismatch_test_4             ( 138.8s) Progress:  33.1% ETA: 0:06:38 [Remaining:87 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_5
+❌ [ 44/130] axi4_user_signal_width_mismatch_test_5             ( 139.4s) Progress:  33.8% ETA: 0:06:24 [Remaining:86 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_6
+❌ [ 45/130] axi4_user_signal_width_mismatch_test_6             ( 140.1s) Progress:  34.6% ETA: 0:06:11 [Remaining:85 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_7
+❌ [ 46/130] axi4_user_signal_width_mismatch_test_7             ( 140.8s) Progress:  35.4% ETA: 0:05:59 [Remaining:84 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_8
+❌ [ 47/130] axi4_user_signal_width_mismatch_test_8             ( 141.5s) Progress:  36.2% ETA: 0:05:47 [Remaining:83 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_9
+❌ [ 48/130] axi4_user_signal_width_mismatch_test_9             ( 142.2s) Progress:  36.9% ETA: 0:05:36 [Remaining:82 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_width_mismatch_test_10
+❌ [ 49/130] axi4_user_signal_width_mismatch_test_10            ( 142.9s) Progress:  37.7% ETA: 0:05:25 [Remaining:81 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_1
+❌ [ 50/130] axi4_user_parity_protection_test_1                 ( 143.6s) Progress:  38.5% ETA: 0:05:15 [Remaining:80 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_2
+❌ [ 51/130] axi4_user_parity_protection_test_2                 ( 144.3s) Progress:  39.2% ETA: 0:05:05 [Remaining:79 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_3
+❌ [ 52/130] axi4_user_parity_protection_test_3                 ( 145.1s) Progress:  40.0% ETA: 0:04:55 [Remaining:78 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_4
+❌ [ 53/130] axi4_user_parity_protection_test_4                 ( 145.8s) Progress:  40.8% ETA: 0:04:46 [Remaining:77 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_5
+❌ [ 54/130] axi4_user_parity_protection_test_5                 ( 146.6s) Progress:  41.5% ETA: 0:04:37 [Remaining:76 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_6
+❌ [ 55/130] axi4_user_parity_protection_test_6                 ( 147.3s) Progress:  42.3% ETA: 0:04:28 [Remaining:75 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_7
+❌ [ 56/130] axi4_user_parity_protection_test_7                 ( 148.0s) Progress:  43.1% ETA: 0:04:20 [Remaining:74 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_8
+❌ [ 57/130] axi4_user_parity_protection_test_8                 ( 148.8s) Progress:  43.8% ETA: 0:04:12 [Remaining:73 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_9
+❌ [ 58/130] axi4_user_parity_protection_test_9                 ( 149.5s) Progress:  44.6% ETA: 0:04:04 [Remaining:72 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_parity_protection_test_10
+❌ [ 59/130] axi4_user_parity_protection_test_10                ( 150.2s) Progress:  45.4% ETA: 0:03:56 [Remaining:71 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_1
+❌ [ 60/130] axi4_user_security_tagging_test_1                  ( 150.9s) Progress:  46.2% ETA: 0:03:49 [Remaining:70 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_2
+❌ [ 61/130] axi4_user_security_tagging_test_2                  ( 151.6s) Progress:  46.9% ETA: 0:03:42 [Remaining:69 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_3
+❌ [ 62/130] axi4_user_security_tagging_test_3                  ( 152.3s) Progress:  47.7% ETA: 0:03:35 [Remaining:68 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_4
+❌ [ 63/130] axi4_user_security_tagging_test_4                  ( 153.0s) Progress:  48.5% ETA: 0:03:29 [Remaining:67 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_5
+❌ [ 64/130] axi4_user_security_tagging_test_5                  ( 153.7s) Progress:  49.2% ETA: 0:03:23 [Remaining:66 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_6
+❌ [ 65/130] axi4_user_security_tagging_test_6                  ( 154.9s) Progress:  50.0% ETA: 0:03:16 [Remaining:65 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_7
+❌ [ 66/130] axi4_user_security_tagging_test_7                  ( 155.6s) Progress:  50.8% ETA: 0:03:10 [Remaining:64 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_8
+❌ [ 67/130] axi4_user_security_tagging_test_8                  ( 156.4s) Progress:  51.5% ETA: 0:03:05 [Remaining:63 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_9
+❌ [ 68/130] axi4_user_security_tagging_test_9                  ( 157.1s) Progress:  52.3% ETA: 0:02:59 [Remaining:62 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_security_tagging_test_10
+❌ [ 69/130] axi4_user_security_tagging_test_10                 ( 157.8s) Progress:  53.1% ETA: 0:02:54 [Remaining:61 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_1
+❌ [ 70/130] axi4_user_transaction_tracing_test_1               ( 158.5s) Progress:  53.8% ETA: 0:02:48 [Remaining:60 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_2
+❌ [ 71/130] axi4_user_transaction_tracing_test_2               ( 159.2s) Progress:  54.6% ETA: 0:02:43 [Remaining:59 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_3
+❌ [ 72/130] axi4_user_transaction_tracing_test_3               ( 160.0s) Progress:  55.4% ETA: 0:02:38 [Remaining:58 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_4
+❌ [ 73/130] axi4_user_transaction_tracing_test_4               ( 160.6s) Progress:  56.2% ETA: 0:02:33 [Remaining:57 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_5
+❌ [ 74/130] axi4_user_transaction_tracing_test_5               ( 161.3s) Progress:  56.9% ETA: 0:02:29 [Remaining:56 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_6
+❌ [ 75/130] axi4_user_transaction_tracing_test_6               ( 162.0s) Progress:  57.7% ETA: 0:02:24 [Remaining:55 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_7
+❌ [ 76/130] axi4_user_transaction_tracing_test_7               ( 162.7s) Progress:  58.5% ETA: 0:02:19 [Remaining:54 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_8
+❌ [ 77/130] axi4_user_transaction_tracing_test_8               ( 163.4s) Progress:  59.2% ETA: 0:02:15 [Remaining:53 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_5
+❌ [ 78/130] axi4_user_signal_corruption_test_5                 ( 175.7s) Progress:  60.0% ETA: 0:02:11 [Remaining:52 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_6
+❌ [ 79/130] axi4_user_signal_corruption_test_6                 ( 176.5s) Progress:  60.8% ETA: 0:02:07 [Remaining:51 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_7
+❌ [ 80/130] axi4_user_signal_corruption_test_7                 ( 177.2s) Progress:  61.5% ETA: 0:02:03 [Remaining:50 P:111 R:19]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_8
+❌ [ 81/130] axi4_user_signal_corruption_test_8                 ( 178.0s) Progress:  62.3% ETA: 0:01:59 [Remaining:49 P:111 R:19]
+    └─ Error: LSF job exited with error
+📊 [LSF Status] Done: 81/130 (62.3%) | Remaining: 49 | Pending: 106 | Running: 24 | ETA: 0:02:22
+           Results: 0 PASS, 81 FAIL
+⚠️  Warning: Could not find log file for axi4_user_signal_passthrough_test_8
+❌ [ 82/130] axi4_user_signal_passthrough_test_8                ( 206.0s) Progress:  63.1% ETA: 0:02:17 [Remaining:48 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_9
+❌ [ 83/130] axi4_user_transaction_tracing_test_9               ( 205.9s) Progress:  63.8% ETA: 0:02:13 [Remaining:47 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_transaction_tracing_test_10
+❌ [ 84/130] axi4_user_transaction_tracing_test_10              ( 206.6s) Progress:  64.6% ETA: 0:02:08 [Remaining:46 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_1
+❌ [ 85/130] axi4_user_signal_protocol_violation_test_1         ( 207.4s) Progress:  65.4% ETA: 0:02:04 [Remaining:45 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_2
+❌ [ 86/130] axi4_user_signal_protocol_violation_test_2         ( 208.1s) Progress:  66.2% ETA: 0:02:00 [Remaining:44 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_3
+❌ [ 87/130] axi4_user_signal_protocol_violation_test_3         ( 208.8s) Progress:  66.9% ETA: 0:01:56 [Remaining:43 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_4
+❌ [ 88/130] axi4_user_signal_protocol_violation_test_4         ( 209.5s) Progress:  67.7% ETA: 0:01:52 [Remaining:42 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_5
+❌ [ 89/130] axi4_user_signal_protocol_violation_test_5         ( 210.2s) Progress:  68.5% ETA: 0:01:48 [Remaining:41 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_6
+❌ [ 90/130] axi4_user_signal_protocol_violation_test_6         ( 210.9s) Progress:  69.2% ETA: 0:01:44 [Remaining:40 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_7
+❌ [ 91/130] axi4_user_signal_protocol_violation_test_7         ( 211.6s) Progress:  70.0% ETA: 0:01:40 [Remaining:39 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_8
+❌ [ 92/130] axi4_user_signal_protocol_violation_test_8         ( 212.3s) Progress:  70.8% ETA: 0:01:37 [Remaining:38 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_9
+❌ [ 93/130] axi4_user_signal_protocol_violation_test_9         ( 213.0s) Progress:  71.5% ETA: 0:01:33 [Remaining:37 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_protocol_violation_test_10
+❌ [ 94/130] axi4_user_signal_protocol_violation_test_10        ( 213.7s) Progress:  72.3% ETA: 0:01:30 [Remaining:36 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_1
+❌ [ 95/130] axi4_user_signal_corruption_test_1                 ( 214.5s) Progress:  73.1% ETA: 0:01:26 [Remaining:35 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_2
+❌ [ 96/130] axi4_user_signal_corruption_test_2                 ( 215.2s) Progress:  73.8% ETA: 0:01:23 [Remaining:34 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_3
+❌ [ 97/130] axi4_user_signal_corruption_test_3                 ( 216.0s) Progress:  74.6% ETA: 0:01:20 [Remaining:33 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_4
+❌ [ 98/130] axi4_user_signal_corruption_test_4                 ( 216.8s) Progress:  75.4% ETA: 0:01:16 [Remaining:32 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_9
+❌ [ 99/130] axi4_user_signal_corruption_test_9                 ( 217.4s) Progress:  76.2% ETA: 0:01:13 [Remaining:31 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_signal_corruption_test_10
+❌ [100/130] axi4_user_signal_corruption_test_10                ( 218.1s) Progress:  76.9% ETA: 0:01:10 [Remaining:30 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_1
+❌ [101/130] axi4_qos_with_user_priority_boost_test_1           ( 218.8s) Progress:  77.7% ETA: 0:01:07 [Remaining:29 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_2
+❌ [102/130] axi4_qos_with_user_priority_boost_test_2           ( 219.5s) Progress:  78.5% ETA: 0:01:04 [Remaining:28 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_3
+❌ [103/130] axi4_qos_with_user_priority_boost_test_3           ( 220.2s) Progress:  79.2% ETA: 0:01:01 [Remaining:27 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_4
+❌ [104/130] axi4_qos_with_user_priority_boost_test_4           ( 220.9s) Progress:  80.0% ETA: 0:00:58 [Remaining:26 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_5
+❌ [105/130] axi4_qos_with_user_priority_boost_test_5           ( 221.6s) Progress:  80.8% ETA: 0:00:56 [Remaining:25 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_6
+❌ [106/130] axi4_qos_with_user_priority_boost_test_6           ( 222.3s) Progress:  81.5% ETA: 0:00:53 [Remaining:24 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_7
+❌ [107/130] axi4_qos_with_user_priority_boost_test_7           ( 223.0s) Progress:  82.3% ETA: 0:00:50 [Remaining:23 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_qos_with_user_priority_boost_test_8
+❌ [108/130] axi4_qos_with_user_priority_boost_test_8           ( 223.8s) Progress:  83.1% ETA: 0:00:47 [Remaining:22 P:106 R:24]
+    └─ Error: LSF job exited with error
+📋 Copied log to no_pass_logs: axi4_user_based_qos_routing_test_2.log
+❌ [109/130] axi4_user_based_qos_routing_test_2                 ( 226.8s) Progress:  83.8% ETA: 0:00:45 [Remaining:21 P:106 R:24]
+    └─ Error: LSF job exited with error
+📋 Copied log to no_pass_logs: axi4_user_based_qos_routing_test_3.log
+❌ [110/130] axi4_user_based_qos_routing_test_3                 ( 227.5s) Progress:  84.6% ETA: 0:00:42 [Remaining:20 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_based_qos_routing_test_5
+❌ [111/130] axi4_user_based_qos_routing_test_5                 ( 228.9s) Progress:  85.4% ETA: 0:00:40 [Remaining:19 P:106 R:24]
+    └─ Error: LSF job exited with error
+⚠️  Warning: Could not find log file for axi4_user_based_qos_routing_test_7
+❌ [112/130] axi4_user_based_qos_routing_test_7                 ( 230.3s) Progress:  86.2% ETA: 0:00:37 [Remaining:18 P:106 R:24]
+    └─ Error: LSF job exited with error
+
+⚠️  Received signal 15. Initiating graceful shutdown...
+🔪 Killing LSF jobs...
+⚠️  Warning: Could not kill job 12527: Command '['bkill', '12527']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12528: Command '['bkill', '12528']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12529: Command '['bkill', '12529']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12530: Command '['bkill', '12530']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12531: Command '['bkill', '12531']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12532: Command '['bkill', '12532']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12533: Command '['bkill', '12533']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12534: Command '['bkill', '12534']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12535: Command '['bkill', '12535']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12536: Command '['bkill', '12536']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12537: Command '['bkill', '12537']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12538: Command '['bkill', '12538']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12539: Command '['bkill', '12539']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12540: Command '['bkill', '12540']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12541: Command '['bkill', '12541']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12542: Command '['bkill', '12542']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12543: Command '['bkill', '12543']' returned non-zero exit status 255.
+🔪 Killed job 12544 (axi4_qos_equal_priority_fairness_test_8)
+⚠️  Warning: Could not kill job 12545: Command '['bkill', '12545']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12546: Command '['bkill', '12546']' returned non-zero exit status 255.
+🔪 Killed job 12547 (axi4_qos_saturation_stress_test_1)
+⚠️  Warning: Could not kill job 12548: Command '['bkill', '12548']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12549: Command '['bkill', '12549']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12550: Command '['bkill', '12550']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12551: Command '['bkill', '12551']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12552: Command '['bkill', '12552']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12553: Command '['bkill', '12553']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12554: Command '['bkill', '12554']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12555: Command '['bkill', '12555']' returned non-zero exit status 255.
+🔪 Killed job 12556 (axi4_qos_saturation_stress_test_10)
+⚠️  Warning: Could not kill job 12557: Command '['bkill', '12557']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12558: Command '['bkill', '12558']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12559: Command '['bkill', '12559']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12560: Command '['bkill', '12560']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12561: Command '['bkill', '12561']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12562: Command '['bkill', '12562']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12563: Command '['bkill', '12563']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12564: Command '['bkill', '12564']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12565: Command '['bkill', '12565']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12566: Command '['bkill', '12566']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12567: Command '['bkill', '12567']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12568: Command '['bkill', '12568']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12569: Command '['bkill', '12569']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12570: Command '['bkill', '12570']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12571: Command '['bkill', '12571']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12572: Command '['bkill', '12572']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12573: Command '['bkill', '12573']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12574: Command '['bkill', '12574']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12575: Command '['bkill', '12575']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12576: Command '['bkill', '12576']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12577: Command '['bkill', '12577']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12578: Command '['bkill', '12578']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12579: Command '['bkill', '12579']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12580: Command '['bkill', '12580']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12581: Command '['bkill', '12581']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12582: Command '['bkill', '12582']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12583: Command '['bkill', '12583']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12584: Command '['bkill', '12584']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12585: Command '['bkill', '12585']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12586: Command '['bkill', '12586']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12587: Command '['bkill', '12587']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12588: Command '['bkill', '12588']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12589: Command '['bkill', '12589']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12590: Command '['bkill', '12590']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12591: Command '['bkill', '12591']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12592: Command '['bkill', '12592']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12593: Command '['bkill', '12593']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12594: Command '['bkill', '12594']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12595: Command '['bkill', '12595']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12596: Command '['bkill', '12596']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12597: Command '['bkill', '12597']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12598: Command '['bkill', '12598']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12599: Command '['bkill', '12599']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12600: Command '['bkill', '12600']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12601: Command '['bkill', '12601']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12602: Command '['bkill', '12602']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12603: Command '['bkill', '12603']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12604: Command '['bkill', '12604']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12605: Command '['bkill', '12605']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12606: Command '['bkill', '12606']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12607: Command '['bkill', '12607']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12608: Command '['bkill', '12608']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12609: Command '['bkill', '12609']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12610: Command '['bkill', '12610']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12611: Command '['bkill', '12611']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12612: Command '['bkill', '12612']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12613: Command '['bkill', '12613']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12614: Command '['bkill', '12614']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12615: Command '['bkill', '12615']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12616: Command '['bkill', '12616']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12617: Command '['bkill', '12617']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12618: Command '['bkill', '12618']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12619: Command '['bkill', '12619']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12620: Command '['bkill', '12620']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12621: Command '['bkill', '12621']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12622: Command '['bkill', '12622']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12623: Command '['bkill', '12623']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12624: Command '['bkill', '12624']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12625: Command '['bkill', '12625']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12626: Command '['bkill', '12626']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12627: Command '['bkill', '12627']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12628: Command '['bkill', '12628']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12629: Command '['bkill', '12629']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12630: Command '['bkill', '12630']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12631: Command '['bkill', '12631']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12632: Command '['bkill', '12632']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12633: Command '['bkill', '12633']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12634: Command '['bkill', '12634']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12635: Command '['bkill', '12635']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12636: Command '['bkill', '12636']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12637: Command '['bkill', '12637']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12638: Command '['bkill', '12638']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12639: Command '['bkill', '12639']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12640: Command '['bkill', '12640']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12641: Command '['bkill', '12641']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12642: Command '['bkill', '12642']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12643: Command '['bkill', '12643']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12644: Command '['bkill', '12644']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12645: Command '['bkill', '12645']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12646: Command '['bkill', '12646']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12647: Command '['bkill', '12647']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12648: Command '['bkill', '12648']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12649: Command '['bkill', '12649']' returned non-zero exit status 255.
+🔪 Killed job 12650 (axi4_user_based_qos_routing_test_4)
+⚠️  Warning: Could not kill job 12651: Command '['bkill', '12651']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12652: Command '['bkill', '12652']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12653: Command '['bkill', '12653']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12654: Command '['bkill', '12654']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12655: Command '['bkill', '12655']' returned non-zero exit status 255.
+⚠️  Warning: Could not kill job 12656: Command '['bkill', '12656']' returned non-zero exit status 255.
+🧹 Cleaning up old execution folders (keeping run_folder_00 to run_folder_04 from current run)...
+📁 Keeping 5 execution folders from current run (run_folder_00 to run_folder_04)
+✅ No old folders to remove
+⚠️  Keeping all execution folders for debugging (run_folder_*)
+💡 Manually remove with: rm -rf run_folder_*
+
+📊 Regression results saved in: regression_result_20250729_111219
+   View summary: cat regression_result_20250729_111219/regression_summary.txt
+   View detailed results: cat regression_result_20250729_111219/regression_results_20250729_111219.txt

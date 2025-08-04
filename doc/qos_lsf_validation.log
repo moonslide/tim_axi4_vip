@@ -1,0 +1,4 @@
+make: Entering directory '/home/timtim01/eda_test/project/axi_vip_qos/sim/synopsys_sim'
+make: ../sim/synopsys_sim/Makefile: No such file or directory
+make: *** No rule to make target '../sim/synopsys_sim/Makefile'.  Stop.
+make: Leaving directory '/home/timtim01/eda_test/project/axi_vip_qos/sim/synopsys_sim'

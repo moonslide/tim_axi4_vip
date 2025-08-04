@@ -54,9 +54,14 @@ function void axi4_test_config::configure_for_test(string test_name);
   // Convert to lowercase for case-insensitive matching
   lower_test_name = test_name.tolower();
   
-  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test)
+  `uvm_info("TEST_CONFIG", $sformatf("Configuring test: original='%s', lower='%s'", test_name, lower_test_name), UVM_MEDIUM)
+  
+  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test + QoS tests + USER tests)
+  `uvm_info("TEST_CONFIG", $sformatf("Checking patterns for: '%s'", lower_test_name), UVM_MEDIUM)
   if (lower_test_name.match(".*tc.*00[1-5].*") || 
-      lower_test_name.match(".*axi4_enhanced_bus_matrix_test.*")) begin
+      lower_test_name.match(".*axi4_enhanced_bus_matrix_test.*") ||
+      lower_test_name.match(".*qos.*") ||
+      lower_test_name.match(".*user.*")) begin
     test_category = ENHANCED_MATRIX_TESTS;
     `uvm_info("TEST_CONFIG", $sformatf("Test %s categorized as ENHANCED_MATRIX_TESTS", test_name), UVM_MEDIUM)
   end

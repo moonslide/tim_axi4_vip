@@ -45,7 +45,8 @@ endfunction : new
 
 function void axi4_master_seq_item_converter::from_write_class( input axi4_master_tx input_conv_h, output axi4_write_transfer_char_s output_conv_h);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_HIGH);
- $cast(output_conv_h.awid,input_conv_h.awid); 
+  
+  $cast(output_conv_h.awid,input_conv_h.awid); 
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awid =  %b",output_conv_h.awid),UVM_HIGH);
 
   $cast(output_conv_h.awlen,input_conv_h.awlen);
@@ -197,6 +198,19 @@ function void axi4_master_seq_item_converter::to_write_class( input axi4_write_t
  
 
   output_conv_h.tx_type = WRITE; 
+  
+  // Initialize read address fields to valid slave address to avoid DECERR
+  output_conv_h.araddr = 64'h0000_0008_0000_0000;
+  output_conv_h.arid = ARID_0;
+  output_conv_h.arlen = 0;
+  output_conv_h.arsize = READ_1_BYTE;
+  output_conv_h.arburst = READ_FIXED;
+  output_conv_h.arlock = READ_NORMAL_ACCESS;
+  output_conv_h.arcache = READ_BUFFERABLE;
+  output_conv_h.arprot = READ_NORMAL_SECURE_DATA;
+  output_conv_h.arqos = 4'h0;
+  output_conv_h.aruser = 0;
+  output_conv_h.arregion = 0;
 
   $cast(output_conv_h.awid,input_conv_h.awid); 
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awid =  %b",output_conv_h.awid),UVM_HIGH);
@@ -273,6 +287,21 @@ function void axi4_master_seq_item_converter::to_read_class( input axi4_read_tra
   input_conv_h, output axi4_master_tx output_conv_h);
 
   output_conv_h = new();
+  
+  output_conv_h.tx_type = READ;
+  
+  // Initialize write address fields to valid slave address to avoid DECERR
+  output_conv_h.awaddr = 64'h0000_0008_0000_0000;
+  output_conv_h.awid = AWID_0;
+  output_conv_h.awlen = 0;
+  output_conv_h.awsize = WRITE_1_BYTE;
+  output_conv_h.awburst = WRITE_FIXED;
+  output_conv_h.awlock = WRITE_NORMAL_ACCESS;
+  output_conv_h.awcache = WRITE_BUFFERABLE;
+  output_conv_h.awprot = WRITE_NORMAL_SECURE_DATA;
+  output_conv_h.awqos = 4'h0;
+  output_conv_h.awuser = 0;
+  output_conv_h.awregion = 0;
 
   $cast(output_conv_h.arid,input_conv_h.arid);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting arid =  %b",output_conv_h.arid),UVM_HIGH);
@@ -337,6 +366,19 @@ function void axi4_master_seq_item_converter::to_write_addr_data_class(input axi
  
 
   output_conv_h.tx_type = WRITE; 
+  
+  // Initialize read address fields to valid slave address to avoid DECERR
+  output_conv_h.araddr = 64'h0000_0008_0000_0000;
+  output_conv_h.arid = ARID_0;
+  output_conv_h.arlen = 0;
+  output_conv_h.arsize = READ_1_BYTE;
+  output_conv_h.arburst = READ_FIXED;
+  output_conv_h.arlock = READ_NORMAL_ACCESS;
+  output_conv_h.arcache = READ_BUFFERABLE;
+  output_conv_h.arprot = READ_NORMAL_SECURE_DATA;
+  output_conv_h.arqos = 4'h0;
+  output_conv_h.aruser = 0;
+  output_conv_h.arregion = 0;
 
   $cast(output_conv_h.awid,waddr_packet.awid); 
   $cast(output_conv_h.awlen,waddr_packet.awlen);
@@ -384,6 +426,19 @@ function void axi4_master_seq_item_converter::to_write_addr_data_resp_class(inpu
  
 
   output_conv_h.tx_type = WRITE; 
+  
+  // Initialize read address fields to valid slave address to avoid DECERR
+  output_conv_h.araddr = 64'h0000_0008_0000_0000;
+  output_conv_h.arid = ARID_0;
+  output_conv_h.arlen = 0;
+  output_conv_h.arsize = READ_1_BYTE;
+  output_conv_h.arburst = READ_FIXED;
+  output_conv_h.arlock = READ_NORMAL_ACCESS;
+  output_conv_h.arcache = READ_BUFFERABLE;
+  output_conv_h.arprot = READ_NORMAL_SECURE_DATA;
+  output_conv_h.arqos = 4'h0;
+  output_conv_h.aruser = 0;
+  output_conv_h.arregion = 0;
 
   $cast(output_conv_h.awid,waddr_data_packet.awid); 
   $cast(output_conv_h.awlen,waddr_data_packet.awlen);
@@ -427,6 +482,21 @@ endfunction : to_write_addr_data_resp_class
 function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4_master_tx raddr_packet, input axi4_read_transfer_char_s input_conv_h, output axi4_master_tx output_conv_h);
 
   output_conv_h = new();
+  
+  output_conv_h.tx_type = READ;
+  
+  // Initialize write address fields to valid slave address to avoid DECERR
+  output_conv_h.awaddr = 64'h0000_0008_0000_0000;
+  output_conv_h.awid = AWID_0;
+  output_conv_h.awlen = 0;
+  output_conv_h.awsize = WRITE_1_BYTE;
+  output_conv_h.awburst = WRITE_FIXED;
+  output_conv_h.awlock = WRITE_NORMAL_ACCESS;
+  output_conv_h.awcache = WRITE_BUFFERABLE;
+  output_conv_h.awprot = WRITE_NORMAL_SECURE_DATA;
+  output_conv_h.awqos = 4'h0;
+  output_conv_h.awuser = 0;
+  output_conv_h.awregion = 0;
 
   $cast(output_conv_h.arid,raddr_packet.arid);
   $cast(output_conv_h.arlen,raddr_packet.arlen);

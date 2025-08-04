@@ -1,0 +1,10 @@
+  CREATE_STREAM @0 {NAME:axi4_virtual_qos_saturation_stress_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:8345}
+  CREATE_STREAM @0 {NAME:master_stress_seq_0 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_read_seqr_h STREAM:8367}
+  CREATE_STREAM @0 {NAME:master_stress_seq_1 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[1].axi4_master_write_seqr_h STREAM:8379}
+  CREATE_STREAM @0 {NAME:axi4_virtual_qos_saturation_stress_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:8345}
+  CREATE_STREAM @0 {NAME:master_stress_seq_0 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_read_seqr_h STREAM:8367}
+  CREATE_STREAM @0 {NAME:master_stress_seq_1 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[1].axi4_master_write_seqr_h STREAM:8379}
+  CREATE_STREAM @0 {NAME:qos_priority_vseq T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:8345}
+  CREATE_STREAM @0 {NAME:qos_priority_vseq T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:8345}
+  CREATE_STREAM @0 {NAME:master_qos_seq_0 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:8363}
+  CREATE_STREAM @0 {NAME:master_qos_seq_1 T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[1].axi4_master_write_seqr_h STREAM:8374}

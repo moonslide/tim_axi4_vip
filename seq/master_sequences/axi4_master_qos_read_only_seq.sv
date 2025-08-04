@@ -22,6 +22,9 @@ class axi4_master_qos_read_only_seq extends axi4_master_base_seq;
   int num_transactions = 10;   // Further reduced for proper response handling (10*10=100 total)
   int inter_transaction_delay = 500; // Much longer delay to allow read response processing
   
+  // Transaction ID counter to ensure unique IDs per sequence instance
+  int unsigned transaction_id_counter = 0;
+  
   //-------------------------------------------------------
   // Externally defined tasks and functions
   //-------------------------------------------------------
@@ -43,6 +46,7 @@ endfunction : new
 // Main sequence body - generates READ transactions ONLY
 //-----------------------------------------------------------------------------
 task axi4_master_qos_read_only_seq::body();
+  bit [15:0] calculated_id;
   super.body();
   
   // Get master and slave IDs from configuration
@@ -69,18 +73,27 @@ task axi4_master_qos_read_only_seq::body();
     // Create and send read transaction using proper UVM sequence protocol
     req = axi4_master_tx::type_id::create("req");
     
+    // Calculate unique ID within 16-value constraint
+    // Use master_id as base and add transaction counter modulo (16-master_id) to avoid overlap
+    calculated_id = master_id + (transaction_id_counter % (16 - master_id));
+    if (calculated_id >= 16) calculated_id = master_id; // Wrap around if needed
+    if (calculated_id == 0) calculated_id = 1; // Avoid ID 0
+    
     start_item(req);
     if(!req.randomize() with {
       req.tx_type == READ;
       req.araddr == calculate_slave_address(slave_id) + (i * 'h1000) + (master_id * 'h100);
-      req.arid == arid_e'(master_id % 16);
+      req.arid == `GET_ARID_ENUM(calculated_id);
       req.arlen == 0;  // Force single-beat transactions only
       req.arsize == READ_8_BYTES;
       req.arburst == READ_INCR;
       req.arqos == qos_value;
+      // Ensure write address is a valid slave address for read transactions to avoid DECERR
+      req.awaddr == 64'h0000_0008_0000_0000;
     }) begin
       `uvm_error(get_type_name(), "Failed to randomize read transaction")
     end
+    transaction_id_counter++;
     
     finish_item(req);
     
