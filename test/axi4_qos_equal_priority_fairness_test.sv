@@ -112,14 +112,14 @@ function void axi4_qos_equal_priority_fairness_test::build_phase(uvm_phase phase
   
   super.build_phase(phase);
   
-  // Enable QoS mode for all agents in QoS tests
+  // Re-enable QoS mode now that basic FIFO throughput is fixed
   for (int i = 0; i < axi4_env_cfg_h.no_of_masters; i++) begin
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
   end
   for (int i = 0; i < axi4_env_cfg_h.no_of_slaves; i++) begin
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
   end
-  `uvm_info(get_type_name(), "Enabled WRITE_READ_QOS_MODE for all agents", UVM_LOW)
+  `uvm_info(get_type_name(), "Re-enabled WRITE_READ_QOS_MODE for all agents with simplified transaction counts", UVM_LOW)
   
   // Force proper slave configuration for QoS tests regardless of auto-configuration
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].min_address = 64'h0000_0008_0000_0000;

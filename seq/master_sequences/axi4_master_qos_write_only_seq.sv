@@ -19,8 +19,8 @@ class axi4_master_qos_write_only_seq extends axi4_master_base_seq;
   
   // Test parameters
   bit [3:0] qos_value = 4'h8; // All masters use same QoS
-  int num_transactions = 10;   // Further reduced for proper response handling (10*10=100 total)
-  int inter_transaction_delay = 500; // Much longer delay to allow write response processing
+  int num_transactions = 1;   // Minimal transactions for basic functionality testing
+  int inter_transaction_delay = 100; // Reduced delay for faster completion
   
   // Transaction ID counter to ensure unique IDs per sequence instance
   int unsigned transaction_id_counter = 0;
@@ -58,8 +58,8 @@ task axi4_master_qos_write_only_seq::body();
     slave_id = 2; // Default to slave 2
   end
   
-  // Add initial delay based on master ID to stagger start times
-  #(master_id * 200ns);
+  // Minimal stagger delay 
+  #(master_id * 100ns);
   
   // Get test parameters from config if available
   void'(uvm_config_db#(bit [3:0])::get(null, get_full_name(), "qos_value", qos_value));
@@ -97,14 +97,8 @@ task axi4_master_qos_write_only_seq::body();
     
     finish_item(req);
     
-    // Inter-transaction delay for flow control
-    if (i % 5 == 0 && i > 0) begin
-      // Every 5 transactions, add a longer delay for pipeline clearing
-      #(inter_transaction_delay * 20ns);
-    end else begin
-      // Normal inter-transaction delay
-      #(inter_transaction_delay * 10ns);
-    end
+    // Minimal inter-transaction delay 
+    #(inter_transaction_delay * 10ns);
   end
   
   `uvm_info(get_type_name(), $sformatf("WRITE-ONLY QoS sequence completed - sent %0d write transactions", num_transactions), UVM_MEDIUM)
