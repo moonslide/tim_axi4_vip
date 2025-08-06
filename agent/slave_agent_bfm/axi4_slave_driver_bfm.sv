@@ -458,8 +458,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
         end while(rready===0);
         rlast <= 1'b0;
         rvalid <= 1'b0;
-        // Ensure clean transition before next beat
-        @(posedge aclk);
       end
      end
      else begin
@@ -501,8 +499,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
         `uvm_info(name, $sformatf("BFM rready received for beat %0d, deasserting rvalid", i1), UVM_MEDIUM);
         rlast <= 1'b0;
         rvalid <= 1'b0;
-        // Ensure clean transition before next beat
-        @(posedge aclk);
       end
      end
     j1++;
