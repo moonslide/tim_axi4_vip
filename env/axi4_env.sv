@@ -141,6 +141,11 @@ function void axi4_env::build_phase(uvm_phase phase);
   // Set scoreboard handle globally for backdoor verification access by sequences
   if(axi4_env_cfg_h.has_scoreboard) begin
     uvm_config_db#(axi4_scoreboard)::set(null, "*", "axi4_scoreboard_h", axi4_scoreboard_h);
+    
+    // Set master agents for scoreboard to access driver transaction counts
+    foreach(axi4_master_agent_h[i]) begin
+      uvm_config_db#(axi4_master_agent)::set(this, "axi4_scoreboard_h", $sformatf("axi4_master_agent_%0d", i), axi4_master_agent_h[i]);
+    end
   end
 
   

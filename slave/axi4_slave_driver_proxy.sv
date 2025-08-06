@@ -1051,6 +1051,19 @@ task axi4_slave_driver_proxy::axi4_read_task();
             task_memory_read(local_slave_addr_chk_tx,struct_read_packet);
           end
 
+          // Update struct_read_packet with correct address channel information before BFM call
+          struct_read_packet.arid = local_slave_addr_chk_tx.arid;
+          struct_read_packet.araddr = local_slave_addr_chk_tx.araddr;
+          struct_read_packet.arlen = local_slave_addr_chk_tx.arlen;
+          struct_read_packet.arsize = local_slave_addr_chk_tx.arsize;
+          struct_read_packet.arburst = local_slave_addr_chk_tx.arburst;
+          struct_read_packet.arlock = local_slave_addr_chk_tx.arlock;
+          struct_read_packet.arcache = local_slave_addr_chk_tx.arcache;
+          struct_read_packet.arprot = local_slave_addr_chk_tx.arprot;
+          struct_read_packet.arqos = local_slave_addr_chk_tx.arqos;
+          struct_read_packet.arregion = local_slave_addr_chk_tx.arregion;
+          struct_read_packet.aruser = local_slave_addr_chk_tx.aruser;
+
           //read data task - always complete transaction
           `uvm_info("DEBUG_BFM_CALL", "Calling axi4_read_data_phase BFM", UVM_LOW);
           axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
@@ -1128,6 +1141,19 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // Only perform memory operations if no error response
               task_memory_read(local_slave_addr_chk_tx,struct_read_packet);
             end
+            
+            // Update struct_read_packet with correct address channel information before BFM call
+            struct_read_packet.arid = local_slave_addr_chk_tx.arid;
+            struct_read_packet.araddr = local_slave_addr_chk_tx.araddr;
+            struct_read_packet.arlen = local_slave_addr_chk_tx.arlen;
+            struct_read_packet.arsize = local_slave_addr_chk_tx.arsize;
+            struct_read_packet.arburst = local_slave_addr_chk_tx.arburst;
+            struct_read_packet.arlock = local_slave_addr_chk_tx.arlock;
+            struct_read_packet.arcache = local_slave_addr_chk_tx.arcache;
+            struct_read_packet.arprot = local_slave_addr_chk_tx.arprot;
+            struct_read_packet.arqos = local_slave_addr_chk_tx.arqos;
+            struct_read_packet.arregion = local_slave_addr_chk_tx.arregion;
+            struct_read_packet.aruser = local_slave_addr_chk_tx.aruser;
             
             //read data task - always complete transaction
             axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
@@ -1229,10 +1255,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           end
         end
         
-        for(int depth=0;depth<(((axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER)
-          || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
-          (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
-          (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
+        for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
           struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
                                                                            local_slave_addr_chk_tx.araddr,
                                                                            local_slave_addr_chk_tx.arprot);

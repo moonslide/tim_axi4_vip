@@ -94,6 +94,12 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
 
   write_read_data_mode_e write_read_mode_h;
 
+  // Transaction counters for tracking what driver actually sends
+  int unsigned write_addr_sent_count = 0;
+  int unsigned write_data_sent_count = 0;
+  int unsigned write_resp_received_count = 0;
+  int unsigned read_addr_sent_count = 0;
+  int unsigned read_data_received_count = 0;
   
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -214,8 +220,11 @@ task axi4_master_driver_proxy::axi4_write_task();
       
       //Calling 3 write tasks from axi4_master_drv_bfm in HDL side
       axi4_master_drv_bfm_h.axi4_write_address_channel_task(struct_write_packet,struct_cfg);
+      write_addr_sent_count++; // Increment counter for blocking write address
       axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_packet,struct_cfg);
+      write_data_sent_count++; // Increment counter for blocking write data
       axi4_master_drv_bfm_h.axi4_write_response_channel_task(struct_write_packet,struct_cfg);
+      write_resp_received_count++; // Increment counter for blocking write response
 
       //Converts the struct packet to req packet
       axi4_master_seq_item_converter::to_write_class(struct_write_packet,local_master_write_tx);
@@ -272,6 +281,7 @@ task axi4_master_driver_proxy::axi4_write_task();
 
           //Calling the bfm task which drives write address channel signals
           axi4_master_drv_bfm_h.axi4_write_address_channel_task(struct_write_addr_packet,struct_cfg);
+          write_addr_sent_count++; // Increment counter after sending write address
 
           //Converting the write data struct packet to req packet
           axi4_master_seq_item_converter::to_write_class(struct_write_addr_packet,req_wr);
@@ -455,6 +465,7 @@ task axi4_master_driver_proxy::axi4_write_task();
 
           //Calling the write data channel in bfm to drive all the write data signals
           axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_data_packet,struct_cfg);
+          write_data_sent_count++; // Increment counter after sending write data
          
           //Converting the write data struct packet to req packet
           axi4_master_seq_item_converter::to_write_class(struct_write_data_packet,local_master_data_tx);
@@ -563,6 +574,7 @@ task axi4_master_driver_proxy::axi4_write_task();
           
           //Calls the write response channel on the bfm to sample the write response channel signals
           axi4_master_drv_bfm_h.axi4_write_response_channel_task(struct_write_response_packet,struct_cfg);
+          write_resp_received_count++; // Increment counter after receiving write response
           `uvm_info(get_type_name(),$sformatf("WRITE_RESPONSE_THREAD::Received_struct_packet = %p",
                                                struct_write_response_packet),UVM_FULL);
 
@@ -655,10 +667,20 @@ task axi4_master_driver_proxy::axi4_read_task();
       axi4_master_seq_item_converter::from_read_class(req_rd,struct_read_packet);
       `uvm_info(get_type_name(),$sformatf("READ_TASK::Checking transfer type in read task = %s",req_rd.transfer_type),UVM_MEDIUM); 
 
-      //Calling read address channel and read data channel tasks declared in bfm to drive the
-      //read address channel signals and to sample the read data channel siganls
+      // Start BFM read data task immediately in parallel to ensure fast RVALID response
+      fork
+        begin
+          axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
+          read_data_received_count++; // Increment counter for blocking read data
+        end
+      join_none
+
+      //Calling read address channel task to drive read address signals
       axi4_master_drv_bfm_h.axi4_read_address_channel_task(struct_read_packet,struct_cfg);
-      axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
+      read_addr_sent_count++; // Increment counter for blocking read address
+      
+      // Wait for read data task to complete
+      wait fork;
       
       //Converting transactions into struct data type
       axi4_master_seq_item_converter::to_read_class(struct_read_packet,req_rd);
@@ -687,6 +709,26 @@ task axi4_master_driver_proxy::axi4_read_task();
         `uvm_error(get_type_name(),$sformatf("READ_TASK::Cannot write into FIFO as READ_FIFO IS FULL"));
       end
 
+      // First, prepare the read data channel to be ready for response
+      // This ensures rready can be asserted quickly when rvalid arrives
+      fork
+        begin : READ_DATA_CHANNEL_PREP
+          axi4_master_tx local_master_read_data_tx;
+          axi4_read_transfer_char_s struct_read_data_packet;
+          
+          // Prepare the packet before sending address to minimize delay
+          axi4_master_seq_item_converter::from_read_class(req_rd,struct_read_data_packet);
+          
+          // Pre-call the BFM task so it's ready to respond when rvalid arrives
+          fork
+            begin
+              axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_data_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
+              read_data_received_count++;
+            end
+          join_none
+        end
+      join_none
+      
       fork
         begin : READ_ADDRESS_CHANNEL  
           axi4_read_transfer_char_s struct_read_address_packet;
@@ -707,6 +749,7 @@ task axi4_master_driver_proxy::axi4_read_task();
           
           //Calls the read address channel to drive the read address channel signals
           axi4_master_drv_bfm_h.axi4_read_address_channel_task(struct_read_address_packet,struct_cfg);
+          read_addr_sent_count++; // Increment counter after sending read address
 
           //Converting transactions into struct data type
           axi4_master_seq_item_converter::to_read_class(struct_read_packet,req_rd);
@@ -720,10 +763,6 @@ task axi4_master_driver_proxy::axi4_read_task();
           //Added the read_data_process to keep track of this read data channel thread
           //self is a static method which creates the read_data_process of type process
           read_data_process = process::self();
-          
-          //Getting the key from the read_data_channel so that 
-          //the other transaction should start after completion of the previous transaction
-          read_channel_key.get(1);
 
           //Get method gets the packet and discards the packet from fifo
           //It throws an error if get is done into an empty fifo
@@ -739,8 +778,18 @@ task axi4_master_driver_proxy::axi4_read_task();
           `uvm_info(get_type_name(),$sformatf("READ_DATA_THREAD::Checking struct packet = %p",
                                                struct_read_data_packet),UVM_MEDIUM); 
           
-          //Calls the read data channel task in bfm to sample the read data signals
-          axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_data_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
+          // Fork the BFM task early to minimize RVALID response delay
+          fork
+            begin
+              //Calls the read data channel task in bfm to sample the read data signals
+              `uvm_info(get_type_name(),$sformatf("READ_DATA_THREAD::Calling BFM read_data_channel_task at time %0t", $time),UVM_MEDIUM);
+              axi4_master_drv_bfm_h.axi4_read_data_channel_task(struct_read_data_packet,struct_cfg,axi4_master_agent_cfg_h.error_inject);
+              read_data_received_count++; // Increment counter after receiving read data
+            end
+          join_none
+          
+          // Wait for the BFM task to complete - no semaphore delay for faster RVALID response
+          wait fork;
           `uvm_info(get_type_name(),$sformatf("READ_DATA_THREAD::Checking response struct packet = %p",
                                                struct_read_data_packet),UVM_FULL); 
           
@@ -762,9 +811,7 @@ task axi4_master_driver_proxy::axi4_read_task();
             end
           end
 
-          //Getting the key from the read_channel so that 
-          //the other transaction should start after completion of the previous transaction
-          read_channel_key.put(1);
+          // No semaphore put needed - removed semaphore for faster RVALID response
           
           //Converting transactions into struct data type
           axi4_master_seq_item_converter::to_read_class(struct_read_data_packet,req_rd);

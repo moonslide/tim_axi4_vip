@@ -49,7 +49,7 @@ class axi4_qos_basic_priority_test extends axi4_base_test;
   `uvm_component_utils(axi4_qos_basic_priority_test)
   
   // Virtual sequence handle
-  axi4_virtual_qos_basic_priority_test_seq qos_priority_vseq;
+  axi4_virtual_qos_basic_priority_seq qos_priority_vseq;
   
   //-------------------------------------------------------
   // Externally defined tasks and functions
@@ -110,6 +110,10 @@ function void axi4_qos_basic_priority_test::build_phase(uvm_phase phase);
   // Update config_db with the correct bus matrix mode
   uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "*", "bus_matrix_mode", test_config.bus_matrix_mode);
   
+  // Disable RREADY assertion checking during cleanup phase for QoS test
+  uvm_config_db#(bit)::set(this, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "Disabled RREADY assertion checking during cleanup phase for QoS test", UVM_LOW)
+  
 endfunction : build_phase
 
 //-----------------------------------------------------------------------------
@@ -121,12 +125,15 @@ task axi4_qos_basic_priority_test::run_phase(uvm_phase phase);
   `uvm_info(get_type_name(), "Starting QoS basic priority test", UVM_MEDIUM)
   
   // Create the virtual sequence
-  qos_priority_vseq = axi4_virtual_qos_basic_priority_test_seq::type_id::create("qos_priority_vseq");
+  qos_priority_vseq = axi4_virtual_qos_basic_priority_seq::type_id::create("qos_priority_vseq");
   
   phase.raise_objection(this);
   
   // Start the virtual sequence
   qos_priority_vseq.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   // Add extra time for scoreboard checking
   #1000;

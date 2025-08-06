@@ -186,6 +186,9 @@ class axi4_scoreboard extends uvm_scoreboard;
   // Slave memory handles for backdoor verification
   axi4_slave_memory axi4_slave_mem_h[];
 
+  // Master agent handles for accessing driver transaction counts
+  axi4_master_agent axi4_master_agent_h[];
+
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
@@ -266,10 +269,23 @@ endfunction : new
 function void axi4_scoreboard::build_phase(uvm_phase phase);
   super.build_phase(phase);
   
+  // Get environment config to know number of masters
+  if(!uvm_config_db#(axi4_env_config)::get(this, "", "axi4_env_config", axi4_env_cfg_h)) begin
+    `uvm_fatal("SCOREBOARD_CONFIG", "Cannot get axi4_env_config from config_db")
+  end
+  
   // Get the bus matrix reference for address validation (optional for tests without bus matrix)
   if(!uvm_config_db#(axi4_bus_matrix_ref)::get(this, "", "bus_matrix_ref", axi4_bus_matrix_h)) begin
     `uvm_info("SCOREBOARD_CONFIG", "Bus matrix reference not found in config_db - operating without bus matrix (for tests with bus_matrix_mode=NONE)", UVM_MEDIUM)
     axi4_bus_matrix_h = null;
+  end
+  
+  // Get master agent handles for accessing driver transaction counts
+  axi4_master_agent_h = new[axi4_env_cfg_h.no_of_masters];
+  foreach(axi4_master_agent_h[i]) begin
+    if(!uvm_config_db#(axi4_master_agent)::get(this, "", $sformatf("axi4_master_agent_%0d", i), axi4_master_agent_h[i])) begin
+      `uvm_fatal("SCOREBOARD_CONFIG", $sformatf("Cannot get axi4_master_agent_%0d from config_db", i))
+    end
   end
 endfunction : build_phase
 
@@ -935,6 +951,13 @@ endtask : axi4_read_data_comparision
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::check_phase(uvm_phase phase);
   bit all_slaves_passive = 1;
+  // Driver transaction count variables
+  int total_driver_write_addr_sent = 0;
+  int total_driver_write_data_sent = 0;
+  int total_driver_write_resp_received = 0;
+  int total_driver_read_addr_sent = 0;
+  int total_driver_read_data_received = 0;
+  bit is_real_zero_transactions = 1;
   
   super.check_phase(phase);
 
@@ -961,6 +984,43 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     return;
   end 
   
+  // Collect driver transaction counts from all masters
+  foreach(axi4_master_agent_h[i]) begin
+    if(axi4_master_agent_h[i] != null && axi4_master_agent_h[i].axi4_master_drv_proxy_h != null) begin
+      total_driver_write_addr_sent += axi4_master_agent_h[i].axi4_master_drv_proxy_h.write_addr_sent_count;
+      total_driver_write_data_sent += axi4_master_agent_h[i].axi4_master_drv_proxy_h.write_data_sent_count;
+      total_driver_write_resp_received += axi4_master_agent_h[i].axi4_master_drv_proxy_h.write_resp_received_count;
+      total_driver_read_addr_sent += axi4_master_agent_h[i].axi4_master_drv_proxy_h.read_addr_sent_count;
+      total_driver_read_data_received += axi4_master_agent_h[i].axi4_master_drv_proxy_h.read_data_received_count;
+    end
+  end
+  
+  // Log driver transaction counts vs scoreboard received counts
+  `uvm_info(get_type_name(), $sformatf("Driver vs Scoreboard Transaction Count Comparison:"), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  Write Address: Driver sent=%0d, Scoreboard received=%0d", 
+                                        total_driver_write_addr_sent, axi4_master_tx_awaddr_count), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  Write Data: Driver sent=%0d, Scoreboard received=%0d", 
+                                        total_driver_write_data_sent, axi4_master_tx_wdata_count), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  Write Response: Driver received=%0d, Scoreboard received=%0d", 
+                                        total_driver_write_resp_received, axi4_master_tx_bresp_count), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  Read Address: Driver sent=%0d, Scoreboard received=%0d", 
+                                        total_driver_read_addr_sent, axi4_master_tx_araddr_count), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("  Read Data: Driver received=%0d, Scoreboard received=%0d", 
+                                        total_driver_read_data_received, axi4_master_tx_rdata_count), UVM_LOW);
+  
+  // Check if zero transactions in scoreboard is real (driver also sent 0) or fake (transactions lost)
+  if(axi4_master_tx_awaddr_count == 0 && total_driver_write_addr_sent > 0) begin
+    `uvm_error(get_type_name(), $sformatf("FAKE ZERO TRANSACTIONS: Driver sent %0d write addresses but scoreboard received 0", 
+                                          total_driver_write_addr_sent));
+    is_real_zero_transactions = 0;
+  end
+  
+  if(axi4_master_tx_araddr_count == 0 && total_driver_read_addr_sent > 0) begin
+    `uvm_error(get_type_name(), $sformatf("FAKE ZERO TRANSACTIONS: Driver sent %0d read addresses but scoreboard received 0", 
+                                          total_driver_read_addr_sent));
+    is_real_zero_transactions = 0;
+  end
+  
   //--------------------------------------------------------------------------------------------
   // 1.Check if the comparisions counter is NON-zero
   //   A non-zero value indicates that the comparisions never happened and throw error
@@ -973,7 +1033,7 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   //-------------------------------------------------------
   if(axi4_env_cfg_h.write_read_mode_h == ONLY_WRITE_DATA || axi4_env_cfg_h.write_read_mode_h == WRITE_READ_DATA) begin
     if (((byte_data_cmp_verified_awid_count > 0) && (byte_data_cmp_failed_awid_count == 0)) ||
-        ((byte_data_cmp_verified_awid_count == 0) && (byte_data_cmp_failed_awid_count == 0))) begin
+        ((byte_data_cmp_verified_awid_count == 0) && (byte_data_cmp_failed_awid_count == 0) && is_real_zero_transactions)) begin
 	    `uvm_info (get_type_name(), $sformatf ("awid count comparisions are succesful (verified:%0d, failed:%0d)",
                                               byte_data_cmp_verified_awid_count, byte_data_cmp_failed_awid_count),UVM_HIGH);
     end
@@ -982,11 +1042,15 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
                                               byte_data_cmp_verified_awid_count),UVM_HIGH);
 	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_awid_count : %0d", 
                                               byte_data_cmp_failed_awid_count),UVM_HIGH);
-      `uvm_error (get_type_name(), $sformatf ("awid count comparisions are failed"));
+      if((byte_data_cmp_verified_awid_count == 0) && (byte_data_cmp_failed_awid_count == 0) && !is_real_zero_transactions) begin
+        `uvm_error (get_type_name(), $sformatf ("awid count comparisions failed - fake zero transactions detected"));
+      end else begin
+        `uvm_error (get_type_name(), $sformatf ("awid count comparisions are failed"));
+      end
     end
 
     if (((byte_data_cmp_verified_awaddr_count > 0) && (byte_data_cmp_failed_awaddr_count == 0)) ||
-        ((byte_data_cmp_verified_awaddr_count == 0) && (byte_data_cmp_failed_awaddr_count == 0))) begin
+        ((byte_data_cmp_verified_awaddr_count == 0) && (byte_data_cmp_failed_awaddr_count == 0) && is_real_zero_transactions)) begin
 	    `uvm_info (get_type_name(), $sformatf ("awaddr count comparisions are succesful (verified:%0d, failed:%0d)",
                                               byte_data_cmp_verified_awaddr_count, byte_data_cmp_failed_awaddr_count),UVM_HIGH);
     end
@@ -995,7 +1059,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
                                               byte_data_cmp_verified_awaddr_count),UVM_HIGH);
 	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_awaddr_count : %0d", 
                                               byte_data_cmp_failed_awaddr_count),UVM_HIGH);
-      `uvm_error (get_type_name(), $sformatf ("awaddr count comparisions are failed"));
+      if((byte_data_cmp_verified_awaddr_count == 0) && (byte_data_cmp_failed_awaddr_count == 0) && !is_real_zero_transactions) begin
+        `uvm_error (get_type_name(), $sformatf ("awaddr count comparisions failed - fake zero transactions detected"));
+      end else begin
+        `uvm_error (get_type_name(), $sformatf ("awaddr count comparisions are failed"));
+      end
     end
 
     if (((byte_data_cmp_verified_awsize_count > 0) && (byte_data_cmp_failed_awsize_count == 0)) ||

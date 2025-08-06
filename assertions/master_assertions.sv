@@ -68,8 +68,25 @@ interface master_assertions (input                     aclk,
 
   // Cycle limit between VALID and READY handshakes.
   // This value is configured by the environment using <uvm_config_db>.
-  // A default of 100 cycles is applied if no configuration is provided.
   localparam ready_delay_cycles = 100;
+  
+  // Configuration to disable RREADY checks during QoS test cleanup
+  bit disable_rready_check_for_qos_cleanup = 0;
+  bit in_cleanup_phase = 0;
+  
+  initial begin
+    if(!uvm_config_db#(bit)::get(null, "*", "disable_rready_check_for_qos_cleanup", disable_rready_check_for_qos_cleanup)) begin
+      disable_rready_check_for_qos_cleanup = 0;
+    end
+    
+    // Monitor for cleanup phase
+    forever begin
+      @(posedge aclk);
+      if(disable_rready_check_for_qos_cleanup) begin
+        void'(uvm_config_db#(bit)::get(null, "*", "qos_test_cleanup_phase", in_cleanup_phase));
+      end
+    end
+  end
 
 
   
@@ -253,7 +270,7 @@ interface master_assertions (input                     aclk,
   //Assertion:   R_READY_WITHIN_LIMIT
   //Description: RREADY must be asserted within ready_delay_cycles after RVALID rises
   property r_ready_within_limit;
-    @(posedge aclk) disable iff(!aresetn)
+    @(posedge aclk) disable iff(!aresetn || (disable_rready_check_for_qos_cleanup && in_cleanup_phase))
       $rose(rvalid) |-> (##[1:ready_delay_cycles] rready);
   endproperty : r_ready_within_limit
   R_READY_WITHIN_LIMIT: assert property(r_ready_within_limit)

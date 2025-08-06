@@ -505,6 +505,11 @@ seq/master_sequences/axi4_master_user_signal_passthrough_seq.sv
 - Fixed address mapping in QoS sequences
 - Fixed UVM timeout and scoreboard errors
 - Added all includes to packages for proper compilation
+- Fixed VIP GUI integration issues (indentation errors, duplicate try statements)
+- Fixed 11x11 matrix generation hang by removing problematic ultrathin patches
+- Fixed 8x8 template generation from GUI with proper output directory handling
+- Added 15x15 template to GUI for large-scale SoC testing
+- Verified all templates (2x3, 8x8, 15x15, AHB) generate RTL and VIP correctly
 
 ### Running QoS Tests
 ```bash
