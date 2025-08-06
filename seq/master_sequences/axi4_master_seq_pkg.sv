@@ -155,6 +155,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_qos_write_only_seq.sv"
   `include "axi4_master_qos_saturation_stress_seq.sv"
   `include "axi4_master_qos_starvation_prevention_seq.sv"
+  // USER signal sequences
   `include "axi4_master_user_signal_passthrough_seq.sv"
   `include "axi4_master_user_signal_width_mismatch_seq.sv"
   `include "axi4_master_user_parity_protection_seq.sv"

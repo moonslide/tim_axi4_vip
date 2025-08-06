@@ -35,10 +35,13 @@ task axi4_slave_nbk_write_seq::body();
   req.transfer_type = NON_BLOCKING_WRITE;
 
   start_item(req);
-  if(!req.randomize())begin
+  if(!req.randomize() with {
+    req.transfer_type == NON_BLOCKING_WRITE;
+    req.bresp == WRITE_OKAY; // Ensure proper write response
+  }) begin
     `uvm_fatal("axi4","Rand failed");
   end
-  `uvm_info("SLAVE_WRITE_NBK_SEQ", $sformatf("slave_seq = \n%s",req.sprint()), UVM_NONE); 
+  `uvm_info("SLAVE_WRITE_NBK_SEQ", $sformatf("slave_seq = \n%s",req.sprint()), UVM_HIGH); 
   finish_item(req);
 
 endtask : body

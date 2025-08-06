@@ -43,6 +43,13 @@ class axi4_master_monitor_proxy extends uvm_component;
   //Declaring handle for uvm_tlm_analysis_fifo for read task
   uvm_tlm_analysis_fifo #(axi4_master_tx) axi4_master_read_fifo_h;
 
+  // Transaction counters for tracking what's sent to scoreboard
+  int unsigned write_addr_sent_count = 0;
+  int unsigned write_data_sent_count = 0;
+  int unsigned write_resp_sent_count = 0;
+  int unsigned read_addr_sent_count = 0;
+  int unsigned read_data_sent_count = 0;
+
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
@@ -158,6 +165,7 @@ task axi4_master_monitor_proxy::axi4_write_address();
 
     `uvm_info(get_type_name(),$sformatf("Packet received from axi4_write_address clone packet is \n %s",req_wr_clone_packet.sprint()),UVM_HIGH)
     axi4_master_write_address_analysis_port.write(req_wr_clone_packet);
+    write_addr_sent_count++;
   end
 endtask
 

@@ -36,10 +36,17 @@ task axi4_slave_nbk_read_qos_seq::body();
   req.transfer_type=NON_BLOCKING_READ;
   
   start_item(req);
-  if(!req.randomize())begin
+  if(!req.randomize() with {
+    req.transfer_type == NON_BLOCKING_READ;
+    req.rresp == READ_OKAY;
+    req.rdata.size() > 0;
+    foreach(req.rdata[i]) {
+      req.rdata[i] != 0; // Ensure non-zero read data for QoS test
+    }
+  }) begin
     `uvm_fatal("axi4","Rand failed");
   end
-  req.print();
+  `uvm_info("SLAVE_READ_QOS_SEQ", $sformatf("QoS slave_seq = \n%s",req.sprint()), UVM_HIGH);
   finish_item(req);
 
 endtask : body

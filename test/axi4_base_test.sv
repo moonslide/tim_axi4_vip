@@ -280,13 +280,14 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
   // Create slave agent configs array based on dynamic configuration
   axi4_env_cfg_h.axi4_slave_agent_cfg_h = new[axi4_env_cfg_h.no_of_slaves];
   
-  // Initialize common configuration for all slaves
+  // Initialize common configuration for all slaves  
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])begin
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i] =
     axi4_slave_agent_config::type_id::create($sformatf("axi4_slave_agent_cfg_h[%0d]",i));
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_id = i;
+    // Default maximum_transactions - will be overridden for NONE mode
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 3;
-    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+    // Note: read_data_mode will be set per bus matrix mode below
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
 
@@ -299,17 +300,39 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].has_coverage = 1; 
   end
   
-  // Configure address ranges based on bus matrix mode
+  // Configure address ranges and read_data_mode based on bus matrix mode
   case(test_config.bus_matrix_mode)
-    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: setup_enhanced_slave_agent_cfg();
-    axi4_bus_matrix_ref::BASE_BUS_MATRIX: setup_base_slave_agent_cfg();
-    axi4_bus_matrix_ref::NONE: begin 
-      // For NONE mode, set very wide address ranges to accept any address
+    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: begin
+      setup_enhanced_slave_agent_cfg();
+      // All slaves auto-respond in enhanced mode
       foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+        // Increase transactions for QoS/USER tests with multiple masters
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 8;
+      end
+    end
+    axi4_bus_matrix_ref::BASE_BUS_MATRIX: begin  
+      setup_base_slave_agent_cfg();
+      // All slaves auto-respond in base mode
+      foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+        // Increase transactions for QoS/USER tests with multiple masters
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 8;
+      end
+    end
+    axi4_bus_matrix_ref::NONE: begin 
+      // For NONE mode with 1:1 master-slave connections, all slaves must respond
+      // Since hdl_top.sv has direct connections (Master[i] → Slave[i]), configure all slaves
+      foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+        // All slaves accept all addresses and respond automatically in NONE mode
         axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
         axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'hFFFF_FFFF_FFFF_FFFF;
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+        // Set max transactions to handle QoS tests properly
+        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions = 15;
+        `uvm_info(get_type_name(), $sformatf("NONE mode: Configured slave[%0d] for SLAVE_MEM_MODE with maximum_transactions=%0d", i, axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].maximum_transactions), UVM_LOW)
       end
-      `uvm_info(get_type_name(), "Configured NONE mode - all addresses accepted by all slaves", UVM_MEDIUM)
+      `uvm_info(get_type_name(), "Configured NONE mode - all slaves in SLAVE_MEM_MODE to match 1:1 interface connections", UVM_MEDIUM)
     end
   endcase
 endfunction: setup_axi4_slave_agent_cfg

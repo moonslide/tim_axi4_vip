@@ -143,10 +143,12 @@ package axi4_virtual_seq_pkg;
   `include "axi4_enhanced_bus_matrix_virtual_seq.sv"
   
   // QoS and USER Signal Virtual Sequences
-  `include "axi4_virtual_qos_basic_priority_test_seq.sv"
+  // QoS virtual sequences
+  `include "axi4_virtual_qos_basic_priority_seq.sv"
   `include "axi4_virtual_qos_equal_priority_fairness_seq.sv"
   `include "axi4_virtual_qos_saturation_stress_seq.sv"
   `include "axi4_virtual_qos_starvation_prevention_seq.sv"
+  // USER signal virtual sequences
   `include "axi4_virtual_user_signal_passthrough_seq.sv"
   `include "axi4_virtual_user_signal_width_mismatch_seq.sv"
   `include "axi4_virtual_user_parity_protection_seq.sv"

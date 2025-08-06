@@ -161,10 +161,12 @@ package axi4_test_pkg;
   `include "axi4_none_matrix_test.sv"
   
   // QoS and USER Signal Tests
+  // QoS tests
   `include "axi4_qos_basic_priority_test.sv"
   `include "axi4_qos_equal_priority_fairness_test.sv"
   `include "axi4_qos_saturation_stress_test.sv"
   `include "axi4_qos_starvation_prevention_test.sv"
+  // USER signal tests
   `include "axi4_user_signal_passthrough_test.sv"
   `include "axi4_user_signal_width_mismatch_test.sv"
   `include "axi4_user_parity_protection_test.sv"
@@ -172,6 +174,7 @@ package axi4_test_pkg;
   `include "axi4_user_transaction_tracing_test.sv"
   `include "axi4_user_signal_protocol_violation_test.sv"
   `include "axi4_user_signal_corruption_test.sv"
+  // Combined QoS and USER tests
   `include "axi4_qos_with_user_priority_boost_test.sv"
   `include "axi4_user_based_qos_routing_test.sv"
 

@@ -121,15 +121,15 @@ function axi4_slave_driver_proxy::new(string name = "axi4_slave_driver_proxy",
   axi_read_seq_item_port                    = new("axi_read_seq_item_port", this);
   axi_write_rsp_port                        = new("axi_write_rsp_port", this);
   axi_read_rsp_port                         = new("axi_read_rsp_port", this);
-  axi4_slave_write_addr_fifo_h              = new("axi4_slave_write_addr_fifo_h",this,64);
-  axi4_slave_write_data_in_fifo_h           = new("axi4_slave_write_data_in_fifo_h",this,64);
-  axi4_slave_write_response_fifo_h          = new("axi4_slave_write_response_fifo_h",this,64);
-  axi4_slave_write_data_out_fifo_h          = new("axi4_slave_write_data_out_fifo_h",this,64);
-  axi4_slave_read_addr_fifo_h               = new("axi4_slave_read_addr_fifo_h",this,64);
-  axi4_slave_read_data_in_fifo_h            = new("axi4_slave_read_data_in_fifo_h",this,64);
-  semaphore_write_key                       = new(4);  // Increased from 1 to 4 for better multi-master throughput
-  semaphore_rsp_write_key                   = new(4);  // Increased from 1 to 4 for better multi-master throughput  
-  semaphore_read_key                        = new(4);  // Increased from 1 to 4 for better multi-master throughput
+  axi4_slave_write_addr_fifo_h              = new("axi4_slave_write_addr_fifo_h",this,16);
+  axi4_slave_write_data_in_fifo_h           = new("axi4_slave_write_data_in_fifo_h",this,16);
+  axi4_slave_write_response_fifo_h          = new("axi4_slave_write_response_fifo_h",this,16);
+  axi4_slave_write_data_out_fifo_h          = new("axi4_slave_write_data_out_fifo_h",this,16);
+  axi4_slave_read_addr_fifo_h               = new("axi4_slave_read_addr_fifo_h",this,16);
+  axi4_slave_read_data_in_fifo_h            = new("axi4_slave_read_data_in_fifo_h",this,16);
+  semaphore_write_key                       = new(1);
+  semaphore_rsp_write_key                   = new(1);
+  semaphore_read_key                        = new(1);
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
@@ -195,8 +195,20 @@ task axi4_slave_driver_proxy::run_phase(uvm_phase phase);
   axi4_slave_drv_bfm_h.wait_for_system_reset();
 
   fork 
-    axi4_write_task();
-    axi4_read_task();
+    forever begin
+      axi4_write_task();
+      // In SLAVE_MEM_MODE, continue processing
+      if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+        `uvm_info(get_type_name(), "SLAVE_MEM_MODE: Restarting write task", UVM_HIGH)
+      end
+    end
+    forever begin
+      axi4_read_task();
+      // In SLAVE_MEM_MODE, continue processing
+      if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+        `uvm_info(get_type_name(), "SLAVE_MEM_MODE: Restarting read task", UVM_HIGH)
+      end
+    end
   join
 
 
@@ -215,13 +227,13 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
-      req_wr = axi4_slave_tx::type_id::create("req_wr");
-      // Initialize with default values - BFM will fill with actual sampled values from bus
+      // In SLAVE_MEM_MODE, create a single dummy transaction for the BFM to fill
+      req_wr = axi4_slave_tx::type_id::create($sformatf("req_wr_%0d", $urandom()));
+      // Initialize with default values - BFM will fill with actual sampled values
       assert(req_wr.randomize());
-      // Put dummy transaction only into data FIFO - response FIFO will get it after BFM update
+      // Put dummy transaction into FIFOs for processing
       axi4_slave_write_data_in_fifo_h.put(req_wr);
-      // NOTE: Response FIFO will be populated in ADDRESS_CHANNEL thread after BFM updates
+      axi4_slave_write_response_fifo_h.put(req_wr);
     end else begin
       // Normal mode - get transaction from sequencer
       axi_write_seq_item_port.get_next_item(req_wr);
@@ -275,15 +287,11 @@ task axi4_slave_driver_proxy::axi4_write_task();
      //Converting struct into transaction data type
      axi4_slave_seq_item_converter::to_write_class(struct_write_packet,local_slave_addr_tx);
 
-     if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-        // Skip obviously invalid dummy transactions with address 0x0 to prevent QoS queue overflow
-        if (local_slave_addr_tx.awaddr != 64'h0) begin
-          qos_queue.push_front(local_slave_addr_tx);
-          `uvm_info("QOS_DEBUG", $sformatf("Added transaction to QoS queue - queue size now %0d, addr=0x%16h, qos=%0d", 
-                   qos_queue.size(), local_slave_addr_tx.awaddr, local_slave_addr_tx.awqos), UVM_LOW);
-        end else begin
-          `uvm_info("QOS_DEBUG", $sformatf("Skipping dummy transaction with address 0x0 from QoS queue"), UVM_LOW);
-        end
+     // In SLAVE_MEM_MODE, don't use QoS queue - respond immediately to all requests
+     if(((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || 
+         (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) &&
+         (axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE)) begin
+        qos_queue.push_front(local_slave_addr_tx);
       end
      
      `uvm_info("DEBUG_SLAVE_WRITE_ADDR_PROXY", $sformatf("AFTER :: Received req packet \n %s",local_slave_addr_tx.sprint()), UVM_NONE);
@@ -295,13 +303,6 @@ task axi4_slave_driver_proxy::axi4_write_task();
      else begin
        axi4_slave_write_addr_fifo_h.put(local_slave_addr_tx);
      end
-     
-     // In SLAVE_MEM_MODE, now put the BFM-updated transaction into response FIFO
-     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-       axi4_slave_write_response_fifo_h.put(local_slave_addr_tx);
-       `uvm_info("SLAVE_MEM_DEBUG", $sformatf("Put BFM-updated transaction with address 0x%16h into response FIFO", local_slave_addr_tx.awaddr), UVM_LOW);
-     end
-     
      wr_addr_cnt++;
    
    end
@@ -319,6 +320,12 @@ task axi4_slave_driver_proxy::axi4_write_task();
       semaphore_write_key.get(1);
 
       //getting the data from write data fifo
+      // Ensure FIFO has a dummy transaction if in SLAVE_MEM_MODE
+      if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && axi4_slave_write_data_in_fifo_h.used() == 0) begin
+        req_wr = axi4_slave_tx::type_id::create($sformatf("req_wr_dummy_%0d", $urandom()));
+        assert(req_wr.randomize());
+        axi4_slave_write_data_in_fifo_h.put(req_wr);
+      end
       axi4_slave_write_data_in_fifo_h.get(local_slave_data_tx);
       
       //Converting transactions into struct data type
@@ -355,7 +362,6 @@ task axi4_slave_driver_proxy::axi4_write_task();
       axi4_slave_tx              local_slave_response_tx;
       axi4_slave_tx              packet;
       axi4_slave_tx              qos_value_check_1;
-      axi4_slave_tx              addr_calc_tx;
       axi4_write_transfer_char_s struct_write_packet;
       axi4_transfer_cfg_s        struct_cfg;
       bit[3:0]                   bid_local;
@@ -365,7 +371,6 @@ task axi4_slave_driver_proxy::axi4_write_task();
       int                        end_sid;
       int                        wait_cycles;
       bit [1:0]                  original_bresp;
-      bit                        is_dummy_transaction;
       
       //returns status of response thread
       response_tx=process::self();
@@ -375,18 +380,24 @@ task axi4_slave_driver_proxy::axi4_write_task();
       //getting the key from semaphore 
       semaphore_rsp_write_key.get(1);
 
-      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-        `uvm_info("QOS_DEBUG", $sformatf("Response thread: QoS mode enabled, queue size=%0d", qos_queue.size()), UVM_LOW);
-        if (qos_queue.size() == 0) begin
-          // During teardown phase (after initial transactions complete), empty QoS queue is expected
-          if (completed_initial_txn) begin
-            `uvm_info("QOS_DEBUG", "Response thread: QoS queue is empty during teardown - this is expected", UVM_LOW);
-            // Set response tx to null to skip further processing
-            local_slave_response_tx = null;
-          end else begin
-            `uvm_error("QOS_DEBUG", "Response thread: QoS queue is empty during active phase!");
-          end
-        end else begin
+      // In SLAVE_MEM_MODE with QoS, bypass queue and get directly from FIFO
+      if(((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || 
+          (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) &&
+          (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE)) begin
+        // Skip QoS queue processing in SLAVE_MEM_MODE
+        `uvm_info("slave_driver_proxy", "SLAVE_MEM_MODE with QoS: Bypassing write QoS queue", UVM_HIGH)
+        // Ensure FIFO has a dummy transaction if in SLAVE_MEM_MODE
+        if(axi4_slave_write_response_fifo_h.used() == 0) begin
+          req_wr = axi4_slave_tx::type_id::create($sformatf("req_wr_resp_dummy_%0d", $urandom()));
+          assert(req_wr.randomize());
+          axi4_slave_write_response_fifo_h.put(req_wr);
+        end
+        axi4_slave_write_response_fifo_h.get(local_slave_response_tx);
+      end
+      else if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+        if(qos_queue.size() > 0) begin
+          // Initialize to 0 to handle case where all priorities are equal
+          queue_index = 0;
           qos_value_check_1 = qos_queue[$];
           for(int i=0;i<qos_queue.size();i++) begin
             if(qos_queue[i].awqos >= qos_value_check_1.awqos) begin
@@ -395,150 +406,113 @@ task axi4_slave_driver_proxy::axi4_write_task();
             end
           end
           local_slave_response_tx = qos_queue[queue_index];
-          `uvm_info("QOS_DEBUG", $sformatf("Response thread: Got transaction from QoS queue[%0d], addr=0x%16h, qos=%0d", 
-                   queue_index, local_slave_response_tx.awaddr, local_slave_response_tx.awqos), UVM_LOW);
           qos_queue.delete(queue_index);
+        end else begin
+          `uvm_error(get_type_name(), "Write QoS queue is empty - cannot process write response");
         end
       end
       else begin 
         if(axi4_slave_write_response_fifo_h.is_empty) begin
-          // During teardown phase (after initial transactions complete), empty response FIFO is expected
-          if (completed_initial_txn) begin
-            `uvm_info(get_type_name(), "WRITE_RESP_THREAD::Response FIFO is empty during teardown - this is expected", UVM_LOW);
-          end else begin
-            `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write resp data from FIFO as WRITE_RESP_FIFO is EMPTY"));
-          end
-          // Set local_slave_response_tx to null to skip processing
-          local_slave_response_tx = null;
+          `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::Cannot get write resp data from FIFO as WRITE_RESP_FIFO is EMPTY"));
         end
         else begin
           //getting the data from response fifo
+          // Ensure FIFO has a dummy transaction if in SLAVE_MEM_MODE
+          if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && axi4_slave_write_response_fifo_h.used() == 0) begin
+            req_wr = axi4_slave_tx::type_id::create($sformatf("req_wr_resp_dummy_2_%0d", $urandom()));
+            assert(req_wr.randomize());
+            axi4_slave_write_response_fifo_h.put(req_wr);
+          end
           axi4_slave_write_response_fifo_h.get(local_slave_response_tx);
         end
       end
 
-      // Check if we have valid transaction before processing
-      if(local_slave_response_tx != null) begin
-        //Converting transactions into struct data type
-        axi4_slave_seq_item_converter::from_write_class(local_slave_response_tx,struct_write_packet);
-        `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH);
       
-        // Store the original bresp to preserve user-defined response in SLAVE_MEM_MODE
-        original_bresp = struct_write_packet.bresp; 
+      //Converting transactions into struct data type
+      axi4_slave_seq_item_converter::from_write_class(local_slave_response_tx,struct_write_packet);
+      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_write_packet = \n %0p",struct_write_packet), UVM_HIGH);
+      
+      // Store the original bresp to preserve user-defined response in SLAVE_MEM_MODE
+      original_bresp = struct_write_packet.bresp; 
 
-        //Converting configurations into struct config type
-        axi4_slave_cfg_converter::from_class(axi4_slave_agent_cfg_h,struct_cfg);
-        `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_cfg =  \n %0p",struct_cfg),UVM_HIGH);
+      //Converting configurations into struct config type
+      axi4_slave_cfg_converter::from_class(axi4_slave_agent_cfg_h,struct_cfg);
+      `uvm_info(get_type_name(), $sformatf("from_write_class:: struct_cfg =  \n %0p",struct_cfg),UVM_HIGH);
 
-        //check for fifo empty if not get the data 
-        if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-          local_slave_addr_tx = local_slave_response_tx;
-          struct_write_packet.bid = awid_queue_for_qos.pop_front();
-          
-          // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
-          // The QoS queue transaction may have dummy/randomized addresses
-          if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-            axi4_slave_tx actual_addr_tx;
-            if(!axi4_slave_write_addr_fifo_h.is_empty) begin
-              axi4_slave_write_addr_fifo_h.get(actual_addr_tx);
-              // Copy the actual address to our transaction
-              local_slave_addr_tx.awaddr = actual_addr_tx.awaddr;
-              local_slave_addr_tx.awlen = actual_addr_tx.awlen;
-              local_slave_addr_tx.awsize = actual_addr_tx.awsize;
-              local_slave_addr_tx.awburst = actual_addr_tx.awburst;
-              local_slave_addr_tx.awlock = actual_addr_tx.awlock;
-              local_slave_addr_tx.awid = actual_addr_tx.awid;
-              local_slave_addr_tx.awprot = actual_addr_tx.awprot;
-              `uvm_info("SLAVE_MEM_QOS_DEBUG", $sformatf("Using actual address 0x%16h from BFM instead of QoS queue addr", actual_addr_tx.awaddr), UVM_LOW);
-            end else begin
-              `uvm_error(get_type_name(), "SLAVE_MEM_MODE with QoS: Write address FIFO is empty - cannot get actual address");
-            end
-          end
-        end
-        else begin
-          if(axi4_slave_write_addr_fifo_h.is_empty) begin
-            `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-            // In out-of-order mode, it's normal for FIFO to be temporarily empty
-            if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || 
-               axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
-              `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
-            end else begin
-              `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in in-order mode"),UVM_MEDIUM);
-            end
-            wait_cycles = 0;
-            while(axi4_slave_write_addr_fifo_h.is_empty) begin
-              @(posedge axi4_slave_drv_bfm_h.aclk);
-              if(wait_cycles++ > 1000) begin  // Reduced from 50000 to 1000 to prevent excessive delays
-                `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
-                break;
-              end
-            end
-          end
+      //check for fifo empty if not get the data 
+      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+        local_slave_addr_tx = local_slave_response_tx;
+        struct_write_packet.bid = awid_queue_for_qos.pop_front();
+        
+        // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
+        // The QoS queue transaction may have dummy/randomized addresses
+        if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+          axi4_slave_tx actual_addr_tx;
           if(!axi4_slave_write_addr_fifo_h.is_empty) begin
-            axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
-            `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
-            `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
-            
-            // In SLAVE_MEM_MODE without QoS, update the response transaction with actual address from BFM
-            if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-              // Copy the actual address info from BFM-updated transaction to response transaction
-              local_slave_response_tx.awaddr = local_slave_addr_tx.awaddr;
-              local_slave_response_tx.awlen = local_slave_addr_tx.awlen;
-              local_slave_response_tx.awsize = local_slave_addr_tx.awsize;
-              local_slave_response_tx.awburst = local_slave_addr_tx.awburst;
-              local_slave_response_tx.awlock = local_slave_addr_tx.awlock;
-              local_slave_response_tx.awid = local_slave_addr_tx.awid;
-              local_slave_response_tx.awprot = local_slave_addr_tx.awprot;
-              `uvm_info("SLAVE_MEM_DEBUG", $sformatf("Updated response transaction with actual address 0x%16h from BFM", local_slave_addr_tx.awaddr), UVM_LOW);
+            axi4_slave_write_addr_fifo_h.get(actual_addr_tx);
+            // Copy the actual address to our transaction
+            local_slave_addr_tx.awaddr = actual_addr_tx.awaddr;
+            local_slave_addr_tx.awlen = actual_addr_tx.awlen;
+            local_slave_addr_tx.awsize = actual_addr_tx.awsize;
+            local_slave_addr_tx.awburst = actual_addr_tx.awburst;
+            local_slave_addr_tx.awlock = actual_addr_tx.awlock;
+            local_slave_addr_tx.awid = actual_addr_tx.awid;
+            local_slave_addr_tx.awprot = actual_addr_tx.awprot;
+            `uvm_info("SLAVE_MEM_QOS_DEBUG", $sformatf("Using actual address 0x%16h from BFM instead of QoS queue addr", actual_addr_tx.awaddr), UVM_LOW);
+          end else begin
+            `uvm_error(get_type_name(), "SLAVE_MEM_MODE with QoS: Write address FIFO is empty - cannot get actual address");
+          end
+        end
+      end
+      else begin
+        if(axi4_slave_write_addr_fifo_h.is_empty) begin
+          `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+          // In out-of-order mode, it's normal for FIFO to be temporarily empty
+          if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || 
+             axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in out-of-order mode"),UVM_MEDIUM);
+          end else begin
+            `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Waiting for write addr data in in-order mode"),UVM_MEDIUM);
+          end
+          wait_cycles = 0;
+          while(axi4_slave_write_addr_fifo_h.is_empty) begin
+            @(posedge axi4_slave_drv_bfm_h.aclk);
+            if(wait_cycles++ > 50000) begin
+              `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
+              break;
             end
           end
         end
-
-      // In SLAVE_MEM_MODE without QoS, use the response transaction for address calculations
-      // since it has been updated with actual BFM values
-      if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && 
-         !((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || 
-           (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))) begin
-        addr_calc_tx = local_slave_response_tx;
-      end else begin
-        addr_calc_tx = local_slave_addr_tx;
-      end
-
-      if(addr_calc_tx.awburst == WRITE_FIXED) begin
-        end_wrap_addr =  addr_calc_tx.awaddr + ((2**addr_calc_tx.awsize)) - 1;
-      end
-      if(addr_calc_tx.awburst == WRITE_INCR) begin
-        end_wrap_addr =  addr_calc_tx.awaddr + ((addr_calc_tx.awlen+1)*(2**addr_calc_tx.awsize)) - 1;
-      end
-      if(addr_calc_tx.awburst == WRITE_WRAP) begin
-         end_wrap_addr = addr_calc_tx.awaddr - int'(addr_calc_tx.awaddr%((addr_calc_tx.awlen+1)*(2**addr_calc_tx.awsize)));
-         end_wrap_addr = end_wrap_addr + ((addr_calc_tx.awlen+1)*(2**addr_calc_tx.awsize)) - 1;
-      end
-
-      // In SLAVE_MEM_MODE, check if this is a dummy transaction that hasn't been filled by BFM yet
-      // In enhanced bus matrix mode, only addresses in the 0x0000_0008_xxxx_xxxx to 0x0000_000A_xxxx_xxxx range are valid
-      // Any address outside this range is likely a dummy transaction that hasn't been updated by BFM
-      is_dummy_transaction = 0;
-      if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && axi4_bus_matrix_h != null) begin
-        // Enhanced mode valid address ranges: 0x0000_0008_0000_0000 to 0x0000_000A_0004_FFFF
-        bit is_in_valid_range = (addr_calc_tx.awaddr >= 64'h0000_0008_0000_0000) && 
-                               (addr_calc_tx.awaddr <= 64'h0000_000A_0004_FFFF);
-        
-        `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Checking dummy transaction: addr=0x%16h, in_valid_range=%0b", 
-                 addr_calc_tx.awaddr, is_in_valid_range), UVM_LOW);
-        
-        if (!is_in_valid_range) begin
-          is_dummy_transaction = 1;
-          `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Detected dummy transaction with out-of-range address 0x%16h - will get normal DECERR response", 
-                   addr_calc_tx.awaddr), UVM_LOW);
+        if(!axi4_slave_write_addr_fifo_h.is_empty) begin
+          axi4_slave_write_addr_fifo_h.get(local_slave_addr_tx);
+          `uvm_info("DEBUG_FIFO",$sformatf("fifo_size = %0d",axi4_slave_write_addr_fifo_h.size()),UVM_HIGH)
+          `uvm_info("DEBUG_FIFO",$sformatf("fifo_used =%0d",axi4_slave_write_addr_fifo_h.used()),UVM_HIGH)
         end
       end
-      
+
+      if(local_slave_addr_tx.awburst == WRITE_FIXED) begin
+        end_wrap_addr =  local_slave_addr_tx.awaddr + ((2**local_slave_addr_tx.awsize)) - 1;
+      end
+      if(local_slave_addr_tx.awburst == WRITE_INCR) begin
+        end_wrap_addr =  local_slave_addr_tx.awaddr + ((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize)) - 1;
+      end
+      if(local_slave_addr_tx.awburst == WRITE_WRAP) begin
+         end_wrap_addr = local_slave_addr_tx.awaddr - int'(local_slave_addr_tx.awaddr%((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize)));
+         end_wrap_addr = end_wrap_addr + ((local_slave_addr_tx.awlen+1)*(2**local_slave_addr_tx.awsize)) - 1;
+      end
+
       // Determine the response for the entire burst. If any address in the
       // burst falls outside the allowed region, the transaction should fail.
       if (axi4_bus_matrix_h != null) begin
-        start_sid = axi4_bus_matrix_h.decode(addr_calc_tx.awaddr);
+        start_sid = axi4_bus_matrix_h.decode(local_slave_addr_tx.awaddr);
         end_sid   = axi4_bus_matrix_h.decode(end_wrap_addr);
+        // In NONE mode with 1:1 connections, each slave handles all transactions it receives
+        if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::NONE) begin
+          start_sid = axi4_slave_agent_cfg_h.slave_id; // Force this slave to handle
+          end_sid = axi4_slave_agent_cfg_h.slave_id;
+          `uvm_info("slave_driver_proxy", $sformatf("NONE mode: Slave %0d handling write address 0x%16h (1:1 connection)", 
+                   axi4_slave_agent_cfg_h.slave_id, local_slave_addr_tx.awaddr), UVM_MEDIUM)
+        end
       end else begin
         // No bus matrix - assume this slave handles all addresses directed to it
         start_sid = axi4_slave_agent_cfg_h.slave_id;
@@ -546,37 +520,37 @@ task axi4_slave_driver_proxy::axi4_write_task();
       end
 
       `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Address 0x%16h: end_wrap_addr=0x%16h, start_sid=%0d, end_sid=%0d", 
-               addr_calc_tx.awaddr, end_wrap_addr, start_sid, end_sid), UVM_LOW);
+               local_slave_addr_tx.awaddr, end_wrap_addr, start_sid, end_sid), UVM_LOW);
 
       if(start_sid != end_sid || start_sid < 0 || end_sid < 0) begin
         `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Setting WRITE_DECERR for addr 0x%16h: start_sid=%0d, end_sid=%0d", 
-                 addr_calc_tx.awaddr, start_sid, end_sid), UVM_LOW);
+                 local_slave_addr_tx.awaddr, start_sid, end_sid), UVM_LOW);
         struct_write_packet.bresp = WRITE_DECERR;
       end else begin
         // Handle exclusive write access according to AMBA AXI4 specification
-        if(addr_calc_tx.awlock == WRITE_EXCLUSIVE_ACCESS) begin
+        if(local_slave_addr_tx.awlock == WRITE_EXCLUSIVE_ACCESS) begin
           // Check if this exclusive write should succeed
-          if(check_exclusive_monitor(addr_calc_tx.awaddr, addr_calc_tx.awid)) begin
+          if(check_exclusive_monitor(local_slave_addr_tx.awaddr, local_slave_addr_tx.awid)) begin
             struct_write_packet.bresp = WRITE_EXOKAY; // Exclusive access succeeded
             `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive write SUCCESS at 0x%16h for master ID %0d - returning EXOKAY", 
-                     addr_calc_tx.awaddr, addr_calc_tx.awid), UVM_LOW);
+                     local_slave_addr_tx.awaddr, local_slave_addr_tx.awid), UVM_LOW);
             // Clear exclusive monitors for this address after successful exclusive write
-            clear_exclusive_monitors(addr_calc_tx.awaddr);
+            clear_exclusive_monitors(local_slave_addr_tx.awaddr);
           end else begin
             struct_write_packet.bresp = WRITE_OKAY; // Exclusive access failed, but write completes normally
             `uvm_info("EXCLUSIVE_ACCESS", $sformatf("Exclusive write FAILED at 0x%16h for master ID %0d - returning OKAY", 
-                     addr_calc_tx.awaddr, addr_calc_tx.awid), UVM_LOW);
+                     local_slave_addr_tx.awaddr, local_slave_addr_tx.awid), UVM_LOW);
           end
           
           // Clear any other monitors that may overlap with this write (per AXI4 spec)
-          clear_exclusive_monitors(addr_calc_tx.awaddr);
+          clear_exclusive_monitors(local_slave_addr_tx.awaddr);
         end else begin
           // Normal write - check bus matrix and clear any exclusive monitors for this address
           // Extract master_id from AWID value
           // TC046 uses AWID = master_id * 4, so we need to divide by 4
           // For general case, assume lower bits of AWID contain master ID
           int master_id = 0;
-          int awid_value = int'(addr_calc_tx.awid);
+          int awid_value = int'(local_slave_addr_tx.awid);
           
           // Extract master ID from AWID - assume master ID is encoded in lower bits
           // Common patterns: 
@@ -593,22 +567,21 @@ task axi4_slave_driver_proxy::axi4_write_task();
             master_id = awid_value % 4; // Default to 4x4 if no bus matrix
           end
           
-          // Let all transactions (including dummy ones) get proper bus matrix response
           if (axi4_bus_matrix_h != null) begin
             struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(master_id,
-                                                                         addr_calc_tx.awaddr,
+                                                                         local_slave_addr_tx.awaddr,
                                                                          struct_write_packet.awprot);
             `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Bus matrix returned bresp=%0d for addr 0x%16h", 
-                     struct_write_packet.bresp, addr_calc_tx.awaddr), UVM_LOW);
+                     struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
           end else begin
             // No bus matrix - default to WRITE_OKAY for normal writes
             struct_write_packet.bresp = WRITE_OKAY;
             `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("No bus matrix - returning default bresp=%0d for addr 0x%16h", 
-                     struct_write_packet.bresp, addr_calc_tx.awaddr), UVM_LOW);
+                     struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
           end
           
           // Normal write invalidates exclusive monitors at overlapping addresses (per AXI4 spec)
-          clear_exclusive_monitors(addr_calc_tx.awaddr);
+          clear_exclusive_monitors(local_slave_addr_tx.awaddr);
         end
       end
       
@@ -617,7 +590,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && 
           original_bresp != struct_write_packet.bresp) begin
         `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("SLAVE_MEM_MODE: Using bus matrix bresp=%0d instead of original bresp=%0d for addr 0x%16h", 
-                 struct_write_packet.bresp, original_bresp, addr_calc_tx.awaddr), UVM_LOW);
+                 struct_write_packet.bresp, original_bresp, local_slave_addr_tx.awaddr), UVM_LOW);
       end
       
       slave_err = (struct_write_packet.bresp != WRITE_OKAY && struct_write_packet.bresp != WRITE_EXOKAY);
@@ -629,7 +602,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
           wait_cycles = 0;
           while(axi4_slave_write_data_out_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
             @(posedge axi4_slave_drv_bfm_h.aclk);
-            if(wait_cycles++ > 500) begin  // Reduced from 50000 to 500 to prevent excessive delays
+            if(wait_cycles++ > 50000) begin
               `uvm_error("slave_driver_proxy","write response wait timeout")
               break;
             end
@@ -679,7 +652,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
      
      // Log error responses for debugging
      if(slave_err) begin
-       `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Write transaction has error response (DECERR/SLVERR) for address 0x%16h - skipping memory write", addr_calc_tx.awaddr), UVM_LOW);
+       `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Write transaction has error response (DECERR/SLVERR) for address 0x%16h - skipping memory write", local_slave_addr_tx.awaddr), UVM_LOW);
      end
      
      wr_resp_cnt++;
@@ -688,11 +661,6 @@ task axi4_slave_driver_proxy::axi4_write_task();
      end
      
      semaphore_rsp_write_key.put(1);
-    end else begin
-      // local_slave_response_tx is null, skip processing but still need to release semaphore
-      `uvm_info(get_type_name(),$sformatf("WRITE_RESP_THREAD::Skipping processing due to null transaction"), UVM_LOW);
-      semaphore_rsp_write_key.put(1);
-      end
    end
  
   join_any
@@ -727,20 +695,15 @@ task axi4_slave_driver_proxy::axi4_read_task();
     process rd_data;
     int master_id; // Variable for bus matrix master ID mapping
 
-    // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
-    if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
-      req_rd = axi4_slave_tx::type_id::create("req_rd");
-      // Initialize with default values - BFM will fill with actual sampled values
-      assert(req_rd.randomize());
-      // Put dummy transaction into FIFO for processing
-      axi4_slave_read_data_in_fifo_h.put(req_rd);
-      // NOTE: The BFM-updated transaction will be used directly in READ_DATA_CHANNEL
-    end else begin
-      // Normal mode - get transaction from sequencer
+    // Normal mode - get transaction from sequencer
+    if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE) begin
       axi_read_seq_item_port.get_next_item(req_rd);
       //putting the data into read data fifo
       axi4_slave_read_data_in_fifo_h.put(req_rd);
+    end else begin
+      // SLAVE_MEM_MODE - create initial dummy transaction
+      req_rd = axi4_slave_tx::type_id::create($sformatf("req_rd_init_%0d", $urandom()));
+      assert(req_rd.randomize());
     end
 
     // Keep threads active in all modes - in SLAVE_MEM_MODE they will be reactive to BFM signals
@@ -798,7 +761,10 @@ task axi4_slave_driver_proxy::axi4_read_task();
                 local_slave_tx.araddr, local_slave_tx.arid), UVM_LOW);
      end
 
-     if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+     // In SLAVE_MEM_MODE, don't use QoS queue - respond immediately to all requests
+     if(((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || 
+         (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) &&
+         (axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE)) begin
         qos_read_queue.push_front(local_slave_tx);
       end
      
@@ -820,7 +786,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
     int                        total_bytes;
     int                        compl_cycles;
     int                        rd_cycles;
-    bit                        is_dummy_read_transaction;
+    bit                        bypass_to_mem_mode = 0;
+    int                        target_slave_id = -1;
+    bit                        should_process_transaction = 1;
 
      //returns status of data thread
      rd_data = process::self();
@@ -831,32 +799,96 @@ task axi4_slave_driver_proxy::axi4_read_task();
 
      //Getting the key from semaphore
      semaphore_read_key.get(1);
+     
+     // Debug log to see configuration values
+     `uvm_info("DEBUG_QOS_CONFIG", $sformatf("qos_mode_type=%s, read_data_mode=%s", 
+               axi4_slave_agent_cfg_h.qos_mode_type.name(), 
+               axi4_slave_agent_cfg_h.read_data_mode.name()), UVM_MEDIUM)
 
+     // Handle QoS and non-QoS modes
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+         // In multi-slave systems, check if this slave should handle the transaction
+         // Get the address transaction first to determine routing
+         axi4_slave_read_addr_fifo_h.get(local_slave_addr_chk_tx);
+         target_slave_id = -1;
+         if (axi4_bus_matrix_h != null) begin
+           target_slave_id = axi4_bus_matrix_h.decode(local_slave_addr_chk_tx.araddr);
+           // In NONE mode with 1:1 connections, each slave handles all transactions it receives
+           if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::NONE) begin
+             target_slave_id = axi4_slave_agent_cfg_h.slave_id; // Force this slave to handle
+             `uvm_info("slave_driver_proxy", $sformatf("NONE mode: Slave %0d handling address 0x%16h (1:1 connection)", 
+                      axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr), UVM_MEDIUM)
+           end
+         end
+         
+         // Only process if this slave is the target slave for the address
+         if (target_slave_id == axi4_slave_agent_cfg_h.slave_id || target_slave_id < 0) begin
+           // Skip QoS queue processing in SLAVE_MEM_MODE - create dummy transaction for BFM
+           `uvm_info("slave_driver_proxy", $sformatf("SLAVE_MEM_MODE with QoS: Slave %0d bypassing QoS queue for address 0x%16h (target_slave=%0d)", 
+                    axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr, target_slave_id), UVM_MEDIUM)
+           req_rd = axi4_slave_tx::type_id::create($sformatf("req_rd_dummy_%0d", $urandom()));
+           assert(req_rd.randomize());
+           local_slave_rdata_tx = req_rd;
+           bypass_to_mem_mode = 1;
+           // Don't get address again later since we already got it
+         end else begin
+           // This slave should not handle this address - put the address back and exit
+           `uvm_info("slave_driver_proxy", $sformatf("SLAVE_MEM_MODE with QoS: Slave %0d NOT handling address 0x%16h (target_slave=%0d), exiting read task", 
+                    axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr, target_slave_id), UVM_MEDIUM)
+           // Put the address transaction back for other slaves
+           axi4_slave_read_addr_fifo_h.put(local_slave_addr_chk_tx);
+           // Set flag to skip processing and release semaphore
+           should_process_transaction = 0;
+         end
+       end else begin
       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
          compl_cycles = 0;
          // Skip wait in SLAVE_MEM_MODE - reads are independent of writes
          `uvm_info("slave_driver_proxy", "SLAVE_MEM_MODE: Skipping write completion wait for read", UVM_HIGH)
        end
-       if(qos_wait_enable) begin
+       // In SLAVE_MEM_MODE, don't wait for multiple queue entries - respond immediately
+       if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE && qos_wait_enable) begin
          wait(qos_read_queue.size>=2);
        end
        qos_wait_enable = 1'b0;
-       qos_value_check_1 = qos_read_queue[$];
-       for(int i=0;i<qos_read_queue.size();i++) begin
-         if(qos_read_queue[i].arqos >= qos_value_check_1.arqos) begin
-           qos_value_check_1 = qos_read_queue[i];
-           read_queue_index = i;
+       // Check if queue has entries before processing
+       if(qos_read_queue.size() > 0) begin
+         // Initialize to 0 to handle case where all priorities are equal
+         read_queue_index = 0;
+         qos_value_check_1 = qos_read_queue[$];
+         for(int i=0;i<qos_read_queue.size();i++) begin
+           if(qos_read_queue[i].arqos >= qos_value_check_1.arqos) begin
+             qos_value_check_1 = qos_read_queue[i];
+             read_queue_index = i;
+           end
          end
+         //Getting the data from read data fifo
+         //axi4_slave_read_data_in_fifo_h.get(local_slave_rdata_tx);
+         //local_slave_rdata_tx.rid = rid_e'(qos_read_queue[read_queue_index].arid);
+         local_slave_rdata_tx =  qos_read_queue[read_queue_index];
+         qos_read_queue.delete(read_queue_index);
+       end else begin
+         // In SLAVE_MEM_MODE, queue might be empty - get from FIFO directly
+         `uvm_info("slave_driver_proxy", "QoS queue empty in SLAVE_MEM_MODE, getting from FIFO", UVM_HIGH)
+         // Ensure FIFO has a dummy transaction if in SLAVE_MEM_MODE
+         if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && axi4_slave_read_data_in_fifo_h.used() == 0) begin
+           req_rd = axi4_slave_tx::type_id::create($sformatf("req_rd_dummy_qos_%0d", $urandom()));
+           assert(req_rd.randomize());
+           axi4_slave_read_data_in_fifo_h.put(req_rd);
+         end
+         axi4_slave_read_data_in_fifo_h.get(local_slave_rdata_tx);
        end
-       //Getting the data from read data fifo
-       //axi4_slave_read_data_in_fifo_h.get(local_slave_rdata_tx);
-       //local_slave_rdata_tx.rid = rid_e'(qos_read_queue[read_queue_index].arid);
-       local_slave_rdata_tx =  qos_read_queue[read_queue_index];
-       qos_read_queue.delete(read_queue_index);
+     end
      end
      else begin
        //Getting the data from read data fifo
+       // Ensure FIFO has a dummy transaction if in SLAVE_MEM_MODE
+       if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE && axi4_slave_read_data_in_fifo_h.used() == 0) begin
+         req_rd = axi4_slave_tx::type_id::create($sformatf("req_rd_dummy_%0d", $urandom()));
+         assert(req_rd.randomize());
+         axi4_slave_read_data_in_fifo_h.put(req_rd);
+       end
        axi4_slave_read_data_in_fifo_h.get(local_slave_rdata_tx);
      end
 
@@ -881,7 +913,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
        axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
        `uvm_info("DEBUG_SLAVE_RDATA_PROXY", $sformatf("AFTER :: READ CHANNEL PACKET \n %p",struct_read_packet), UVM_HIGH);
      end
-     else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA) begin
+     else if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE || bypass_to_mem_mode || (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_ERR_RESP_MODE && write_read_mode_h != ONLY_READ_DATA)) begin
 
       // Declare error response variables for memory mode processing
       bit error_response;
@@ -917,31 +949,21 @@ task axi4_slave_driver_proxy::axi4_read_task();
        end
 
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-        local_slave_addr_chk_tx = local_slave_rdata_tx;
-      end
-      else begin
-        axi4_slave_read_addr_fifo_h.peek(local_slave_addr_chk_tx);
-      end
-      total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
-      
-      // In SLAVE_MEM_MODE, check if this is a dummy transaction that hasn't been filled by BFM yet
-      is_dummy_read_transaction = 0;
-      if (axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-        // Check if this looks like an unfilled dummy transaction
-        if (local_slave_addr_chk_tx.araddr[63:48] == 16'h0000 && axi4_bus_matrix_h != null) begin
-          int test_sid = axi4_bus_matrix_h.decode(local_slave_addr_chk_tx.araddr);
-          if (test_sid < 0) begin
-            is_dummy_read_transaction = 1;
-            `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Detected dummy read transaction with unmapped address 0x%16h - treating as valid", 
-                     local_slave_addr_chk_tx.araddr), UVM_HIGH);
-          end
+        // In QoS mode, we need to get the actual address transaction from the address FIFO
+        // The dummy transaction doesn't have the real address information
+        // BUT: if bypass_to_mem_mode is set, we already got the address transaction during bypass logic
+        if (!bypass_to_mem_mode) begin
+          axi4_slave_read_addr_fifo_h.get(local_slave_addr_chk_tx);
         end
       end
-      
+      else begin
+        axi4_slave_read_addr_fifo_h.get(local_slave_addr_chk_tx);
+      end
+      total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
       `uvm_info("SLAVE_DRIVER_ALWAYS", $sformatf("Slave %0d checking address 0x%16h against range [0x%16h:0x%16h]", 
                axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr, 
                axi4_slave_agent_cfg_h.min_address, axi4_slave_agent_cfg_h.max_address), UVM_LOW);
-      if(is_dummy_read_transaction || local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
+      if(local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
         `uvm_info("SLAVE_DRIVER_ALWAYS", $sformatf("Address 0x%16h IS INSIDE slave %0d range", 
                  local_slave_addr_chk_tx.araddr, axi4_slave_agent_cfg_h.slave_id), UVM_LOW);
         if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
@@ -996,12 +1018,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               master_id = arid_value % 4; // Default to 4x4 if no bus matrix
             end
             
-            if (is_dummy_read_transaction) begin
-              // For dummy transactions, always return READ_OKAY to avoid DECERR
-              struct_read_packet.rresp = READ_OKAY;
-              `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Dummy read transaction - returning READ_OKAY for address 0x%16h", 
-                       local_slave_addr_chk_tx.araddr), UVM_HIGH);
-            end else if (axi4_bus_matrix_h != null) begin
+            if (axi4_bus_matrix_h != null) begin
               struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(master_id,
                                                                          local_slave_addr_chk_tx.araddr,
                                                                          local_slave_addr_chk_tx.arprot);
@@ -1035,6 +1052,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           end
 
           //read data task - always complete transaction
+          `uvm_info("DEBUG_BFM_CALL", "Calling axi4_read_data_phase BFM", UVM_LOW);
           axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet,struct_cfg,axi4_slave_agent_cfg_h.slave_response_mode);
           `uvm_info("DEBUG_SLAVE_RDATA_PROXY", $sformatf("AFTER :: READ_CHANNEL_PACKET \n%p",struct_read_packet), UVM_NONE);
         end
@@ -1248,8 +1266,8 @@ task axi4_slave_driver_proxy::axi4_read_task();
      axi4_slave_seq_item_converter::to_read_class(struct_read_packet,local_slave_rdata_tx);
      `uvm_info("DEBUG_SLAVE_RDATA_PROXY", $sformatf("AFTER :: READ CHANNEL PACKET \n %s",local_slave_rdata_tx.sprint()), UVM_NONE);
 
-     //Getting teh sampled read address from read address fifo
-     axi4_slave_read_addr_fifo_h.get(local_slave_raddr_tx);
+     //Use the address transaction we already got earlier
+     local_slave_raddr_tx = local_slave_addr_chk_tx;
     
      //Calling the Combined coverter class to combine read address and read data packet
      axi4_slave_seq_item_converter::tx_read_packet(local_slave_raddr_tx,local_slave_rdata_tx,packet);

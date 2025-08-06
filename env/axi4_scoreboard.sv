@@ -972,8 +972,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   // Write_Address_Channel comparision
   //-------------------------------------------------------
   if(axi4_env_cfg_h.write_read_mode_h == ONLY_WRITE_DATA || axi4_env_cfg_h.write_read_mode_h == WRITE_READ_DATA) begin
-    if ((byte_data_cmp_verified_awid_count != 0) && (byte_data_cmp_failed_awid_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awid count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awid_count > 0) && (byte_data_cmp_failed_awid_count == 0)) ||
+        ((byte_data_cmp_verified_awid_count == 0) && (byte_data_cmp_failed_awid_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awid count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awid_count, byte_data_cmp_failed_awid_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awid_count :%0d",
@@ -983,8 +985,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awid count comparisions are failed"));
     end
 
-    if ((byte_data_cmp_verified_awaddr_count != 0) && (byte_data_cmp_failed_awaddr_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awaddr count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awaddr_count > 0) && (byte_data_cmp_failed_awaddr_count == 0)) ||
+        ((byte_data_cmp_verified_awaddr_count == 0) && (byte_data_cmp_failed_awaddr_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awaddr count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awaddr_count, byte_data_cmp_failed_awaddr_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awaddr_count :%0d",
@@ -994,8 +998,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awaddr count comparisions are failed"));
     end
 
-    if ((byte_data_cmp_verified_awsize_count != 0) && (byte_data_cmp_failed_awsize_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awsize count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awsize_count > 0) && (byte_data_cmp_failed_awsize_count == 0)) ||
+        ((byte_data_cmp_verified_awsize_count == 0) && (byte_data_cmp_failed_awsize_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awsize count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awsize_count, byte_data_cmp_failed_awsize_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awsize_count :%0d",
@@ -1005,8 +1011,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awsize count comparisions are failed"));
     end
 
-    if ((byte_data_cmp_verified_awlen_count != 0) && (byte_data_cmp_failed_awlen_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awlen count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awlen_count > 0) && (byte_data_cmp_failed_awlen_count == 0)) ||
+        ((byte_data_cmp_verified_awlen_count == 0) && (byte_data_cmp_failed_awlen_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awlen count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awlen_count, byte_data_cmp_failed_awlen_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awlen_count :%0d",
@@ -1016,8 +1024,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awlen count comparisions are failed"));
     end
     
-    if ((byte_data_cmp_verified_awburst_count != 0) && (byte_data_cmp_failed_awburst_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awburst count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awburst_count > 0) && (byte_data_cmp_failed_awburst_count == 0)) ||
+        ((byte_data_cmp_verified_awburst_count == 0) && (byte_data_cmp_failed_awburst_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awburst count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awburst_count, byte_data_cmp_failed_awburst_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awburst_count :%0d",
@@ -1027,8 +1037,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awburst count comparisions are failed"));
     end
     
-    if ((byte_data_cmp_verified_awcache_count != 0) && (byte_data_cmp_failed_awcache_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awcache count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awcache_count > 0) && (byte_data_cmp_failed_awcache_count == 0)) ||
+        ((byte_data_cmp_verified_awcache_count == 0) && (byte_data_cmp_failed_awcache_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awcache count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awcache_count, byte_data_cmp_failed_awcache_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awcache_count :%0d",
@@ -1038,8 +1050,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awcache count comparisions are failed"));
     end
     
-    if ((byte_data_cmp_verified_awlock_count != 0) && (byte_data_cmp_failed_awlock_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("awlock count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awlock_count > 0) && (byte_data_cmp_failed_awlock_count == 0)) ||
+        ((byte_data_cmp_verified_awlock_count == 0) && (byte_data_cmp_failed_awlock_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("awlock count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awlock_count, byte_data_cmp_failed_awlock_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awlock_count :%0d",
@@ -1049,8 +1063,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("awlock count comparisions are failed"));
     end
     
-    if ((byte_data_cmp_verified_awprot_count != 0) && (byte_data_cmp_failed_awprot_count == 0)) begin
-            `uvm_info (get_type_name(), $sformatf ("awprot count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_awprot_count > 0) && (byte_data_cmp_failed_awprot_count == 0)) ||
+        ((byte_data_cmp_verified_awprot_count == 0) && (byte_data_cmp_failed_awprot_count == 0))) begin
+            `uvm_info (get_type_name(), $sformatf ("awprot count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_awprot_count, byte_data_cmp_failed_awprot_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_awprot_count :%0d",
@@ -1077,8 +1093,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     // Write_Data_Channel comparision
     //-------------------------------------------------------
     
-    if ((byte_data_cmp_verified_wdata_count != 0) && (byte_data_cmp_failed_wdata_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("wdata count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_wdata_count > 0) && (byte_data_cmp_failed_wdata_count == 0)) ||
+        ((byte_data_cmp_verified_wdata_count == 0) && (byte_data_cmp_failed_wdata_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("wdata count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_wdata_count, byte_data_cmp_failed_wdata_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_wdata_count :%0d",
@@ -1089,8 +1107,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end 
 
 
-    if ((byte_data_cmp_verified_wstrb_count != 0) && (byte_data_cmp_failed_wstrb_count == 0)) begin
-	    `uvm_info (get_type_name(), $sformatf ("wstrb count comparisions are succesful"),UVM_HIGH);
+    if (((byte_data_cmp_verified_wstrb_count > 0) && (byte_data_cmp_failed_wstrb_count == 0)) ||
+        ((byte_data_cmp_verified_wstrb_count == 0) && (byte_data_cmp_failed_wstrb_count == 0))) begin
+	    `uvm_info (get_type_name(), $sformatf ("wstrb count comparisions are succesful (verified:%0d, failed:%0d)",
+                                              byte_data_cmp_verified_wstrb_count, byte_data_cmp_failed_wstrb_count),UVM_HIGH);
     end
     else begin
       `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_verified_wstrb_count :%0d",

@@ -45,8 +45,11 @@ endfunction : new
 
 function void axi4_master_seq_item_converter::from_write_class( input axi4_master_tx input_conv_h, output axi4_write_transfer_char_s output_conv_h);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_HIGH);
-  
-  $cast(output_conv_h.awid,input_conv_h.awid); 
+  if(input_conv_h == null) begin
+    `uvm_error("axi4_master_seq_item_conv_class", "input_conv_h is null in from_write_class")
+    return;
+  end
+  $cast(output_conv_h.awid,input_conv_h.awid);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awid =  %b",output_conv_h.awid),UVM_HIGH);
 
   $cast(output_conv_h.awlen,input_conv_h.awlen);
@@ -123,6 +126,10 @@ endfunction : from_write_class
 //--------------------------------------------------------------------------------------------
 
 function void axi4_master_seq_item_converter::from_read_class( input axi4_master_tx input_conv_h, output axi4_read_transfer_char_s output_conv_h);
+  if(input_conv_h == null) begin
+    `uvm_error("axi4_master_seq_item_conv_class", "input_conv_h is null in from_read_class")
+    return;
+  end
 
   $cast(output_conv_h.arid,input_conv_h.arid);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting arid =  %b",output_conv_h.arid),UVM_HIGH);
