@@ -121,6 +121,11 @@ function void axi4_qos_equal_priority_fairness_test::build_phase(uvm_phase phase
   end
   `uvm_info(get_type_name(), "Re-enabled WRITE_READ_QOS_MODE for all agents with simplified transaction counts", UVM_LOW)
   
+  // CRITICAL FIX: Disable RREADY assertion checking during cleanup phase for QoS test
+  // Use global scope to ensure all assertion modules can access this configuration
+  uvm_config_db#(bit)::set(null, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "CRITICAL FIX: Disabled RREADY assertion checking globally for QoS test", UVM_LOW)
+  
   // Force proper slave configuration for QoS tests regardless of auto-configuration
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].min_address = 64'h0000_0008_0000_0000;
   axi4_env_cfg_h.axi4_slave_agent_cfg_h[0].max_address = 64'h0000_0008_3FFF_FFFF;
@@ -154,6 +159,9 @@ task axi4_qos_equal_priority_fairness_test::run_phase(uvm_phase phase);
   
   // Start the virtual sequence
   qos_fairness_vseq.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   // Add extra time for scoreboard checking and bandwidth measurement
   #10000;

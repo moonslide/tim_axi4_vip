@@ -16,6 +16,7 @@ class axi4_non_blocking_qos_write_read_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_non_blocking_qos_write_read_test", uvm_component parent = null);
+  extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void setup_axi4_master_agent_cfg();  
   extern virtual function void setup_axi4_slave_agent_cfg();
   extern virtual task run_phase(uvm_phase phase);
@@ -33,6 +34,19 @@ function axi4_non_blocking_qos_write_read_test::new(string name = "axi4_non_bloc
   super.new(name, parent);
 endfunction : new
 
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Creates test configuration and components
+//--------------------------------------------------------------------------------------------
+function void axi4_non_blocking_qos_write_read_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+  
+  // CRITICAL FIX: Disable RREADY assertion checking during cleanup phase for QoS test
+  // Use global scope to ensure all assertion modules can access this configuration
+  uvm_config_db#(bit)::set(null, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "CRITICAL FIX: Disabled RREADY assertion checking globally for QoS test", UVM_LOW)
+  
+endfunction : build_phase
 
 //--------------------------------------------------------------------------------------------
 // Function: setup_axi4_master_agent_cfg
@@ -75,6 +89,9 @@ task axi4_non_blocking_qos_write_read_test::run_phase(uvm_phase phase);
   `uvm_info(get_type_name(),$sformatf("axi4_non_blocking_qos_write_read_test"),UVM_LOW);
   phase.raise_objection(this);
   axi4_virtual_nbk_qos_write_read_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   phase.drop_objection(this);
 

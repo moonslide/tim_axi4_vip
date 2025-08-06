@@ -97,6 +97,7 @@ task axi4_master_qos_saturation_stress_seq::generate_stress_transaction(int txn_
     // Generate high-priority write transaction
     `uvm_do_with(req, {
       req.tx_type == WRITE;
+      req.transfer_type == BLOCKING_WRITE;  // CRITICAL FIX: Explicitly set BLOCKING_WRITE for consistency  
       req.awaddr == base_addr + (txn_id * 'h100);
       req.awid == awid_e'(master_id % 16);
       req.awlen == 0;  // Force single-beat transactions to prevent QoS arbitration blockage
@@ -110,6 +111,7 @@ task axi4_master_qos_saturation_stress_seq::generate_stress_transaction(int txn_
     // Generate high-priority read transaction
     `uvm_do_with(req, {
       req.tx_type == READ;
+      req.transfer_type == BLOCKING_READ;  // CRITICAL FIX: Explicitly set BLOCKING_READ so driver proxy processes it
       req.araddr == base_addr + (txn_id * 'h100);
       req.arid == arid_e'(master_id % 16);
       req.arlen == 0;  // Force single-beat transactions to prevent QoS arbitration blockage

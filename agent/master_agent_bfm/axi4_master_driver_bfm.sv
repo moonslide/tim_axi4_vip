@@ -276,35 +276,30 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
     static reg [7:0]i = 0;  // Static to maintain state across calls
     int rv_cycles;
     int rv2_cycles;
-    int actual_wait_states;
+    `uvm_info(name,$sformatf("ZERO_DELAY_FIX: Starting read data task at time %0t", $time),UVM_MEDIUM)
     `uvm_info(name,$sformatf("data_read_packet in read data Channel=\n%p",data_read_packet),UVM_HIGH)
     `uvm_info(name,$sformatf("cfg_packet=\n%p",cfg_packet),UVM_HIGH)
     `uvm_info(name,$sformatf("DRIVE TO READ DATA CHANNEL - Current rvalid=%b, rready=%b at time %0t", rvalid, rready, $time),UVM_MEDIUM)
     
-    // Check if rvalid is already high when we enter
-    if (rvalid === 1'b1) begin
-      `uvm_info(name,"RVALID already high when entering read data task - responding immediately",UVM_MEDIUM);
-      // Assert rready immediately to meet timing requirement
-      rready <= 1'b1;
-      // Skip wait states when rvalid was already high
-    end else begin
-      // Wait for rvalid with immediate response for timing compliance
+    // BULLETPROOF FIX: Assert RREADY immediately without any delays
+    // This eliminates ALL possible race conditions
+    rready <= 1'b1;
+    `uvm_info(name,"ZERO_DELAY_FIX: RREADY asserted immediately upon task entry",UVM_MEDIUM)
+    
+    // Wait for RVALID if not already present, but with RREADY already high
+    if (rvalid !== 1'b1) begin
       rv_cycles = 0;
       do begin
         @(posedge aclk);
-        //Driving rready as low initially
-        rready  <= 0;
         if(rv_cycles++ > 1000) begin
-          `uvm_info(name,$sformatf("TIMEOUT: No RVALID received after %0d cycles - exiting read data task gracefully", rv_cycles),UVM_MEDIUM);
-          rready <= 1'b0; // Ensure clean state before exit
-          return; // Exit task gracefully to prevent assertion failures during cleanup
+          `uvm_info(name,$sformatf("ZERO_DELAY_FIX: Timeout waiting for RVALID after %0d cycles", rv_cycles),UVM_MEDIUM);
+          rready <= 1'b0; // Clean exit
+          return;
         end
       end while(rvalid === 1'b0);
-      
-      // For QoS tests, immediately assert RREADY when RVALID is detected
-      `uvm_info(name,$sformatf("RVALID detected - asserting RREADY immediately for timing compliance"),UVM_MEDIUM);
-      rready <= 1'b1;
     end
+    
+    `uvm_info(name,$sformatf("ZERO_DELAY_FIX: RVALID detected, proceeding with data capture"),UVM_MEDIUM)
 
     forever begin
       // Wait for valid data (rvalid=1 and rready=1)
@@ -314,7 +309,7 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
         data_read_packet.rdata[i] = rdata;
         data_read_packet.ruser    = ruser;
         data_read_packet.rresp    = rresp;
-        `uvm_info(name,$sformatf("DEBUG_NA:RDATA[%0d]=%0h",i,data_read_packet.rdata[i]),UVM_HIGH)
+        `uvm_info(name,$sformatf("ZERO_DELAY_FIX: Captured beat %0d, data=0x%0h, rlast=%b",i,rdata,rlast),UVM_HIGH)
         
         // Deassert RREADY after capturing data to prepare for next beat
         @(posedge aclk);
@@ -324,22 +319,26 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
 
         if(rlast === 1'b1)begin
           i=0;
-          break;
+          // Transaction complete - exit the task
+          `uvm_info(name,$sformatf("ZERO_DELAY_FIX: Transaction completed successfully"),UVM_MEDIUM)
+          return;
         end
         
-        // For next beat, wait for RVALID and assert RREADY
+        // For next beat, assert RREADY immediately and wait for RVALID
+        rready <= 1'b1;  // Assert RREADY FIRST
+        `uvm_info(name,$sformatf("ZERO_DELAY_FIX: RREADY pre-asserted for next beat %0d", i),UVM_HIGH);
+        
         rv_cycles = 0;
         do begin
           @(posedge aclk);
           if(rv_cycles++ > 1000) begin
-            `uvm_info(name,$sformatf("TIMEOUT: No RVALID received for next beat after %0d cycles", rv_cycles),UVM_MEDIUM);
+            `uvm_info(name,$sformatf("ZERO_DELAY_FIX: Timeout waiting for next beat RVALID after %0d cycles", rv_cycles),UVM_MEDIUM);
+            rready <= 1'b0;
             return;
           end
         end while(rvalid === 1'b0);
         
-        // Assert RREADY for next beat
-        `uvm_info(name,$sformatf("RVALID detected for beat %0d - asserting RREADY", i),UVM_HIGH);
-        rready <= 1'b1;
+        `uvm_info(name,$sformatf("ZERO_DELAY_FIX: RVALID detected for beat %0d", i),UVM_HIGH);
       end
     end
 

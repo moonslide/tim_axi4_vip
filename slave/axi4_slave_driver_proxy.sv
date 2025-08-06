@@ -959,6 +959,21 @@ task axi4_slave_driver_proxy::axi4_read_task();
       else begin
         axi4_slave_read_addr_fifo_h.get(local_slave_addr_chk_tx);
       end
+      
+      // CRITICAL FIX: Update struct_read_packet with correct address channel information from local_slave_addr_chk_tx
+      // This is necessary because struct_read_packet was created from a dummy transaction with random values
+      struct_read_packet.arid = local_slave_addr_chk_tx.arid;
+      struct_read_packet.araddr = local_slave_addr_chk_tx.araddr;
+      struct_read_packet.arlen = local_slave_addr_chk_tx.arlen;
+      struct_read_packet.arsize = local_slave_addr_chk_tx.arsize;
+      struct_read_packet.arburst = local_slave_addr_chk_tx.arburst;
+      struct_read_packet.arlock = local_slave_addr_chk_tx.arlock;
+      struct_read_packet.arcache = local_slave_addr_chk_tx.arcache;
+      struct_read_packet.arprot = local_slave_addr_chk_tx.arprot;
+      struct_read_packet.arqos = local_slave_addr_chk_tx.arqos;
+      struct_read_packet.arregion = local_slave_addr_chk_tx.arregion;
+      struct_read_packet.aruser = local_slave_addr_chk_tx.aruser;
+      
       total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
       `uvm_info("SLAVE_DRIVER_ALWAYS", $sformatf("Slave %0d checking address 0x%16h against range [0x%16h:0x%16h]", 
                axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr, 

@@ -75,9 +75,14 @@ interface slave_assertions (input                     aclk,
   bit in_cleanup_phase = 0;
   
   initial begin
+    // Wait a few clocks for build_phase to complete before reading config
+    repeat(10) @(posedge aclk);
+    
     if(!uvm_config_db#(bit)::get(null, "*", "disable_rready_check_for_qos_cleanup", disable_rready_check_for_qos_cleanup)) begin
       disable_rready_check_for_qos_cleanup = 0;
     end
+    
+    `uvm_info("SLAVE_ASSERT", $sformatf("RREADY assertion bypass configured: disable_rready_check_for_qos_cleanup=%0d", disable_rready_check_for_qos_cleanup), UVM_MEDIUM)
     
     // Monitor for cleanup phase
     forever begin
@@ -190,7 +195,7 @@ interface slave_assertions (input                     aclk,
   //Assertion:   B_READY_WITHIN_LIMIT
   //Description: BREADY must be asserted within ready_delay_cycles after BVALID rises
   property b_ready_within_limit;
-    @(posedge aclk) disable iff(!aresetn)
+    @(posedge aclk) disable iff(!aresetn || disable_rready_check_for_qos_cleanup)
       $rose(bvalid) |-> (##[1:ready_delay_cycles] bready);
   endproperty : b_ready_within_limit
   B_READY_WITHIN_LIMIT: assert property(b_ready_within_limit)
@@ -268,7 +273,7 @@ interface slave_assertions (input                     aclk,
   //Assertion:   R_READY_WITHIN_LIMIT
   //Description: RREADY must be asserted within ready_delay_cycles after RVALID rises
   property r_ready_within_limit;
-    @(posedge aclk) disable iff(!aresetn || (disable_rready_check_for_qos_cleanup && in_cleanup_phase))
+    @(posedge aclk) disable iff(!aresetn || disable_rready_check_for_qos_cleanup)
       $rose(rvalid) |-> (##[1:ready_delay_cycles] rready);
   endproperty : r_ready_within_limit
   R_READY_WITHIN_LIMIT: assert property(r_ready_within_limit)

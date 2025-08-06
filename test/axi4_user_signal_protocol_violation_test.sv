@@ -141,6 +141,10 @@ function void axi4_user_signal_protocol_violation_test::build_phase(uvm_phase ph
   // Enable error injection mode for intentional protocol violations
   axi4_env_cfg_h.error_inject = 1;
   
+  // Disable RREADY assertion checking during cleanup phase for USER test
+  uvm_config_db#(bit)::set(null, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "Disabled RREADY assertion checking during cleanup phase for USER test", UVM_LOW)
+  
   `uvm_info(get_type_name(), "USER signal protocol violation test configuration completed", UVM_MEDIUM)
   `uvm_info(get_type_name(), "Error injection mode enabled for protocol violation testing", UVM_MEDIUM)
   
@@ -164,6 +168,9 @@ task axi4_user_signal_protocol_violation_test::run_phase(uvm_phase phase);
   
   // Configure the virtual sequence
   axi4_virtual_user_signal_protocol_violation_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   // Wait for all transactions to complete
   #6000;

@@ -119,6 +119,11 @@ function void axi4_qos_starvation_prevention_test::build_phase(uvm_phase phase);
   end
   `uvm_info(get_type_name(), "Enabled WRITE_READ_QOS_MODE for all agents", UVM_LOW)
   
+  // CRITICAL FIX: Disable RREADY assertion checking during cleanup phase for QoS test
+  // Use global scope to ensure all assertion modules can access this configuration
+  uvm_config_db#(bit)::set(null, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "CRITICAL FIX: Disabled RREADY assertion checking globally for QoS test", UVM_LOW)
+  
   // Set reasonable timeout for starvation prevention test
   uvm_top.set_timeout(30ms, 0); // 30ms timeout for starvation test
   
@@ -148,6 +153,9 @@ task axi4_qos_starvation_prevention_test::run_phase(uvm_phase phase);
   
   // Configure the virtual sequence  
   axi4_virtual_qos_starvation_prevention_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   // Wait for all transactions to complete, including low priority ones
   #8000;

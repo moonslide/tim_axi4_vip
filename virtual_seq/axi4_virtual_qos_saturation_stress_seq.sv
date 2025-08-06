@@ -93,8 +93,31 @@ task axi4_virtual_qos_saturation_stress_seq::body();
             uvm_config_db#(int)::set(null, {get_full_name(), ".", master_stress_seq[master_id].get_name()}, 
                                     "num_transactions", num_transactions_per_master);
             
-            // Always use write sequencer since the sequence generates both read and write transactions
-            master_stress_seq[master_id].start(p_sequencer.axi4_master_write_seqr_h_all[master_id]);
+            // CRITICAL FIX: Start sequences on BOTH read and write sequencers
+            // The sequence generates both read and write transactions, so we need both paths active
+            fork
+              begin
+                // Write transactions go through write sequencer
+                master_stress_seq[master_id].start(p_sequencer.axi4_master_write_seqr_h_all[master_id]);
+              end
+              begin
+                // Create separate sequence instance for read sequencer
+                axi4_master_qos_saturation_stress_seq read_stress_seq;
+                read_stress_seq = axi4_master_qos_saturation_stress_seq::type_id::create(
+                                $sformatf("read_stress_seq_%0d", master_id));
+                
+                // Set same configuration for read sequence
+                uvm_config_db#(int)::set(null, {get_full_name(), ".", read_stress_seq.get_name()}, 
+                                        "master_id", master_id);
+                uvm_config_db#(int)::set(null, {get_full_name(), ".", read_stress_seq.get_name()}, 
+                                        "slave_id", distributed_slave);
+                uvm_config_db#(int)::set(null, {get_full_name(), ".", read_stress_seq.get_name()}, 
+                                        "num_transactions", num_transactions_per_master);
+                
+                // Read transactions go through read sequencer  
+                read_stress_seq.start(p_sequencer.axi4_master_read_seqr_h_all[master_id]);
+              end
+            join_none
           end
         join_none
       end

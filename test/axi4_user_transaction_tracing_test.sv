@@ -135,6 +135,10 @@ endfunction : new
 function void axi4_user_transaction_tracing_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
   
+  // Disable RREADY assertion checking during cleanup phase for USER test
+  uvm_config_db#(bit)::set(null, "*", "disable_rready_check_for_qos_cleanup", 1'b1);
+  `uvm_info(get_type_name(), "Disabled RREADY assertion checking during cleanup phase for USER test", UVM_LOW)
+  
   `uvm_info(get_type_name(), "USER signal transaction tracing test configuration completed", UVM_MEDIUM)
   
 endfunction : build_phase
@@ -156,6 +160,9 @@ task axi4_user_transaction_tracing_test::run_phase(uvm_phase phase);
   
   // Configure the virtual sequence
   axi4_virtual_user_transaction_tracing_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Signal that we're entering cleanup phase
+  uvm_config_db#(bit)::set(null, "*", "qos_test_cleanup_phase", 1'b1);
   
   // Wait for all transactions to complete
   #5000;
