@@ -414,6 +414,8 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
     static int j1 = 0;  // Initialize and make static to track across calls
     int rr_cycles;
     int rr_cycles2;
+    // Ensure rvalid is 0 before starting any signal updates
+    rvalid <= 1'b0;
     @(posedge aclk);
     `uvm_info(name, $sformatf("BFM read_data_phase: out_of_order_enable=%s, qos_mode_type=%s, arlen=%0d, j1=%0d", 
               out_of_order_enable.name(), cfg_packet.qos_mode_type.name(), data_read_packet.arlen, j1), UVM_LOW);
@@ -425,8 +427,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
       
       for(int i1=0, k1=0; i1<mem_rlen[j1] + 1; i1++) begin
         if(k1 == DATA_WIDTH/8) k1 = 0;
-        
-        // CRITICAL FIX: Update all signals first in non-blocking assignments
         rid  <= mem_arid[j1];
         //Sending the rdata based on each byte lane
         //RHS: Is used to send Byte by Byte
@@ -436,6 +436,7 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
           k1++;
         end
         rresp<=data_read_packet.rresp[i1];
+       
         ruser<=data_read_packet.ruser;
         
         if((mem_rlen[j1]) == i1)begin
@@ -445,8 +446,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
           rlast <= 1'b0;
         end
         
-        // Assert rvalid on next clock edge after signals are updated
-        @(posedge aclk);
         rvalid<=1'b1;
         
         rr_cycles = 0;
@@ -457,8 +456,10 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
             break;
           end
         end while(rready===0);
-        // Deassert rvalid after handshake
+        rlast <= 1'b0;
         rvalid <= 1'b0;
+        // Ensure clean transition before next beat
+        @(posedge aclk);
       end
      end
      else begin
@@ -466,8 +467,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
       for(int i1=0, k1=0; i1<data_read_packet.arlen + 1; i1++) begin
         `uvm_info(name, $sformatf("BFM driving beat %0d of %0d, rready=%b", i1, data_read_packet.arlen, rready), UVM_MEDIUM);
         if(k1 == DATA_WIDTH/8) k1 = 0;
-        
-        // CRITICAL FIX: Update all signals first in non-blocking assignments
         rid  <= data_read_packet.arid;
         //Sending the rdata based on each byte lane
         //RHS: Is used to send Byte by Byte
@@ -477,6 +476,7 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
           k1++;
         end
         rresp<=data_read_packet.rresp[i1];
+       
         ruser<=data_read_packet.ruser;
         
         if((data_read_packet.arlen) == i1)begin
@@ -487,8 +487,6 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
           rlast <= 1'b0;
         end
         
-        // Assert rvalid on next clock edge after signals are updated
-        @(posedge aclk);
         `uvm_info(name, $sformatf("BFM setting rvalid=1 for beat %0d, rready=%b", i1, rready), UVM_LOW);
         rvalid<=1'b1;
         
@@ -501,8 +499,10 @@ task axi4_read_data_phase (inout axi4_read_transfer_char_s data_read_packet, inp
           end
         end while(rready===0);
         `uvm_info(name, $sformatf("BFM rready received for beat %0d, deasserting rvalid", i1), UVM_MEDIUM);
-        // Deassert rvalid after handshake
+        rlast <= 1'b0;
         rvalid <= 1'b0;
+        // Ensure clean transition before next beat
+        @(posedge aclk);
       end
      end
     j1++;
