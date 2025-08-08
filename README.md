@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.1-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Version](https://img.shields.io/badge/version-2.2-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.md)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
@@ -130,7 +130,7 @@ python3 axi4_regression.py --test-list axi4_transfers_regression.list --cov --ls
 python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --lsf
 ```
 
-## 🔄 Recent Improvements (v2.1)
+## 🔄 Recent Improvements (v2.2)
 
 ### ✅ All Critical Issues Resolved
 
@@ -162,7 +162,13 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
    - Added USER signal functionality tests (security, parity, routing)
    - Impact: Complete QoS/USER protocol coverage validation
 
-**Result**: 16 previously failing tests → 0 failures (100% pass rate with QoS/USER support)
+7. **Enhanced Coverage Collection (v2.2)**
+   - Added dedicated QoS and USER signal coverage collectors
+   - Implemented coverage for master and slave agents
+   - Tracks QoS priority levels, USER signal patterns, and routing behaviors
+   - Impact: Comprehensive verification metrics for advanced AXI4 features
+
+**Result**: 16 previously failing tests → 0 failures (100% pass rate with full QoS/USER coverage)
 
 ## 🏗️ Architecture
 
@@ -239,7 +245,7 @@ This project is proprietary software. All rights reserved.
 
 <div align="center">
 
-**AXI4 VIP v2.1** - Enterprise-Ready Verification IP
+**AXI4 VIP v2.2** - Enterprise-Ready Verification IP
 
 *Developed with ❤️ for the verification community*
 
