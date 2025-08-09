@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.3-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Version](https://img.shields.io/badge/version-2.4-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.md)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
@@ -20,7 +20,7 @@ The AXI4 Verification IP (VIP) is a comprehensive, production-ready UVM-based ve
 ### ✨ Key Features
 
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
-- **✅ 100% Pass Rate**: All 140+ regression tests verified and passing (v2.3)
+- **✅ 100% Pass Rate**: All 140+ regression tests verified and passing (v2.4)
 - **📊 Comprehensive Coverage**: Full functional, code, and assertion coverage
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
@@ -160,6 +160,38 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
    - Fixed missing USER signal checks
    - Impact: Full USER signal coverage
 
+### 🔧 Critical Fixes Applied (v2.4)
+
+1. **QoS/USER Test Failure Resolution**
+   - Fixed address mapping misalignment in 7 QoS/USER signal sequences
+   - Corrected ultrathink 10x10 matrix address calculations
+   - Updated base address to 0x0100_0000_0000 with proper 256MB slave spacing
+   - Impact: All 12 previously failing QoS/USER tests now pass
+
+2. **SystemVerilog Constraint Compliance**
+   - Moved variable declarations to beginning of task bodies
+   - Removed `$urandom()` function calls from constraint blocks
+   - Fixed variable scope issues with `local::` prefix
+   - Impact: Eliminates all compilation syntax errors
+
+3. **Random Seed Generation Enhancement**
+   - Updated Makefile to use VCS automatic seed generation by default
+   - Maintains option for manual seed specification (SEED=value)
+   - Uses `+ntb_random_seed_automatic` for true randomization
+   - Impact: Better test diversity and debugging capabilities
+
+**Affected Files**:
+- `axi4_master_qos_priority_read_seq.sv`
+- `axi4_master_qos_priority_write_seq.sv`  
+- `axi4_master_user_signal_passthrough_seq.sv`
+- `axi4_master_user_parity_seq.sv`
+- `axi4_master_user_security_tagging_seq.sv`
+- `axi4_master_user_signal_corruption_seq.sv`
+- `axi4_master_qos_user_boost_write_seq.sv`
+- `sim/synopsys_sim/Makefile`
+
+**Result**: 12 failing regression tests → 0 failures (sustained 100% pass rate)
+
 ### ✅ All Critical Issues Resolved (v2.2)
 
 1. **Config Database Path Resolution**
@@ -273,7 +305,7 @@ This project is proprietary software. All rights reserved.
 
 <div align="center">
 
-**AXI4 VIP v2.2** - Enterprise-Ready Verification IP
+**AXI4 VIP v2.4** - Enterprise-Ready Verification IP
 
 *Developed with ❤️ for the verification community*
 
