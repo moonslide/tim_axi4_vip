@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.2-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Version](https://img.shields.io/badge/version-2.3-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.md)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
@@ -20,11 +20,12 @@ The AXI4 Verification IP (VIP) is a comprehensive, production-ready UVM-based ve
 ### ✨ Key Features
 
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
-- **✅ 100% Pass Rate**: All 127+ regression tests verified and passing (v2.1)
+- **✅ 100% Pass Rate**: All 140+ regression tests verified and passing (v2.3)
 - **📊 Comprehensive Coverage**: Full functional, code, and assertion coverage
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
 - **🎯 Enterprise Ready**: Production-tested with all critical issues resolved
+- **🆕 QoS & USER Signals**: Complete AWQOS/ARQOS and AWUSER/ARUSER/WUSER/RUSER/BUSER support
 
 ### 🏗️ Architecture Highlights
 
@@ -112,7 +113,9 @@ Configure bus matrix size in `include/axi4_bus_config.svh`:
 | **Bus Matrix** | 20 | ✅ Pass |
 | **QoS Arbitration** | 8 | ✅ Pass |
 | **USER Signal Features** | 6 | ✅ Pass |
-| **Total** | **127** | **✅ 100% Pass** |
+| **QoS Priority Tests** | 5 | ✅ Pass |
+| **USER Signal Tests** | 8 | ✅ Pass |
+| **Total** | **140** | **✅ 100% Pass** |
 
 ### Running Tests
 
@@ -130,9 +133,34 @@ python3 axi4_regression.py --test-list axi4_transfers_regression.list --cov --ls
 python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --lsf
 ```
 
-## 🔄 Recent Improvements (v2.2)
+## 🔄 Recent Improvements (v2.3)
 
-### ✅ All Critical Issues Resolved
+### 🆕 QoS and USER Signal Test Suite
+
+1. **Comprehensive QoS Testing**
+   - Basic priority ordering with AWQOS/ARQOS
+   - Equal priority fairness arbitration  
+   - Saturation stress testing
+   - Starvation prevention mechanisms
+   - USER-based priority boost
+
+2. **USER Signal Functionality**
+   - Signal passthrough integrity verification
+   - Width mismatch handling (truncation/padding)
+   - Parity protection implementation
+   - Security tagging and classification
+   - Transaction tracing and debugging
+   - Protocol violation detection
+   - Signal corruption testing
+   - USER-based QoS routing
+
+3. **Enhanced Scoreboard**
+   - Added AWUSER/ARUSER comparison logic
+   - Complete USER signal verification
+   - Fixed missing USER signal checks
+   - Impact: Full USER signal coverage
+
+### ✅ All Critical Issues Resolved (v2.2)
 
 1. **Config Database Path Resolution**
    - Fixed bus matrix reference access with wildcard path
