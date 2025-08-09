@@ -91,6 +91,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_verified_awcache_count;
   int byte_data_cmp_verified_awlock_count;
   int byte_data_cmp_verified_awprot_count;
+  int byte_data_cmp_verified_awuser_count;
 
   int byte_data_cmp_verified_wdata_count;
   int byte_data_cmp_verified_wstrb_count;
@@ -116,6 +117,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_verified_arprot_count;
   int byte_data_cmp_verified_arregion_count;
   int byte_data_cmp_verified_arqos_count;
+  int byte_data_cmp_verified_aruser_count;
 
   int byte_data_cmp_verified_rid_count;
   int byte_data_cmp_verified_rdata_count;
@@ -134,6 +136,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_awcache_count;
   int byte_data_cmp_failed_awlock_count;
   int byte_data_cmp_failed_awprot_count;
+  int byte_data_cmp_failed_awuser_count;
 
   int byte_data_cmp_failed_wdata_count;
   int byte_data_cmp_failed_wstrb_count;
@@ -159,6 +162,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_arprot_count;
   int byte_data_cmp_failed_arregion_count;
   int byte_data_cmp_failed_arqos_count;
+  int byte_data_cmp_failed_aruser_count;
 
   int byte_data_cmp_failed_rid_count;
   int byte_data_cmp_failed_rdata_count;
@@ -579,6 +583,18 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     end
   end
 
+  // AWUSER signal comparison - ULTRATHINK enhancement for USER signal integrity
+  if(axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser)begin
+    `uvm_info(get_type_name(),$sformatf("axi4_awuser from master and slave is equal"),UVM_HIGH);
+    `uvm_info("SB_AWUSER_MATCHED", $sformatf("Master awuser = 'h%0x and Slave awuser = 'h%0x",axi4_master_tx_h1.awuser,axi4_slave_tx_h1.awuser), UVM_HIGH);
+    byte_data_cmp_verified_awuser_count++;
+  end
+  else begin
+    `uvm_error(get_type_name(),$sformatf("⚠️  AWUSER SIGNAL INTEGRITY FAILURE: axi4_awuser from master and slave are NOT equal - potential width truncation or interconnect corruption"));
+    `uvm_error("SB_AWUSER_NOT_MATCHED", $sformatf("❌ Master awuser = 'h%0x but Slave awuser = 'h%0x - USER signal passthrough failed",axi4_master_tx_h1.awuser,axi4_slave_tx_h1.awuser));
+    byte_data_cmp_failed_awuser_count++;
+  end
+
 endtask : axi4_write_address_comparision
 
 //--------------------------------------------------------------------------------------------
@@ -833,6 +849,19 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
       `uvm_info("SB_AR_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h4.ar_wait_states,axi4_slave_tx_h4.ar_wait_states), UVM_HIGH);
     end
   end
+
+  // ARUSER signal comparison - ULTRATHINK enhancement for USER signal integrity
+  if(axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser)begin
+    `uvm_info(get_type_name(),$sformatf("axi4_aruser from master and slave is equal"),UVM_HIGH);
+    `uvm_info("SB_ARUSER_MATCHED", $sformatf("Master aruser = 'h%0x and Slave aruser = 'h%0x",axi4_master_tx_h4.aruser,axi4_slave_tx_h4.aruser), UVM_HIGH);
+    byte_data_cmp_verified_aruser_count++;
+  end
+  else begin
+    `uvm_error(get_type_name(),$sformatf("⚠️  ARUSER SIGNAL INTEGRITY FAILURE: axi4_aruser from master and slave are NOT equal - potential width truncation or interconnect corruption"));
+    `uvm_error("SB_ARUSER_NOT_MATCHED", $sformatf("❌ Master aruser = 'h%0x but Slave aruser = 'h%0x - USER signal passthrough failed",axi4_master_tx_h4.aruser,axi4_slave_tx_h4.aruser));
+    byte_data_cmp_failed_aruser_count++;
+  end
+
 endtask : axi4_read_address_comparision
 
 //--------------------------------------------------------------------------------------------
@@ -1608,6 +1637,14 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot failed comparisions:%0d",byte_data_cmp_failed_awprot_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot verified comparisions:%0d",byte_data_cmp_verified_awprot_count ),UVM_HIGH);
 
+  
+  //Number of awuser comparisoins done - ULTRATHINK enhancement
+  `uvm_info (get_type_name(),$sformatf("🔍 AWUSER signal integrity comparisons:%0d",byte_data_cmp_verified_awuser_count+byte_data_cmp_failed_awuser_count ),UVM_MEDIUM);
+  if(byte_data_cmp_failed_awuser_count > 0) begin
+    `uvm_error (get_type_name(),$sformatf("⚠️  AWUSER FAILURES:%0d - Signal truncation or interconnect corruption detected!",byte_data_cmp_failed_awuser_count ));
+  end
+  `uvm_info (get_type_name(),$sformatf("✅ AWUSER verified comparisons:%0d",byte_data_cmp_verified_awuser_count ),UVM_MEDIUM);
+
   if(axi4_env_cfg_h.check_wait_states) begin
     `uvm_info (get_type_name(),$sformatf("Total no. of aw wait state comparisions:%0d",byte_data_cmp_verified_aw_wait_states_count+byte_data_cmp_failed_aw_wait_states_count ),UVM_HIGH);
     `uvm_info (get_type_name(),$sformatf("Total no. of aw wait state failed comparisions:%0d",byte_data_cmp_failed_aw_wait_states_count ),UVM_HIGH);
@@ -1747,6 +1784,14 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos comparisions:%0d",byte_data_cmp_verified_arqos_count+byte_data_cmp_failed_arqos_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos failed comparisions:%0d",byte_data_cmp_failed_arqos_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos verified comparisions:%0d",byte_data_cmp_verified_arqos_count ),UVM_HIGH);
+
+  
+  //Number of aruser comparisoins done - ULTRATHINK enhancement  
+  `uvm_info (get_type_name(),$sformatf("🔍 ARUSER signal integrity comparisons:%0d",byte_data_cmp_verified_aruser_count+byte_data_cmp_failed_aruser_count ),UVM_MEDIUM);
+  if(byte_data_cmp_failed_aruser_count > 0) begin
+    `uvm_error (get_type_name(),$sformatf("⚠️  ARUSER FAILURES:%0d - Signal truncation or interconnect corruption detected!",byte_data_cmp_failed_aruser_count ));
+  end
+  `uvm_info (get_type_name(),$sformatf("✅ ARUSER verified comparisons:%0d",byte_data_cmp_verified_aruser_count ),UVM_MEDIUM);
 
   if(axi4_env_cfg_h.check_wait_states) begin
     `uvm_info (get_type_name(),$sformatf("Total no. of ar wait state comparisions:%0d",byte_data_cmp_verified_ar_wait_states_count+byte_data_cmp_failed_ar_wait_states_count ),UVM_HIGH);

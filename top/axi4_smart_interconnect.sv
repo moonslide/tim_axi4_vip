@@ -11,6 +11,7 @@
 //--------------------------------------------------------------------------------------------
 
 import axi4_globals_pkg::*;
+`include "axi4_bus_config.svh"
 
 module axi4_smart_interconnect #(
   parameter int NUM_MASTERS = 10,
@@ -43,7 +44,7 @@ module axi4_smart_interconnect #(
         slave_intf[j].awprot   = 3'b0;
         slave_intf[j].awqos    = 4'b0;
         slave_intf[j].awregion = 4'b0;
-        slave_intf[j].awuser   = 4'b0;
+        slave_intf[j].awuser   = '0;
         slave_intf[j].awvalid  = 1'b0;
         
         for (int i = 0; i < NUM_MASTERS; i++) begin
@@ -69,7 +70,7 @@ module axi4_smart_interconnect #(
         slave_intf[j].wdata  = '0;
         slave_intf[j].wstrb  = '0;
         slave_intf[j].wlast  = 1'b0;
-        slave_intf[j].wuser  = 4'b0;
+        slave_intf[j].wuser  = '0;
         slave_intf[j].wvalid = 1'b0;
         
         for (int i = 0; i < NUM_MASTERS; i++) begin
@@ -95,7 +96,7 @@ module axi4_smart_interconnect #(
         slave_intf[j].arprot   = 3'b0;
         slave_intf[j].arqos    = 4'b0;
         slave_intf[j].arregion = 4'b0;
-        slave_intf[j].aruser   = 4'b0;
+        slave_intf[j].aruser   = '0;
         slave_intf[j].arvalid  = 1'b0;
         
         for (int i = 0; i < NUM_MASTERS; i++) begin
@@ -125,7 +126,7 @@ module axi4_smart_interconnect #(
         master_intf[i].wready  = 1'b0;
         master_intf[i].bid     = 4'b0;
         master_intf[i].bresp   = 2'b0;
-        master_intf[i].buser   = 4'b0;
+        master_intf[i].buser   = '0;
         master_intf[i].bvalid  = 1'b0;
         
         for (int j = 0; j < NUM_SLAVES; j++) begin
@@ -147,7 +148,7 @@ module axi4_smart_interconnect #(
         master_intf[i].rdata   = '0;
         master_intf[i].rresp   = 2'b0;
         master_intf[i].rlast   = 1'b0;
-        master_intf[i].ruser   = 4'b0;
+        master_intf[i].ruser   = '0;
         master_intf[i].rvalid  = 1'b0;
         
         for (int j = 0; j < NUM_SLAVES; j++) begin

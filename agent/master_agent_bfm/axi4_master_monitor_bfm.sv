@@ -7,6 +7,7 @@
 //It connects with the HVL monitor_proxy for driving the stimulus
 //--------------------------------------------------------------------------------------------
 import axi4_globals_pkg::*;
+`include "axi4_bus_config.svh"
 
 interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  //Write Address Channel Signals
@@ -18,6 +19,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  input  [1:0]awlock,
                                  input  [3:0]awcache,
                                  input  [2:0]awprot,
+                                 input  [`AXI_AWUSER_WIDTH-1:0]awuser,
                                  input  awvalid,
                                  input  awready,
 
@@ -25,14 +27,14 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  input  [DATA_WIDTH-1: 0]wdata,
                                  input  [(DATA_WIDTH/8)-1:0]wstrb,
                                  input  wlast,
-                                 input  [3:0]wuser,
+                                 input  [`AXI_WUSER_WIDTH-1:0]wuser,
                                  input  wvalid,
                                  input  wready,
 
                                  //Write Response Channel Signals
                                  input  [3:0]bid,
                                  input  [1:0]bresp,
-                                 input  [3:0]buser,
+                                 input  [`AXI_BUSER_WIDTH-1:0]buser,
                                  input  bvalid,
                                  input  bready,
 
@@ -47,7 +49,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  input  [2:0]arprot,
                                  input  [3:0]arqos,
                                  input  [3:0]arregion,
-                                 input  [3:0]aruser,
+                                 input  [`AXI_ARUSER_WIDTH-1:0]aruser,
                                  input  arvalid,
                                  input  arready,
                                  //Read Data Channel Signals
@@ -55,7 +57,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  input  [DATA_WIDTH-1: 0]rdata,
                                  input  [1:0]rresp,
                                  input  rlast,
-                                 input  [3:0]ruser,
+                                 input  [`AXI_RUSER_WIDTH-1:0]ruser,
                                  input  rvalid,
                                  input  rready  
                                 );  
@@ -113,6 +115,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     req.awlock  = awlock;
     req.awcache = awcache;
     req.awprot  = awprot;
+    req.awuser  = awuser;
     req.aw_wait_states = aw_ws;
     `uvm_info("FROM MASTER MON BFM",$sformatf("datapacket =%p",req),UVM_HIGH)
   endtask

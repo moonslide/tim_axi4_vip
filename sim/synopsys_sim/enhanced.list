@@ -1,26 +1,26 @@
 # QOS Test
-axi4_non_blocking_qos_write_read_test
+axi4_non_blocking_qos_write_read_test run_cnt=50
 
 # Enhanced QoS Tests (from axi4-testplan-with-axqos-user.md)
-axi4_qos_basic_priority_test
-axi4_qos_equal_priority_fairness_test
-axi4_qos_saturation_stress_test
-axi4_qos_starvation_prevention_test
+axi4_qos_basic_priority_test run_cnt=50
+axi4_qos_equal_priority_fairness_test run_cnt=50
+axi4_qos_saturation_stress_test run_cnt=50
+axi4_qos_starvation_prevention_test run_cnt=50
 
 # USER Signal Integrity Tests (from axi4-testplan-with-axqos-user.md)
-axi4_user_signal_passthrough_test
-axi4_user_signal_width_mismatch_test
+axi4_user_signal_passthrough_test run_cnt=50
+axi4_user_signal_width_mismatch_test run_cnt=50
 
 # Functional USER Signal Tests (from axi4-testplan-with-axqos-user.md)
-axi4_user_parity_protection_test
-axi4_user_security_tagging_test
-axi4_user_transaction_tracing_test
+axi4_user_parity_protection_test run_cnt=50
+axi4_user_security_tagging_test run_cnt=50
+axi4_user_transaction_tracing_test run_cnt=50
 
 # USER Signal Error Injection Tests (from axi4-testplan-with-axqos-user.md)
-axi4_user_signal_protocol_violation_test
-axi4_user_signal_corruption_test
+axi4_user_signal_protocol_violation_test run_cnt=50
+axi4_user_signal_corruption_test run_cnt=50
 
 # Combined QoS and USER Signal Tests (from axi4-testplan-with-axqos-user.md)
-axi4_qos_with_user_priority_boost_test
-axi4_user_based_qos_routing_test
+axi4_qos_with_user_priority_boost_test run_cnt=50
+axi4_user_based_qos_routing_test run_cnt=50
 

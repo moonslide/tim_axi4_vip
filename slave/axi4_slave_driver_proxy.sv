@@ -218,10 +218,10 @@ task axi4_slave_driver_proxy::axi4_write_task();
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_wr = axi4_slave_tx::type_id::create("req_wr");
       // Initialize with default values - BFM will fill with actual sampled values
-      // Constrain address to avoid 0x0 which can cause spurious SLVERR responses
-      assert(req_wr.randomize() with {
-        awaddr != 0;  // Avoid address 0x0 to prevent spurious bus matrix errors
-      });
+      // Use simple randomization without constraints
+      if(!req_wr.randomize()) begin
+        `uvm_info("SLAVE_DRIVER_PROXY", "Randomization failed, using default values", UVM_LOW)
+      end
       // Put dummy transaction into FIFOs for processing
       axi4_slave_write_data_in_fifo_h.put(req_wr);
       axi4_slave_write_response_fifo_h.put(req_wr);

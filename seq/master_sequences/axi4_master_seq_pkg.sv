@@ -154,19 +154,23 @@ package axi4_master_seq_pkg;
   `include "axi4_master_qos_write_only_seq.sv"
   `include "axi4_master_user_based_qos_routing_seq.sv"
   
+  // QoS Priority Test Sequences
+  `include "axi4_master_qos_priority_write_seq.sv"
+  `include "axi4_master_qos_priority_read_seq.sv"
+  
   // TODO: Future QoS/USER sequences to be implemented
   // `include "axi4_master_qos_basic_priority_order_seq.sv"
   // `include "axi4_master_qos_equal_priority_fairness_seq.sv"
   // `include "axi4_master_qos_saturation_stress_seq.sv"
   // `include "axi4_master_qos_starvation_prevention_seq.sv"
-  // `include "axi4_master_user_signal_passthrough_seq.sv"
-  // `include "axi4_master_user_signal_width_mismatch_seq.sv"
-  // `include "axi4_master_user_parity_protection_seq.sv"
-  // `include "axi4_master_user_security_tagging_seq.sv"
-  // `include "axi4_master_user_transaction_tracing_seq.sv"
-  // `include "axi4_master_user_signal_protocol_violation_seq.sv"
-  // `include "axi4_master_user_signal_corruption_seq.sv"
-  // `include "axi4_master_qos_with_user_priority_boost_seq.sv"
+  `include "axi4_master_user_signal_passthrough_seq.sv"
+  `include "axi4_master_user_width_mismatch_seq.sv"
+  `include "axi4_master_user_parity_seq.sv"
+  `include "axi4_master_user_security_tagging_seq.sv"
+  `include "axi4_master_user_transaction_tracing_seq.sv"
+  `include "axi4_master_user_protocol_violation_seq.sv"
+  `include "axi4_master_user_signal_corruption_seq.sv"
+  `include "axi4_master_qos_user_boost_write_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

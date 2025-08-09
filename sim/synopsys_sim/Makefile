@@ -71,9 +71,9 @@ VCS_FLAGS += +define+RUN_4X4_CONFIG
 $(info Configuring for 4x4 interface matrix based on test: $(test))
 endif
 
-# TC001-TC005 and enhanced matrix test use 10x10 configuration
-ifneq ($(filter %tc_00% %enhanced_bus_matrix_test%,$(test)),)
-VCS_FLAGS += +define+RUN_10X10_CONFIG
+# TC001-TC005, enhanced matrix test, and QoS/USER tests use 10x10 configuration
+ifneq ($(filter %tc_00% %enhanced_bus_matrix_test% %qos% %user%,$(test)),)
+VCS_FLAGS += +define+RUN_10X10_CONFIG +define+BUS_MATRIX_10X10
 $(info Configuring for 10x10 interface matrix based on test: $(test))
 endif
 

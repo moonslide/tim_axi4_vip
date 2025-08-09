@@ -5,6 +5,7 @@
 // Importing global package
 //-------------------------------------------------------
 import axi4_globals_pkg::*;
+`include "axi4_bus_config.svh"
 
 //--------------------------------------------------------------------------------------------
 // Interface : axi4_master_driver_bfm
@@ -24,20 +25,20 @@ interface axi4_master_driver_bfm(input bit                      aclk,
                                  output reg               [2:0] awprot,
                                  output reg               [3:0] awqos,
                                  output reg               [3:0] awregion,
-                                 output reg                     awuser,
+                                 output reg [`AXI_AWUSER_WIDTH-1:0] awuser,
                                  output reg                     awvalid,
                                  input    	                    awready,
                                  //Write Data Channel Signals
                                  output reg    [DATA_WIDTH-1: 0] wdata,
                                  output reg [(DATA_WIDTH/8)-1:0] wstrb,
                                  output reg                      wlast,
-                                 output reg                [3:0] wuser,
+                                 output reg [`AXI_WUSER_WIDTH-1:0] wuser,
                                  output reg                      wvalid,
                                  input                           wready,
                                  //Write Response Channel Signals
                                  input      [3:0] bid,
                                  input      [1:0] bresp,
-                                 input      [3:0] buser,
+                                 input      [`AXI_BUSER_WIDTH-1:0] buser,
                                  input            bvalid,
                                  output	reg       bready,
                                  //Read Address Channel Signals
@@ -51,7 +52,7 @@ interface axi4_master_driver_bfm(input bit                      aclk,
                                  output reg               [2:0] arprot,
                                  output reg               [3:0] arqos,
                                  output reg               [3:0] arregion,
-                                 output reg               [3:0] aruser,
+                                 output reg [`AXI_ARUSER_WIDTH-1:0] aruser,
                                  output reg                     arvalid,
                                  input                          arready,
                                  //Read Data Channel Signals
@@ -59,7 +60,7 @@ interface axi4_master_driver_bfm(input bit                      aclk,
                                  input      [DATA_WIDTH-1: 0] rdata,
                                  input                  [1:0] rresp,
                                  input                        rlast,
-                                 input                  [3:0] ruser,
+                                 input      [`AXI_RUSER_WIDTH-1:0] ruser,
                                  input                        rvalid,
                                  output	reg                   rready  
                                 );  

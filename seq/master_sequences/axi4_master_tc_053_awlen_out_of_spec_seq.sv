@@ -31,7 +31,7 @@ task axi4_master_tc_053_awlen_out_of_spec_seq::body();
     tx_type == WRITE;
     awid == `GET_AWID_ENUM(0); // Scalable AWID - use ID 0
     awaddr == 64'h0000_0100_0000_1230; // DDR Memory range
-    awlen == 8'h100; // 257 beats (0x100 + 1 = 257) - Exceeds AXI4 limit of 256
+    awlen == 9'h100; // 257 beats (0x100 + 1 = 257) - Exceeds AXI4 limit of 256
     awsize == WRITE_4_BYTES;
     awburst == WRITE_INCR;
     awprot == WRITE_NORMAL_NONSECURE_DATA; // Explicitly set for DDR access

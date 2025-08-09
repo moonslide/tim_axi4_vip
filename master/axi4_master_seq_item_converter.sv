@@ -101,6 +101,9 @@ function void axi4_master_seq_item_converter::from_write_class( input axi4_maste
   output_conv_h.wuser = input_conv_h.wuser;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wuser =  %0h",output_conv_h.wuser),UVM_HIGH);
 
+  output_conv_h.awuser = input_conv_h.awuser;
+  `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awuser =  %0h",output_conv_h.awuser),UVM_HIGH);
+
   output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
   output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
   output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
@@ -225,6 +228,9 @@ function void axi4_master_seq_item_converter::to_write_class( input axi4_write_t
   output_conv_h.awqos = input_conv_h.awqos;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awqos =  %0h",output_conv_h.awqos),UVM_HIGH);
 
+  output_conv_h.awuser = input_conv_h.awuser;
+  `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awuser =  %0h",output_conv_h.awuser),UVM_HIGH);
+
   output_conv_h.wait_count_write_address_channel = input_conv_h.wait_count_write_address_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_write_address_channel =  %0h",output_conv_h.wait_count_write_address_channel),UVM_HIGH);
 
@@ -347,6 +353,7 @@ function void axi4_master_seq_item_converter::to_write_addr_data_class(input axi
   $cast(output_conv_h.awprot,waddr_packet.awprot);
   output_conv_h.awaddr = waddr_packet.awaddr;
   output_conv_h.awqos = waddr_packet.awqos;
+  output_conv_h.awuser = waddr_packet.awuser;
 
   foreach(input_conv_h.wdata[i]) begin
     if(input_conv_h.wdata[i] != 0)begin
@@ -394,6 +401,7 @@ function void axi4_master_seq_item_converter::to_write_addr_data_resp_class(inpu
   $cast(output_conv_h.awprot,waddr_data_packet.awprot);
   output_conv_h.awaddr = waddr_data_packet.awaddr;
   output_conv_h.awqos = waddr_data_packet.awqos;
+  output_conv_h.awuser = waddr_data_packet.awuser;
 
   foreach(waddr_data_packet.wdata[i]) begin
     if(waddr_data_packet.wdata[i] != 0)begin

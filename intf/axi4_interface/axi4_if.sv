@@ -4,6 +4,9 @@
 // Import axi4_globals_pkg 
 import axi4_globals_pkg::*;
 
+// Include bus configuration defines
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 // Interface : axi4_if
 // Declaration of pin level signals for axi4 interface
@@ -21,20 +24,20 @@ interface axi4_if(input aclk, input aresetn);
   logic     [2: 0] awprot    ;
   logic     [3:0] awqos      ;
   logic     [3:0] awregion   ;
-  logic           awuser     ;
+  logic [`AXI_AWUSER_WIDTH-1:0] awuser;
   logic            awvalid   ;
   logic		         awready   ;
   //Write_data_channel
   logic     [DATA_WIDTH-1: 0] wdata     ;
   logic     [(DATA_WIDTH/8)-1: 0] wstrb ;
   logic            wlast     ;
-  logic      [3:0] wuser     ;
+  logic [`AXI_WUSER_WIDTH-1:0] wuser;
   logic            wvalid    ;
  	logic            wready    ;
   //Write Response Channel
   logic     [3: 0] bid       ;
   logic     [1: 0] bresp     ;
-  logic     [3: 0] buser     ;
+  logic [`AXI_BUSER_WIDTH-1:0] buser;
   logic            bvalid    ;
   logic            bready    ;
   //Read Address Channel
@@ -48,7 +51,7 @@ interface axi4_if(input aclk, input aresetn);
   logic     [2:0] arprot     ;
   logic     [3:0] arqos      ;
   logic     [3:0] arregion   ;
-  logic     [3:0] aruser     ;
+  logic [`AXI_ARUSER_WIDTH-1:0] aruser;
   logic           arvalid    ;
  	logic	          arready    ;
   //Read Data Channel
@@ -56,7 +59,7 @@ interface axi4_if(input aclk, input aresetn);
   logic     [DATA_WIDTH-1: 0] rdata     ;
   logic     [1:0] rresp      ;
   logic           rlast      ;
-  logic     [3:0] ruser      ;
+  logic [`AXI_RUSER_WIDTH-1:0] ruser;
   logic           rvalid     ;
   logic  	        rready     ;
   

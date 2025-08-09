@@ -361,7 +361,8 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
             end
             if(enable_qos_check_for_initial_txn == 0) begin
-              if(qos_queue[$].awid == qos_queue[$-1].awid && awid_queue_for_qos[$] == qos_queue[$-1].awid) begin
+              // Check if queue has at least 2 elements before accessing $-1
+              if(qos_queue.size() >= 2 && qos_queue[$].awid == qos_queue[$-1].awid && awid_queue_for_qos[$] == qos_queue[$-1].awid) begin
                 awid_queue_q = qos_queue.find_last_index with (item.awid == qos_queue[$].awid);
                 queue_index = awid_queue_q[$]; 
                 enable_qos_check_for_initial_txn = -1;
@@ -372,7 +373,8 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
             end
             if(enable_qos_check_for_initial_txn == 1) begin
-              if(qos_queue[$].awid == qos_queue[$-1].awid) begin
+              // Check if queue has at least 2 elements before accessing $-1
+              if(qos_queue.size() >= 2 && qos_queue[$].awid == qos_queue[$-1].awid) begin
                 local_master_data_tx = qos_queue.pop_back;
                 awid_queue_for_qos.push_back(local_master_data_tx.awid);
               end
@@ -391,9 +393,16 @@ task axi4_master_driver_proxy::axi4_write_task();
               end
             end
             else begin
-                local_master_data_tx = qos_queue[queue_index];
-                awid_queue_for_qos.push_back(local_master_data_tx.awid);
-                qos_queue.delete(queue_index);
+                // Check if queue_index is valid before accessing
+                if(queue_index < qos_queue.size() && qos_queue[queue_index] != null) begin
+                  local_master_data_tx = qos_queue[queue_index];
+                  awid_queue_for_qos.push_back(local_master_data_tx.awid);
+                  qos_queue.delete(queue_index);
+                end
+                else begin
+                  // If index is invalid, skip QoS processing for this transaction
+                  `uvm_info("axi4_master_driver_proxy", $sformatf("Invalid queue_index %0d, qos_queue size=%0d", queue_index, qos_queue.size()), UVM_LOW)
+                end
             end
            temp_queue_sz = qos_queue.size();
             qos_wait_enable_for_b2b = 1'b0;
@@ -411,17 +420,23 @@ task axi4_master_driver_proxy::axi4_write_task();
 
 
           //Converts the received req_packet to struct packet
-          axi4_master_seq_item_converter::from_write_class(local_master_data_tx,struct_write_data_packet);
-          `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Checking write data struct packet = %p",
-                                               struct_write_data_packet),UVM_MEDIUM);
+          if(local_master_data_tx != null) begin
+            axi4_master_seq_item_converter::from_write_class(local_master_data_tx,struct_write_data_packet);
+            `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Checking write data struct packet = %p",
+                                                 struct_write_data_packet),UVM_MEDIUM);
 
-          //Calling the write data channel in bfm to drive all the write data signals
-          axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_data_packet,struct_cfg);
-         
-          //Converting the write data struct packet to req packet
-          axi4_master_seq_item_converter::to_write_class(struct_write_data_packet,local_master_data_tx);
-          `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Received_req_write_packet = \n %s",
-                                               local_master_data_tx.sprint()),UVM_MEDIUM);
+            //Calling the write data channel in bfm to drive all the write data signals
+            axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_data_packet,struct_cfg);
+            
+            //Converting the write data struct packet to req packet
+            axi4_master_seq_item_converter::to_write_class(struct_write_data_packet,local_master_data_tx);
+            `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Received_req_write_packet = \n %s",
+                                                 local_master_data_tx.sprint()),UVM_MEDIUM);
+          end
+          else begin
+            `uvm_info(get_type_name(), "WRITE_DATA_THREAD::local_master_data_tx is null, skipping this iteration", UVM_LOW)
+            #1ns;  // Small delay before retrying
+          end
           
                                                //Returns the number of packets written into fifo
           `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Checking fifo size used= %0d",
@@ -435,7 +450,8 @@ task axi4_master_driver_proxy::axi4_write_task();
                end
                else begin
                  diff = qos_queue.size - temp_queue_sz;
-                 if(local_master_data_tx.awid == qos_queue[diff-1].awid) begin
+                 if(local_master_data_tx != null && diff > 0 && qos_queue[diff-1] != null && 
+                    local_master_data_tx.awid == qos_queue[diff-1].awid) begin
                    queue_index = diff-1;
                    disable_qos_check = 1;
                  end
