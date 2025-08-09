@@ -36,9 +36,14 @@ endfunction : new
 // Creates read transaction with specific QoS value for priority testing
 //--------------------------------------------------------------------------------------------
 task axi4_master_qos_priority_read_seq::body();
+  int target_slave_id;
   super.body();
   
   start_item(req);
+  
+  // For ultrathink 10x10 configuration, use proper address mapping
+  // Each slave has 256MB (0x1000_0000) of address space starting from base 0x0100_0000_0000
+  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
   
   if(!req.randomize() with {
     req.tx_type == READ;
@@ -47,14 +52,7 @@ task axi4_master_qos_priority_read_seq::body();
     req.arburst == READ_INCR;
     req.arsize == READ_4_BYTES;
     req.arlen == 8'h00;  // Single beat burst to simplify
-    req.araddr inside {[64'h8_0000_0000:64'h8_3FFF_FFF0],  // Slave 0 (General Purpose 0) - aligned
-                        [64'h8_4000_0000:64'h8_7FFF_FFF0],  // Slave 1 (General Purpose 1) - aligned
-                        [64'h8_8000_0000:64'h8_BFFF_FFF0],  // Slave 2 (High Speed) - aligned
-                        [64'h9_0000_0000:64'h9_3FFF_FFF0],  // Slave 4 (Instruction ROM) - aligned
-                        [64'hA_0000_0000:64'hA_0000_FFF0],  // Slave 5 (Boot ROM) - aligned
-                        [64'hA_0001_0000:64'hA_0001_FFF0],  // Slave 6 (Control Reg 0) - aligned
-                        [64'hA_0002_0000:64'hA_0002_FFF0],  // Slave 7 (Control Reg 1) - aligned
-                        [64'hA_0003_0000:64'hA_0003_FFF0]};  // Slave 8 (Control Reg 2) - aligned
+    req.araddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
   }) begin
     `uvm_fatal("axi4", "Randomization failed for QoS priority read sequence")
   end

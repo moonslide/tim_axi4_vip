@@ -53,6 +53,7 @@ endfunction : new
 task axi4_master_qos_user_boost_write_seq::body();
   bit [3:0] effective_qos;
   bit [31:0] user_signal;
+  int target_slave_id;
   
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
@@ -69,6 +70,9 @@ task axi4_master_qos_user_boost_write_seq::body();
   // Encode USER signal: [31:8]=reserved, [7:4]=boost_enable, [3:0]=boost_value
   user_signal = {24'h0, user_boost_enable, 3'b0, user_boost_value};
   
+  // For ultrathink 10x10 configuration, use proper address mapping
+  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
+  
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
     req.awqos == base_qos_value;  // Use base QoS in protocol
@@ -76,12 +80,7 @@ task axi4_master_qos_user_boost_write_seq::body();
     req.awburst == WRITE_INCR;
     req.awsize == WRITE_4_BYTES;
     req.awlen == 8'h00;  // Single beat burst
-    req.awaddr inside {[64'h8_0000_0000:64'h8_3FFF_FFF0],  // Slave 0
-                       [64'h8_4000_0000:64'h8_7FFF_FFF0],  // Slave 1
-                       [64'h8_8000_0000:64'h8_BFFF_FFF0],  // Slave 2
-                       [64'hA_0001_0000:64'hA_0001_FFF0],  // Slave 6
-                       [64'hA_0002_0000:64'hA_0002_FFF0],  // Slave 7
-                       [64'hA_0003_0000:64'hA_0003_FFF0]}; // Slave 8
+    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
   }) begin
     `uvm_fatal("axi4", "Randomization failed for QoS USER boost write sequence")
   end

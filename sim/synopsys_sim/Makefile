@@ -4,7 +4,7 @@
 
 # Default values for regression script
 test ?= axi4_default_test
-SEED ?= 12345
+SEED ?=
 LOG_FILE ?= $(test).log
 RUN_DIR ?= .
 FSDB_DUMP ?= 0
@@ -166,7 +166,7 @@ help:
 	@echo ""
 	@echo "Parameters:"
 	@echo "  test         - Name of the test to run (default: axi4_default_test)"
-	@echo "  SEED         - Random seed value (default: 12345, empty=automatic)"
+	@echo "  SEED         - Random seed value (default: automatic, specify value to override)"
 	@echo "  LOG_FILE     - Output log file name (default: \$${test}.log)"
 	@echo "  FSDB_DUMP    - Enable FSDB dumping: 0|1 (default: 0)"
 	@echo "  COVERAGE     - Enable coverage collection: 0|1 (default: 0)"
@@ -176,7 +176,8 @@ help:
 	@echo "  CLEANUP_DELAY - Delay after cleanup in seconds (default: 10)"
 	@echo ""
 	@echo "Usage Examples:"
-	@echo "  make sim test=axi4_wstrb_test SEED=98765"
+	@echo "  make sim test=axi4_wstrb_test              # Auto-generate random seed"
+	@echo "  make sim test=axi4_wstrb_test SEED=98765   # Use specific seed"
 	@echo "  make sim test=axi4_burst_test COVERAGE=1 FSDB_DUMP=1"
 	@echo "  make sim test=axi4_exclusive_test COMMAND_ADD='+define+DEBUG_MODE'"
 	@echo "  make all test=axi4_test                    # Clean and run"

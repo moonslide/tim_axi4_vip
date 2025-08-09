@@ -126,6 +126,7 @@ task axi4_master_user_security_tagging_seq::body();
   bit [31:0] security_tag;
   bit policy_valid;
   string tag_info;
+  int target_slave_id;
   
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
@@ -140,6 +141,9 @@ task axi4_master_user_security_tagging_seq::body();
   `uvm_info(get_type_name(), $sformatf("Security Tag: 0x%08h - %s", security_tag, tag_info), UVM_MEDIUM)
   `uvm_info(get_type_name(), $sformatf("Policy Check: %s", policy_valid ? "AUTHORIZED" : "DENIED"), UVM_MEDIUM)
   
+  // For ultrathink 10x10 configuration, use proper address mapping
+  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
+  
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
     req.awburst == WRITE_INCR;
@@ -147,9 +151,7 @@ task axi4_master_user_security_tagging_seq::body();
     req.awlen == 8'h00;  // Single beat burst
     req.awuser == security_tag;
     req.wuser == security_tag;  // Same security tag for write data
-    req.awaddr inside {[64'h8_0000_0000:64'h8_3FFF_FFF0],  // Slave 0
-                       [64'h8_4000_0000:64'h8_7FFF_FFF0],  // Slave 1
-                       [64'h8_8000_0000:64'h8_BFFF_FFF0]};  // Slave 2
+    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
   }) begin
     `uvm_fatal("axi4", "Randomization failed for security tagging sequence")
   end

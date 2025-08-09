@@ -96,6 +96,7 @@ endfunction : new
 task axi4_master_user_signal_passthrough_seq::body();
   bit [31:0] user_signal_pattern;
   string pattern_description;
+  int target_slave_id;
   
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
@@ -118,6 +119,9 @@ task axi4_master_user_signal_passthrough_seq::body();
                                       test_pattern_type, sequence_counter, master_id, data_payload), UVM_MEDIUM)
 
   // Configure the transaction with the test pattern
+  // For ultrathink 10x10 configuration, use proper address mapping
+  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
+  
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
     req.awburst == WRITE_INCR;
@@ -125,9 +129,7 @@ task axi4_master_user_signal_passthrough_seq::body();
     req.awlen == 8'h00;  // Single beat burst for clean testing
     req.awuser == user_signal_pattern;
     req.wuser == user_signal_pattern;  // Same pattern for write data USER
-    req.awaddr inside {[64'h8_0000_0000:64'h8_3FFF_FFF0],  // Slave 0
-                       [64'h8_4000_0000:64'h8_7FFF_FFF0],  // Slave 1  
-                       [64'h8_8000_0000:64'h8_BFFF_FFF0]};  // Slave 2
+    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
   }) begin
     `uvm_fatal("axi4", "Randomization failed for passthrough sequence")
   end
