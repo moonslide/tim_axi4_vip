@@ -3,13 +3,13 @@
 <div align="center">
 
 [![Version](https://img.shields.io/badge/version-2.5-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
-[![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.md)
+[![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.html)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
 
 **Enterprise-Grade SystemVerilog/UVM Verification IP for AXI4 Protocol**
 
-[Quick Start](doc/AXI4_VIP_Quick_Start.md) | [User Guide](doc/AXI4_VIP_User_Guide.md) | [Documentation](doc/) | [Support](#support)
+[Quick Start](doc/AXI4_VIP_Quick_Start.md) | [User Guide](doc/AXI4_VIP_User_Guide.html) | [Documentation](doc/) | [Support](#support)
 
 </div>
 
@@ -92,7 +92,7 @@ Configure bus matrix size in `include/axi4_bus_config.svh`:
 
 | Document | Description |
 |----------|-------------|
-| [User Guide](doc/AXI4_VIP_User_Guide.md) | Complete reference documentation |
+| [User Guide](doc/AXI4_VIP_User_Guide.html) | Complete interactive HTML documentation |
 | [Quick Start](doc/AXI4_VIP_Quick_Start.md) | Get started in 5 minutes |
 | [Architecture](doc/axi4_avip_architecture_document.pdf) | Detailed architecture document |
 | [Coverage Plan](doc/axi4_avip_coverage_plan.md) | Coverage methodology |
@@ -308,7 +308,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### Getting Help
 
-1. Check [User Guide](doc/AXI4_VIP_User_Guide.md) and [Troubleshooting](doc/AXI4_VIP_User_Guide.md#troubleshooting)
+1. Check [User Guide](doc/AXI4_VIP_User_Guide.html) and [Troubleshooting](doc/AXI4_VIP_User_Guide.html#troubleshooting)
 2. Search existing [Issues](https://github.com/moonslide/tim_axi4_vip/issues)
 3. Contact support team
 

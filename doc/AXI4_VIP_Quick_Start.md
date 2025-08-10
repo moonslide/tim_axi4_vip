@@ -91,7 +91,7 @@ grep "awaddr.*0x0" <test>.log
 
 ## Need Help?
 
-📚 Full Guide: `doc/AXI4_VIP_User_Guide.md`  
+📚 Full Guide: `doc/AXI4_VIP_User_Guide.html`  
 📧 Support: axi4_vip_support@company.com  
 🐛 Issues: GitHub Issues page  
 ✅ **Status**: All known issues resolved in v2.1
