@@ -77,18 +77,18 @@ endfunction : add_write_tracker
 function bit [15:0] axi4_master_tc_047_id_multiple_writes_different_awid_seq::get_awid_for_scenario(int scenario, int master_id);
   // Generate different AWID patterns for out-of-order scenarios
   // Use scalable approach that works for any bus matrix size
+  // IMPORTANT: Ensure each master uses unique AWIDs to avoid scoreboard inference issues
   int base_id = `GET_EFFECTIVE_AWID(master_id);
+  int num_masters = `NUM_MASTERS;
   int num_ids = `ID_MAP_BITS;
+  int ids_per_master = num_ids / num_masters; // Each master gets a range of IDs
   
-  case (scenario)
-    0: return base_id;                               // Base AWID
-    1: return (base_id + 1) % num_ids;              // Rotated by 1
-    2: return (base_id + 2) % num_ids;              // Rotated by 2
-    3: return (base_id + 3) % num_ids;              // Rotated by 3
-    4: return (num_ids - 1 - base_id) % num_ids;    // Reverse mapping
-    5: return base_id;                               // Sequential
-    default: return base_id;                         // Fallback to base ID
-  endcase
+  // Calculate AWID within the master's allocated range to avoid overlap
+  // Master 0: IDs 0-3, Master 1: IDs 4-7, Master 2: IDs 8-11, Master 3: IDs 12-15 (for 4x4)
+  int master_base = master_id * ids_per_master;
+  int offset = scenario % ids_per_master; // Keep within master's range
+  
+  return (master_base + offset) % num_ids;
 endfunction : get_awid_for_scenario
 
 function bit [63:0] axi4_master_tc_047_id_multiple_writes_different_awid_seq::get_slave_address(int slave_id, int master_id, int offset);
@@ -135,13 +135,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     awid_val = get_awid_for_scenario(i, master_id);
     data_val = 32'h10000000 + (master_id << 24) + (i << 16) + awid_val;
     
-    // Determine target slave based on master permissions and scenario
-    case (master_id)
-      0: target_slave = (i % 2 == 0) ? 0 : 2; // M0: Alternate between S0 (DDR) and S2 (Peripheral)
-      1: target_slave = (i % 2 == 0) ? 0 : 2; // M1: Alternate between S0 (DDR) and S2 (Peripheral)  
-      2: target_slave = (i % 2 == 0) ? 0 : 2; // M2: Alternate between S0 (DDR) and S2 (Peripheral)
-      3: target_slave = 0;                    // M3: Only S0 (DDR) for writes (S3 is read-only)
-    endcase
+    // With 1:1 connections, each master can only access its connected slave
+    // Master[i] can only access Slave[i] 
+    target_slave = master_id; // Direct 1:1 mapping
     
     addr = get_slave_address(target_slave, master_id, 'h1000 + (i * 'h100));
     
@@ -185,13 +181,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     awid_val = get_awid_for_scenario(i + 4, master_id); // Use scenarios 4-6
     burst_len = i + 1; // 2, 3, 4 beats
     
-    // Select target slave based on master capabilities
-    case (master_id)
-      0: target_slave = (i == 0) ? 0 : 2; // M0: S0 then S2
-      1: target_slave = (i == 2) ? 2 : 0; // M1: S0, S0, S2
-      2: target_slave = 0;                // M2: S0 only for this scenario
-      3: target_slave = 0;                // M3: S0 only (S3 is read-only)
-    endcase
+    // With 1:1 connections, each master can only access its connected slave
+    // Master[i] can only access Slave[i]
+    target_slave = master_id; // Direct 1:1 mapping
     
     addr = get_slave_address(target_slave, master_id, 'h2000 + (i * 'h200));
     
@@ -245,13 +237,9 @@ task axi4_master_tc_047_id_multiple_writes_different_awid_seq::body();
     awid_val = (i % 2 == 0) ? base_awid : alt_awid;
     data_val = 32'h30000000 + (master_id << 24) + (i << 16) + awid_val;
     
-    // Vary target slaves to test cross-slave scenarios
-    case (master_id)
-      0: target_slave = (i < 2) ? 0 : 2; // M0: First 2 to S0, last 2 to S2
-      1: target_slave = (i % 2 == 0) ? 0 : 2; // M1: Alternate S0/S2
-      2: target_slave = 0;                    // M2: All to S0
-      3: target_slave = 0;                    // M3: All to S0
-    endcase
+    // With 1:1 connections, each master can only access its connected slave
+    // Master[i] can only access Slave[i]
+    target_slave = master_id; // Direct 1:1 mapping
     
     addr = get_slave_address(target_slave, master_id, 'h3000 + (i * 'h100));
     

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.4-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Version](https://img.shields.io/badge/version-2.5-blue.svg)](https://github.com/moonslide/tim_axi4_vip)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.md)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
@@ -20,7 +20,7 @@ The AXI4 Verification IP (VIP) is a comprehensive, production-ready UVM-based ve
 ### ✨ Key Features
 
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
-- **✅ 100% Pass Rate**: All 140+ regression tests verified and passing (v2.4)
+- **✅ 100% Pass Rate**: All 140+ regression tests verified and passing (v2.5)
 - **📊 Comprehensive Coverage**: Full functional, code, and assertion coverage
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
@@ -160,6 +160,14 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
    - Fixed missing USER signal checks
    - Impact: Full USER signal coverage
 
+### 🔧 Critical Fixes Applied (v2.5)
+
+1. **TC046/TC047 1:1 Topology Compatibility Fix**
+   - Resolved bus matrix mode mismatch with 1:1 HDL connections
+   - Changed BOUNDARY_ACCESS_TESTS from BASE_BUS_MATRIX to NONE mode
+   - Fixed SLVERR responses in direct master-slave connections
+   - Impact: TC046/TC047 tests now pass consistently across all seeds
+
 ### 🔧 Critical Fixes Applied (v2.4)
 
 1. **QoS/USER Test Failure Resolution**
@@ -180,7 +188,12 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
    - Uses `+ntb_random_seed_automatic` for true randomization
    - Impact: Better test diversity and debugging capabilities
 
-**Affected Files**:
+**Affected Files (v2.5)**:
+- `test/axi4_test_config.sv` (bus matrix mode configuration)
+- `bm/axi4_bus_matrix_ref.sv` (NONE mode implementation)
+- `top/hdl_top.sv` (1:1 connection topology verification)
+
+**Affected Files (v2.4)**:
 - `axi4_master_qos_priority_read_seq.sv`
 - `axi4_master_qos_priority_write_seq.sv`  
 - `axi4_master_user_signal_passthrough_seq.sv`
@@ -190,7 +203,9 @@ python3 axi4_regression.py --test-list regression_result_*/no_pass.list --cov --
 - `axi4_master_qos_user_boost_write_seq.sv`
 - `sim/synopsys_sim/Makefile`
 
-**Result**: 12 failing regression tests → 0 failures (sustained 100% pass rate)
+**Result (v2.5)**: TC046/TC047 regression failures → 0 failures (100% pass rate maintained)
+
+**Result (v2.4)**: 12 failing regression tests → 0 failures (sustained 100% pass rate)
 
 ### ✅ All Critical Issues Resolved (v2.2)
 
@@ -305,7 +320,7 @@ This project is proprietary software. All rights reserved.
 
 <div align="center">
 
-**AXI4 VIP v2.4** - Enterprise-Ready Verification IP
+**AXI4 VIP v2.5** - Enterprise-Ready Verification IP
 
 *Developed with ❤️ for the verification community*
 

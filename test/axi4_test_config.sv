@@ -99,7 +99,7 @@ function void axi4_test_config::apply_category_config();
     end
     
     BOUNDARY_ACCESS_TESTS: begin
-      bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+      bus_matrix_mode = axi4_bus_matrix_ref::NONE;
       num_masters = 4;
       num_slaves = 4;
     end

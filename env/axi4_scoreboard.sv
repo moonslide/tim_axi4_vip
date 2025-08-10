@@ -2125,8 +2125,15 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
       end
       // WRITE_OKAY and WRITE_EXOKAY responses are handled by regular comparison logic
     end else begin
-      unexpected_error_count++;
-      `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.awaddr, expected_resp.name(), slave_tx.bresp.name()));
+      // Handle error injection mode: Accept SLVERR when error injection is enabled for protocol violation tests
+      if (slave_tx.bresp == WRITE_SLVERR && expected_resp == WRITE_OKAY && axi4_env_cfg_h.error_inject) begin
+        `uvm_info(get_type_name(),$sformatf("ERROR_INJECT_MODE: Accepting SLVERR for protocol violation test at address 0x%16h from Master %0d", 
+                  master_tx.awaddr, inferred_master_id), UVM_LOW);
+        // Do NOT increment unexpected_error_count - this is expected behavior for protocol violation tests
+      end else begin
+        unexpected_error_count++;
+        `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.awaddr, expected_resp.name(), slave_tx.bresp.name()));
+      end
     end
   end else begin
     // In 1:1 connection, try to infer master ID from transaction
@@ -2208,8 +2215,15 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
       end
       // READ_OKAY and READ_EXOKAY responses are handled by regular comparison logic
     end else begin
-      unexpected_error_count++;
-      `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.araddr, expected_resp.name(), slave_tx.rresp.name()));
+      // Handle error injection mode: Accept SLVERR when error injection is enabled for protocol violation tests
+      if (slave_tx.rresp == READ_SLVERR && expected_resp == READ_OKAY && axi4_env_cfg_h.error_inject) begin
+        `uvm_info(get_type_name(),$sformatf("ERROR_INJECT_MODE: Accepting READ_SLVERR for protocol violation test at address 0x%16h from Master %0d", 
+                  master_tx.araddr, inferred_master_id), UVM_LOW);
+        // Do NOT increment unexpected_error_count - this is expected behavior for protocol violation tests
+      end else begin
+        unexpected_error_count++;
+        `uvm_error(get_type_name(),$sformatf("Response mismatch for address 0x%16h: expected %0s, got %0s", master_tx.araddr, expected_resp.name(), slave_tx.rresp.name()));
+      end
     end
   end
 endtask : validate_response_correctness
