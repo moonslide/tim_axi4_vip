@@ -171,6 +171,23 @@ package axi4_master_seq_pkg;
   `include "axi4_master_user_protocol_violation_seq.sv"
   `include "axi4_master_user_signal_corruption_seq.sv"
   `include "axi4_master_qos_user_boost_write_seq.sv"
+  
+  // Reset sequences
+  `include "axi4_master_reset_smoke_seq.sv"
+  `include "axi4_master_midburst_reset_read_seq.sv"
+  `include "axi4_master_midburst_reset_write_seq.sv"
+  
+  // Stress test sequences from markdown
+  `include "axi4_master_all_to_all_saturation_seq.sv"
+  `include "axi4_master_hotspot_many_to_one_seq.sv"
+  `include "axi4_master_one_to_many_fanout_seq.sv"
+  `include "axi4_master_mixed_burst_lengths_seq.sv"
+  `include "axi4_master_4kb_boundary_seq.sv"
+  `include "axi4_master_max_outstanding_seq.sv"
+  `include "axi4_master_qos_arbitration_seq.sv"
+  `include "axi4_master_region_routing_seq.sv"
+  `include "axi4_master_read_reorder_seq.sv"
+  `include "axi4_master_read_write_contention_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

@@ -177,6 +177,17 @@ package axi4_test_pkg;
   `include "axi4_user_signal_corruption_test.sv"
   `include "axi4_qos_with_user_priority_boost_test.sv"
   `include "axi4_user_based_qos_routing_test.sv"
+  
+  // Stress Reset Test
+  `include "axi4_stress_reset_test.sv"
+  
+  // Stress test cases from markdown
+  `include "axi4_saturation_midburst_reset_qos_boundary_test.sv"
+  `include "axi4_throughput_ordering_longtail_throttled_write_test.sv"
+  `include "axi4_hotspot_fairness_boundary_error_reset_backpressure_test.sv"
+  `include "axi4_qos_region_routing_reset_backpressure_test.sv"
+  `include "axi4_write_heavy_midburst_reset_rw_contention_test.sv"
+  `include "axi4_stability_burnin_longtail_backpressure_error_recovery_test.sv"
 
 endpackage : axi4_test_pkg
 

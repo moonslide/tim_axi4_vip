@@ -115,6 +115,13 @@ package axi4_slave_seq_pkg;
 
   `include "axi4_slave_nbk_write_qos_seq.sv"
   `include "axi4_slave_nbk_read_qos_seq.sv"
+  
+  // Stress test slave sequences from markdown
+  `include "axi4_slave_reset_backpressure_seq.sv"
+  `include "axi4_slave_backpressure_storm_seq.sv"
+  `include "axi4_slave_write_response_throttling_seq.sv"
+  `include "axi4_slave_long_tail_latency_seq.sv"
+  `include "axi4_slave_sparse_error_injection_seq.sv"
 
 endpackage : axi4_slave_seq_pkg
 

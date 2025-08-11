@@ -156,6 +156,9 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_user_signal_corruption_seq.sv"
   `include "axi4_virtual_qos_with_user_priority_boost_seq.sv"
   `include "axi4_virtual_user_based_qos_routing_seq.sv"
+  
+  // Stress Reset Virtual Sequence
+  `include "axi4_stress_reset_virtual_seq.sv"
 
 endpackage : axi4_virtual_seq_pkg
 
