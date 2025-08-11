@@ -131,30 +131,30 @@ package axi4_test_pkg;
   `include "axi4_4k_boundary_cross_test.sv"
   `include "axi4_unaligned_access_test.sv"
   
-  // TC_046~TC_058: AXI4 ID Management and Protocol Violation Tests
-  `include "axi4_tc_046_id_multiple_writes_same_awid_test.sv"
-  `include "axi4_tc_047_id_multiple_writes_different_awid_test.sv"
-  `include "axi4_tc_048_id_multiple_reads_same_arid_test.sv"
-  `include "axi4_tc_049_id_multiple_reads_different_arid_test.sv"
-  `include "axi4_tc_050_wid_awid_mismatch_test.sv"
-  `include "axi4_tc_051_wlast_too_early_test.sv"
-  `include "axi4_tc_052_wlast_too_late_test.sv"
-  `include "axi4_tc_053_awlen_out_of_spec_test.sv"
-  `include "axi4_tc_054_arlen_out_of_spec_test.sv"
-  `include "axi4_tc_055_exclusive_write_success_test.sv"
-  `include "axi4_tc_056_exclusive_write_fail_test.sv"
-  `include "axi4_tc_057_exclusive_read_success_test.sv"
-  `include "axi4_tc_058_exclusive_read_fail_test.sv"
+  // ID_MULTIPLE_WRITES_SAME_AWID~TC_058: AXI4 ID Management and Protocol Violation Tests
+  `include "axi4_id_multiple_writes_same_awid_test.sv"
+  `include "axi4_id_multiple_writes_different_awid_test.sv"
+  `include "axi4_id_multiple_reads_same_arid_test.sv"
+  `include "axi4_id_multiple_reads_different_arid_test.sv"
+  `include "axi4_wid_awid_mismatch_test.sv"
+  `include "axi4_wlast_too_early_test.sv"
+  `include "axi4_wlast_too_late_test.sv"
+  `include "axi4_awlen_out_of_spec_test.sv"
+  `include "axi4_arlen_out_of_spec_test.sv"
+  `include "axi4_exclusive_write_success_test.sv"
+  `include "axi4_exclusive_write_fail_test.sv"
+  `include "axi4_exclusive_read_success_test.sv"
+  `include "axi4_exclusive_read_fail_test.sv"
   
   // Enhanced Bus Matrix Test for claude.md compliance
   `include "axi4_enhanced_bus_matrix_test.sv"
 
   // Claude.md Test Cases
-  `include "axi4_tc_001_concurrent_reads_test.sv"
-  `include "axi4_tc_002_concurrent_writes_raw_test.sv"
-  `include "axi4_tc_003_sequential_mixed_ops_test.sv"
-  `include "axi4_tc_004_concurrent_error_stress_test.sv"
-  `include "axi4_tc_005_exhaustive_random_reads_test.sv"
+  `include "axi4_concurrent_reads_test.sv"
+  `include "axi4_concurrent_writes_raw_test.sv"
+  `include "axi4_sequential_mixed_ops_test.sv"
+  `include "axi4_concurrent_error_stress_test.sv"
+  `include "axi4_exhaustive_random_reads_test.sv"
   
   // Example tests for different bus matrix modes
   `include "axi4_base_matrix_test.sv"

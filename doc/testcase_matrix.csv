@@ -1,0 +1,125 @@
+Test Name,Test Category,Scenario Description,Bus Matrix Mode,Masters,Slaves,Test Duration,QoS Support,USER Support,Status
+axi4_base_test,Base,Base test class for inheritance,NONE,4,4,N/A,No,No,Infrastructure
+axi4_test_config,Configuration,Test configuration infrastructure,AUTO,VAR,VAR,N/A,No,No,Infrastructure
+axi4_enhanced_bus_matrix_test,Enhanced,Enhanced bus matrix verification,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_concurrent_reads_test,Enhanced,Concurrent reads from multiple masters,BUS_ENHANCED_MATRIX,10,10,5ms,Yes,Yes,PASS
+axi4_concurrent_writes_raw_test,Enhanced,Concurrent writes from multiple masters,BUS_ENHANCED_MATRIX,10,10,5ms,Yes,Yes,PASS
+axi4_sequential_mixed_ops_test,Enhanced,Sequential mixed read/write operations,BUS_ENHANCED_MATRIX,10,10,5ms,Yes,Yes,PASS
+axi4_concurrent_error_stress_test,Enhanced,Concurrent error stress testing,BUS_ENHANCED_MATRIX,10,10,5ms,Yes,Yes,PASS
+axi4_exhaustive_random_reads_test,Enhanced,Exhaustive random read patterns,BUS_ENHANCED_MATRIX,10,10,8.3s,Yes,Yes,PASS
+axi4_qos_priority_test,QoS,QoS priority arbitration,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_fairness_test,QoS,QoS fairness verification,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_latency_test,QoS,QoS latency requirements,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_bandwidth_test,QoS,QoS bandwidth allocation,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_priority_write_test,QoS,QoS write priority,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_priority_read_test,QoS,QoS read priority,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_dynamic_test,QoS,Dynamic QoS adjustment,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_stress_test,QoS,QoS under stress conditions,BUS_ENHANCED_MATRIX,10,10,15ms,Yes,Yes,PASS
+axi4_qos_mixed_traffic_test,QoS,Mixed QoS traffic patterns,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_deadline_test,QoS,QoS deadline verification,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_escalation_test,QoS,QoS priority escalation,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_preemption_test,QoS,QoS transaction preemption,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_qos_user_boost_write_test,QoS,QoS with USER signal boost,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
+axi4_user_signal_passthrough_test,USER,USER signal passthrough verification,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_user_parity_test,USER,USER signal parity checking,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_user_security_tagging_test,USER,USER security tag verification,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_user_signal_corruption_test,USER,USER signal corruption detection,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_upper_boundary_write_test,Boundary,Upper address boundary write test,NONE,4,4,8ms,No,No,PASS
+axi4_upper_boundary_read_test,Boundary,Upper address boundary read test,NONE,4,4,8ms,No,No,PASS
+axi4_4k_boundary_cross_test,Boundary,4K page boundary crossing test,NONE,4,4,8ms,No,No,PASS
+axi4_unaligned_transfer_test,Boundary,Unaligned address access test,NONE,4,4,8ms,No,No,PASS
+axi4_wrap_burst_4beat_test,Boundary,WRAP burst boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_blocking_fixed_burst_write_read_test,Boundary,FIXED burst boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_blocking_incr_burst_write_test,Boundary,INCR burst boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_narrow_transfer_test,Boundary,Narrow transfer boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_wide_transfer_test,Boundary,Wide transfer boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_mixed_size_test,Boundary,Mixed size boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_back_to_back_write_test,Boundary,Back-to-back boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_interleaved_write_test,Boundary,Interleaved boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_max_outstanding_test,Boundary,Maximum outstanding boundary test,NONE,4,4,8ms,No,No,PASS
+axi4_all_master_slave_access_test,Matrix,All master-slave combinations,BASE_BUS_MATRIX,4,4,20ms,No,No,PASS
+axi4_base_matrix_test,Matrix,Base bus matrix functionality,BASE_BUS_MATRIX,4,4,10ms,No,No,PASS
+axi4_blocking_8b_write_data_test,Data Width,8-bit write data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_8b_data_read_test,Data Width,8-bit read data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_8b_write_read_test,Data Width,8-bit write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_16b_write_data_test,Data Width,16-bit write data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_16b_data_read_test,Data Width,16-bit read data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_16b_write_read_test,Data Width,16-bit write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_32b_write_data_test,Data Width,32-bit write data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_32b_data_read_test,Data Width,32-bit read data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_32b_write_read_test,Data Width,32-bit write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_64b_write_data_test,Data Width,64-bit write data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_64b_data_read_test,Data Width,64-bit read data test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_64b_write_read_test,Data Width,64-bit write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_incr_burst_write_test,Burst,INCR burst write test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_incr_burst_read_test,Burst,INCR burst read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_incr_burst_write_read_test,Burst,INCR burst write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_fixed_burst_write_read_test,Burst,FIXED burst write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_wrap_burst_test,Burst,WRAP burst test,NONE,4,4,5ms,No,No,PASS
+axi4_wrap_burst_4beat_test,Burst,WRAP 4-beat burst test,NONE,4,4,5ms,No,No,PASS
+axi4_wrap_burst_8beat_test,Burst,WRAP 8-beat burst test,NONE,4,4,5ms,No,No,PASS
+axi4_wrap_burst_16beat_test,Burst,WRAP 16-beat burst test,NONE,4,4,5ms,No,No,PASS
+axi4_exclusive_write_success_test,Exclusive,Exclusive write success scenario,NONE,4,4,10ms,No,No,PASS
+axi4_exclusive_write_fail_test,Exclusive,Exclusive write failure scenario,NONE,4,4,10ms,No,No,PASS
+axi4_exclusive_read_success_test,Exclusive,Exclusive read success scenario,NONE,4,4,10ms,No,No,PASS
+axi4_exclusive_read_fail_test,Exclusive,Exclusive read failure scenario,NONE,4,4,10ms,No,No,PASS
+axi4_exclusive_monitor_test,Exclusive,Exclusive monitor verification,NONE,4,4,10ms,No,No,PASS
+axi4_exclusive_stress_test,Exclusive,Exclusive access under stress,NONE,4,4,15ms,No,No,PASS
+axi4_exclusive_multi_master_test,Exclusive,Multi-master exclusive access,BASE_BUS_MATRIX,4,4,15ms,No,No,PASS
+axi4_exclusive_timeout_test,Exclusive,Exclusive access timeout,NONE,4,4,10ms,No,No,PASS
+axi4_blocking_exokay_response_write_test,Response,EXOKAY write response test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_exokay_response_read_test,Response,EXOKAY read response test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_okay_response_write_test,Response,OKAY write response test,NONE,4,4,5ms,No,No,PASS
+axi4_blocking_okay_response_read_test,Response,OKAY read response test,NONE,4,4,5ms,No,No,PASS
+axi4_slverr_response_test,Response,SLVERR response handling,NONE,4,4,5ms,No,No,PASS
+axi4_decerr_response_test,Response,DECERR response handling,NONE,4,4,5ms,No,No,PASS
+axi4_aw_ready_delay_test,Handshake,AW channel ready delay test,NONE,4,4,5ms,No,No,PASS
+axi4_ar_ready_delay_test,Handshake,AR channel ready delay test,NONE,4,4,5ms,No,No,PASS
+axi4_w_ready_delay_test,Handshake,W channel ready delay test,NONE,4,4,5ms,No,No,PASS
+axi4_b_ready_delay_test,Handshake,B channel ready delay test,NONE,4,4,5ms,No,No,PASS
+axi4_r_ready_delay_test,Handshake,R channel ready delay test,NONE,4,4,5ms,No,No,PASS
+axi4_aw_w_channel_separation_test,Handshake,AW-W channel separation test,NONE,4,4,5ms,No,No,PASS
+axi4_out_of_order_read_test,Ordering,Out-of-order read completion,NONE,4,4,10ms,No,No,PASS
+axi4_out_of_order_write_test,Ordering,Out-of-order write completion,NONE,4,4,10ms,No,No,PASS
+axi4_interleaved_write_test,Ordering,Interleaved write data,NONE,4,4,10ms,No,No,PASS
+axi4_outstanding_read_test,Outstanding,Multiple outstanding reads,NONE,4,4,10ms,No,No,PASS
+axi4_outstanding_write_test,Outstanding,Multiple outstanding writes,NONE,4,4,10ms,No,No,PASS
+axi4_max_outstanding_test,Outstanding,Maximum outstanding transactions,NONE,4,4,15ms,No,No,PASS
+axi4_awlen_out_of_spec_test,Error,AWLEN out of spec error test,NONE,4,4,5ms,No,No,PASS
+axi4_arlen_out_of_spec_test,Error,ARLEN out of spec error test,NONE,4,4,5ms,No,No,PASS
+axi4_wlast_too_early_test,Error,WLAST asserted too early,NONE,4,4,5ms,No,No,PASS
+axi4_wlast_too_late_test,Error,WLAST asserted too late,NONE,4,4,5ms,No,No,PASS
+axi4_wid_awid_mismatch_test,Error,WID-AWID mismatch error,NONE,4,4,5ms,No,No,PASS
+axi4_protocol_violation_test,Error,Protocol violation detection,NONE,4,4,5ms,No,No,PASS
+axi4_illegal_burst_test,Error,Illegal burst type test,NONE,4,4,5ms,No,No,PASS
+axi4_illegal_size_test,Error,Illegal transfer size test,NONE,4,4,5ms,No,No,PASS
+axi4_strobe_mismatch_test,Error,Write strobe mismatch test,NONE,4,4,5ms,No,No,PASS
+axi4_nonblocking_write_test,Non-blocking,Non-blocking write operation,NONE,4,4,5ms,No,No,PASS
+axi4_nonblocking_read_test,Non-blocking,Non-blocking read operation,NONE,4,4,5ms,No,No,PASS
+axi4_nonblocking_write_read_test,Non-blocking,Non-blocking write-read,NONE,4,4,5ms,No,No,PASS
+axi4_cross_4k_boundary_test,Cross,Cross 4K boundary access,NONE,4,4,8ms,No,No,PASS
+axi4_blocking_cross_write_read_test,Cross,Cross write-read test,NONE,4,4,5ms,No,No,PASS
+axi4_random_test,Random,Random transaction generation,NONE,4,4,20ms,No,No,PASS
+axi4_random_burst_test,Random,Random burst generation,NONE,4,4,15ms,No,No,PASS
+axi4_random_size_test,Random,Random size generation,NONE,4,4,15ms,No,No,PASS
+axi4_random_delay_test,Random,Random delay insertion,NONE,4,4,15ms,No,No,PASS
+axi4_stress_test,Stress,High stress conditions,BASE_BUS_MATRIX,4,4,30ms,No,No,PASS
+axi4_stress_burst_test,Stress,Burst under stress,BASE_BUS_MATRIX,4,4,25ms,No,No,PASS
+axi4_stress_outstanding_test,Stress,Outstanding under stress,BASE_BUS_MATRIX,4,4,25ms,No,No,PASS
+axi4_write_read_test,Basic,Basic write-read operation,NONE,4,4,5ms,No,No,PASS
+axi4_write_only_test,Basic,Write-only operation,NONE,4,4,5ms,No,No,PASS
+axi4_read_only_test,Basic,Read-only operation,NONE,4,4,5ms,No,No,PASS
+axi4_single_write_test,Basic,Single write transaction,NONE,4,4,5ms,No,No,PASS
+axi4_single_read_test,Basic,Single read transaction,NONE,4,4,5ms,No,No,PASS
+axi4_back_to_back_write_test,Performance,Back-to-back writes,NONE,4,4,10ms,No,No,PASS
+axi4_back_to_back_read_test,Performance,Back-to-back reads,NONE,4,4,10ms,No,No,PASS
+axi4_pipeline_write_test,Performance,Pipelined write operations,NONE,4,4,10ms,No,No,PASS
+axi4_pipeline_read_test,Performance,Pipelined read operations,NONE,4,4,10ms,No,No,PASS
+axi4_narrow_transfer_test,Transfer,Narrow transfer operations,NONE,4,4,5ms,No,No,PASS
+axi4_wide_transfer_test,Transfer,Wide transfer operations,NONE,4,4,5ms,No,No,PASS
+axi4_mixed_size_test,Transfer,Mixed size transfers,NONE,4,4,10ms,No,No,PASS
+axi4_cache_test,Cache,Cache attribute testing,NONE,4,4,10ms,No,No,PASS
+axi4_prot_test,Protection,Protection attribute testing,NONE,4,4,10ms,No,No,PASS
+axi4_lock_test,Lock,Lock signal testing,NONE,4,4,10ms,No,No,PASS
+axi4_region_test,Region,Region signal testing,NONE,4,4,10ms,No,No,PASS
+assertion_base_test,Assertion,Assertion infrastructure test,NONE,4,4,5ms,No,No,PASS

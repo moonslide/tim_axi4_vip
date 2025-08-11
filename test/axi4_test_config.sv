@@ -54,9 +54,12 @@ function void axi4_test_config::configure_for_test(string test_name);
   // Convert to lowercase for case-insensitive matching
   lower_test_name = test_name.tolower();
   
-  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test + QoS tests)
+  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test + QoS tests + concurrent tests)
   if (lower_test_name.match(".*tc.*00[1-5].*") || 
       lower_test_name.match(".*axi4_enhanced_bus_matrix_test.*") ||
+      lower_test_name.match(".*concurrent.*") ||
+      lower_test_name.match(".*sequential_mixed_ops.*") ||
+      lower_test_name.match(".*exhaustive_random_reads.*") ||
       lower_test_name.match(".*qos.*") ||
       lower_test_name.match(".*user.*")) begin
     test_category = ENHANCED_MATRIX_TESTS;

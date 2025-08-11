@@ -125,28 +125,28 @@ package axi4_master_seq_pkg;
   `include "axi4_master_lower_boundary_read_seq.sv"
   `include "axi4_master_4k_boundary_cross_seq.sv"
   
-  // TC_046~TC_058: AXI4 ID Management and Protocol Violation Test Sequences
-  `include "axi4_master_tc_046_id_multiple_writes_same_awid_seq.sv"
-  `include "axi4_master_tc_047_id_multiple_writes_different_awid_seq.sv"
-  `include "axi4_master_tc_048_id_multiple_reads_same_arid_seq.sv"
-  `include "axi4_master_tc_048_write_setup_seq.sv"
-  `include "axi4_master_tc_048_read_test_seq.sv"
-  `include "axi4_master_tc_049_id_multiple_reads_different_arid_seq.sv"
-  `include "axi4_master_tc_049_write_setup_seq.sv"
-  `include "axi4_master_tc_049_read_test_seq.sv"
-  `include "axi4_master_tc_050_wid_awid_mismatch_seq.sv"
-  `include "axi4_master_tc_051_wlast_too_early_seq.sv"
-  `include "axi4_master_tc_052_wlast_too_late_seq.sv"
-  `include "axi4_master_tc_053_awlen_out_of_spec_seq.sv"
-  `include "axi4_master_tc_054_arlen_out_of_spec_seq.sv"
-  `include "axi4_master_tc_055_exclusive_write_success_seq.sv"
-  `include "axi4_master_tc_056_exclusive_write_fail_seq.sv"
-  `include "axi4_master_tc_057_exclusive_read_success_seq.sv"
-  `include "axi4_master_tc_058_exclusive_read_fail_seq.sv"
+  // ID_MULTIPLE_WRITES_SAME_AWID~TC_058: AXI4 ID Management and Protocol Violation Test Sequences
+  `include "axi4_master_id_multiple_writes_same_awid_seq.sv"
+  `include "axi4_master_id_multiple_writes_different_awid_seq.sv"
+  `include "axi4_master_id_multiple_reads_same_arid_seq.sv"
+  `include "axi4_master_id_multiple_reads_same_arid_write_setup_seq.sv"
+  `include "axi4_master_id_multiple_reads_same_arid_read_test_seq.sv"
+  `include "axi4_master_id_multiple_reads_different_arid_seq.sv"
+  `include "axi4_master_id_multiple_reads_different_arid_write_setup_seq.sv"
+  `include "axi4_master_id_multiple_reads_different_arid_read_test_seq.sv"
+  `include "axi4_master_wid_awid_mismatch_seq.sv"
+  `include "axi4_master_wlast_too_early_seq.sv"
+  `include "axi4_master_wlast_too_late_seq.sv"
+  `include "axi4_master_awlen_out_of_spec_seq.sv"
+  `include "axi4_master_arlen_out_of_spec_seq.sv"
+  `include "axi4_master_exclusive_write_success_seq.sv"
+  `include "axi4_master_exclusive_write_fail_seq.sv"
+  `include "axi4_master_exclusive_read_success_seq.sv"
+  `include "axi4_master_exclusive_read_fail_seq.sv"
   
   // Claude.md Test Case Sequences
-  `include "axi4_tc_001_master_sequences.sv"
-  `include "axi4_tc_002_master_sequences.sv"
+  `include "axi4_concurrent_reads_master_sequences.sv"
+  `include "axi4_concurrent_writes_raw_master_sequences.sv"
   
   // QoS and USER Signal Test Sequences
   // Existing QoS/USER sequences

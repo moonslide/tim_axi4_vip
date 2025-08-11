@@ -1,6 +1,8 @@
 `ifndef AXI4_SLAVE_DRIVER_BFM_INCLUDED_
 `define AXI4_SLAVE_DRIVER_BFM_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 //Interface : axi4_slave_driver_bfm
 //Used as the HDL driver for axi4
@@ -26,14 +28,14 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
                                 input [DATA_WIDTH-1: 0]     wdata  ,
                                 input [(DATA_WIDTH/8)-1: 0] wstrb  ,
                                 input                       wlast  ,
-                                input [3: 0]                wuser  ,
+                                input [`AXI_WUSER_WIDTH-1: 0]                wuser  ,
                                 input                       wvalid ,
                                 output reg	                wready ,
 
                                 //Write Response Channel
                                 output reg [3:0]            bid    ,
                                 output reg [1:0]            bresp  ,
-                                output reg [3:0]            buser  ,
+                                output reg [`AXI_BUSER_WIDTH-1:0]            buser  ,
                                 output reg                  bvalid ,
                                 input		                    bready ,
 
@@ -48,7 +50,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
                                 input [2:0]                 arprot  ,
                                 input [3:0]                 arqos   ,
                                 input [3:0]                 arregion,
-                                input [3:0]                 aruser  ,
+                                input [`AXI_ARUSER_WIDTH-1:0]                 aruser  ,
                                 input                       arvalid ,
                                 output reg                  arready ,
 
@@ -57,7 +59,7 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
                                 output reg [DATA_WIDTH-1: 0]    rdata  ,
                                 output reg [1:0]                rresp  ,
                                 output reg                      rlast  ,
-                                output reg [3:0]                ruser  ,
+                                output reg [`AXI_RUSER_WIDTH-1:0]                ruser  ,
                                 output reg                      rvalid ,
                                 input		                        rready  
                               ); 

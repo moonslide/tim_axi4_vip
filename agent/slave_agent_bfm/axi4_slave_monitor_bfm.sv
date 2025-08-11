@@ -1,6 +1,8 @@
 `ifndef AXI4_SLAVE_MONITOR_BFM_INCLUDED_
 `define AXI4_SLAVE_MONITOR_BFM_INCLUDED_
 
+`include "axi4_bus_config.svh"
+
 //--------------------------------------------------------------------------------------------
 //Interface : axi4_slave_monitor_bfm
 //Used as the HDL monitor for axi4
@@ -25,14 +27,14 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
                                 input [DATA_WIDTH-1: 0]wdata  ,
                                 input [(DATA_WIDTH/8)-1: 0]wstrb  ,
                                 input wlast  ,
-                                input [3: 0]wuser  ,
+                                input [`AXI_WUSER_WIDTH-1: 0]wuser  ,
                                 input wvalid ,
                                 input wready ,
 
                                 //Write Response Channel
                                 input  [3:0]bid    ,
                                 input  [1:0]bresp  ,
-                                input  [3:0]buser  ,
+                                input  [`AXI_BUSER_WIDTH-1:0]buser  ,
                                 input bvalid ,
                                 input bready ,
 
@@ -47,7 +49,7 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
                                 input [2:0]arprot  ,
                                 input [3:0]arqos   ,
                                 input [3:0]arregion,
-                                input [3:0]aruser  ,
+                                input [`AXI_ARUSER_WIDTH-1:0]aruser  ,
                                 input arvalid ,
                                 input arready ,
 
@@ -56,7 +58,7 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
                                 input  [DATA_WIDTH-1: 0]rdata  ,
                                 input  [1:0]rresp  ,
                                 input  rlast  ,
-                                input  [3:0]ruser  ,
+                                input  [`AXI_RUSER_WIDTH-1:0]ruser  ,
                                 input  rvalid ,
                                 input  rready   
   
