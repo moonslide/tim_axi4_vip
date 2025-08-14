@@ -215,11 +215,20 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+      // Wait for actual master signals before creating transactions
+      @(posedge axi4_slave_drv_bfm_h.awvalid or posedge axi4_slave_drv_bfm_h.wvalid);
+      
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_wr = axi4_slave_tx::type_id::create("req_wr");
       // Initialize with default values - BFM will fill with actual sampled values
       // Use simple randomization without constraints
-      if(!req_wr.randomize()) begin
+      if(!req_wr.randomize() with {
+        aw_wait_states == 0;
+        w_wait_states == 0;
+        b_wait_states == 0;
+        ar_wait_states == 0;
+        r_wait_states == 0;
+      }) begin
         `uvm_info("SLAVE_DRIVER_PROXY", "Randomization failed, using default values", UVM_LOW)
       end
       // Put dummy transaction into FIFOs for processing
@@ -646,12 +655,20 @@ task axi4_slave_driver_proxy::axi4_read_task();
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
+      // Wait for actual master signals before creating transactions
+      @(posedge axi4_slave_drv_bfm_h.arvalid);
+      
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_rd = axi4_slave_tx::type_id::create("req_rd");
       // Initialize with default values - BFM will fill with actual sampled values
       // Constrain address to avoid 0x0 which can cause spurious DECERR responses
       assert(req_rd.randomize() with {
         araddr != 0;  // Avoid address 0x0 to prevent spurious bus matrix errors
+        aw_wait_states == 0;
+        w_wait_states == 0;
+        b_wait_states == 0;
+        ar_wait_states == 0;
+        r_wait_states == 0;
       });
       // Put dummy transaction into FIFO for processing
       axi4_slave_read_data_in_fifo_h.put(req_rd);
