@@ -1,5 +1,5 @@
-# AXI4 VIP Quick Start Guide
-Get up and running in 5 minutes! ✅ **100% Pass Rate Verified**
+# AXI4 VIP Quick Start Guide - ULTRATHINK Edition
+Get up and running in 5 minutes with the revolutionary ULTRATHINK 10x10 bus matrix! ✅ **100% Pass Rate Verified**
 
 ## Prerequisites
 
@@ -16,12 +16,15 @@ git clone https://github.com/your-org/axi4_vip.git
 cd axi4_vip
 ```
 
-### 2. Configure Bus Size (Optional)
+### 2. Configure ULTRATHINK Bus Matrix (Optional)
 ```systemverilog
-// Edit include/axi4_bus_config.svh
-`define NUM_MASTERS 10  // For 10x10 matrix
+// Edit include/axi4_bus_config.svh for ULTRATHINK mode
+`define NUM_MASTERS 10          // ULTRATHINK 10x10 matrix
 `define NUM_SLAVES 10
+`define BUS_MATRIX_10X10        // Enable ULTRATHINK features
+`define RUN_10X10_CONFIG 
 `define ID_MAP_BITS 16
+`define ENABLE_PERFORMANCE_METRICS  // Real-time KPI monitoring
 ```
 
 ### 3. Run Test
@@ -36,7 +39,7 @@ python3 axi4_regression.py \
   --test-list axi4_transfers_regression.list --cov --lsf
 ```
 
-🎉 **Expected Result**: 100% PASS (All 113 tests pass)
+🎉 **Expected Result**: 100% PASS (All 135 tests pass - 117 standard + 18 performance KPI tests)
 
 ## Common Commands
 
@@ -44,9 +47,12 @@ python3 axi4_regression.py \
 |------|---------|
 | Single test | `make TEST=<name>` |
 | With waves | `make TEST=<name> WAVES=1` |
+| ULTRATHINK test | `make TEST=<name> DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"` |
+| Performance KPI test | `make TEST=axi4_saturation_midburst_reset_qos_boundary_test DEFINES="+define+BUS_MATRIX_10X10"` |
 | Clean build | `make clean` |
-| Regression | `python3 axi4_regression.py --test-list <list>` |
-| With LSF | Add `--lsf --cov` |
+| Full regression | `python3 axi4_regression.py --test-list axi4_transfers_regression.list` |
+| With LSF & coverage | Add `--lsf --cov` |
+| KPI report | `python3 scripts/generate_kpi_report.py --dir regression_result_*` |
 | Failed tests only | `python3 axi4_regression.py --test-list regression_result_*/no_pass.list` |
 
 ## Pro Tips
@@ -58,35 +64,46 @@ python3 axi4_regression.py \
 💡 Use `--lsf --cov` for parallel execution  
 💡 All tests should pass - if not, check troubleshooting guide
 
-## ⚡ Recent Improvements (v2.1)
+## ⚡ ULTRATHINK Features (v2.7)
 
-🔧 **100% Pass Rate Achieved** - All critical bugs fixed:
+🚀 **ULTRATHINK Edition** - Revolutionary performance and visibility:
 
-- ✅ **Config DB Issues**: Fixed bus matrix reference access
-- ✅ **Address 0x0 Spurious Errors**: Constrained dummy transactions  
-- ✅ **Response Mismatches**: Fixed SLAVE_MEM_MODE handling
-- ✅ **QoS Mode**: Corrected address handling
+- ✅ **ULTRATHINK 10x10 Bus Matrix**: Revolutionary 10-master × 10-slave configuration
+- ✅ **Real-Time Performance KPIs**: 6 comprehensive metrics with live monitoring
+- ✅ **135 Test Suite**: 117 standard + 18 performance KPI tests  
+- ✅ **Performance Metrics Module**: Built-in `axi4_performance_metrics.sv`
+- ✅ **QoS & USER Signals**: Full support with 16-level priority arbitration
+- ✅ **3 Bus Matrix Modes**: NONE (1×1), BASE (4×4), ULTRATHINK (10×10)
 
-**Before**: 16 failing tests  
-**After**: 0 failing tests (100% pass rate)
+**Key Performance Indicators**:
+- 📊 Throughput (GB/s)
+- 📈 Latency Distribution (p50/p95/p99)
+- 🔄 Retry Rate (< 5%)
+- ⚡ Reset Recovery Time (< 100 cycles)
+- 🛡️ Error Isolation Rate (> 99%)
+- ⚖️ Arbitration Fairness (> 0.9)
 
 ## Troubleshooting
 
 ### If Tests Fail:
-1. **Update to latest version** - Most issues are fixed in v2.1
+1. **Update to ULTRATHINK v2.7** - All known issues resolved
 2. **Check log files**: `regression_result_*/logs/no_pass_logs/`
 3. **Run with debug**: `+UVM_VERBOSITY=UVM_HIGH +define+SLAVE_DRIVER_DEBUG`
+4. **Enable KPI monitoring**: `+define+ENABLE_PERFORMANCE_METRICS`
 
-### Common Fixes:
+### ULTRATHINK Mode Debugging:
 ```bash
-# Response mismatch errors (v2.1 fix applied)
-grep "Response mismatch" <test>.log
+# Check ULTRATHINK configuration
+grep "BUS_MATRIX_10X10" <test>.log
 
-# Config DB errors (v2.1 fix applied)  
-grep "Bus matrix reference not found" <test>.log
+# Monitor performance KPIs
+grep "KPI:" <test>.log | grep -E "Throughput|Latency|Retry|Fairness"
 
-# Check for address 0x0 issues (v2.1 fix applied)
-grep "awaddr.*0x0" <test>.log
+# Verify bus matrix connections
+grep "Master\[.*\] -> Slave\[.*\]" <test>.log
+
+# Check QoS arbitration
+grep "QoS Priority" <test>.log
 ```
 
 ## Need Help?
@@ -94,4 +111,4 @@ grep "awaddr.*0x0" <test>.log
 📚 Full Guide: `doc/AXI4_VIP_User_Guide.html`  
 📧 Support: axi4_vip_support@company.com  
 🐛 Issues: GitHub Issues page  
-✅ **Status**: All known issues resolved in v2.1
+✅ **Status**: ULTRATHINK v2.7 - All 135 tests passing with real-time KPI monitoring

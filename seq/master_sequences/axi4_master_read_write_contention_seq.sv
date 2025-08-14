@@ -10,6 +10,7 @@ class axi4_master_read_write_contention_seq extends axi4_master_base_seq;
 
   rand int target_slave = 3;
   rand int num_transactions = 50;
+  bit write_only_mode = 0;  // Flag to force write-only transactions
   
   extern function new(string name = "axi4_master_read_write_contention_seq");
   extern task body();
@@ -40,14 +41,26 @@ task axi4_master_read_write_contention_seq::body();
     req = axi4_master_tx::type_id::create("req");
     
     start_item(req);
-    if(!req.randomize() with {
-      transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
-      awaddr[63:16] == target_addr[63:16];
-      araddr[63:16] == target_addr[63:16];
-      awburst == WRITE_INCR;
-      arburst == READ_INCR;
-    }) begin
-      `uvm_fatal(get_type_name(), "Randomization failed")
+    if(write_only_mode) begin
+      // Write-only mode for write sequencer
+      if(!req.randomize() with {
+        transfer_type == NON_BLOCKING_WRITE;
+        awaddr[63:16] == target_addr[63:16];
+        awburst == WRITE_INCR;
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
+    end else begin
+      // Normal mode - both read and write for contention
+      if(!req.randomize() with {
+        transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
+        awaddr[63:16] == target_addr[63:16];
+        araddr[63:16] == target_addr[63:16];
+        awburst == WRITE_INCR;
+        arburst == READ_INCR;
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
     end
     finish_item(req);
   end

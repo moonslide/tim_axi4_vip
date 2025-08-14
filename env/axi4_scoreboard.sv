@@ -1106,7 +1106,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     // Write_Data_Channel comparision
     //-------------------------------------------------------
     
-    if ((byte_data_cmp_verified_wdata_count != 0) && (byte_data_cmp_failed_wdata_count == 0)) begin
+    if ((byte_data_cmp_verified_wdata_count == 0) && (byte_data_cmp_failed_wdata_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("wdata count comparisons - no transactions processed"),UVM_MEDIUM);
+    end
+    else if ((byte_data_cmp_verified_wdata_count != 0) && (byte_data_cmp_failed_wdata_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("wdata count comparisions are succesful"),UVM_HIGH);
     end
     else begin
@@ -1118,7 +1121,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     end 
 
 
-    if ((byte_data_cmp_verified_wstrb_count != 0) && (byte_data_cmp_failed_wstrb_count == 0)) begin
+    if ((byte_data_cmp_verified_wstrb_count == 0) && (byte_data_cmp_failed_wstrb_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("wstrb count comparisons - no transactions processed"),UVM_MEDIUM);
+    end
+    else if ((byte_data_cmp_verified_wstrb_count != 0) && (byte_data_cmp_failed_wstrb_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("wstrb count comparisions are succesful"),UVM_HIGH);
     end
     else begin

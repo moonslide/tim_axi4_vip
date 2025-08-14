@@ -80,14 +80,20 @@ endfunction : build_phase
 // Setup test configuration based on test name for dynamic bus matrix mode and interface config
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::setup_test_configuration();
-  test_config = axi4_test_config::type_id::create("test_config");
-  
-  // Configure based on current test name
-  test_config.configure_for_test(get_type_name());
-  
-  // Store in config_db for use by environment and other components
-  uvm_config_db#(axi4_test_config)::set(this, "*", "test_config", test_config);
-  uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "*", "bus_matrix_mode", test_config.bus_matrix_mode);
+  // Check if test_config already exists in config_db (set by derived test)
+  if(!uvm_config_db#(axi4_test_config)::get(this, "*", "test_config", test_config)) begin
+    // Create new test_config only if not already set
+    test_config = axi4_test_config::type_id::create("test_config");
+    
+    // Configure based on current test name
+    test_config.configure_for_test(get_type_name());
+    
+    // Store in config_db for use by environment and other components
+    uvm_config_db#(axi4_test_config)::set(this, "*", "test_config", test_config);
+    uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "*", "bus_matrix_mode", test_config.bus_matrix_mode);
+  end else begin
+    `uvm_info(get_type_name(), "Using test_config from derived test", UVM_MEDIUM)
+  end
   
   `uvm_info(get_type_name(), $sformatf("Test configuration set: %s", test_config.get_config_summary()), UVM_MEDIUM)
 endfunction : setup_test_configuration
@@ -100,10 +106,10 @@ endfunction : setup_test_configuration
 function void axi4_base_test:: setup_axi4_env_cfg();
   axi4_env_cfg_h = axi4_env_config::type_id::create("axi4_env_cfg_h");
  
-  // Get error_inject flag from config_db if set by test
-  if (!uvm_config_db#(bit)::get(this, "*", "error_inject", axi4_env_cfg_h.error_inject)) begin
-    axi4_env_cfg_h.error_inject = 0; // default value
-  end
+  // Initialize error handling configuration flags
+  // These can be overridden by derived tests
+  axi4_env_cfg_h.error_inject = 0; // default value
+  axi4_env_cfg_h.allow_error_responses = 0; // default value
   
   axi4_env_cfg_h.has_scoreboard = 1;
   axi4_env_cfg_h.has_virtual_seqr = 1;

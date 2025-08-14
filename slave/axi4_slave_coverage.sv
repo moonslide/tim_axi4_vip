@@ -306,13 +306,27 @@ endfunction : new
 // sampling is done
 //--------------------------------------------------------------------------------------------
 function void axi4_slave_coverage::write(axi4_slave_tx t);
- `uvm_info(get_type_name(),$sformatf("Before calling SAMPLE METHOD"),UVM_HIGH);
+  // Fixed: Add null checks to prevent crashes in 10x10 configuration
+  if (t == null) begin
+    `uvm_warning(get_type_name(), "Null transaction received in coverage write - skipping")
+    return;
+  end
+  
+  if (axi4_slave_agent_cfg_h == null) begin
+    `uvm_warning(get_type_name(), "Coverage configuration not set - skipping coverage collection")
+    return;
+  end
+  
+  `uvm_info(get_type_name(),$sformatf("Before calling SAMPLE METHOD"),UVM_HIGH);
 
   axi4_slave_covergroup.sample(axi4_slave_agent_cfg_h,t);
 
-  foreach(t.wstrb[i]) begin
-    cov_wstrb = t.wstrb[i][3:0];
-    wstrb_cg.sample();
+  // Check if wstrb exists before processing
+  if (t.wstrb.size() > 0) begin
+    foreach(t.wstrb[i]) begin
+      cov_wstrb = t.wstrb[i][3:0];
+      wstrb_cg.sample();
+    end
   end
 
   `uvm_info(get_type_name(),"After calling SAMPLE METHOD",UVM_HIGH);

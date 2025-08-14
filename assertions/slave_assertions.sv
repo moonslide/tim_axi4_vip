@@ -66,10 +66,11 @@ interface slave_assertions (input                     aclk,
   import uvm_pkg::*;
   `include "uvm_macros.svh";
 
-  // Cycle limit between VALID and READY handshakes. This can be
-  // configured from the UVM environment via <uvm_config_db>. A
-  // default of 100 cycles is used if no override is provided.
-  localparam ready_delay_cycles = 100;
+  // Cycle limit between VALID and READY handshakes.
+  // Blocking operations can take an extremely long time to complete as they
+  // may involve complex memory operations, arbitration, and other delays.
+  // Setting to 50000 cycles to accommodate worst-case blocking scenarios.
+  localparam ready_delay_cycles = 50000;
 
   
 

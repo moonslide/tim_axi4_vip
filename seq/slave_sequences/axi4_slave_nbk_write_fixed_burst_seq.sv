@@ -35,7 +35,7 @@ task axi4_slave_nbk_write_fixed_burst_seq::body();
   req.transfer_type=NON_BLOCKING_WRITE;
   
   start_item(req);
-  if(!req.randomize)begin
+  if(!req.randomize())begin
     `uvm_fatal("axi4","Rand failed");
   end
   

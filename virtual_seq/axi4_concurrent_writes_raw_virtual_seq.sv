@@ -50,6 +50,16 @@ task axi4_concurrent_writes_raw_virtual_seq::body();
   `uvm_info("TC002_VSEQ", "Testing AWPROT & AWCACHE attribute handling", UVM_NONE);
   `uvm_info("TC002_VSEQ", "========================================", UVM_NONE);
   
+  // Report error injection context
+  `uvm_info("ERROR_INJECT", "========================================", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "ERROR INJECTION CONTEXT", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "This test intentionally injects the following errors:", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "1. SLVERR - Write to read-only peripheral (M3→S5)", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "2. DECERR - Write to illegal address hole (M6→S3)", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "3. SLVERR - Read from write-only region (M9→S9)", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "Expected total error responses: 3", UVM_NONE);
+  `uvm_info("ERROR_INJECT", "========================================", UVM_NONE);
+  
   // Get environment configuration and cast sequencer
   super.body();
   
@@ -237,31 +247,32 @@ endtask : setup_slave_sequences
 task axi4_concurrent_writes_raw_virtual_seq::execute_concurrent_writes();
   
   `uvm_info("TC002_VSEQ", "Executing 4 concurrent write operations", UVM_MEDIUM);
+  `uvm_info("ERROR_INJECT", "Starting error injection phase - concurrent writes", UVM_NONE);
   
   // Execute all master write sequences concurrently
   fork
     begin : M0_SECURE_CPU_WRITE
       `uvm_info("TC002_VSEQ", "Starting M0 (Secure CPU) → S0 (Secure Kernel)", UVM_MEDIUM);
       m0_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[0]);
-      `uvm_info("TC002_VSEQ", "Completed M0 → S0 write operation", UVM_MEDIUM);
+      `uvm_info("TC002_VSEQ", "Completed M0 → S0 write operation - Expected: OKAY", UVM_MEDIUM);
     end
     
     begin : M3_GPU_WRITE
-      `uvm_info("TC002_VSEQ", "Starting M3 (GPU) → S5 (RO Peripheral)", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTION] Starting M3 (GPU) → S5 (RO Peripheral) - Expecting SLVERR", UVM_NONE);
       m3_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[3]);
-      `uvm_info("TC002_VSEQ", "Completed M3 → S5 write operation", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTED] M3 → S5 write completed - SLVERR response expected", UVM_NONE);
     end
     
     begin : M6_DMA_NS_WRITE
-      `uvm_info("TC002_VSEQ", "Starting M6 (DMA-NS) → S3 (Address Hole)", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTION] Starting M6 (DMA-NS) → S3 (Address Hole) - Expecting DECERR", UVM_NONE);
       m6_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[6]);
-      `uvm_info("TC002_VSEQ", "Completed M6 → S3 write operation", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTED] M6 → S3 write completed - DECERR response expected", UVM_NONE);
     end
     
     begin : M9_LEGACY_WRITE
       `uvm_info("TC002_VSEQ", "Starting M9 (Legacy) → S9 (Attribute Monitor)", UVM_MEDIUM);
       m9_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[9]);
-      `uvm_info("TC002_VSEQ", "Completed M9 → S9 write operation", UVM_MEDIUM);
+      `uvm_info("TC002_VSEQ", "Completed M9 → S9 write operation - Expected: OKAY", UVM_MEDIUM);
     end
   join
   
@@ -279,6 +290,7 @@ endtask : execute_concurrent_writes
 task axi4_concurrent_writes_raw_virtual_seq::execute_read_after_write_verification();
   
   `uvm_info("TC002_VSEQ", "Starting Read-After-Write verification phase", UVM_MEDIUM);
+  `uvm_info("ERROR_INJECT", "Starting error injection phase - read-after-write", UVM_NONE);
   
   // Set target addresses for read-after-write sequences
   m0_raw_seq_h.target_address = m0_write_seq_h.write_address;
@@ -289,17 +301,18 @@ task axi4_concurrent_writes_raw_virtual_seq::execute_read_after_write_verificati
     begin : M0_RAW_VERIFICATION
       `uvm_info("TC002_VSEQ", "Starting M0 Read-After-Write verification", UVM_MEDIUM);
       m0_raw_seq_h.start(p_sequencer.axi4_master_read_seqr_h_all[0]);
-      `uvm_info("TC002_VSEQ", "Completed M0 RAW verification", UVM_MEDIUM);
+      `uvm_info("TC002_VSEQ", "Completed M0 RAW verification - Expected: OKAY", UVM_MEDIUM);
     end
     
     begin : M9_RAW_VERIFICATION
-      `uvm_info("TC002_VSEQ", "Starting M9 Read-After-Write verification (should fail)", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTION] Starting M9 RAW verification - Reading from write-only region", UVM_NONE);
       m9_raw_seq_h.start(p_sequencer.axi4_master_read_seqr_h_all[9]);
-      `uvm_info("TC002_VSEQ", "Completed M9 RAW verification", UVM_MEDIUM);
+      `uvm_info("ERROR_INJECT", "[ERROR INJECTED] M9 RAW completed - SLVERR response expected", UVM_NONE);
     end
   join
   
   `uvm_info("TC002_VSEQ", "Read-After-Write verification phase completed", UVM_MEDIUM);
+  `uvm_info("ERROR_INJECT", "Error injection phase completed - Total errors injected: 3", UVM_NONE);
   
   // Add delay for transaction completion and response propagation
   #1000;

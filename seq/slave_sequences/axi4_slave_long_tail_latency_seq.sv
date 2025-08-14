@@ -31,6 +31,10 @@ task axi4_slave_long_tail_latency_seq::body();
   req = axi4_slave_tx::type_id::create("req");
   
   start_item(req);
+  
+  // Disable the class constraint for wait states since we need long delays
+  req.wait_states_c1.constraint_mode(0);
+  
   if(!req.randomize() with {
     aw_wait_states == long_delay/100;
     ar_wait_states == long_delay/100;

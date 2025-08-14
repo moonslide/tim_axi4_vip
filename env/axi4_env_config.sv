@@ -65,6 +65,12 @@ class axi4_env_config extends uvm_object;
   // Import the enum type from bus matrix package
   axi4_bus_matrix_ref::bus_matrix_mode_e bus_matrix_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
 
+  // Variable: allow_error_responses
+  // Control whether error responses are allowed without failing the test
+  // When set to 1, performance metrics will allow error responses (for error injection tests)
+  // When set to 0 (default), performance metrics will fail tests with error responses
+  bit allow_error_responses = 0;
+
 //-------------------------------------------------------
 // Externally defined Tasks and Functions
 //-------------------------------------------------------

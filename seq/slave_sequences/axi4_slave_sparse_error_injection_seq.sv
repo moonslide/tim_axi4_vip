@@ -38,7 +38,7 @@ task axi4_slave_sparse_error_injection_seq::body();
       if(!req.randomize() with {
         bresp inside {WRITE_SLVERR, WRITE_DECERR};
         rresp inside {READ_SLVERR, READ_DECERR};
-        aw_wait_states == 0;
+        aw_wait_states == 0;  // 0 is within [0:6] class constraint
         w_wait_states == 0;
         ar_wait_states == 0;
         b_wait_states == 0;
@@ -51,7 +51,7 @@ task axi4_slave_sparse_error_injection_seq::body();
       if(!req.randomize() with {
         bresp == WRITE_OKAY;
         rresp == READ_OKAY;
-        aw_wait_states == 0;
+        aw_wait_states == 0;  // 0 is within [0:6] class constraint
         w_wait_states == 0;
         ar_wait_states == 0;
         b_wait_states == 0;

@@ -87,6 +87,7 @@ VCS_FLAGS += +define+UVM_VERDI_COMPWAVE -f $(COMPILE_FILE) \
              -debug_access+all -R +UVM_TESTNAME=$(test) \
              +UVM_VERBOSITY=MEDIUM +plusarg_ignore
 
+
 # Add any custom command line additions
 ifneq ($(COMMAND_ADD),)
 VCS_FLAGS += $(COMMAND_ADD)

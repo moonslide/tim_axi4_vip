@@ -12,7 +12,51 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
   //-------------------------------------------------------
   import uvm_pkg::*;
   `include "uvm_macros.svh"
-  slave_assertions S_A(); 
+  slave_assertions S_A(
+    .aclk(intf.aclk),
+    .aresetn(intf.aresetn),
+    .awid(intf.awid),
+    .awaddr(intf.awaddr),
+    .awlen(intf.awlen),
+    .awsize(intf.awsize),
+    .awburst(intf.awburst),
+    .awlock(intf.awlock),
+    .awcache(intf.awcache),
+    .awprot(intf.awprot),
+    .awvalid(intf.awvalid),
+    .awready(intf.awready),
+    .wdata(intf.wdata),
+    .wstrb(intf.wstrb),
+    .wlast(intf.wlast),
+    .wuser(intf.wuser),
+    .wvalid(intf.wvalid),
+    .wready(intf.wready),
+    .bid(intf.bid),
+    .bresp(intf.bresp),
+    .buser(intf.buser),
+    .bvalid(intf.bvalid),
+    .bready(intf.bready),
+    .arid(intf.arid),
+    .araddr(intf.araddr),
+    .arlen(intf.arlen),
+    .arsize(intf.arsize),
+    .arburst(intf.arburst),
+    .arlock(intf.arlock),
+    .arcache(intf.arcache),
+    .arprot(intf.arprot),
+    .arqos(intf.arqos),
+    .arregion(intf.arregion),
+    .aruser(intf.aruser),
+    .arvalid(intf.arvalid),
+    .arready(intf.arready),
+    .rid(intf.rid),
+    .rdata(intf.rdata),
+    .rresp(intf.rresp),
+    .rlast(intf.rlast),
+    .ruser(intf.ruser),
+    .rvalid(intf.rvalid),
+    .rready(intf.rready)
+  ); 
   //-------------------------------------------------------
   // AXI4 Slave Driver bfm instantiation
   //-------------------------------------------------------

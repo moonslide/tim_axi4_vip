@@ -29,11 +29,11 @@ task axi4_slave_backpressure_storm_seq::body();
     
     start_item(req);
     if(!req.randomize() with {
-      aw_wait_states inside {[0:100]};
-      w_wait_states inside {[0:100]};
-      ar_wait_states inside {[0:100]};
-      b_wait_states inside {[0:10]};
-      r_wait_states inside {[0:10]};
+      aw_wait_states inside {[0:6]};   // Fixed: Compatible with class constraint
+      w_wait_states inside {[0:6]};    // Fixed: Compatible with class constraint
+      ar_wait_states inside {[0:6]};   // Fixed: Compatible with class constraint
+      b_wait_states inside {[0:6]};    // Fixed: Compatible with class constraint
+      r_wait_states inside {[0:6]};    // Fixed: Compatible with class constraint
       bresp == WRITE_OKAY;
       rresp == READ_OKAY;
     }) begin

@@ -36,6 +36,10 @@ class axi4_env extends uvm_env;
   //Variable : axi4_protocol_coverage_h
   //Handle for protocol compliance coverage
   axi4_protocol_coverage axi4_protocol_coverage_h;
+  
+  //Variable : axi4_performance_metrics_h
+  //Handle for performance KPI measurements
+  axi4_performance_metrics axi4_performance_metrics_h;
 
   
   // Variable: axi4_master_agent_cfg_h;
@@ -129,6 +133,9 @@ function void axi4_env::build_phase(uvm_phase phase);
 
   // Create protocol coverage component
   axi4_protocol_coverage_h = axi4_protocol_coverage::type_id::create("axi4_protocol_coverage_h", this);
+  
+  // Create performance metrics component
+  axi4_performance_metrics_h = axi4_performance_metrics::type_id::create("axi4_performance_metrics_h", this);
 
   axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
   
@@ -224,6 +231,12 @@ function void axi4_env::connect_phase(uvm_phase phase);
     // Connect protocol coverage to master agent transaction analysis ports
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    
+    // Connect performance metrics to master agent transaction analysis ports
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_performance_metrics_h.write_addr_fifo.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_response_analysis_port.connect(axi4_performance_metrics_h.write_resp_fifo.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_performance_metrics_h.read_addr_fifo.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_data_analysis_port.connect(axi4_performance_metrics_h.read_data_fifo.analysis_export);
     
     axi4_master_agent_h[i].axi4_master_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
   end

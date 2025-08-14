@@ -19,6 +19,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  input  [1:0]awlock,
                                  input  [3:0]awcache,
                                  input  [2:0]awprot,
+                                 input  [3:0]awqos,
+                                 input  [3:0]awregion,
                                  input  [`AXI_AWUSER_WIDTH-1:0]awuser,
                                  input  awvalid,
                                  input  awready,
@@ -115,6 +117,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     req.awlock  = awlock;
     req.awcache = awcache;
     req.awprot  = awprot;
+    req.awqos   = awqos;
+    req.awregion = awregion;
     req.awuser  = awuser;
     req.aw_wait_states = aw_ws;
     `uvm_info("FROM MASTER MON BFM",$sformatf("datapacket =%p",req),UVM_HIGH)

@@ -215,9 +215,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // Wait for actual master signals before creating transactions
-      @(posedge axi4_slave_drv_bfm_h.awvalid or posedge axi4_slave_drv_bfm_h.wvalid);
-      
+      // Create transaction immediately - BFM will handle signal waiting
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_wr = axi4_slave_tx::type_id::create("req_wr");
       // Initialize with default values - BFM will fill with actual sampled values
@@ -655,9 +653,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
     if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
-      // Wait for actual master signals before creating transactions
-      @(posedge axi4_slave_drv_bfm_h.arvalid);
-      
+      // Create transaction immediately - BFM will handle signal waiting
       // In SLAVE_MEM_MODE, create a dummy transaction for the BFM to fill with real signal data
       req_rd = axi4_slave_tx::type_id::create("req_rd");
       // Initialize with default values - BFM will fill with actual sampled values

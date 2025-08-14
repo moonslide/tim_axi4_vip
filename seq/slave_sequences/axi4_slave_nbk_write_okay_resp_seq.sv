@@ -35,7 +35,7 @@ task axi4_slave_nbk_write_okay_resp_seq::body();
   req.transfer_type=NON_BLOCKING_WRITE;
 
   start_item(req);
-  if(!req.randomize)begin
+  if(!req.randomize())begin
     `uvm_fatal("axi4","Rand failed");
   end
   `uvm_info(get_type_name(), $sformatf("slave_seq \n%s",req.sprint()), UVM_NONE); 

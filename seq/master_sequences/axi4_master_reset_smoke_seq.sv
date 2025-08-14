@@ -11,6 +11,7 @@ class axi4_master_reset_smoke_seq extends axi4_master_base_seq;
 
   // Number of simple transactions to send after reset
   rand int num_txns = 5;
+  int use_bus_matrix_addressing = 0;  // 0=NONE, 1=4x4, 2=10x10
 
   constraint num_txns_c {
     num_txns inside {[1:10]};
@@ -52,16 +53,41 @@ task axi4_master_reset_smoke_seq::body();
     req = axi4_master_tx::type_id::create("req");
     
     start_item(req);
-    if(!req.randomize() with {
-      awburst == WRITE_INCR;
-      arburst == READ_INCR;
-      transfer_type == BLOCKING_WRITE;
-      awsize == WRITE_4_BYTES;
-      arsize == READ_4_BYTES;
-      awlen == 0;  // Single beat
-      arlen == 0;  // Single beat
-    }) begin
-      `uvm_fatal(get_type_name(), "Randomization failed")
+    if(use_bus_matrix_addressing == 1) begin
+      // For 4x4 base matrix mode, use DDR memory address range
+      if(!req.randomize() with {
+        awaddr inside {[64'h0000_0100_0000_0000:64'h0000_0100_00FF_FFFF]};  // 4x4 DDR range
+        awburst == WRITE_INCR;
+        transfer_type == BLOCKING_WRITE;
+        awsize == WRITE_4_BYTES;
+        awlen == 0;  // Single beat
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
+    end else if(use_bus_matrix_addressing == 2) begin
+      // For 10x10 enhanced matrix mode, use DDR addresses
+      if(!req.randomize() with {
+        awaddr inside {[64'h0000_0008_0000_0000:64'h0000_0008_00FF_FFFF]};  // 10x10 DDR range
+        awburst == WRITE_INCR;
+        transfer_type == BLOCKING_WRITE;
+        awsize == WRITE_4_BYTES;
+        awlen == 0;  // Single beat
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
+    end else begin
+      // For NONE mode, use default random addresses
+      if(!req.randomize() with {
+        awburst == WRITE_INCR;
+        arburst == READ_INCR;
+        transfer_type == BLOCKING_WRITE;
+        awsize == WRITE_4_BYTES;
+        arsize == READ_4_BYTES;
+        awlen == 0;  // Single beat
+        arlen == 0;  // Single beat
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
     end
     finish_item(req);
     

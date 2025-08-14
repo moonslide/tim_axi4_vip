@@ -108,13 +108,15 @@ class axi4_protocol_coverage extends uvm_subscriber#(axi4_master_tx);
     // AWLEN violations
     cp_awlen_violation: coverpoint master_tx_h.awlen {
       bins normal_len = {[0:255]};
-      illegal_bins out_of_spec = {[256:$]};
+      // Fixed: Removed illegal bin as awlen is 8 bits, max value is 255 which is legal
+      // illegal_bins out_of_spec = {[256:$]};
     }
     
     // ARLEN violations
     cp_arlen_violation: coverpoint master_tx_h.arlen {
       bins normal_len = {[0:255]};
-      illegal_bins out_of_spec = {[256:$]};
+      // Fixed: Removed illegal bin as arlen is 8 bits, max value is 255 which is legal
+      // illegal_bins out_of_spec = {[256:$]};
     }
     
     // Exclusive access coverage

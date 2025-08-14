@@ -10,6 +10,7 @@ class axi4_master_4kb_boundary_seq extends axi4_master_base_seq;
 
   rand int num_transactions = 20;
   rand bit test_illegal = 0;
+  bit write_only_mode = 0;  // Flag to force write-only transactions
   
   extern function new(string name = "axi4_master_4kb_boundary_seq");
   extern task body();
@@ -42,16 +43,29 @@ task axi4_master_4kb_boundary_seq::body();
       end
     end else begin
       // Create legal transaction near boundary
-      if(!req.randomize() with {
-        transfer_type inside {BLOCKING_WRITE, BLOCKING_READ};
-        awburst == WRITE_INCR;
-        arburst == READ_INCR;
-        awaddr[11:0] inside {[12'h000:12'hF00]};
-        araddr[11:0] inside {[12'h000:12'hF00]};
-        awlen inside {[0:15]};
-        arlen inside {[0:15]};
-      }) begin
-        `uvm_fatal(get_type_name(), "Randomization failed")
+      if(write_only_mode) begin
+        // Write-only mode for write sequencer
+        if(!req.randomize() with {
+          transfer_type == BLOCKING_WRITE;
+          awburst == WRITE_INCR;
+          awaddr[11:0] inside {[12'h000:12'hF00]};
+          awlen inside {[0:15]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
+      end else begin
+        // Normal mode - both read and write
+        if(!req.randomize() with {
+          transfer_type inside {BLOCKING_WRITE, BLOCKING_READ};
+          awburst == WRITE_INCR;
+          arburst == READ_INCR;
+          awaddr[11:0] inside {[12'h000:12'hF00]};
+          araddr[11:0] inside {[12'h000:12'hF00]};
+          awlen inside {[0:15]};
+          arlen inside {[0:15]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
       end
     end
     finish_item(req);

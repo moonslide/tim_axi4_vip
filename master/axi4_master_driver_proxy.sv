@@ -210,9 +210,13 @@ task axi4_master_driver_proxy::axi4_write_task();
       axi4_master_seq_item_converter::from_write_class(req_wr,struct_write_packet);
       `uvm_info(get_type_name(),$sformatf("WRITE_TASK::Checking transfer type = %s",req_wr.transfer_type),UVM_MEDIUM); 
       
-      //Calling 3 write tasks from axi4_master_drv_bfm in HDL side
-      axi4_master_drv_bfm_h.axi4_write_address_channel_task(struct_write_packet,struct_cfg);
-      axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_packet,struct_cfg);
+      //For blocking writes, run address and data channels in parallel per AXI protocol
+      //Address and data channels are independent and can operate concurrently
+      fork
+        axi4_master_drv_bfm_h.axi4_write_address_channel_task(struct_write_packet,struct_cfg);
+        axi4_master_drv_bfm_h.axi4_write_data_channel_task(struct_write_packet,struct_cfg);
+      join
+      //Response channel must wait for both address and data to complete
       axi4_master_drv_bfm_h.axi4_write_response_channel_task(struct_write_packet,struct_cfg);
 
       //Converts the struct packet to req packet

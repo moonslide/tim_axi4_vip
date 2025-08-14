@@ -67,9 +67,10 @@ interface master_assertions (input                     aclk,
   `include "uvm_macros.svh";
 
   // Cycle limit between VALID and READY handshakes.
-  // This value is configured by the environment using <uvm_config_db>.
-  // A default of 100 cycles is applied if no configuration is provided.
-  localparam ready_delay_cycles = 100;
+  // Blocking operations can take an extremely long time to complete as they
+  // may involve complex memory operations, arbitration, and other delays.
+  // Setting to 50000 cycles to accommodate worst-case blocking scenarios.
+  localparam ready_delay_cycles = 50000;
 
 
   

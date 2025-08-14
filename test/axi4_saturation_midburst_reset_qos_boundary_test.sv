@@ -6,6 +6,11 @@
 // Test combining saturation, mid-burst reset, QoS, and boundary testing
 // Supports both NONE (no ref model) and ENHANCED (10x10) bus matrix modes
 //
+// Configuration options:
+// 1. Random mode: Randomly selects between NONE and BUS_ENHANCED_MATRIX
+// 2. Plusarg: +BUS_MATRIX_MODE=NONE or +BUS_MATRIX_MODE=ENHANCED
+// 3. Environment: Set BUS_MATRIX_MODE env variable
+//
 // Timeline from axi_stress_reset_test.md:
 // Phase-1: |==== saturation_seq (0~120k) ====| + |==== qos_seq (0~120k) ====|
 // Hook    :                ^ midburst_reset_seq at 80k (mid-burst)
@@ -30,6 +35,8 @@ class axi4_saturation_midburst_reset_qos_boundary_test extends axi4_base_test;
   int num_masters;
   int num_slaves;
   bit is_enhanced_mode;
+  bit is_4x4_ref_mode;
+  string bus_matrix_mode_str;
   
   // Test phase control and timing
   bit phase1_done = 0;
@@ -52,6 +59,7 @@ class axi4_saturation_midburst_reset_qos_boundary_test extends axi4_base_test;
   
   extern function new(string name = "axi4_saturation_midburst_reset_qos_boundary_test", uvm_component parent = null);
   extern virtual function void build_phase(uvm_phase phase);
+  extern virtual function void configure_bus_matrix_mode();
   extern virtual task run_phase(uvm_phase phase);
   extern virtual task run_phase1_saturation_qos(uvm_phase phase);
   extern virtual task run_phase2_backpressure(uvm_phase phase);
@@ -67,14 +75,26 @@ function axi4_saturation_midburst_reset_qos_boundary_test::new(string name = "ax
 endfunction : new
 
 function void axi4_saturation_midburst_reset_qos_boundary_test::build_phase(uvm_phase phase);
+  int override_masters, override_slaves;
+  axi4_bus_matrix_ref::bus_matrix_mode_e override_mode;
+  
+  // Configure bus matrix mode BEFORE calling super.build_phase()
+  // This ensures our configuration takes priority over test_config
+  configure_bus_matrix_mode();
+  
   super.build_phase(phase);
   
-  // Determine bus matrix mode and adjust test accordingly
-  if (test_config != null) begin
-    is_enhanced_mode = (test_config.bus_matrix_mode == axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX);
-  end else begin
-    // Default to NONE mode if test_config not available
-    is_enhanced_mode = 0;
+  // Apply our bus matrix mode overrides after super.build_phase()
+  if (uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::get(this, "*", "bus_matrix_mode", override_mode)) begin
+    axi4_env_cfg_h.bus_matrix_mode = override_mode;
+  end
+  
+  if (uvm_config_db#(int)::get(this, "*", "override_num_masters", override_masters)) begin
+    axi4_env_cfg_h.no_of_masters = override_masters;
+  end
+  
+  if (uvm_config_db#(int)::get(this, "*", "override_num_slaves", override_slaves)) begin
+    axi4_env_cfg_h.no_of_slaves = override_slaves;
   end
   
   // Set number of masters and slaves based on configuration
@@ -84,7 +104,7 @@ function void axi4_saturation_midburst_reset_qos_boundary_test::build_phase(uvm_
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), "AXI4 SATURATION MIDBURST RESET QOS BOUNDARY TEST", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
-  `uvm_info(get_type_name(), $sformatf("Bus Matrix Mode: %s", is_enhanced_mode ? "ENHANCED (10x10)" : "NONE (no ref model)"), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Bus Matrix Mode: %s", bus_matrix_mode_str), UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
   `uvm_info(get_type_name(), "Test Timeline (from axi_stress_reset_test.md):", UVM_LOW)
   `uvm_info(get_type_name(), "  Phase-1: Parallel saturation + QoS (0~120k cycles)", UVM_LOW)
@@ -95,9 +115,17 @@ function void axi4_saturation_midburst_reset_qos_boundary_test::build_phase(uvm_
   `uvm_info(get_type_name(), "  Phase-5: Reset smoke cleanup", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   
-  // Configure slave response mode for memory testing if needed
-  if (is_enhanced_mode) begin
-    `uvm_info(get_type_name(), "Configuring slaves for ENHANCED mode with memory model", UVM_MEDIUM)
+  // Configure slave response mode for memory testing based on mode
+  if (is_enhanced_mode || is_4x4_ref_mode) begin
+    `uvm_info(get_type_name(), $sformatf("Configuring slaves for %s mode with memory model", 
+              is_enhanced_mode ? "ENHANCED 10x10" : "4x4 REF"), UVM_MEDIUM)
+    foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
+      axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+    end
+  end else begin
+    `uvm_info(get_type_name(), "Configuring for NONE mode (no reference model, 4x4 topology)", UVM_MEDIUM)
+    // Configure slaves for consistent behavior even in NONE mode
     foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;
       axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
@@ -106,12 +134,119 @@ function void axi4_saturation_midburst_reset_qos_boundary_test::build_phase(uvm_
   
 endfunction : build_phase
 
+function void axi4_saturation_midburst_reset_qos_boundary_test::configure_bus_matrix_mode();
+  string mode_str;
+  bit mode_configured = 0;
+  int random_mode;
+  axi4_bus_matrix_ref::bus_matrix_mode_e selected_mode;
+  int selected_masters, selected_slaves;
+  
+  // Priority 1: Check for command-line plusarg
+  if ($value$plusargs("BUS_MATRIX_MODE=%s", mode_str)) begin
+    `uvm_info(get_type_name(), $sformatf("Bus matrix mode from plusarg: %s", mode_str), UVM_MEDIUM)
+    if (mode_str == "ENHANCED" || mode_str == "enhanced" || mode_str == "10x10") begin
+      selected_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+      selected_masters = 10;
+      selected_slaves = 10;
+      is_enhanced_mode = 1;
+      is_4x4_ref_mode = 0;
+      bus_matrix_mode_str = "ENHANCED (10x10 with ref model)";
+      mode_configured = 1;
+    end else if (mode_str == "4x4" || mode_str == "4X4" || mode_str == "BASE" || mode_str == "base") begin
+      selected_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+      selected_masters = 4;
+      selected_slaves = 4;
+      is_enhanced_mode = 0;
+      is_4x4_ref_mode = 1;
+      bus_matrix_mode_str = "BASE_BUS_MATRIX (4x4 with ref model)";
+      mode_configured = 1;
+    end else if (mode_str == "NONE" || mode_str == "none") begin
+      selected_mode = axi4_bus_matrix_ref::NONE;
+      selected_masters = 4;
+      selected_slaves = 4;
+      is_enhanced_mode = 0;
+      is_4x4_ref_mode = 0;
+      bus_matrix_mode_str = "NONE (no ref model, 4x4 topology)";
+      mode_configured = 1;
+    end else if (mode_str == "RANDOM" || mode_str == "random") begin
+      // User explicitly requested random selection
+      mode_configured = 0;
+    end else begin
+      `uvm_warning(get_type_name(), $sformatf("Invalid BUS_MATRIX_MODE: %s. Valid: NONE, 4x4, ENHANCED, RANDOM. Using random selection.", mode_str))
+      mode_configured = 0;
+    end
+  end
+  
+  // Priority 2: Random selection if no configuration provided (3-way random)
+  if (!mode_configured) begin
+    random_mode = $urandom_range(0, 2); // 0=NONE, 1=4x4_REF, 2=ENHANCED_10x10
+    `uvm_info(get_type_name(), $sformatf("Randomly selecting bus matrix mode. Random value: %0d", random_mode), UVM_MEDIUM)
+    
+    if (random_mode == 2) begin
+      selected_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+      selected_masters = 10;
+      selected_slaves = 10;
+      is_enhanced_mode = 1;
+      is_4x4_ref_mode = 0;
+      bus_matrix_mode_str = "ENHANCED (10x10 with ref model) [RANDOM]";
+      `uvm_info(get_type_name(), "Random selection: ENHANCED 10x10 mode", UVM_LOW)
+    end else if (random_mode == 1) begin
+      selected_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+      selected_masters = 4;
+      selected_slaves = 4;
+      is_enhanced_mode = 0;
+      is_4x4_ref_mode = 1;
+      bus_matrix_mode_str = "BASE_BUS_MATRIX (4x4 with ref model) [RANDOM]";
+      `uvm_info(get_type_name(), "Random selection: BASE_BUS_MATRIX mode", UVM_LOW)
+    end else begin
+      selected_mode = axi4_bus_matrix_ref::NONE;
+      selected_masters = 4;
+      selected_slaves = 4;
+      is_enhanced_mode = 0;
+      is_4x4_ref_mode = 0;
+      bus_matrix_mode_str = "NONE (no ref model, 4x4 topology) [RANDOM]";
+      `uvm_info(get_type_name(), "Random selection: NONE mode", UVM_LOW)
+    end
+  end
+  
+  // Create test_config if it doesn't exist and set our values
+  if (test_config == null) begin
+    test_config = axi4_test_config::type_id::create("test_config");
+  end
+  
+  // Override test_config settings to ensure our mode takes priority
+  test_config.bus_matrix_mode = selected_mode;
+  test_config.num_masters = selected_masters;
+  test_config.num_slaves = selected_slaves;
+  `uvm_info(get_type_name(), "Setting test_config with selected bus matrix mode", UVM_MEDIUM)
+  
+  // Store in config_db for base test to use - use parent context to ensure base test gets it
+  uvm_config_db#(axi4_test_config)::set(null, "*", "test_config", test_config);
+  
+  // Store configuration for use after super.build_phase()
+  // These will be applied to axi4_env_cfg_h after it's created
+  uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::set(this, "*", "bus_matrix_mode", selected_mode);
+  uvm_config_db#(int)::set(this, "*", "override_num_masters", selected_masters);
+  uvm_config_db#(int)::set(this, "*", "override_num_slaves", selected_slaves);
+  
+  `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
+  `uvm_info(get_type_name(), "BUS MATRIX MODE CONFIGURATION", UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Final Mode: %s", bus_matrix_mode_str), UVM_LOW)
+  `uvm_info(get_type_name(), "Configuration Priority:", UVM_LOW)
+  `uvm_info(get_type_name(), "  1. Command line: +BUS_MATRIX_MODE=NONE/4x4/BASE/ENHANCED/RANDOM", UVM_LOW)
+  `uvm_info(get_type_name(), "  2. test_config (if available)", UVM_LOW)
+  `uvm_info(get_type_name(), "  3. Random selection (default)", UVM_LOW)
+  `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
+  
+endfunction : configure_bus_matrix_mode
+
 task axi4_saturation_midburst_reset_qos_boundary_test::run_phase(uvm_phase phase);
   
   test_start_time = $time;
   
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("TEST STARTING at time %0t", test_start_time), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Mode: %s", bus_matrix_mode_str), UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   
   phase.raise_objection(this);
@@ -152,6 +287,7 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase(uvm_phase phase
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("TEST COMPLETED at time %0t", $time), UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Total test duration: %0t", $time - test_start_time), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Final Mode Used: %s", bus_matrix_mode_str), UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   
   phase.drop_objection(this);
@@ -164,6 +300,7 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase1_saturation_qos
   
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("PHASE 1 STARTING at %0t: Parallel saturation + QoS arbitration", phase1_start_time), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Mode: %s", is_enhanced_mode ? "ENHANCED" : "NONE"), UVM_LOW)
   `uvm_info(get_type_name(), "Target: 120k cycles (120us) with mid-burst reset hook at 80k cycles", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   
@@ -174,6 +311,9 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase1_saturation_qos
     // Create saturation sequence
     saturation_seq[master_id] = axi4_master_all_to_all_saturation_seq::type_id::create($sformatf("saturation_seq_%0d", master_id));
     saturation_seq[master_id].num_transactions = is_enhanced_mode ? 50 : 25;
+    
+    // Bus matrix addressing handled automatically through test configuration
+    
     `uvm_info(get_type_name(), $sformatf("Created saturation_seq[%0d] with %0d transactions", 
               master_id, saturation_seq[master_id].num_transactions), UVM_MEDIUM)
     
@@ -181,6 +321,9 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase1_saturation_qos
     qos_seq[master_id] = axi4_master_qos_arbitration_seq::type_id::create($sformatf("qos_seq_%0d", master_id));
     qos_seq[master_id].qos_value = master_id % 16;
     qos_seq[master_id].num_transactions = is_enhanced_mode ? 30 : 15;
+    
+    // Bus matrix addressing handled automatically through test configuration
+    
     `uvm_info(get_type_name(), $sformatf("Created qos_seq[%0d] with QoS=%0d, %0d transactions", 
               master_id, qos_seq[master_id].qos_value, qos_seq[master_id].num_transactions), UVM_MEDIUM)
   end
@@ -233,6 +376,9 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase1_saturation_qos
       `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
       
       midburst_reset_seq = axi4_master_midburst_reset_read_seq::type_id::create("midburst_reset_seq");
+      
+      // Bus matrix addressing handled automatically through test configuration
+      
       `uvm_info(get_type_name(), "[HOOK] Starting axi4_master_midburst_reset_read_seq", UVM_MEDIUM)
       midburst_reset_seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_read_seqr_h);
       `uvm_info(get_type_name(), $sformatf("[HOOK] Completed mid-burst reset sequence at %0t", $time), UVM_MEDIUM)
@@ -268,7 +414,7 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase2_backpressure(u
   // Create backpressure sequences with limited patterns
   for(int s = 0; s < num_slaves; s++) begin
     backpressure_seq[s] = axi4_slave_backpressure_storm_seq::type_id::create($sformatf("backpressure_seq_%0d", s));
-    backpressure_seq[s].num_patterns = 5;
+    backpressure_seq[s].num_patterns = is_enhanced_mode ? 5 : 3; // Adjust based on mode
     `uvm_info(get_type_name(), $sformatf("Created backpressure_seq[%0d] with %0d patterns", 
               s, backpressure_seq[s].num_patterns), UVM_MEDIUM)
   end
@@ -325,8 +471,10 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase3_boundary(uvm_p
   boundary_seq = axi4_master_4kb_boundary_seq::type_id::create("boundary_seq");
   boundary_seq.num_transactions = is_enhanced_mode ? 50 : 25; // Reduced for practical execution
   
-  `uvm_info(get_type_name(), $sformatf("Starting 4KB boundary sequence with %0d transactions", 
-            boundary_seq.num_transactions), UVM_MEDIUM)
+  // Bus matrix addressing handled automatically through test configuration
+  
+  `uvm_info(get_type_name(), $sformatf("Starting 4KB boundary sequence with %0d transactions (%s mode)", 
+            boundary_seq.num_transactions, is_enhanced_mode ? "ENHANCED" : "NONE"), UVM_MEDIUM)
   
   fork
     begin
@@ -366,8 +514,8 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase4_error_injectio
   error_seq.error_rate = 1; // 1% as per specification
   error_seq.num_transactions = is_enhanced_mode ? 50 : 25;
   
-  `uvm_info(get_type_name(), $sformatf("Starting sparse error injection with %0d%% error rate, %0d transactions", 
-            error_seq.error_rate, error_seq.num_transactions), UVM_MEDIUM)
+  `uvm_info(get_type_name(), $sformatf("Starting sparse error injection with %0d%% error rate, %0d transactions (%s mode)", 
+            error_seq.error_rate, error_seq.num_transactions, is_enhanced_mode ? "ENHANCED" : "NONE"), UVM_MEDIUM)
   
   fork
     begin
@@ -405,6 +553,8 @@ task axi4_saturation_midburst_reset_qos_boundary_test::run_phase5_cleanup(uvm_ph
   // Create and run cleanup sequence with minimal transactions
   smoke_seq = axi4_master_reset_smoke_seq::type_id::create("smoke_seq");
   smoke_seq.num_txns = 5;
+  
+  // Bus matrix addressing handled automatically through test configuration
   
   `uvm_info(get_type_name(), $sformatf("Starting reset smoke cleanup with %0d transactions", 
             smoke_seq.num_txns), UVM_MEDIUM)

@@ -16,6 +16,7 @@ class axi4_blocking_write_read_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_blocking_write_read_test", uvm_component parent = null);
+  extern function void build_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_blocking_write_read_test
@@ -33,6 +34,18 @@ function axi4_blocking_write_read_test::new(string name = "axi4_blocking_write_r
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Configure assertion timeouts for blocking operations
+//
+// Parameters:
+//  phase - uvm phase
+//--------------------------------------------------------------------------------------------
+function void axi4_blocking_write_read_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+  
+endfunction : build_phase
+
+//--------------------------------------------------------------------------------------------
 // Task: run_phase
 // Creates the axi4_virtual_write_read_seq sequence and starts the write virtual sequences
 //
@@ -43,6 +56,7 @@ task axi4_blocking_write_read_test::run_phase(uvm_phase phase);
 
   axi4_virtual_bk_write_read_seq_h=axi4_virtual_bk_write_read_seq::type_id::create("axi4_virtual_bk_write_read_seq_h");
   `uvm_info(get_type_name(),$sformatf("axi4_blocking_write_read_test"),UVM_LOW);
+  
   phase.raise_objection(this);
   axi4_virtual_bk_write_read_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
   phase.drop_objection(this);
