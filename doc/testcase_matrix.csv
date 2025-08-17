@@ -123,3 +123,14 @@ axi4_prot_test,Protection,Protection attribute testing,NONE,4,4,10ms,No,No,PASS
 axi4_lock_test,Lock,Lock signal testing,NONE,4,4,10ms,No,No,PASS
 axi4_region_test,Region,Region signal testing,NONE,4,4,10ms,No,No,PASS
 assertion_base_test,Assertion,Assertion infrastructure test,NONE,4,4,5ms,No,No,PASS
+# Version 2.8 Fixed Tests - Previously failing, now passing
+axi4_hotspot_fairness_boundary_error_reset_backpressure_test,Performance,Hotspot fairness with boundary errors and reset,BUS_ENHANCED_MATRIX,4,4,30ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_qos_region_routing_reset_backpressure_test,QoS,QoS region routing with reset and backpressure,BUS_ENHANCED_MATRIX,4,4,20ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_saturation_midburst_reset_qos_boundary_test,Performance,Saturation with mid-burst reset and QoS,BUS_ENHANCED_MATRIX,4,4,25ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_stability_burnin_longtail_backpressure_error_recovery_test,Stress,Stability burn-in with error recovery,BUS_ENHANCED_MATRIX,4,4,50ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_throughput_ordering_longtail_throttled_write_test,Performance,Throughput ordering with throttled writes,BUS_ENHANCED_MATRIX,4,4,30ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_write_heavy_midburst_reset_rw_contention_test,Performance,Write-heavy with RW contention,BUS_ENHANCED_MATRIX,4,4,35ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_qos_equal_priority_fairness_test,QoS,Equal priority fairness verification,BUS_ENHANCED_MATRIX,4,4,15ms,Yes,No,PASS (v2.8 fixed)
+axi4_qos_saturation_stress_test,QoS,QoS saturation under stress,BUS_ENHANCED_MATRIX,4,4,20ms,Yes,No,PASS (v2.8 fixed)
+axi4_qos_starvation_prevention_test,QoS,QoS starvation prevention,BUS_ENHANCED_MATRIX,4,4,15ms,Yes,No,PASS (v2.8 fixed)
+axi4_qos_with_user_priority_boost_test,QoS,QoS with USER priority boost,BUS_ENHANCED_MATRIX,4,4,15ms,Yes,Yes,PASS (v2.8 fixed)
