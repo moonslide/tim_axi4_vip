@@ -74,23 +74,57 @@ task axi4_master_one_to_many_fanout_seq::body();
       start_item(req);
       if(write_only_mode) begin
         // Write-only mode for write sequencer
-        if(!req.randomize() with {
-          transfer_type == NON_BLOCKING_WRITE;
-          awaddr[63:16] == slave_addr[s][63:16];
-          awburst == WRITE_INCR;
-        }) begin
-          `uvm_fatal(get_type_name(), "Randomization failed")
+        // Constrain AWID based on bus matrix mode
+        if(use_bus_matrix_addressing == 2) begin
+          // 10x10 mode: AWID can be 0-9
+          if(!req.randomize() with {
+            transfer_type == NON_BLOCKING_WRITE;
+            awaddr[63:16] == slave_addr[s][63:16];
+            awburst == WRITE_INCR;
+            awid inside {[0:9]};
+          }) begin
+            `uvm_fatal(get_type_name(), "Randomization failed")
+          end
+        end else begin
+          // 4x4 and NONE modes: AWID must be 0-3
+          if(!req.randomize() with {
+            transfer_type == NON_BLOCKING_WRITE;
+            awaddr[63:16] == slave_addr[s][63:16];
+            awburst == WRITE_INCR;
+            awid inside {[0:3]};
+          }) begin
+            `uvm_fatal(get_type_name(), "Randomization failed")
+          end
         end
       end else begin
         // Normal mode - both read and write
-        if(!req.randomize() with {
-          transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
-          awaddr[63:16] == slave_addr[s][63:16];
-          araddr[63:16] == slave_addr[s][63:16];
-          awburst == WRITE_INCR;
-          arburst == READ_INCR;
-        }) begin
-          `uvm_fatal(get_type_name(), "Randomization failed")
+        // Constrain AWID/ARID based on bus matrix mode
+        if(use_bus_matrix_addressing == 2) begin
+          // 10x10 mode: IDs can be 0-9
+          if(!req.randomize() with {
+            transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
+            awaddr[63:16] == slave_addr[s][63:16];
+            araddr[63:16] == slave_addr[s][63:16];
+            awburst == WRITE_INCR;
+            arburst == READ_INCR;
+            awid inside {[0:9]};
+            arid inside {[0:9]};
+          }) begin
+            `uvm_fatal(get_type_name(), "Randomization failed")
+          end
+        end else begin
+          // 4x4 and NONE modes: IDs must be 0-3
+          if(!req.randomize() with {
+            transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
+            awaddr[63:16] == slave_addr[s][63:16];
+            araddr[63:16] == slave_addr[s][63:16];
+            awburst == WRITE_INCR;
+            arburst == READ_INCR;
+            awid inside {[0:3]};
+            arid inside {[0:3]};
+          }) begin
+            `uvm_fatal(get_type_name(), "Randomization failed")
+          end
         end
       end
       finish_item(req);

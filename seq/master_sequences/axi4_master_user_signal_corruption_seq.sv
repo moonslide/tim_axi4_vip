@@ -52,6 +52,10 @@ class axi4_master_user_signal_corruption_seq extends axi4_master_base_seq;
   int detection_count;
   int recovery_count;
   
+  // Configuration for bus matrix mode
+  bit is_enhanced_mode = 0;
+  int target_slave_id = 0;
+  
   // Constraints
   constraint corruption_cfg_c {
     corruption_type dist {
@@ -119,9 +123,17 @@ task axi4_master_user_signal_corruption_seq::body();
   bit [31:0] corrupted_user_signal;
   bit corruption_detected;
   string corruption_desc;
-  int target_slave_id;
+  bit [63:0] base_addr;
+  bit [63:0] addr_offset;
+  axi4_bus_matrix_ref::bus_matrix_mode_e bus_mode;
   
   req = axi4_master_tx::type_id::create("req");
+  
+  // Get bus matrix mode from config_db
+  if(!uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::get(m_sequencer, "", "bus_matrix_mode", bus_mode)) begin
+    bus_mode = axi4_bus_matrix_ref::NONE; // Default to NONE
+  end
+  
   start_item(req);
   
   // Generate original clean USER data
@@ -147,8 +159,54 @@ task axi4_master_user_signal_corruption_seq::body();
   `uvm_info(get_type_name(), $sformatf("  Corrupted: 0x%08h", corrupted_user_signal), UVM_MEDIUM)
   `uvm_info(get_type_name(), $sformatf("  Detection: %s", corruption_detected ? "DETECTED" : "MISSED"), UVM_MEDIUM)
   
-  // For ultrathink 10x10 configuration, use proper address mapping
-  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
+  // Use mode-aware address mapping based on actual bus matrix mode
+  if (bus_mode == axi4_bus_matrix_ref::NONE || bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
+    // 4x4 BASE mode addresses matching AXI_MATRIX.txt
+    // S0: DDR_Memory at 0x0000_0100_0000_0000 (R/W)
+    // S1: Boot_ROM at 0x0000_0000_0000_0000 (Read-Only)
+    // S2: Peripheral_Regs at 0x0000_0010_0000_0000 (R/W)
+    // S3: HW_Fuse_Box at 0x0000_0020_0000_0000 (Read-Only)
+    // Only target writable slaves (0 and 2)
+    if (target_slave_id == 1 || target_slave_id == 3) begin
+      target_slave_id = (target_slave_id == 1) ? 0 : 2; // Redirect to writable slave
+    end
+    case(target_slave_id)
+      0: base_addr = 64'h0000_0100_0000_0000; // DDR_Memory (R/W)
+      2: base_addr = 64'h0000_0010_0000_0000; // Peripheral_Regs (R/W)
+      default: base_addr = 64'h0000_0100_0000_0000; // Default to DDR
+    endcase
+  end else begin
+    // 10x10 ENHANCED mode addresses
+    // S3: Illegal Address Hole - NO ACCESS ALLOWED
+    // S4: Instruction-only - READ-ONLY
+    // S5: Read-only peripheral - READ-ONLY  
+    // Redirect to writable slaves only (0, 1, 2, 6, 7, 8, 9)
+    if (target_slave_id == 3 || target_slave_id == 4 || target_slave_id == 5) begin
+      // Redirect to a writable slave
+      case(target_slave_id)
+        3: target_slave_id = 0; // S3 is illegal, use S0 instead
+        4: target_slave_id = 1; // S4 is instruction-only, use S1 instead
+        5: target_slave_id = 2; // S5 is read-only, use S2 instead
+        default: target_slave_id = 0;
+      endcase
+    end
+    
+    case(target_slave_id)
+      0: base_addr = 64'h0000_0008_0000_0000; // DDR Secure (R/W)
+      1: base_addr = 64'h0000_0008_4000_0000; // DDR Non-Secure (R/W)
+      2: base_addr = 64'h0000_0008_8000_0000; // DDR Shared (R/W)
+      3: base_addr = 64'h0000_0008_c000_0000; // Illegal - should never reach here
+      4: base_addr = 64'h0000_0009_0000_0000; // Instruction-only - should never reach here
+      5: base_addr = 64'h0000_000a_0000_0000; // Read-only - should never reach here
+      6: base_addr = 64'h0000_000a_0001_0000; // Privileged-Only (R/W)
+      7: base_addr = 64'h0000_000a_0002_0000; // Secure-Only (R/W)
+      8: base_addr = 64'h0000_000a_0003_0000; // Non-Secure (R/W)
+      9: base_addr = 64'h0000_000a_0004_0000; // Exclusive Monitor (R/W)
+      default: base_addr = 64'h0000_0008_0000_0000;
+    endcase
+  end
+  
+  addr_offset = $urandom() & 64'hFFF;
   
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
@@ -157,7 +215,20 @@ task axi4_master_user_signal_corruption_seq::body();
     req.awlen == 8'h00;  // Single beat burst
     req.awuser == corrupted_user_signal;
     req.wuser == corrupted_user_signal;  // Same corrupted signal for write data
-    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
+    req.awaddr == local::base_addr + local::addr_offset;
+    req.awprot == 3'b000;  // Non-secure, non-privileged, data access
+    // Constrain AWID based on bus matrix mode
+    if (!local::is_enhanced_mode) {
+      // 4x4 mode: Slave 2 only allows masters 0, 1, 2
+      if (local::target_slave_id == 2) {
+        req.awid inside {AWID_0, AWID_1, AWID_2};
+      } else {
+        req.awid inside {AWID_0, AWID_1, AWID_2, AWID_3};
+      }
+    } else {
+      // 10x10 mode: All masters allowed for writable slaves
+      req.awid inside {AWID_0, AWID_1, AWID_2, AWID_3, AWID_4, AWID_5, AWID_6, AWID_7, AWID_8, AWID_9};
+    }
   }) begin
     `uvm_fatal("axi4", "Randomization failed for corruption sequence")
   end

@@ -23,6 +23,9 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
     .awlock(intf.awlock),
     .awcache(intf.awcache),
     .awprot(intf.awprot),
+    .awqos(intf.awqos),
+    .awregion(intf.awregion),
+    .awuser(intf.awuser),
     .awvalid(intf.awvalid),
     .awready(intf.awready),
     .wdata(intf.wdata),
@@ -121,6 +124,9 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
                                                  .awlock(intf.awlock),
                                                  .awcache(intf.awcache),
                                                  .awprot(intf.awprot),
+                                                 .awqos(intf.awqos),
+                                                 .awregion(intf.awregion),
+                                                 .awuser(intf.awuser),
                                                  .awvalid(intf.awvalid),
                                                  .awready(intf.awready),
                                                  .wdata(intf.wdata),
@@ -161,6 +167,8 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
   //-------------------------------------------------------
   initial begin
     string path;
+    bit disable_timeout;
+    
     path = $sformatf("*axi4_master_agent_h[%0d]*", MASTER_ID);
     uvm_config_db#(virtual axi4_master_driver_bfm)::set(null, path,
                                                        "axi4_master_driver_bfm",
@@ -175,6 +183,15 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
     uvm_config_db#(virtual master_assertions)::set(null, path,
                                                   "master_assertions",
                                                   M_A);
+    
+    // Check for timeout disable configuration after UVM build phase
+    #1;  // Wait for UVM configuration to be set
+    if(uvm_config_db#(bit)::get(null, "*", "disable_timeout_checks", disable_timeout)) begin
+      if(disable_timeout) begin
+        M_A.disable_timeout_checks = 1'b1;
+        `uvm_info("axi4_master_agent_bfm", "Timeout checks disabled for assertions", UVM_MEDIUM);
+      end
+    end
   end
 
 

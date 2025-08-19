@@ -19,6 +19,11 @@ class axi4_virtual_qos_starvation_prevention_seq extends axi4_virtual_base_seq;
   axi4_slave_nbk_write_seq axi4_slave_write_seq_h;
   axi4_slave_nbk_read_seq axi4_slave_read_seq_h;
 
+  // Bus matrix configuration parameters
+  int num_masters = 4;
+  int num_slaves = 4;
+  int use_bus_matrix_addressing = 0; // 0=NONE, 1=BASE_4x4, 2=ENHANCED_10x10
+
   // Tracking variables
   int low_priority_start_time;
   int low_priority_end_time;
@@ -74,13 +79,19 @@ task axi4_virtual_qos_starvation_prevention_seq::body();
   fork
     begin : SLAVE_WRITE
       forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_write_seq slave_wr_seq;
+        slave_wr_seq = axi4_slave_nbk_write_seq::type_id::create("slave_wr_seq");
+        slave_wr_seq.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     
     begin : SLAVE_READ
       forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_read_seq slave_rd_seq;
+        slave_rd_seq = axi4_slave_nbk_read_seq::type_id::create("slave_rd_seq");
+        slave_rd_seq.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
   join_none

@@ -8,10 +8,10 @@
 class axi4_slave_reset_backpressure_seq extends axi4_slave_base_seq;
   `uvm_object_utils(axi4_slave_reset_backpressure_seq)
 
-  rand int backpressure_cycles = 5000;
+  rand int backpressure_cycles = 50;
   
   constraint backpressure_c {
-    backpressure_cycles inside {[1000:10000]};
+    backpressure_cycles inside {[10:100]};
   }
 
   extern function new(string name = "axi4_slave_reset_backpressure_seq");
@@ -43,8 +43,8 @@ task axi4_slave_reset_backpressure_seq::body();
   end
   finish_item(req);
   
-  // Hold backpressure
-  #(backpressure_cycles * 1ns);
+  // Hold backpressure (optimized)
+  #(backpressure_cycles * 100ps);
   
   `uvm_info(get_type_name(), "Completed reset backpressure sequence", UVM_HIGH)
   

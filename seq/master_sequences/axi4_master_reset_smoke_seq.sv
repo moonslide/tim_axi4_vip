@@ -61,6 +61,7 @@ task axi4_master_reset_smoke_seq::body();
         transfer_type == BLOCKING_WRITE;
         awsize == WRITE_4_BYTES;
         awlen == 0;  // Single beat
+        awid inside {[0:3]};  // 4x4 mode: AWID must be 0-3
       }) begin
         `uvm_fatal(get_type_name(), "Randomization failed")
       end
@@ -72,6 +73,7 @@ task axi4_master_reset_smoke_seq::body();
         transfer_type == BLOCKING_WRITE;
         awsize == WRITE_4_BYTES;
         awlen == 0;  // Single beat
+        awid inside {[0:9]};  // 10x10 mode: AWID can be 0-9
       }) begin
         `uvm_fatal(get_type_name(), "Randomization failed")
       end
@@ -85,6 +87,8 @@ task axi4_master_reset_smoke_seq::body();
         arsize == READ_4_BYTES;
         awlen == 0;  // Single beat
         arlen == 0;  // Single beat
+        awid inside {[0:3]};  // NONE mode: AWID must be 0-3
+        arid inside {[0:3]};  // NONE mode: ARID must be 0-3
       }) begin
         `uvm_fatal(get_type_name(), "Randomization failed")
       end

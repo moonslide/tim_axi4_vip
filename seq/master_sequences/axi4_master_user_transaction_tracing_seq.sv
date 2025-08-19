@@ -157,6 +157,14 @@ task axi4_master_user_transaction_tracing_seq::body();
   bit [31:0] trace_user_signal;
   bit [7:0] current_tid;
   bit [7:0] current_flags;
+  axi4_bus_matrix_ref::bus_matrix_mode_e bus_mode;
+  bit [ADDRESS_WIDTH-1:0] base_addr;
+  
+  // Get bus matrix mode from config_db
+  if(!uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::get(m_sequencer, "", "bus_matrix_mode", bus_mode)) begin
+    bus_mode = axi4_bus_matrix_ref::NONE;
+    `uvm_info(get_type_name(), "No bus_matrix_mode found, defaulting to NONE", UVM_MEDIUM)
+  end
   
   // Get configuration if set
   if(!uvm_config_db#(string)::get(null, get_full_name(), "trace_mode", trace_mode)) begin
@@ -189,50 +197,92 @@ task axi4_master_user_transaction_tracing_seq::body();
     // Store trace ID for correlation checking
     trace_id_array[trace_count++] = current_tid;
     
-    // Create write transaction with trace info
-    req = axi4_master_tx::type_id::create("req");
-    start_item(req);
-    assert(req.randomize() with {
-      tx_type == WRITE;
-      awid == `GET_AWID_ENUM(master_id);
-      awaddr == 64'h0000_0100_0000_0000 + (slave_id * 64'h1000_0000) + (sequence_number * 64'h100);
-      awlen == 4'h3; // 4 beats
-      awsize == WRITE_4_BYTES;
-      awburst == WRITE_INCR;
-      awuser == trace_user_signal;  // Embed trace info
-      wuser == trace_user_signal;   // Maintain trace through data channel
-      wdata.size() == awlen + 1;
-      wstrb.size() == awlen + 1;
-      foreach(wdata[i]) {
-        wdata[i] == {current_tid, sequence_number, 8'h00, i[7:0], current_tid, sequence_number, 8'h00, i[7:0]};
-      }
-      foreach(wstrb[i]) {
-        wstrb[i] == 4'hF;
-      }
-    });
-    finish_item(req);
+    // Determine base address based on bus matrix mode and slave
+    case(bus_mode)
+      axi4_bus_matrix_ref::NONE, axi4_bus_matrix_ref::BASE_BUS_MATRIX: begin
+        // 4x4 matrix addresses
+        case(slave_id)
+          0: base_addr = 64'h0000_0100_0000_0000; // DDR
+          1: base_addr = 64'h0000_0000_0000_0000; // Boot ROM (read-only)
+          2: base_addr = 64'h0000_0010_0000_0000; // Peripheral
+          3: base_addr = 64'h0000_0020_0000_0000; // HW Fuse (read-only)
+          default: base_addr = 64'h0000_0100_0000_0000;
+        endcase
+      end
+      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: begin
+        // 10x10 ENHANCED matrix addresses (corrected from bus matrix configuration)
+        case(slave_id)
+          0: base_addr = 64'h0000_0008_0000_0000; // DDR Secure Kernel
+          1: base_addr = 64'h0000_0008_4000_0000; // DDR Non-Secure User
+          2: base_addr = 64'h0000_0008_8000_0000; // DDR Shared Buffer
+          3: base_addr = 64'h0000_0008_C000_0000; // Illegal Address Hole - avoid this
+          4: base_addr = 64'h0000_0009_0000_0000; // XOM Instruction-Only
+          5: base_addr = 64'h0000_000A_0000_0000; // RO Peripheral
+          6: base_addr = 64'h0000_000A_0001_0000; // Privileged-Only (corrected)
+          7: base_addr = 64'h0000_000A_0002_0000; // Secure-Only (corrected)
+          8: base_addr = 64'h0000_000A_0003_0000; // Scratchpad (corrected)
+          9: base_addr = 64'h0000_000A_0004_0000; // Attribute Monitor (corrected)
+          default: base_addr = 64'h0000_0008_4000_0000; // Default to non-secure DDR
+        endcase
+      end
+    endcase
     
-    // Create read transaction to verify trace propagation
-    if(trace_mode == "DEBUG" || trace_mode == "FULL") begin
+    // Skip write to read-only slaves or illegal addresses
+    if((slave_id == 1 || slave_id == 3) && (bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX || bus_mode == axi4_bus_matrix_ref::NONE)) begin
+      `uvm_info(get_type_name(), $sformatf("Skipping write to read-only slave %0d in 4x4 mode", slave_id), UVM_MEDIUM)
+    end else if(bus_mode == axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX && (slave_id == 3 || slave_id == 5)) begin
+      `uvm_info(get_type_name(), $sformatf("Skipping write to illegal/read-only slave %0d in Enhanced mode", slave_id), UVM_MEDIUM)
+    end else begin
+      // Create write transaction with trace info
       req = axi4_master_tx::type_id::create("req");
       start_item(req);
       assert(req.randomize() with {
-        tx_type == READ;
-        arid == `GET_ARID_ENUM(master_id);
-        araddr == 64'h0000_0100_0000_0000 + (slave_id * 64'h1000_0000) + (sequence_number * 64'h100);
-        arlen == 4'h3; // 4 beats
-        arsize == READ_4_BYTES;
-        arburst == READ_INCR;
-        aruser == trace_user_signal;  // Embed trace info in read
+        tx_type == WRITE;
+        awid == `GET_AWID_ENUM(master_id);
+        awaddr == base_addr + (sequence_number * 64'h100);
+        awlen == 4'h3; // 4 beats
+        awsize == WRITE_4_BYTES;
+        awburst == WRITE_INCR;
+        awprot == 3'b000; // Non-secure, non-privileged, data access
+        awuser == trace_user_signal;  // Embed trace info
+        wuser == trace_user_signal;   // Maintain trace through data channel
+        wdata.size() == awlen + 1;
+        wstrb.size() == awlen + 1;
+        foreach(wdata[i]) {
+          wdata[i] == {current_tid, sequence_number, 8'h00, i[7:0], current_tid, sequence_number, 8'h00, i[7:0]};
+        }
+        foreach(wstrb[i]) {
+          wstrb[i] == 4'hF;
+        }
       });
       finish_item(req);
-      
-      `uvm_info(get_type_name(), $sformatf("Read-back transaction for trace validation (TID=0x%02x)", 
-                current_tid), UVM_MEDIUM)
     end
     
-    // Add delay between traced transactions
-    #100ns;
+    // Create read transaction to verify trace propagation
+    if(trace_mode == "DEBUG" || trace_mode == "FULL") begin
+      // Only read from readable addresses (avoid illegal address hole)
+      if(!(bus_mode == axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX && slave_id == 3)) begin
+        req = axi4_master_tx::type_id::create("req");
+        start_item(req);
+        assert(req.randomize() with {
+          tx_type == READ;
+          arid == `GET_ARID_ENUM(master_id);
+          araddr == base_addr + (sequence_number * 64'h100);
+          arlen == 4'h3; // 4 beats
+          arsize == READ_4_BYTES;
+          arburst == READ_INCR;
+          arprot == 3'b000; // Non-secure, non-privileged, data access
+          aruser == trace_user_signal;  // Embed trace info in read
+        });
+        finish_item(req);
+        
+        `uvm_info(get_type_name(), $sformatf("Read-back transaction for trace validation (TID=0x%02x)", 
+                  current_tid), UVM_MEDIUM)
+      end
+    end
+    
+    // Add minimal delay between traced transactions
+    #1ns;
   end
   
   // Final trace summary

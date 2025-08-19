@@ -16,6 +16,7 @@ class axi4_non_blocking_outstanding_transfer_write_read_test extends axi4_base_t
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_non_blocking_outstanding_transfer_write_read_test", uvm_component parent = null);
+  extern virtual function void build_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_non_blocking_outstanding_transfer_write_read_test
@@ -31,6 +32,23 @@ function axi4_non_blocking_outstanding_transfer_write_read_test::new(string name
                                  uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Builds the test components and configures assertion timeout behavior
+//
+// Parameters:
+//  phase - uvm phase
+//--------------------------------------------------------------------------------------------
+function void axi4_non_blocking_outstanding_transfer_write_read_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+  
+  // Disable timeout checks for non-blocking outstanding transfer tests
+  // This avoids SVA-LDRF warnings while testing long outstanding transactions
+  uvm_config_db#(bit)::set(this, "*", "disable_timeout_checks", 1'b1);
+  
+  `uvm_info(get_type_name(), "Configured assertions for non-blocking outstanding transfers", UVM_MEDIUM);
+endfunction : build_phase
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase

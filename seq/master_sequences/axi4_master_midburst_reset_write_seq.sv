@@ -13,6 +13,7 @@ class axi4_master_midburst_reset_write_seq extends axi4_master_base_seq;
   rand int reset_after_beats = 100;  // Reset after this many beats
   rand int master_id = 0;
   rand int slave_id = 0;
+  int use_bus_matrix_addressing = 0; // 0=NONE, 1=BASE_4x4, 2=ENHANCED_10x10
   
   constraint reset_point_c {
     reset_after_beats inside {[50:200]};
@@ -50,23 +51,39 @@ task axi4_master_midburst_reset_write_seq::body();
   req = axi4_master_tx::type_id::create("req");
   
   start_item(req);
-  if(!req.randomize() with {
-    awburst == WRITE_INCR;
-    transfer_type == BLOCKING_WRITE;
-    awsize == WRITE_4_BYTES;
-    awlen == 255;  // Maximum burst length
-    awid == master_id;
-  }) begin
-    `uvm_fatal(get_type_name(), "Randomization failed")
-  end
   
-  // Set address based on slave_id (using enhanced bus matrix ranges)
-  case(slave_id)
-    0: req.awaddr = 64'h0000_0008_0000_2000;  // S0: DDR Secure Kernel
-    1: req.awaddr = 64'h0000_0008_4000_2000;  // S1: DDR Non-Secure User
-    2: req.awaddr = 64'h0000_0008_8000_2000;  // S2: DDR Shared Buffer
-    default: req.awaddr = 64'h0000_0008_0000_2000;
-  endcase
+  // Randomize with proper constraints based on bus matrix mode
+  if(use_bus_matrix_addressing == 2) begin
+    // ENHANCED mode (10x10)
+    if(!req.randomize() with {
+      awburst == WRITE_INCR;
+      transfer_type == BLOCKING_WRITE;
+      awsize == WRITE_4_BYTES;
+      awlen == 255;  // Maximum burst length
+      awid inside {[0:9]};  // Valid master IDs for 10x10
+    }) begin
+      `uvm_fatal(get_type_name(), "Randomization failed")
+    end
+    // Set address for ENHANCED mode
+    req.awaddr = 64'h0000_0100_0000_2000;  // DDR Memory region
+  end else begin
+    // NONE or BASE mode (4x4)
+    if(!req.randomize() with {
+      awburst == WRITE_INCR;
+      transfer_type == BLOCKING_WRITE;
+      awsize == WRITE_4_BYTES;
+      awlen == 255;  // Maximum burst length
+      awid inside {[0:3]};  // Valid master IDs for 4x4
+    }) begin
+      `uvm_fatal(get_type_name(), "Randomization failed")
+    end
+    // Set address for 4x4 or NONE mode
+    if(use_bus_matrix_addressing == 1) begin
+      req.awaddr = 64'h0000_0100_0000_2000;  // DDR Memory region for BASE mode
+    end else begin
+      req.awaddr = 64'h0000_0000_0000_2000;  // Simple address for NONE mode
+    end
+  end
   
   finish_item(req);
   
@@ -80,7 +97,7 @@ task axi4_master_midburst_reset_write_seq::body();
       `uvm_info(get_type_name(), "Write transaction completed", UVM_HIGH)
     end
     begin
-      #500us;  // Timeout in case reset prevents completion
+      #5us;  // Timeout in case reset prevents completion (optimized)
       `uvm_info(get_type_name(), "Write transaction timeout (expected during reset)", UVM_HIGH)
     end
   join_any

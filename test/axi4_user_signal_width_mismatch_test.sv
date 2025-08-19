@@ -13,10 +13,17 @@ class axi4_user_signal_width_mismatch_test extends axi4_base_test;
   // Handle to the USER signal width mismatch virtual sequence
   axi4_virtual_user_signal_width_mismatch_seq axi4_virtual_user_signal_width_mismatch_seq_h;
 
+  // Bus matrix mode configuration
+  axi4_bus_matrix_ref::bus_matrix_mode_e selected_mode = axi4_bus_matrix_ref::NONE;
+  int selected_masters = 1;
+  int selected_slaves = 1;
+  
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_user_signal_width_mismatch_test", uvm_component parent = null);
+  extern virtual function void build_phase(uvm_phase phase);
+  extern virtual function void configure_bus_matrix_mode();
   extern virtual function void setup_axi4_master_agent_cfg();
   extern virtual function void setup_axi4_slave_agent_cfg();
   extern virtual task run_phase(uvm_phase phase);
@@ -34,6 +41,68 @@ function axi4_user_signal_width_mismatch_test::new(string name = "axi4_user_sign
                                                    uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Sets up bus matrix mode configuration
+//--------------------------------------------------------------------------------------------
+function void axi4_user_signal_width_mismatch_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+  
+  // Configure bus matrix mode based on plusarg
+  configure_bus_matrix_mode();
+  
+  // Update environment configuration
+  axi4_env_cfg_h.bus_matrix_mode = selected_mode;
+  axi4_env_cfg_h.no_of_masters = selected_masters;
+  axi4_env_cfg_h.no_of_slaves = selected_slaves;
+  
+  // Allow error responses for width mismatch testing
+  // This is necessary because width mismatches and address mapping issues may cause protocol errors
+  axi4_env_cfg_h.allow_error_responses = 1;
+  
+  `uvm_info(get_type_name(), $sformatf("Bus Matrix Mode: %s", selected_mode.name()), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", selected_masters, selected_slaves), UVM_LOW)
+  `uvm_info(get_type_name(), "Error responses allowed for width mismatch testing", UVM_LOW)
+endfunction : build_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: configure_bus_matrix_mode
+// Configures bus matrix mode based on plusargs
+//--------------------------------------------------------------------------------------------
+function void axi4_user_signal_width_mismatch_test::configure_bus_matrix_mode();
+  string mode_str;
+  
+  if ($value$plusargs("BUS_MATRIX_MODE=%s", mode_str)) begin
+    if (mode_str == "ENHANCED" || mode_str == "enhanced" || mode_str == "10x10") begin
+      selected_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+      selected_masters = 10;
+      selected_slaves = 10;
+      `uvm_info(get_type_name(), "Configuring BUS_ENHANCED_MATRIX (10x10) mode", UVM_LOW)
+    end else if (mode_str == "BASE" || mode_str == "base" || mode_str == "4x4") begin
+      selected_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+      selected_masters = 4;
+      selected_slaves = 4;
+      `uvm_info(get_type_name(), "Configuring BASE_BUS_MATRIX (4x4) mode", UVM_LOW)
+    end else if (mode_str == "NONE" || mode_str == "none") begin
+      selected_mode = axi4_bus_matrix_ref::NONE;
+      selected_masters = 1;
+      selected_slaves = 1;
+      `uvm_info(get_type_name(), "Configuring NONE (no ref model) mode", UVM_LOW)
+    end else begin
+      `uvm_warning(get_type_name(), $sformatf("Unknown BUS_MATRIX_MODE: %s, using NONE", mode_str))
+      selected_mode = axi4_bus_matrix_ref::NONE;
+      selected_masters = 1;
+      selected_slaves = 1;
+    end
+  end else begin
+    // Default to NONE mode
+    selected_mode = axi4_bus_matrix_ref::NONE;
+    selected_masters = 1;
+    selected_slaves = 1;
+    `uvm_info(get_type_name(), "No BUS_MATRIX_MODE specified, defaulting to NONE", UVM_LOW)
+  end
+endfunction : configure_bus_matrix_mode
 
 //--------------------------------------------------------------------------------------------
 // Function: setup_axi4_master_agent_cfg
@@ -78,6 +147,12 @@ endfunction : setup_axi4_slave_agent_cfg
 task axi4_user_signal_width_mismatch_test::run_phase(uvm_phase phase);
   
   axi4_virtual_user_signal_width_mismatch_seq_h = axi4_virtual_user_signal_width_mismatch_seq::type_id::create("axi4_virtual_user_signal_width_mismatch_seq_h");
+  
+  // Pass configuration to virtual sequence
+  axi4_virtual_user_signal_width_mismatch_seq_h.num_masters = selected_masters;
+  axi4_virtual_user_signal_width_mismatch_seq_h.num_slaves = selected_slaves;
+  axi4_virtual_user_signal_width_mismatch_seq_h.is_enhanced_mode = (selected_mode == axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX);
+  axi4_virtual_user_signal_width_mismatch_seq_h.is_4x4_ref_mode = (selected_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX);
   
   `uvm_info(get_type_name(), "Starting USER Signal Width Mismatch Test", UVM_LOW)
   `uvm_info(get_type_name(), "This test verifies handling of USER signal width differences", UVM_LOW)

@@ -9,6 +9,12 @@
 class axi4_virtual_qos_basic_priority_seq extends axi4_virtual_base_seq;
   `uvm_object_utils(axi4_virtual_qos_basic_priority_seq)
 
+  // Configuration parameters from test
+  int num_masters = 4;
+  int num_slaves = 4;
+  bit is_enhanced_mode = 0;
+  bit is_4x4_ref_mode = 0;
+
   // Master sequences for different QoS levels
   axi4_master_qos_priority_write_seq low_qos_write_seq_h;
   axi4_master_qos_priority_write_seq med_qos_write_seq_h;
@@ -71,17 +77,32 @@ task axi4_virtual_qos_basic_priority_seq::body();
   med_qos_read_seq_h.qos_value = 4'b0100;   // Medium priority
   high_qos_read_seq_h.qos_value = 4'b1000;  // High priority
   
+  // Set master ID to 0 for all sequences (using single master)
+  low_qos_write_seq_h.master_id = 0;
+  med_qos_write_seq_h.master_id = 0;
+  high_qos_write_seq_h.master_id = 0;
+  
+  low_qos_read_seq_h.master_id = 0;
+  med_qos_read_seq_h.master_id = 0;
+  high_qos_read_seq_h.master_id = 0;
+  
   // Start slave sequences in forever loops
   fork
     begin : SLAVE_WRITE
       forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_write_seq slave_wr_seq;
+        slave_wr_seq = axi4_slave_nbk_write_seq::type_id::create("slave_wr_seq");
+        slave_wr_seq.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     
     begin : SLAVE_READ
       forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_read_seq slave_rd_seq;
+        slave_rd_seq = axi4_slave_nbk_read_seq::type_id::create("slave_rd_seq");
+        slave_rd_seq.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
   join_none

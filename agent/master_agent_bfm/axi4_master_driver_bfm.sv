@@ -17,7 +17,7 @@ interface axi4_master_driver_bfm(input bit                      aclk,
                                  //Write Address Channel Signals
                                  output reg               [3:0] awid,
                                  output reg [ADDRESS_WIDTH-1:0] awaddr,
-                                 output reg               [3:0] awlen,
+                                 output reg               [7:0] awlen,
                                  output reg               [2:0] awsize,
                                  output reg               [1:0] awburst,
                                  output reg               [1:0] awlock,

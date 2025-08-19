@@ -18,8 +18,14 @@ class axi4_virtual_user_security_tagging_seq extends axi4_virtual_base_seq;
   axi4_master_user_security_tagging_seq mixed_privilege_seq_h[4];
 
   // Slave sequences
-  axi4_slave_nbk_write_seq axi4_slave_write_seq_h;
-  axi4_slave_nbk_read_seq axi4_slave_read_seq_h;
+  axi4_slave_nbk_write_seq axi4_slave_write_seq_h[];
+  axi4_slave_nbk_read_seq axi4_slave_read_seq_h[];
+  
+  // Configuration parameters from test
+  int num_masters = 4;
+  int num_slaves = 4;
+  bit is_enhanced_mode = 0;
+  bit is_4x4_ref_mode = 0;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -45,24 +51,89 @@ endfunction : new
 // Creates and starts sequences to test USER security tagging
 //--------------------------------------------------------------------------------------------
 task axi4_virtual_user_security_tagging_seq::body();
+  int actual_masters;
+  int actual_slaves;
   
-  `uvm_info(get_type_name(), "Starting USER Security Tagging Virtual Sequence", UVM_LOW)
+  `uvm_info(get_type_name(), "========================================", UVM_LOW)
+  `uvm_info(get_type_name(), "USER SECURITY TAGGING SEQUENCE", UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Enhanced: %0d, 4x4 Ref: %0d", is_enhanced_mode, is_4x4_ref_mode), UVM_LOW)
+  `uvm_info(get_type_name(), "========================================", UVM_LOW)
   
-  // Create slave sequences
-  axi4_slave_write_seq_h = axi4_slave_nbk_write_seq::type_id::create("axi4_slave_write_seq_h");
-  axi4_slave_read_seq_h = axi4_slave_nbk_read_seq::type_id::create("axi4_slave_read_seq_h");
+  // Determine actual number of sequencers available
+  actual_masters = (p_sequencer.axi4_master_write_seqr_h_all.size() > 0) ? 
+                   p_sequencer.axi4_master_write_seqr_h_all.size() : 1;
+  actual_slaves = (p_sequencer.axi4_slave_write_seqr_h_all.size() > 0) ? 
+                  p_sequencer.axi4_slave_write_seqr_h_all.size() : 1;
   
-  // Start slave sequences in forever loops
+  // Use minimum of configured and actual
+  if (actual_masters < num_masters) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting masters from %0d to %0d (actual available)", 
+                                         num_masters, actual_masters), UVM_MEDIUM)
+    num_masters = actual_masters;
+  end
+  
+  if (actual_slaves < num_slaves) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting slaves from %0d to %0d (actual available)", 
+                                         num_slaves, actual_slaves), UVM_MEDIUM)
+    num_slaves = actual_slaves;
+  end
+  
+  // Create slave sequences arrays
+  axi4_slave_write_seq_h = new[num_slaves];
+  axi4_slave_read_seq_h = new[num_slaves];
+  
+  // Create and start slave sequences for each slave
+  for(int i = 0; i < num_slaves; i++) begin
+    axi4_slave_write_seq_h[i] = axi4_slave_nbk_write_seq::type_id::create($sformatf("axi4_slave_write_seq_h[%0d]", i));
+    axi4_slave_read_seq_h[i] = axi4_slave_nbk_read_seq::type_id::create($sformatf("axi4_slave_read_seq_h[%0d]", i));
+  end
+  
+  // Start slave sequences once in forever loops
   fork
     begin : SLAVE_WRITE
-      forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_write_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_write_seq_h[slave_idx].start(p_sequencer.axi4_slave_write_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_write_seq_h[0].start(p_sequencer.axi4_slave_write_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
     
     begin : SLAVE_READ
-      forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_read_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_read_seq_h[slave_idx].start(p_sequencer.axi4_slave_read_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_read_seq_h[0].start(p_sequencer.axi4_slave_read_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
   join_none
@@ -77,6 +148,8 @@ task axi4_virtual_user_security_tagging_seq::body();
   unclassified_seq_h.privilege_level = unclassified_seq_h.PRIV_USER;
   unclassified_seq_h.security_zone = unclassified_seq_h.ZONE_DMZ;
   unclassified_seq_h.encryption_required = unclassified_seq_h.ENCRYPT_NONE;
+  unclassified_seq_h.is_enhanced_mode = is_enhanced_mode;
+  unclassified_seq_h.target_slave_id = 0;
   
   `uvm_info(get_type_name(), "  Unclassified user accessing public domain", UVM_LOW)
   unclassified_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
@@ -92,6 +165,8 @@ task axi4_virtual_user_security_tagging_seq::body();
   confidential_seq_h.privilege_level = confidential_seq_h.PRIV_USER;
   confidential_seq_h.security_zone = confidential_seq_h.ZONE_INTERNAL;
   confidential_seq_h.encryption_required = confidential_seq_h.ENCRYPT_AES128;
+  confidential_seq_h.is_enhanced_mode = is_enhanced_mode;
+  confidential_seq_h.target_slave_id = 1 % num_slaves;
   
   `uvm_info(get_type_name(), "  Confidential access with AES128 encryption", UVM_LOW)
   confidential_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
@@ -107,6 +182,8 @@ task axi4_virtual_user_security_tagging_seq::body();
   secret_seq_h.privilege_level = secret_seq_h.PRIV_SUPERVISOR;
   secret_seq_h.security_zone = secret_seq_h.ZONE_CRITICAL;
   secret_seq_h.encryption_required = secret_seq_h.ENCRYPT_AES256;
+  secret_seq_h.is_enhanced_mode = is_enhanced_mode;
+  secret_seq_h.target_slave_id = 2 % num_slaves;
   
   `uvm_info(get_type_name(), "  Secret access requiring supervisor privilege", UVM_LOW)
   secret_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
@@ -122,6 +199,8 @@ task axi4_virtual_user_security_tagging_seq::body();
   top_secret_seq_h.privilege_level = top_secret_seq_h.PRIV_SECURE;
   top_secret_seq_h.security_zone = top_secret_seq_h.ZONE_ISOLATED;
   top_secret_seq_h.encryption_required = top_secret_seq_h.ENCRYPT_RSA4096;
+  top_secret_seq_h.is_enhanced_mode = is_enhanced_mode;
+  top_secret_seq_h.target_slave_id = 0;
   
   `uvm_info(get_type_name(), "  Top Secret access in isolated zone", UVM_LOW)
   top_secret_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
@@ -165,6 +244,8 @@ task axi4_virtual_user_security_tagging_seq::body();
                                             (i == 1) ? cross_domain_seq_h[i].PRIV_SUPERVISOR :
                                             cross_domain_seq_h[i].PRIV_USER;
     cross_domain_seq_h[i].security_zone = cross_domain_seq_h[i].ZONE_INTERNAL;
+    cross_domain_seq_h[i].is_enhanced_mode = is_enhanced_mode;
+    cross_domain_seq_h[i].target_slave_id = i % num_slaves;
     
     cross_domain_seq_h[i].start(p_sequencer.axi4_master_write_seqr_h);
     #150ns;
@@ -194,6 +275,8 @@ task axi4_virtual_user_security_tagging_seq::body();
     mixed_privilege_seq_h[i].domain_id = mixed_privilege_seq_h[i].DOMAIN_CORPORATE;
     mixed_privilege_seq_h[i].access_rights = mixed_privilege_seq_h[i].ACCESS_READ_WRITE;
     mixed_privilege_seq_h[i].security_zone = mixed_privilege_seq_h[i].ZONE_INTERNAL;
+    mixed_privilege_seq_h[i].is_enhanced_mode = is_enhanced_mode;
+    mixed_privilege_seq_h[i].target_slave_id = i % num_slaves;
     
     `uvm_info(get_type_name(), $sformatf("  Testing privilege level %0d", i), UVM_LOW)
     mixed_privilege_seq_h[i].start(p_sequencer.axi4_master_write_seqr_h);
@@ -211,6 +294,8 @@ task axi4_virtual_user_security_tagging_seq::body();
     unclassified_seq_h.domain_id = unclassified_seq_h.DOMAIN_CORPORATE;
     unclassified_seq_h.privilege_level = unclassified_seq_h.PRIV_USER;
     unclassified_seq_h.security_zone = unclassified_seq_h.ZONE_INTERNAL;
+    unclassified_seq_h.is_enhanced_mode = is_enhanced_mode;
+    unclassified_seq_h.target_slave_id = i % num_slaves;
     
     // Test different access rights
     case(i)

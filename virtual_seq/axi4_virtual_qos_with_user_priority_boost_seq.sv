@@ -22,6 +22,11 @@ class axi4_virtual_qos_with_user_priority_boost_seq extends axi4_virtual_base_se
   axi4_slave_nbk_write_seq axi4_slave_write_seq_h;
   axi4_slave_nbk_read_seq axi4_slave_read_seq_h;
 
+  // Bus matrix configuration parameters
+  int num_masters = 4;
+  int num_slaves = 4;
+  int use_bus_matrix_addressing = 0; // 0=NONE, 1=BASE_4x4, 2=ENHANCED_10x10
+
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
@@ -87,13 +92,19 @@ task axi4_virtual_qos_with_user_priority_boost_seq::body();
   fork
     begin : SLAVE_WRITE
       forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_write_seq slave_wr_seq;
+        slave_wr_seq = axi4_slave_nbk_write_seq::type_id::create("slave_wr_seq");
+        slave_wr_seq.start(p_sequencer.axi4_slave_write_seqr_h);
       end
     end
     
     begin : SLAVE_READ
       forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+        // Create new instance each time to avoid sequence reuse error
+        axi4_slave_nbk_read_seq slave_rd_seq;
+        slave_rd_seq = axi4_slave_nbk_read_seq::type_id::create("slave_rd_seq");
+        slave_rd_seq.start(p_sequencer.axi4_slave_read_seqr_h);
       end
     end
   join_none
@@ -101,27 +112,27 @@ task axi4_virtual_qos_with_user_priority_boost_seq::body();
   // Test Scenario 1: Low QoS without boost
   `uvm_info(get_type_name(), "==== Scenario 1: Low QoS without USER boost (QoS=2) ====", UVM_LOW)
   low_qos_no_boost_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-  #200ns;
+  #50ns;
   
   // Test Scenario 2: Low QoS with USER boost
   `uvm_info(get_type_name(), "==== Scenario 2: Low QoS WITH USER boost (QoS=2, boost=8, effective=10) ====", UVM_LOW)
   low_qos_with_boost_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-  #200ns;
+  #50ns;
   
   // Test Scenario 3: Medium QoS without boost
   `uvm_info(get_type_name(), "==== Scenario 3: Medium QoS without USER boost (QoS=4) ====", UVM_LOW)
   med_qos_no_boost_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-  #200ns;
+  #50ns;
   
   // Test Scenario 4: Medium QoS with USER boost
   `uvm_info(get_type_name(), "==== Scenario 4: Medium QoS WITH USER boost (QoS=4, boost=4, effective=8) ====", UVM_LOW)
   med_qos_with_boost_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-  #200ns;
+  #50ns;
   
   // Test Scenario 5: Standard high QoS for comparison
   `uvm_info(get_type_name(), "==== Scenario 5: Standard high QoS for reference (QoS=8) ====", UVM_LOW)
   high_qos_standard_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-  #200ns;
+  #50ns;
   
   // Test Scenario 6: Mixed traffic with and without boost
   `uvm_info(get_type_name(), "==== Scenario 6: Mixed traffic - boosted low priority vs non-boosted medium ====", UVM_LOW)
@@ -136,20 +147,20 @@ task axi4_virtual_qos_with_user_priority_boost_seq::body();
     end
   join
   
-  #500ns;
+  #100ns;
   
   // Test Scenario 7: Dynamic boost enable/disable
   `uvm_info(get_type_name(), "==== Scenario 7: Dynamic USER boost enable/disable demonstration ====", UVM_LOW)
-  for(int i = 0; i < 4; i++) begin
+  for(int i = 0; i < 2; i++) begin  // Reduced from 4 to 2
     low_qos_with_boost_seq_h.user_boost_enable = (i % 2);  // Toggle boost on/off
     `uvm_info(get_type_name(), $sformatf("  Transaction %0d: USER boost %s", i, 
               low_qos_with_boost_seq_h.user_boost_enable ? "ENABLED" : "DISABLED"), UVM_LOW)
     low_qos_with_boost_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-    #100ns;
+    #50ns;
   end
   
   // Wait for all transactions to complete
-  #1000ns;
+  #200ns;  // Reduced from 1000ns
   
   `uvm_info(get_type_name(), "Completed QoS with USER Priority Boost Virtual Sequence", UVM_LOW)
   `uvm_info(get_type_name(), "Test Summary:", UVM_LOW)

@@ -23,6 +23,12 @@ class axi4_virtual_user_signal_width_mismatch_seq extends axi4_virtual_base_seq;
   int channel_mismatch_count = 0;
   int boundary_test_count = 0;
   int total_width_tests = 0;
+  
+  // Configuration parameters from test
+  int num_masters = 1;
+  int num_slaves = 1;
+  bit is_enhanced_mode = 0;
+  bit is_4x4_ref_mode = 0;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -48,9 +54,32 @@ endfunction : new
 // Creates and starts sequences to test USER signal width mismatches
 //--------------------------------------------------------------------------------------------
 task axi4_virtual_user_signal_width_mismatch_seq::body();
+  int actual_masters;
+  int actual_slaves;
   
   `uvm_info(get_type_name(), "Starting USER Signal Width Mismatch Virtual Sequence", UVM_LOW)
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Enhanced: %0d, 4x4 Ref: %0d", is_enhanced_mode, is_4x4_ref_mode), UVM_LOW)
+  
+  // Determine actual number of sequencers available
+  actual_masters = (p_sequencer.axi4_master_write_seqr_h_all.size() > 0) ? 
+                   p_sequencer.axi4_master_write_seqr_h_all.size() : 1;
+  actual_slaves = (p_sequencer.axi4_slave_write_seqr_h_all.size() > 0) ? 
+                  p_sequencer.axi4_slave_write_seqr_h_all.size() : 1;
+  
+  // Use minimum of configured and actual
+  if (actual_masters < num_masters) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting masters from %0d to %0d (actual available)", 
+                                         num_masters, actual_masters), UVM_MEDIUM)
+    num_masters = actual_masters;
+  end
+  
+  if (actual_slaves < num_slaves) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting slaves from %0d to %0d (actual available)", 
+                                         num_slaves, actual_slaves), UVM_MEDIUM)
+    num_slaves = actual_slaves;
+  end
   
   // Create slave sequences
   axi4_slave_write_seq_h = axi4_slave_nbk_write_seq::type_id::create("axi4_slave_write_seq_h");
@@ -59,14 +88,50 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   // Start slave sequences in forever loops
   fork
     begin : SLAVE_WRITE
-      forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_write_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_nbk_write_seq seq = axi4_slave_nbk_write_seq::type_id::create($sformatf("slave_write_%0d", slave_idx));
+                seq.start(p_sequencer.axi4_slave_write_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
     
     begin : SLAVE_READ
-      forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_read_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_nbk_read_seq seq = axi4_slave_nbk_read_seq::type_id::create($sformatf("slave_read_%0d", slave_idx));
+                seq.start(p_sequencer.axi4_slave_read_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
   join_none
@@ -78,6 +143,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[0] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_0");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_0"}, "test_type", "TRUNCATION_32_TO_16");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_0"}, "num_tests", 3);
+  width_mismatch_seq_h[0].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[0].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[0].start(p_sequencer.axi4_master_write_seqr_h);
   truncation_test_count += 3;
@@ -87,6 +154,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[1] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_1");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_1"}, "test_type", "TRUNCATION_32_TO_8");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_1"}, "num_tests", 2);
+  width_mismatch_seq_h[1].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[1].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[1].start(p_sequencer.axi4_master_write_seqr_h);
   truncation_test_count += 2;
@@ -99,6 +168,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[2] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_2");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_2"}, "test_type", "PADDING_8_TO_32");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_2"}, "num_tests", 3);
+  width_mismatch_seq_h[2].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[2].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[2].start(p_sequencer.axi4_master_write_seqr_h);
   padding_test_count += 3;
@@ -111,6 +182,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[3] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_3");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_3"}, "test_type", "MSB_LSB_PRESERVATION");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_3"}, "num_tests", 4);
+  width_mismatch_seq_h[3].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[3].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[3].start(p_sequencer.axi4_master_write_seqr_h);
   msb_lsb_test_count += 4;
@@ -123,6 +196,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[4] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_4");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_4"}, "test_type", "CHANNEL_WIDTH_DIFF");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_4"}, "num_tests", 3);
+  width_mismatch_seq_h[4].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[4].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[4].start(p_sequencer.axi4_master_write_seqr_h);
   channel_mismatch_count += 3;
@@ -135,6 +210,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[5] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_5");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_5"}, "test_type", "BOUNDARY_VALUES");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_5"}, "num_tests", 4);
+  width_mismatch_seq_h[5].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[5].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[5].start(p_sequencer.axi4_master_write_seqr_h);
   boundary_test_count += 4;
@@ -147,6 +224,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[6] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_6");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_6"}, "test_type", "QOS_PRESERVATION");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_6"}, "num_tests", 3);
+  width_mismatch_seq_h[6].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[6].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[6].start(p_sequencer.axi4_master_write_seqr_h);
   #200ns;
@@ -158,6 +237,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
   width_mismatch_seq_h[7] = axi4_master_user_width_mismatch_seq::type_id::create("width_mismatch_seq_7");
   uvm_config_db#(string)::set(null, {get_full_name(), ".width_mismatch_seq_7"}, "test_type", "READ_WIDTH_MISMATCH");
   uvm_config_db#(int)::set(null, {get_full_name(), ".width_mismatch_seq_7"}, "num_tests", 3);
+  width_mismatch_seq_h[7].is_enhanced_mode = is_enhanced_mode;
+  width_mismatch_seq_h[7].slave_id = $urandom_range(0, num_slaves - 1);
   
   width_mismatch_seq_h[7].start(p_sequencer.axi4_master_read_seqr_h);
   #300ns;
@@ -170,6 +251,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
       width_mismatch_seq_h[0] = axi4_master_user_width_mismatch_seq::type_id::create("mixed_width_0");
       uvm_config_db#(string)::set(null, {get_full_name(), ".mixed_width_0"}, "test_type", "TRUNCATION_32_TO_16");
       uvm_config_db#(int)::set(null, {get_full_name(), ".mixed_width_0"}, "num_tests", 2);
+      width_mismatch_seq_h[0].is_enhanced_mode = is_enhanced_mode;
+      width_mismatch_seq_h[0].slave_id = $urandom_range(0, num_slaves - 1);
       width_mismatch_seq_h[0].start(p_sequencer.axi4_master_write_seqr_h);
     end
     begin
@@ -177,6 +260,8 @@ task axi4_virtual_user_signal_width_mismatch_seq::body();
       width_mismatch_seq_h[1] = axi4_master_user_width_mismatch_seq::type_id::create("mixed_width_1");
       uvm_config_db#(string)::set(null, {get_full_name(), ".mixed_width_1"}, "test_type", "PADDING_8_TO_32");
       uvm_config_db#(int)::set(null, {get_full_name(), ".mixed_width_1"}, "num_tests", 2);
+      width_mismatch_seq_h[1].is_enhanced_mode = is_enhanced_mode;
+      width_mismatch_seq_h[1].slave_id = $urandom_range(0, num_slaves - 1);
       width_mismatch_seq_h[1].start(p_sequencer.axi4_master_write_seqr_h);
     end
   join

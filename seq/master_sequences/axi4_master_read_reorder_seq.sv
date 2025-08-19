@@ -43,15 +43,31 @@ task axi4_master_read_reorder_seq::body();
     end
     
     start_item(req);
-    if(!req.randomize() with {
-      transfer_type == NON_BLOCKING_READ;
-      tx_type == READ;
-      araddr[63:16] == target_addr[63:16];
-      arburst == READ_INCR;
-      arid inside {[0:num_ids-1]};
-      arlen inside {[0:15]};
-    }) begin
-      `uvm_fatal(get_type_name(), "Randomization failed")
+    // Constrain ARID based on bus matrix mode
+    if(use_bus_matrix_addressing == 2) begin
+      // 10x10 mode: ARID can be 0-9
+      if(!req.randomize() with {
+        transfer_type == NON_BLOCKING_READ;
+        tx_type == READ;
+        araddr[63:16] == target_addr[63:16];
+        arburst == READ_INCR;
+        arid inside {[0:9]};
+        arlen inside {[0:15]};
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
+    end else begin
+      // 4x4 and NONE modes: ARID must be 0-3
+      if(!req.randomize() with {
+        transfer_type == NON_BLOCKING_READ;
+        tx_type == READ;
+        araddr[63:16] == target_addr[63:16];
+        arburst == READ_INCR;
+        arid inside {[0:3]};
+        arlen inside {[0:15]};
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
     end
     finish_item(req);
   end

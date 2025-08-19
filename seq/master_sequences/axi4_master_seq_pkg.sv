@@ -27,6 +27,8 @@ package axi4_master_seq_pkg;
   `include "axi4_master_read_seq.sv"
   `include "axi4_master_bk_write_seq.sv"
   `include "axi4_master_bk_read_seq.sv"
+  `include "axi4_master_targeted_write_seq.sv"
+  `include "axi4_master_targeted_read_seq.sv"
   `include "axi4_master_nbk_write_seq.sv"
   `include "axi4_master_nbk_read_seq.sv"
   `include "axi4_master_bk_write_8b_transfer_seq.sv"
@@ -118,6 +120,8 @@ package axi4_master_seq_pkg;
   
   `include "axi4_master_nbk_write_qos_seq.sv"
   `include "axi4_master_nbk_read_qos_seq.sv"
+  `include "axi4_master_nbk_targeted_write_qos_seq.sv"
+  `include "axi4_master_nbk_targeted_read_qos_seq.sv"
   `include "axi4_master_all_slave_access_seq.sv"
   `include "axi4_master_upper_boundary_write_seq.sv"
   `include "axi4_master_lower_boundary_write_seq.sv"

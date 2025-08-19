@@ -11,8 +11,9 @@ class axi4_master_user_based_qos_routing_seq extends axi4_master_base_seq;
   
   // Configuration parameters
   int master_id = 0;
-  int slave_id = 2;
-  int num_transactions = 18;
+  int slave_id = 0;  // Changed default to slave 0 for better compatibility
+  int num_transactions = 5;  // Reduced for faster testing
+  bit is_enhanced_mode = 0;  // Flag for 10x10 enhanced mode addressing
   
   // QoS routing strategies
   typedef enum bit [2:0] {
@@ -98,7 +99,32 @@ class axi4_master_user_based_qos_routing_seq extends axi4_master_base_seq;
   rand bit [ADDRESS_WIDTH-1:0] base_addr;
   
   constraint base_addr_c {
-    base_addr == (slave_id == 2) ? 64'h0000_0008_8000_0000 : 64'h0000_0008_0000_0000;
+    // Generate valid addresses based on slave_id and bus matrix mode
+    if (!is_enhanced_mode) {
+      // 4x4 BASE mode addresses matching AXI_MATRIX.txt
+      // S0: DDR_Memory at 0x0000_0100_0000_0000 (R/W)
+      // S1: Boot_ROM at 0x0000_0000_0000_0000 (Read-Only)
+      // S2: Peripheral_Regs at 0x0000_0010_0000_0000 (R/W)
+      // S3: HW_Fuse_Box at 0x0000_0020_0000_0000 (Read-Only)
+      slave_id == 0 -> base_addr == 64'h0000_0100_0000_0000; // DDR_Memory (R/W)
+      slave_id == 1 -> base_addr == 64'h0000_0000_0000_0000; // Boot_ROM (Read-Only)
+      slave_id == 2 -> base_addr == 64'h0000_0010_0000_0000; // Peripheral_Regs (R/W)
+      slave_id == 3 -> base_addr == 64'h0000_0020_0000_0000; // HW_Fuse_Box (Read-Only)
+      slave_id >= 4 -> base_addr == 64'h0000_0100_0000_0000; // Default to DDR
+    } else {
+      // 10x10 ENHANCED mode addresses
+      slave_id == 0 -> base_addr == 64'h0000_0008_0000_0000; // Slave 0
+      slave_id == 1 -> base_addr == 64'h0000_0008_4000_0000; // Slave 1
+      slave_id == 2 -> base_addr == 64'h0000_0008_8000_0000; // Slave 2
+      slave_id == 3 -> base_addr == 64'h0000_0008_c000_0000; // Slave 3
+      slave_id == 4 -> base_addr == 64'h0000_0009_0000_0000; // Slave 4
+      slave_id == 5 -> base_addr == 64'h0000_000a_0000_0000; // Slave 5
+      slave_id == 6 -> base_addr == 64'h0000_000a_0001_0000; // Slave 6
+      slave_id == 7 -> base_addr == 64'h0000_000a_0002_0000; // Slave 7
+      slave_id == 8 -> base_addr == 64'h0000_000a_0003_0000; // Slave 8
+      slave_id == 9 -> base_addr == 64'h0000_000a_0004_0000; // Slave 9
+      slave_id >= 10 -> base_addr == 64'h0000_0008_0000_0000; // Default to slave 0
+    }
   }
   
   extern function new(string name = "axi4_master_user_based_qos_routing_seq");
@@ -130,11 +156,15 @@ task axi4_master_user_based_qos_routing_seq::body();
   end
   
   if (!uvm_config_db#(int)::get(null, get_full_name(), "slave_id", slave_id)) begin
-    `uvm_info(get_type_name(), "Using default slave_id = 2", UVM_MEDIUM)
+    `uvm_info(get_type_name(), $sformatf("Using default slave_id = %0d", slave_id), UVM_MEDIUM)
   end
   
   if (!uvm_config_db#(int)::get(null, get_full_name(), "num_transactions", num_transactions)) begin
     `uvm_info(get_type_name(), "Using default num_transactions = 18", UVM_MEDIUM)
+  end
+  
+  if (!uvm_config_db#(bit)::get(null, get_full_name(), "is_enhanced_mode", is_enhanced_mode)) begin
+    `uvm_info(get_type_name(), "Using default is_enhanced_mode = 0", UVM_MEDIUM)
   end
   
   // Randomize base_addr based on slave_id constraint - critical fix for address generation

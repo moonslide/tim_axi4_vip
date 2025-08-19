@@ -13,7 +13,7 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
                                  //Write Address Channel Signals
                                  input  [3:0]awid,
                                  input  [ADDRESS_WIDTH-1:0]awaddr,
-                                 input  [3:0]awlen,
+                                 input  [7:0]awlen,
                                  input  [2:0]awsize,
                                  input  [1:0]awburst,
                                  input  [1:0]awlock,

@@ -1,10 +1,12 @@
 # AXI4 VIP Regression Test Suite - Original axi_stress_reset_test.md Test Cases
-# Total: 115 standard test cases + 18 performance KPI tests (6×3 modes) = 133 test cases
+# Total: 117 standard test cases (includes 3 stress_reset modes) + 18 performance KPI tests (6×3 modes) + 45 QoS/USER tests (15×3 modes) = 180 test cases
 # Based on axi_stress_reset_test.md specification with 6 main mixed KPI testcases
+# Added QoS (8 tests) and USER (7 tests) with 3 bus matrix modes support
 
 #====================================================================================
-# SECTION 1: STANDARD AXI4 TEST CASES (115 tests) 
+# SECTION 1: STANDARD AXI4 TEST CASES (117 tests) 
 # Core AXI4 protocol tests - excludes the 6 KPI testcases which are in Section 2
+# Note: axi4_stress_reset_test runs with 3 bus matrix modes (NONE, 4x4, ENHANCED)
 #====================================================================================
 
 #------------------------------------------------------------------------------------
@@ -128,7 +130,11 @@ axi4_concurrent_writes_raw_test run_cnt=2
 axi4_concurrent_error_stress_test run_cnt=2
 axi4_exhaustive_random_reads_test run_cnt=2
 axi4_sequential_mixed_ops_test run_cnt=2
-axi4_stress_reset_test run_cnt=2
+
+# Stress Reset Test with 3 Bus Matrix Modes
+axi4_stress_reset_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_stress_reset_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_stress_reset_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
 # Bus Matrix Tests
@@ -154,26 +160,67 @@ axi4_id_multiple_writes_same_awid_test run_cnt=2
 axi4_wid_awid_mismatch_test run_cnt=2
 
 #------------------------------------------------------------------------------------
-# QoS Tests
+# QoS Tests with 3 Bus Matrix Modes
 #------------------------------------------------------------------------------------
-axi4_qos_basic_priority_test run_cnt=2
-axi4_qos_equal_priority_fairness_test run_cnt=2
-axi4_qos_saturation_stress_test run_cnt=2
-axi4_qos_starvation_prevention_test run_cnt=2
-axi4_qos_with_user_priority_boost_test run_cnt=2
-axi4_non_blocking_qos_write_read_test run_cnt=2
-axi4_user_based_qos_routing_test run_cnt=2
+# NONE Mode (no ref model, 4x4 topology)
+axi4_qos_basic_priority_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_equal_priority_fairness_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_qos_basic_priority_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_equal_priority_fairness_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_qos_basic_priority_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_equal_priority_fairness_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
-# USER Signal Tests
+# USER Signal Tests with 3 Bus Matrix Modes
 #------------------------------------------------------------------------------------
-axi4_user_parity_protection_test run_cnt=2
-axi4_user_security_tagging_test run_cnt=2
-axi4_user_signal_corruption_test run_cnt=2
-axi4_user_signal_passthrough_test run_cnt=2
-axi4_user_signal_protocol_violation_test run_cnt=2
-axi4_user_signal_width_mismatch_test run_cnt=2
-axi4_user_transaction_tracing_test run_cnt=2
+# NONE Mode (no ref model, 4x4 topology)
+axi4_user_parity_protection_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_security_tagging_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_corruption_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_passthrough_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_protocol_violation_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_width_mismatch_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_transaction_tracing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_user_parity_protection_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_security_tagging_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_corruption_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_passthrough_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_protocol_violation_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_width_mismatch_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_transaction_tracing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_user_parity_protection_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_security_tagging_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_corruption_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_passthrough_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_protocol_violation_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_width_mismatch_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_transaction_tracing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
 # Ready/Valid Handshake Tests
@@ -275,8 +322,10 @@ axi4_stability_burnin_longtail_backpressure_error_recovery_test run_cnt=5 comman
 #====================================================================================
 
 # Test execution notes:
-# - Total test cases: 133 (115 standard + 18 performance KPI tests)
+# - Total test cases: 180 (117 standard + 18 performance KPI + 45 QoS/USER with bus matrix modes)
 # - Standard tests run 2 iterations each for reliability
+# - axi4_stress_reset_test runs across 3 bus matrix modes (NONE, 4x4, ENHANCED)
 # - Performance KPI tests run 5 iterations each for statistical accuracy
+# - QoS and USER tests run 2 iterations each across 3 bus matrix modes (NONE, BASE 4x4, ENHANCED 10x10)
 # - All tests include comprehensive performance metrics collection via axi4_performance_metrics.sv
 # - Results automatically sorted into pass/fail categories with detailed KPI reports

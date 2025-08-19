@@ -220,8 +220,8 @@ endfunction : configure_enhanced_matrix
 function int axi4_bus_matrix_ref::decode(bit [ADDRESS_WIDTH-1:0] addr);
   // In NONE mode, always return slave 0 for any address
   if(bus_mode == NONE) begin
-    `uvm_info("BUS_MATRIX_DECODE", $sformatf("NONE mode: Address 0x%16h maps to slave 0 (accepting all addresses)", addr), UVM_LOW);
-    return 0;
+    // `uvm_info("BUS_MATRIX_DECODE", $sformatf("NONE mode: Address 0x%16h maps to slave 0 (accepting all addresses)", addr), UVM_LOW);
+    return 0;  // All addresses map to slave 0 in NONE mode
   end
   
   // Check only configured slaves based on bus mode

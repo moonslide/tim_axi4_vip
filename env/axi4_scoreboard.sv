@@ -268,7 +268,17 @@ endfunction : new
 //  phase - uvm phase
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::build_phase(uvm_phase phase);
+  bit error_inject_override;
+  
   super.build_phase(phase);
+  
+  // Check if error_inject flag has been set by the test
+  // This allows tests to override the default env_config setting
+  if(uvm_config_db#(bit)::get(this, "", "error_inject", error_inject_override)) begin
+    `uvm_info("SCOREBOARD_CONFIG", $sformatf("Retrieved error_inject=%0d from config_db (test override)", error_inject_override), UVM_MEDIUM)
+    // Store for later use in check_phase - will check this before checking env_config
+    uvm_config_db#(bit)::set(this, "", "scoreboard_error_inject_override", error_inject_override);
+  end
   
   // Get the bus matrix reference for address validation (optional for tests without bus matrix)
   if(!uvm_config_db#(axi4_bus_matrix_ref)::get(this, "", "bus_matrix_ref", axi4_bus_matrix_h)) begin
@@ -964,6 +974,8 @@ endtask : axi4_read_data_comparision
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::check_phase(uvm_phase phase);
   bit all_slaves_passive = 1;
+  bit error_inject_override;
+  bit has_override;
   
   super.check_phase(phase);
 
@@ -971,9 +983,13 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   
   `uvm_info (get_type_name(),$sformatf(" Scoreboard Check Phase is starting"),UVM_HIGH);
   
-  // Skip count comparison checks if error_inject is enabled
-  if (axi4_env_cfg_h.error_inject) begin
-    `uvm_info(get_type_name(), "Scoreboard count comparison checks skipped due to error_inject enabled", UVM_MEDIUM);
+  // Check for error_inject override from test first
+  has_override = uvm_config_db#(bit)::get(this, "", "scoreboard_error_inject_override", error_inject_override);
+  
+  // Skip count comparison checks if error_inject is enabled (either from override or env_config)
+  if ((has_override && error_inject_override) || (!has_override && axi4_env_cfg_h.error_inject)) begin
+    `uvm_info(get_type_name(), $sformatf("Scoreboard count comparison checks skipped due to error_inject enabled (override=%0d, env_cfg=%0d)", 
+                                          has_override ? error_inject_override : 0, axi4_env_cfg_h.error_inject), UVM_MEDIUM);
     return;
   end
   

@@ -23,6 +23,9 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
     .awlock(intf.awlock),
     .awcache(intf.awcache),
     .awprot(intf.awprot),
+    .awqos(intf.awqos),
+    .awregion(intf.awregion),
+    .awuser(intf.awuser),
     .awvalid(intf.awvalid),
     .awready(intf.awready),
     .wdata(intf.wdata),
@@ -71,6 +74,8 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
                                               .awcache  (intf.awcache)  , 
                                               .awprot   (intf.awprot)   ,  
                                               .awqos    (intf.awqos)    ,
+                                              .awregion (intf.awregion) ,
+                                              .awuser   (intf.awuser)   ,
                                               .awvalid  (intf.awvalid)  , 
                                               .awready  (intf.awready)  , 
                                                                             
@@ -123,6 +128,9 @@ module axi4_slave_agent_bfm #(parameter int SLAVE_ID = 0)(axi4_if intf);
                                                .awlock   (intf.awlock)   ,  
                                                .awcache  (intf.awcache)  , 
                                                .awprot   (intf.awprot)   ,  
+                                               .awqos    (intf.awqos)    ,
+                                               .awregion (intf.awregion) ,
+                                               .awuser   (intf.awuser)   ,
                                                .awvalid  (intf.awvalid)  , 
                                                .awready  (intf.awready)  , 
                                                                              

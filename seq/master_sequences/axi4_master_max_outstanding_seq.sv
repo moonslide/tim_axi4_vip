@@ -47,14 +47,29 @@ task axi4_master_max_outstanding_seq::body();
     end
     
     start_item(req);
-    if(!req.randomize() with {
-      transfer_type == NON_BLOCKING_WRITE;
-      awaddr[63:16] == target_addr[63:16];
-      awburst == WRITE_INCR;
-      awid inside {[0:max_outstanding-1]};
-      awlen inside {[0:15]};
-    }) begin
-      `uvm_fatal(get_type_name(), "Randomization failed")
+    // Constrain AWID based on bus matrix mode
+    if(use_bus_matrix_addressing == 2) begin
+      // 10x10 mode: AWID can be 0-9
+      if(!req.randomize() with {
+        transfer_type == NON_BLOCKING_WRITE;
+        awaddr[63:16] == target_addr[63:16];
+        awburst == WRITE_INCR;
+        awid inside {[0:9]};
+        awlen inside {[0:15]};
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
+    end else begin
+      // 4x4 and NONE modes: AWID must be 0-3
+      if(!req.randomize() with {
+        transfer_type == NON_BLOCKING_WRITE;
+        awaddr[63:16] == target_addr[63:16];
+        awburst == WRITE_INCR;
+        awid inside {[0:3]};
+        awlen inside {[0:15]};
+      }) begin
+        `uvm_fatal(get_type_name(), "Randomization failed")
+      end
     end
     finish_item(req);
     

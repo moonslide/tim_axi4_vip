@@ -11,6 +11,7 @@ class axi4_master_read_write_contention_seq extends axi4_master_base_seq;
   rand int target_slave = 3;
   rand int num_transactions = 50;
   bit write_only_mode = 0;  // Flag to force write-only transactions
+  int use_bus_matrix_addressing = 0; // 0=NONE, 1=BASE_4x4, 2=ENHANCED_10x10
   
   extern function new(string name = "axi4_master_read_write_contention_seq");
   extern task body();
@@ -28,38 +29,71 @@ task axi4_master_read_write_contention_seq::body();
   
   `uvm_info(get_type_name(), "Starting read-write contention sequence", UVM_HIGH)
   
-  // Set target address
-  case(target_slave)
-    0: target_addr = 64'h0000_0008_0000_0000;
-    1: target_addr = 64'h0000_0008_4000_0000;
-    2: target_addr = 64'h0000_0008_8000_0000;
-    3: target_addr = 64'h0000_0008_C000_0000;
-    default: target_addr = 64'h0000_0008_0000_0000;
-  endcase
+  // Set target address based on bus matrix mode
+  if(use_bus_matrix_addressing == 2) begin
+    // ENHANCED mode - use DDR Memory region
+    target_addr = 64'h0000_0100_0000_0000;
+  end else if(use_bus_matrix_addressing == 1) begin
+    // BASE mode - use DDR Memory region
+    target_addr = 64'h0000_0100_0000_0000;
+  end else begin
+    // NONE mode - use simple address
+    target_addr = 64'h0000_0000_0000_0000;
+  end
   
   for(int i = 0; i < num_transactions; i++) begin
     req = axi4_master_tx::type_id::create("req");
     
     start_item(req);
-    if(write_only_mode) begin
-      // Write-only mode for write sequencer
-      if(!req.randomize() with {
-        transfer_type == NON_BLOCKING_WRITE;
-        awaddr[63:16] == target_addr[63:16];
-        awburst == WRITE_INCR;
-      }) begin
-        `uvm_fatal(get_type_name(), "Randomization failed")
+    
+    // Apply proper ID constraints based on bus matrix mode
+    if(use_bus_matrix_addressing == 2) begin
+      // ENHANCED mode (10x10)
+      if(write_only_mode) begin
+        if(!req.randomize() with {
+          transfer_type == NON_BLOCKING_WRITE;
+          awaddr[63:16] == target_addr[63:16];
+          awburst == WRITE_INCR;
+          awid inside {[0:9]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
+      end else begin
+        if(!req.randomize() with {
+          transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
+          awaddr[63:16] == target_addr[63:16];
+          araddr[63:16] == target_addr[63:16];
+          awburst == WRITE_INCR;
+          arburst == READ_INCR;
+          awid inside {[0:9]};
+          arid inside {[0:9]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
       end
     end else begin
-      // Normal mode - both read and write for contention
-      if(!req.randomize() with {
-        transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
-        awaddr[63:16] == target_addr[63:16];
-        araddr[63:16] == target_addr[63:16];
-        awburst == WRITE_INCR;
-        arburst == READ_INCR;
-      }) begin
-        `uvm_fatal(get_type_name(), "Randomization failed")
+      // NONE or BASE mode (4x4)
+      if(write_only_mode) begin
+        if(!req.randomize() with {
+          transfer_type == NON_BLOCKING_WRITE;
+          awaddr[63:16] == target_addr[63:16];
+          awburst == WRITE_INCR;
+          awid inside {[0:3]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
+      end else begin
+        if(!req.randomize() with {
+          transfer_type inside {NON_BLOCKING_WRITE, NON_BLOCKING_READ};
+          awaddr[63:16] == target_addr[63:16];
+          araddr[63:16] == target_addr[63:16];
+          awburst == WRITE_INCR;
+          arburst == READ_INCR;
+          awid inside {[0:3]};
+          arid inside {[0:3]};
+        }) begin
+          `uvm_fatal(get_type_name(), "Randomization failed")
+        end
       end
     end
     finish_item(req);

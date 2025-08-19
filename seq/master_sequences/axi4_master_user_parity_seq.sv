@@ -18,6 +18,10 @@ class axi4_master_user_parity_seq extends axi4_master_base_seq;
   // Error injection location
   rand bit [4:0] error_bit_position;
   
+  // Configuration for bus matrix mode
+  bit is_enhanced_mode = 0;
+  int target_slave_id = 0;
+  
   // Constraints
   constraint parity_cfg_c {
     parity_enable dist {1 := 90, 0 := 10};
@@ -57,7 +61,8 @@ task axi4_master_user_parity_seq::body();
   bit [31:0] protected_user_signal;
   bit [31:0] final_user_signal;
   bit parity_valid;
-  int target_slave_id;
+  bit [63:0] base_addr;
+  bit [63:0] addr_offset;
   
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
@@ -82,8 +87,55 @@ task axi4_master_user_parity_seq::body();
               parity_valid ? "PASS" : "FAIL", user_data_payload, final_user_signal), UVM_MEDIUM)
   end
   
-  // For ultrathink 10x10 configuration, use proper address mapping
-  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
+  // Use mode-aware address mapping
+  
+  if (!is_enhanced_mode) begin
+    // 4x4 BASE mode addresses matching AXI_MATRIX.txt
+    // S0: DDR_Memory at 0x0000_0100_0000_0000 (R/W)
+    // S1: Boot_ROM at 0x0000_0000_0000_0000 (Read-Only)
+    // S2: Peripheral_Regs at 0x0000_0010_0000_0000 (R/W)
+    // S3: HW_Fuse_Box at 0x0000_0020_0000_0000 (Read-Only)
+    // Only target writable slaves (0 and 2)
+    if (target_slave_id == 1 || target_slave_id == 3) begin
+      target_slave_id = (target_slave_id == 1) ? 0 : 2; // Redirect to writable slave
+    end
+    case(target_slave_id)
+      0: base_addr = 64'h0000_0100_0000_0000; // DDR_Memory (R/W)
+      2: base_addr = 64'h0000_0010_0000_0000; // Peripheral_Regs (R/W)
+      default: base_addr = 64'h0000_0100_0000_0000; // Default to DDR
+    endcase
+  end else begin
+    // 10x10 ENHANCED mode addresses
+    // S3: Illegal Address Hole - NO ACCESS ALLOWED
+    // S4: Instruction-only - READ-ONLY
+    // S5: Read-only peripheral - READ-ONLY  
+    // Redirect to writable slaves only (0, 1, 2, 6, 7, 8, 9)
+    if (target_slave_id == 3 || target_slave_id == 4 || target_slave_id == 5) begin
+      // Redirect to a writable slave
+      case(target_slave_id)
+        3: target_slave_id = 0; // S3 is illegal, use S0 instead
+        4: target_slave_id = 1; // S4 is instruction-only, use S1 instead
+        5: target_slave_id = 2; // S5 is read-only, use S2 instead
+        default: target_slave_id = 0;
+      endcase
+    end
+    
+    case(target_slave_id)
+      0: base_addr = 64'h0000_0008_0000_0000; // DDR Secure (R/W)
+      1: base_addr = 64'h0000_0008_4000_0000; // DDR Non-Secure (R/W)
+      2: base_addr = 64'h0000_0008_8000_0000; // DDR Shared (R/W)
+      3: base_addr = 64'h0000_0008_c000_0000; // Illegal - should never reach here
+      4: base_addr = 64'h0000_0009_0000_0000; // Instruction-only - should never reach here
+      5: base_addr = 64'h0000_000a_0000_0000; // Read-only - should never reach here
+      6: base_addr = 64'h0000_000a_0001_0000; // Privileged-Only (R/W)
+      7: base_addr = 64'h0000_000a_0002_0000; // Secure-Only (R/W)
+      8: base_addr = 64'h0000_000a_0003_0000; // Non-Secure (R/W)
+      9: base_addr = 64'h0000_000a_0004_0000; // Exclusive Monitor (R/W)
+      default: base_addr = 64'h0000_0008_0000_0000;
+    endcase
+  end
+  
+  addr_offset = $urandom() & 64'hFFF;
   
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
@@ -92,7 +144,21 @@ task axi4_master_user_parity_seq::body();
     req.awlen == 8'h00;  // Single beat burst
     req.awuser == final_user_signal;
     req.wuser == final_user_signal;  // Same parity protection for write data
-    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
+    req.awaddr == local::base_addr + local::addr_offset; // Add small offset within slave range
+    // Constrain AWID based on bus matrix mode and access control rules
+    if (!local::is_enhanced_mode) {
+      // 4x4 mode: Slave 2 only allows masters 0, 1, 2
+      if (local::target_slave_id == 2) {
+        req.awid inside {AWID_0, AWID_1, AWID_2};
+      } else {
+        req.awid inside {AWID_0, AWID_1, AWID_2, AWID_3};
+      }
+    } else {
+      // 10x10 mode: All masters allowed for writable slaves
+      // Since we're redirecting slaves 3, 4, 5 to slaves 0, 1, 2
+      // and those allow all masters, we can use any master ID
+      req.awid inside {AWID_0, AWID_1, AWID_2, AWID_3, AWID_4, AWID_5, AWID_6, AWID_7, AWID_8, AWID_9};
+    }
   }) begin
     `uvm_fatal("axi4", "Randomization failed for USER parity sequence")
   end

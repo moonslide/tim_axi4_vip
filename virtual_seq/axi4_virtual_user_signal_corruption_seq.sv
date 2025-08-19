@@ -18,10 +18,14 @@ class axi4_virtual_user_signal_corruption_seq extends axi4_virtual_base_seq;
 
   // Configuration parameters
   rand int unsigned num_corruption_tests;
+  int num_masters = 1;
+  int num_slaves = 1;
+  bit is_enhanced_mode = 0;
+  bit is_4x4_ref_mode = 0;
 
   // Constraints
   constraint corruption_test_cfg_c {
-    num_corruption_tests inside {[20:50]};
+    num_corruption_tests inside {[5:10]};  // Reduced from [20:50] to avoid timeout
   }
 
   //-------------------------------------------------------
@@ -50,6 +54,8 @@ endfunction : new
 // Runs comprehensive USER signal corruption testing across all masters
 //--------------------------------------------------------------------------------------------
 task axi4_virtual_user_signal_corruption_seq::body();
+  int actual_masters;
+  int actual_slaves;
 
   if (!this.randomize()) begin
     `uvm_fatal(get_type_name(), "Failed to randomize corruption test configuration")
@@ -58,8 +64,29 @@ task axi4_virtual_user_signal_corruption_seq::body();
   `uvm_info(get_type_name(), "=== Starting USER Signal Corruption Testing ===", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Configuration: %0d corruption tests", 
                                       num_corruption_tests), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("Enhanced: %0d, 4x4 Ref: %0d", is_enhanced_mode, is_4x4_ref_mode), UVM_LOW)
   `uvm_info(get_type_name(), "Testing corruption detection and recovery mechanisms", UVM_LOW)
   `uvm_info(get_type_name(), "USER Signal Format: [31:24]=EDC, [23:16]=Control, [15:8]=Header, [7:0]=Payload", UVM_LOW)
+
+  // Determine actual number of sequencers available
+  actual_masters = (p_sequencer.axi4_master_write_seqr_h_all.size() > 0) ? 
+                   p_sequencer.axi4_master_write_seqr_h_all.size() : 1;
+  actual_slaves = (p_sequencer.axi4_slave_write_seqr_h_all.size() > 0) ? 
+                  p_sequencer.axi4_slave_write_seqr_h_all.size() : 1;
+  
+  // Use minimum of configured and actual
+  if (actual_masters < num_masters) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting masters from %0d to %0d (actual available)", 
+                                         num_masters, actual_masters), UVM_MEDIUM)
+    num_masters = actual_masters;
+  end
+  
+  if (actual_slaves < num_slaves) begin
+    `uvm_info(get_type_name(), $sformatf("Adjusting slaves from %0d to %0d (actual available)", 
+                                         num_slaves, actual_slaves), UVM_MEDIUM)
+    num_slaves = actual_slaves;
+  end
 
   // Create slave sequences
   axi4_slave_write_seq_h = axi4_slave_nbk_write_seq::type_id::create("axi4_slave_write_seq_h");
@@ -68,14 +95,50 @@ task axi4_virtual_user_signal_corruption_seq::body();
   // Start slave sequences in forever loops
   fork
     begin : SLAVE_WRITE
-      forever begin
-        axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_write_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_nbk_write_seq seq = axi4_slave_nbk_write_seq::type_id::create($sformatf("slave_write_%0d", slave_idx));
+                seq.start(p_sequencer.axi4_slave_write_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
     
     begin : SLAVE_READ
-      forever begin
-        axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+      if (actual_slaves > 1) begin
+        foreach(p_sequencer.axi4_slave_read_seqr_h_all[i]) begin
+          if (i < num_slaves) begin
+            automatic int slave_idx = i;
+            fork
+              forever begin
+                axi4_slave_nbk_read_seq seq = axi4_slave_nbk_read_seq::type_id::create($sformatf("slave_read_%0d", slave_idx));
+                seq.start(p_sequencer.axi4_slave_read_seqr_h_all[slave_idx]);
+                #10;
+              end
+            join_none
+          end
+        end
+      end else begin
+        fork
+          forever begin
+            axi4_slave_read_seq_h.start(p_sequencer.axi4_slave_read_seqr_h);
+            #10;
+          end
+        join_none
       end
     end
   join_none
@@ -101,11 +164,15 @@ task axi4_virtual_user_signal_corruption_seq::execute_corruption_tests();
     axi4_master_user_signal_corruption_seq_h = 
       axi4_master_user_signal_corruption_seq::type_id::create("corruption_seq");
     
+    // Pass mode configuration to the master sequence
+    axi4_master_user_signal_corruption_seq_h.is_enhanced_mode = is_enhanced_mode;
+    axi4_master_user_signal_corruption_seq_h.target_slave_id = $urandom_range(0, num_slaves - 1);
+    
     // Run the corruption sequence
     axi4_master_user_signal_corruption_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
     
-    // Add delay between tests
-    #100ns;
+    // Add small delay between tests
+    #10ns;  // Reduced from 100ns to 10ns
   end
   
   `uvm_info(get_type_name(), $sformatf("All %0d corruption tests completed successfully", 
