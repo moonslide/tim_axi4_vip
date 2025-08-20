@@ -21,9 +21,13 @@ axi4_qos_escalation_test,QoS,QoS priority escalation,BUS_ENHANCED_MATRIX,10,10,1
 axi4_qos_preemption_test,QoS,QoS transaction preemption,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
 axi4_qos_user_boost_write_test,QoS,QoS with USER signal boost,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS
 axi4_user_signal_passthrough_test,USER,USER signal passthrough verification,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
-axi4_user_parity_test,USER,USER signal parity checking,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
-axi4_user_security_tagging_test,USER,USER security tag verification,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
-axi4_user_signal_corruption_test,USER,USER signal corruption detection,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_user_parity_protection_test,USER,USER signal parity checking,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS (v2.8 fixed)
+axi4_user_security_tagging_test,USER,USER security tag verification,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS (v2.8 fixed)
+axi4_user_signal_corruption_test,USER,USER signal corruption detection,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS (v2.8 fixed)
+axi4_user_signal_width_mismatch_test,USER,USER signal width mismatch handling,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS (v2.8 fixed)
+axi4_user_signal_protocol_violation_test,USER,USER signal protocol violation,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS
+axi4_user_transaction_tracing_test,USER,USER transaction tracing,BUS_ENHANCED_MATRIX,10,10,5ms,No,Yes,PASS (v2.8 fixed)
+axi4_user_based_qos_routing_test,USER/QoS,USER-based QoS routing,BUS_ENHANCED_MATRIX,10,10,10ms,Yes,Yes,PASS (v2.8 fixed)
 axi4_upper_boundary_write_test,Boundary,Upper address boundary write test,NONE,4,4,8ms,No,No,PASS
 axi4_upper_boundary_read_test,Boundary,Upper address boundary read test,NONE,4,4,8ms,No,No,PASS
 axi4_4k_boundary_cross_test,Boundary,4K page boundary crossing test,NONE,4,4,8ms,No,No,PASS
@@ -134,3 +138,7 @@ axi4_qos_equal_priority_fairness_test,QoS,Equal priority fairness verification,B
 axi4_qos_saturation_stress_test,QoS,QoS saturation under stress,BUS_ENHANCED_MATRIX,4,4,20ms,Yes,No,PASS (v2.8 fixed)
 axi4_qos_starvation_prevention_test,QoS,QoS starvation prevention,BUS_ENHANCED_MATRIX,4,4,15ms,Yes,No,PASS (v2.8 fixed)
 axi4_qos_with_user_priority_boost_test,QoS,QoS with USER priority boost,BUS_ENHANCED_MATRIX,4,4,15ms,Yes,Yes,PASS (v2.8 fixed)
+axi4_qos_basic_priority_test,QoS,Basic QoS priority test,BUS_ENHANCED_MATRIX,4,4,10ms,Yes,No,PASS (v2.8 fixed)
+axi4_non_blocking_qos_write_read_test,QoS,Non-blocking QoS write-read,BUS_ENHANCED_MATRIX,4,4,10ms,Yes,No,PASS (v2.8 fixed)
+axi4_non_blocking_outstanding_transfer_write_read_test,Outstanding,Non-blocking outstanding transfer,ALL,4,4,10ms,No,No,PASS (v2.8 fixed)
+axi4_stress_reset_test,Stress,Stress test with reset,ALL,4,4,20ms,No,No,PASS (v2.8 fixed)

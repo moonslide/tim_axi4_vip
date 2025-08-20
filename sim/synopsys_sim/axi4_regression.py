@@ -97,7 +97,7 @@ class RegressionRunner:
         self.failed_tests = 0
         self.start_time = None
         
-        # Enhanced features for ultrathink requirements
+        # Enhanced features for advanced requirements
         self.test_groups = {}  # Track test groups for run_cnt handling
         self.pattern_registry = {}  # Track patterns with different settings
         self.group_failure_enabled = True  # Enable group failure logic
@@ -1246,11 +1246,11 @@ class RegressionRunner:
                 timeout_msg = f"Test timed out after {self.timeout} seconds"
                 if log_file.exists():
                     try:
-                        # Check log file for ultrasim/ultrathink-specific timeout patterns
+                        # Check log file for enhanced mode timeout patterns
                         with open(log_file, 'r') as f:
                             log_tail = f.read()[-10000:]  # Read last 10KB
-                            if 'ultrasim' in log_tail.lower() or 'ultrathink' in log_tail.lower():
-                                timeout_msg = f"Ultrasim/Ultrathink timeout detected after {self.timeout} seconds"
+                            if 'ultrasim' in log_tail.lower() or 'enhanced' in log_tail.lower():
+                                timeout_msg = f"Enhanced mode timeout detected after {self.timeout} seconds"
                             elif 'excessive repetition' in log_tail or 'simulation stuck' in log_tail:
                                 timeout_msg = f"Simulation hung - excessive repetition detected"
                     except Exception:
@@ -1331,8 +1331,8 @@ class RegressionRunner:
                 r'excessive repetition detected',
                 r'timeout.*ultrasim',
                 r'TIME_OUT.*ultrasim',
-                r'timeout.*ultrathink',
-                r'TIME_OUT.*ultrathink',
+                r'timeout.*enhanced',
+                r'TIME_OUT.*enhanced',
                 r'simulation stuck at time'
             ]
             

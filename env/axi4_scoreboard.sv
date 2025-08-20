@@ -593,7 +593,7 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     end
   end
 
-  // AWUSER signal comparison - ULTRATHINK enhancement for USER signal integrity
+  // AWUSER signal comparison - Enhancement for USER signal integrity
   if(axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser)begin
     `uvm_info(get_type_name(),$sformatf("axi4_awuser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_AWUSER_MATCHED", $sformatf("Master awuser = 'h%0x and Slave awuser = 'h%0x",axi4_master_tx_h1.awuser,axi4_slave_tx_h1.awuser), UVM_HIGH);
@@ -860,7 +860,7 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     end
   end
 
-  // ARUSER signal comparison - ULTRATHINK enhancement for USER signal integrity
+  // ARUSER signal comparison - Enhancement for USER signal integrity
   if(axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser)begin
     `uvm_info(get_type_name(),$sformatf("axi4_aruser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_ARUSER_MATCHED", $sformatf("Master aruser = 'h%0x and Slave aruser = 'h%0x",axi4_master_tx_h4.aruser,axi4_slave_tx_h4.aruser), UVM_HIGH);
@@ -1660,7 +1660,7 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise awprot verified comparisions:%0d",byte_data_cmp_verified_awprot_count ),UVM_HIGH);
 
   
-  //Number of awuser comparisoins done - ULTRATHINK enhancement
+  //Number of awuser comparisoins done
   `uvm_info (get_type_name(),$sformatf("🔍 AWUSER signal integrity comparisons:%0d",byte_data_cmp_verified_awuser_count+byte_data_cmp_failed_awuser_count ),UVM_MEDIUM);
   if(byte_data_cmp_failed_awuser_count > 0) begin
     `uvm_error (get_type_name(),$sformatf("⚠️  AWUSER FAILURES:%0d - Signal truncation or interconnect corruption detected!",byte_data_cmp_failed_awuser_count ));
@@ -1808,7 +1808,7 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise arqos verified comparisions:%0d",byte_data_cmp_verified_arqos_count ),UVM_HIGH);
 
   
-  //Number of aruser comparisoins done - ULTRATHINK enhancement  
+  //Number of aruser comparisoins done  
   `uvm_info (get_type_name(),$sformatf("🔍 ARUSER signal integrity comparisons:%0d",byte_data_cmp_verified_aruser_count+byte_data_cmp_failed_aruser_count ),UVM_MEDIUM);
   if(byte_data_cmp_failed_aruser_count > 0) begin
     `uvm_error (get_type_name(),$sformatf("⚠️  ARUSER FAILURES:%0d - Signal truncation or interconnect corruption detected!",byte_data_cmp_failed_aruser_count ));

@@ -165,8 +165,9 @@ task axi4_virtual_user_transaction_tracing_seq::body();
   
   // Skip Test Scenario 8 to reduce simulation time
   
-  // Wait for all transactions to complete
-  #50ns;
+  // Wait for all transactions to complete and be processed by scoreboard
+  // This is critical to ensure scoreboard receives all transactions
+  #500ns;
   
   // Display comprehensive statistics
   display_trace_statistics();

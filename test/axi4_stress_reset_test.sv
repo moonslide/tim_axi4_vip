@@ -110,23 +110,35 @@ class axi4_stress_reset_test extends axi4_base_test;
     // Phase 1: Basic Write/Read Traffic (covers stress aspect)
     `uvm_info(get_type_name(), "=== Phase 1: Basic Write/Read Traffic ===", UVM_LOW)
     
-    // Minimal write transaction
-    write_rand_seq = axi4_master_nbk_write_rand_seq::type_id::create("write_rand_seq");
-    case(bus_mode)
-      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: write_rand_seq.use_bus_matrix_addressing = 2;
-      axi4_bus_matrix_ref::BASE_BUS_MATRIX: write_rand_seq.use_bus_matrix_addressing = 1;
-      default: write_rand_seq.use_bus_matrix_addressing = 0;
-    endcase
-    write_rand_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h);
+    // Start write sequence with proper fork-join for non-blocking
+    fork
+      begin
+        write_rand_seq = axi4_master_nbk_write_rand_seq::type_id::create("write_rand_seq");
+        case(bus_mode)
+          axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: write_rand_seq.use_bus_matrix_addressing = 2;
+          axi4_bus_matrix_ref::BASE_BUS_MATRIX: write_rand_seq.use_bus_matrix_addressing = 1;
+          default: write_rand_seq.use_bus_matrix_addressing = 0;
+        endcase
+        write_rand_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h);
+      end
+    join_none
     
-    // Minimal read transaction
-    read_rand_seq = axi4_master_nbk_read_rand_seq::type_id::create("read_rand_seq");
-    case(bus_mode)
-      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: read_rand_seq.use_bus_matrix_addressing = 2;
-      axi4_bus_matrix_ref::BASE_BUS_MATRIX: read_rand_seq.use_bus_matrix_addressing = 1;
-      default: read_rand_seq.use_bus_matrix_addressing = 0;
-    endcase
-    read_rand_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_read_seqr_h);
+    #50ns; // Allow some time for write to complete
+    
+    // Start read sequence with proper fork-join for non-blocking
+    fork
+      begin
+        read_rand_seq = axi4_master_nbk_read_rand_seq::type_id::create("read_rand_seq");
+        case(bus_mode)
+          axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: read_rand_seq.use_bus_matrix_addressing = 2;
+          axi4_bus_matrix_ref::BASE_BUS_MATRIX: read_rand_seq.use_bus_matrix_addressing = 1;
+          default: read_rand_seq.use_bus_matrix_addressing = 0;
+        endcase
+        read_rand_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_read_seqr_h);
+      end
+    join_none
+    
+    #50ns; // Allow some time for read to complete
     
     // Phase 2: Reset Simulation (covers reset aspect)
     `uvm_info(get_type_name(), "=== Phase 2: Reset Simulation ===", UVM_LOW)
@@ -135,18 +147,22 @@ class axi4_stress_reset_test extends axi4_base_test;
     // Phase 3: Recovery Test (covers recovery aspect)
     `uvm_info(get_type_name(), "=== Phase 3: Recovery Test ===", UVM_LOW)
     
-    // Post-reset smoke test
-    reset_smoke_seq = axi4_master_reset_smoke_seq::type_id::create("reset_smoke_seq");
-    reset_smoke_seq.num_txns = 1;
-    case(bus_mode)
-      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: reset_smoke_seq.use_bus_matrix_addressing = 2;
-      axi4_bus_matrix_ref::BASE_BUS_MATRIX: reset_smoke_seq.use_bus_matrix_addressing = 1;
-      default: reset_smoke_seq.use_bus_matrix_addressing = 0;
-    endcase
-    reset_smoke_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h);
+    // Post-reset smoke test with non-blocking fork
+    fork
+      begin
+        reset_smoke_seq = axi4_master_reset_smoke_seq::type_id::create("reset_smoke_seq");
+        reset_smoke_seq.num_txns = 1;
+        case(bus_mode)
+          axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: reset_smoke_seq.use_bus_matrix_addressing = 2;
+          axi4_bus_matrix_ref::BASE_BUS_MATRIX: reset_smoke_seq.use_bus_matrix_addressing = 1;
+          default: reset_smoke_seq.use_bus_matrix_addressing = 0;
+        endcase
+        reset_smoke_seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h);
+      end
+    join_none
     
     // Brief completion delay
-    #10ns;
+    #50ns;
     
     `uvm_info(get_type_name(), "Simplified AXI4 Stress Reset Test Completed", UVM_LOW)
     

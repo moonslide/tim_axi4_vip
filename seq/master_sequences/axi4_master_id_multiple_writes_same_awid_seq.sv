@@ -8,7 +8,7 @@
 // ID_MULTIPLE_WRITES_SAME_AWID: AXI4 SAME AWID In-Order Transaction Test with No Write Interleaving
 // 
 // ╔══════════════════════════════════════════════════════════════════════════════════════════╗
-// ║                            ULTRATHINK DEEP ANALYSIS                                     ║
+// ║                            DEEP ANALYSIS                                                ║
 // ╚══════════════════════════════════════════════════════════════════════════════════════════╝
 //
 // PRIMARY VERIFICATION OBJECTIVE:

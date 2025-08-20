@@ -39,8 +39,8 @@ task axi4_master_nbk_write_rand_seq::body();
   
   // Set target address based on bus matrix mode
   if(use_bus_matrix_addressing == 2) begin
-    // ENHANCED mode - use DDR Memory region
-    target_addr = 64'h0000_0100_0000_0000;
+    // ENHANCED mode - use DDR Non-Secure User region (S1)
+    target_addr = 64'h0000_0008_4000_0000;
   end else if(use_bus_matrix_addressing == 1) begin
     // BASE mode - use DDR Memory region
     target_addr = 64'h0000_0100_0000_0000;

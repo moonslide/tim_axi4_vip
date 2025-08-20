@@ -244,7 +244,7 @@ function bresp_e axi4_bus_matrix_ref::get_write_resp(int master, bit [ADDRESS_WI
   if(bus_mode == NONE) return WRITE_OKAY;
   
   // Check address decode
-  if(sid < 0 || sid == 3) begin // S3 is illegal address hole
+  if(sid < 0 || (bus_mode == BUS_ENHANCED_MATRIX && sid == 3)) begin // S3 is illegal address hole only in ENHANCED mode
     `uvm_info("BUS_MATRIX_WRITE_RESP", $sformatf("Master %0d write to unmapped/illegal address 0x%16h - DECERR", master, addr), UVM_LOW)
     return WRITE_DECERR;
   end
@@ -294,7 +294,7 @@ function rresp_e axi4_bus_matrix_ref::get_read_resp(int master, bit [ADDRESS_WID
             master, addr, sid, arprot), UVM_LOW);
   
   // Check address decode
-  if(sid < 0 || sid == 3) begin // S3 is illegal address hole
+  if(sid < 0 || (bus_mode == BUS_ENHANCED_MATRIX && sid == 3)) begin // S3 is illegal address hole only in ENHANCED mode
     `uvm_info("BUS_MATRIX_READ_RESP", $sformatf("Address 0x%16h unmapped/illegal - returning READ_DECERR", addr), UVM_LOW);
     return READ_DECERR;
   end

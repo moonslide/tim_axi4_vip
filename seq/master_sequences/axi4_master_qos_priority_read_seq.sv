@@ -45,6 +45,7 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 task axi4_master_qos_priority_read_seq::body();
   bit [63:0] target_addr;
+  bit [2:0] prot_value;
   axi4_master_agent_config cfg_h;
   axi4_bus_matrix_ref::bus_matrix_mode_e bus_mode;
   int num_slaves;
@@ -117,10 +118,10 @@ task axi4_master_qos_priority_read_seq::body();
       // For NONE mode (no bus matrix ref model), use simple low addresses
       // These addresses work without bus matrix decoding
       case(target_slave_id)
-        0: target_addr = 64'h0000_0000_0000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // Low memory region
-        1: target_addr = 64'h0000_0000_0001_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // Next region
-        2: target_addr = 64'h0000_0000_0002_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // Next region
-        3: target_addr = 64'h0000_0000_0003_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // Next region
+        0: target_addr = 64'h0000_0000_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Low memory region (64KB, 16-byte aligned)
+        1: target_addr = 64'h0000_0000_0001_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
+        2: target_addr = 64'h0000_0000_0002_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
+        3: target_addr = 64'h0000_0000_0003_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
         default: target_addr = 64'h0000_0000_0000_1000; // Default safe address
       endcase
     end
@@ -129,10 +130,10 @@ task axi4_master_qos_priority_read_seq::body();
       // For BASE_BUS_MATRIX (4x4), use address ranges from AXI_MATRIX.txt
       // These ranges match axi4_base_test::setup_base_master_agent_cfg()
       case(target_slave_id)
-        0: target_addr = 64'h0000_0100_0000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // DDR_Memory (32GB range, align to 16 bytes)
-        1: target_addr = 64'h0000_0000_0000_0000 + {$urandom_range(0, 'h1FFF), 4'h0}; // Boot_ROM (128KB range, align to 16 bytes)
-        2: target_addr = 64'h0000_0010_0000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // Peripheral_Regs (1MB range, align to 16 bytes)
-        3: target_addr = 64'h0000_0020_0000_0000 + {$urandom_range(0, 'h0FF), 4'h0};  // HW_Fuse_Box (4KB range, align to 16 bytes)
+        0: target_addr = 64'h0000_0100_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // DDR_Memory (limit to 64KB for testing, 16-byte aligned)
+        1: target_addr = 64'h0000_0000_0000_0000 + ($urandom_range(0, 32'h0001_FFF0) & ~64'hF); // Boot_ROM (128KB range, 16-byte aligned)
+        2: target_addr = 64'h0000_0010_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Peripheral_Regs (limit to 64KB for testing, 16-byte aligned)
+        3: target_addr = 64'h0000_0020_0000_0000 + ($urandom_range(0, 32'h0000_0FF0) & ~64'hF); // HW_Fuse_Box (4KB range, 16-byte aligned)
         default: target_addr = 64'h0000_0100_0000_0000; // Default to DDR base
       endcase
     end
@@ -141,15 +142,15 @@ task axi4_master_qos_priority_read_seq::body();
       // For BUS_ENHANCED_MATRIX (10x10), use specific address ranges for each slave
       // These ranges match axi4_base_test::setup_enhanced_master_agent_cfg()
       case(target_slave_id)
-        0: target_addr = 64'h0000_0008_0000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // S0: DDR Cache-Coherent
-        1: target_addr = 64'h0000_0008_4000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // S1: DDR Non-Coherent
-        2: target_addr = 64'h0000_0008_8000_0000 + {$urandom_range(0, 'hFFFF), 4'h0}; // S2: DDR Shared Buffer
+        0: target_addr = 64'h0000_0008_0000_0000 + ($urandom_range(0, 32'h3FFF_FFF0) & ~64'hF); // S0: DDR Secure Kernel (1GB, 16-byte aligned)
+        1: target_addr = 64'h0000_0008_4000_0000 + ($urandom_range(0, 32'h3FFF_FFF0) & ~64'hF); // S1: DDR Non-Secure User (1GB, 16-byte aligned)
+        2: target_addr = 64'h0000_0008_8000_0000 + ($urandom_range(0, 32'h3FFF_FFF0) & ~64'hF); // S2: DDR Shared Buffer (1GB, 16-byte aligned)
         // S3: Illegal Address Hole - excluded from read sequences
         // S4: XOM Instruction-Only - excluded from read sequences  
-        5: target_addr = 64'h0000_000A_0000_0000 + {$urandom_range(0, 'h0FFF), 4'h0}; // S5: RO Peripheral (64KB)
-        6: target_addr = 64'h0000_000A_0001_0000 + {$urandom_range(0, 'h0FFF), 4'h0}; // S6: Privileged-Only (64KB)
-        7: target_addr = 64'h0000_000A_0002_0000 + {$urandom_range(0, 'h0FFF), 4'h0}; // S7: Secure-Only (64KB)
-        8: target_addr = 64'h0000_000A_0003_0000 + {$urandom_range(0, 'h0FFF), 4'h0}; // S8: Scratchpad (64KB)
+        5: target_addr = 64'h0000_000A_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // S5: RO Peripheral (64KB, 16-byte aligned)
+        6: target_addr = 64'h0000_000A_0001_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // S6: Privileged-Only (64KB, 16-byte aligned)
+        7: target_addr = 64'h0000_000A_0002_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // S7: Secure-Only (64KB, 16-byte aligned)
+        8: target_addr = 64'h0000_000A_0003_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // S8: Scratchpad (64KB, 16-byte aligned)
         // S9: Attribute Monitor is write-only - excluded from read sequences
         default: target_addr = 64'h0000_0008_0000_0000; // Default to S0 DDR base
       endcase
@@ -160,6 +161,21 @@ task axi4_master_qos_priority_read_seq::body();
   
   start_item(req);
   
+  // Set AxPROT based on target slave requirements
+  // Note: This implementation's AxPROT[0] interpretation: 0=Privileged, 1=Normal (opposite of AXI spec)
+  // AxPROT[2]: 0=Data, 1=Instruction
+  // AxPROT[1]: 0=Secure, 1=Non-secure  
+  // AxPROT[0]: 0=Privileged, 1=Normal (bus matrix specific)
+  if (bus_mode == axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX) begin
+    case(target_slave_id)
+      0, 7: prot_value = 3'b000;  // S0 (Secure Kernel) and S7 (Secure-Only) require secure access (privileged)
+      6: prot_value = 3'b000;     // S6 (Privileged-Only) requires privileged access (arprot[0]=0)
+      default: prot_value = 3'b010; // Others can use non-secure, normal access
+    endcase
+  end else begin
+    prot_value = 3'b010; // Non-secure, normal, data access for other modes
+  end
+  
   if(!req.randomize() with {
     req.tx_type == READ;
     req.transfer_type == NON_BLOCKING_READ;
@@ -168,7 +184,7 @@ task axi4_master_qos_priority_read_seq::body();
     req.arsize == READ_4_BYTES;
     req.arlen == 8'h00;  // Single beat burst to simplify
     req.araddr == local::target_addr;
-    req.arprot == 3'b010;  // Set to secure, non-privileged, data access
+    req.arprot == local::prot_value;
   }) begin
     `uvm_fatal("axi4", "Randomization failed for QoS priority read sequence")
   end

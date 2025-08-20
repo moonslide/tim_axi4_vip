@@ -58,7 +58,7 @@ task axi4_master_reset_smoke_seq::body();
       if(!req.randomize() with {
         awaddr inside {[64'h0000_0100_0000_0000:64'h0000_0100_00FF_FFFF]};  // 4x4 DDR range
         awburst == WRITE_INCR;
-        transfer_type == BLOCKING_WRITE;
+        transfer_type == NON_BLOCKING_WRITE;  // Changed to non-blocking
         awsize == WRITE_4_BYTES;
         awlen == 0;  // Single beat
         awid inside {[0:3]};  // 4x4 mode: AWID must be 0-3
@@ -70,7 +70,7 @@ task axi4_master_reset_smoke_seq::body();
       if(!req.randomize() with {
         awaddr inside {[64'h0000_0008_0000_0000:64'h0000_0008_00FF_FFFF]};  // 10x10 DDR range
         awburst == WRITE_INCR;
-        transfer_type == BLOCKING_WRITE;
+        transfer_type == NON_BLOCKING_WRITE;  // Changed to non-blocking
         awsize == WRITE_4_BYTES;
         awlen == 0;  // Single beat
         awid inside {[0:9]};  // 10x10 mode: AWID can be 0-9
@@ -78,11 +78,11 @@ task axi4_master_reset_smoke_seq::body();
         `uvm_fatal(get_type_name(), "Randomization failed")
       end
     end else begin
-      // For NONE mode, use default random addresses
+      // For NONE mode, use default random addresses with non-blocking
       if(!req.randomize() with {
         awburst == WRITE_INCR;
         arburst == READ_INCR;
-        transfer_type == BLOCKING_WRITE;
+        transfer_type == NON_BLOCKING_WRITE;  // Changed to non-blocking
         awsize == WRITE_4_BYTES;
         arsize == READ_4_BYTES;
         awlen == 0;  // Single beat
@@ -95,7 +95,7 @@ task axi4_master_reset_smoke_seq::body();
     end
     finish_item(req);
     
-    get_response(rsp);
+    // Non-blocking transactions don't wait for response
   end
   
   `uvm_info(get_type_name(), "Reset smoke sequence completed", UVM_HIGH)

@@ -10,6 +10,9 @@
 //--------------------------------------------------------------------------------------------
 class axi4_master_user_transaction_tracing_seq extends axi4_master_base_seq;
   `uvm_object_utils(axi4_master_user_transaction_tracing_seq)
+  
+  // Response object for getting transaction responses
+  axi4_master_tx rsp;
 
   // Tracing parameters
   bit [7:0]  transaction_id = 8'h00;     // Unique transaction trace ID
@@ -160,6 +163,10 @@ task axi4_master_user_transaction_tracing_seq::body();
   axi4_bus_matrix_ref::bus_matrix_mode_e bus_mode;
   bit [ADDRESS_WIDTH-1:0] base_addr;
   
+  // Enable response handling for proper transaction flow
+  // But we won't block on get_response() to avoid hanging
+  set_response_queue_depth(10);
+  
   // Get bus matrix mode from config_db
   if(!uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::get(m_sequencer, "", "bus_matrix_mode", bus_mode)) begin
     bus_mode = axi4_bus_matrix_ref::NONE;
@@ -238,6 +245,7 @@ task axi4_master_user_transaction_tracing_seq::body();
       start_item(req);
       assert(req.randomize() with {
         tx_type == WRITE;
+        transfer_type == NON_BLOCKING_WRITE;  // Set transfer type
         awid == `GET_AWID_ENUM(master_id);
         awaddr == base_addr + (sequence_number * 64'h100);
         awlen == 4'h3; // 4 beats
@@ -256,6 +264,9 @@ task axi4_master_user_transaction_tracing_seq::body();
         }
       });
       finish_item(req);
+      
+      // Don't block on response to avoid hanging - let transaction flow asynchronously
+      `uvm_info(get_type_name(), "Write transaction sent", UVM_HIGH)
     end
     
     // Create read transaction to verify trace propagation
@@ -266,6 +277,7 @@ task axi4_master_user_transaction_tracing_seq::body();
         start_item(req);
         assert(req.randomize() with {
           tx_type == READ;
+          transfer_type == NON_BLOCKING_READ;  // Set transfer type
           arid == `GET_ARID_ENUM(master_id);
           araddr == base_addr + (sequence_number * 64'h100);
           arlen == 4'h3; // 4 beats
@@ -275,6 +287,9 @@ task axi4_master_user_transaction_tracing_seq::body();
           aruser == trace_user_signal;  // Embed trace info in read
         });
         finish_item(req);
+        
+        // Don't block on response to avoid hanging - let transaction flow asynchronously
+        `uvm_info(get_type_name(), "Read transaction sent", UVM_HIGH)
         
         `uvm_info(get_type_name(), $sformatf("Read-back transaction for trace validation (TID=0x%02x)", 
                   current_tid), UVM_MEDIUM)

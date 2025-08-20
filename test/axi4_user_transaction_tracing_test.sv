@@ -76,6 +76,9 @@ class axi4_user_transaction_tracing_test extends axi4_base_test;
     // Start the virtual sequence
     tracing_vseq.start(axi4_env_h.axi4_virtual_seqr_h);
     
+    // Add extra time for transactions to complete and be processed by scoreboard
+    #1000ns;
+    
     // Brief delay for completion
     #100ns;
     

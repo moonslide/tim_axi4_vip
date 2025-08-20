@@ -1694,8 +1694,8 @@ class RegressionRunner:
                 r'excessive repetition detected',
                 r'timeout.*ultrasim',
                 r'TIME_OUT.*ultrasim',
-                r'timeout.*ultrathink',
-                r'TIME_OUT.*ultrathink',
+                r'timeout.*enhanced',
+                r'TIME_OUT.*enhanced',
                 r'simulation stuck at time'
             ]
             

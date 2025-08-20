@@ -119,7 +119,7 @@ task axi4_master_user_signal_passthrough_seq::body();
                                       test_pattern_type, sequence_counter, master_id, data_payload), UVM_MEDIUM)
 
   // Configure the transaction with the test pattern
-  // For ultrathink 10x10 configuration, use proper address mapping
+  // For enhanced 10x10 configuration, use proper address mapping
   target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
   
   if(!req.randomize() with {

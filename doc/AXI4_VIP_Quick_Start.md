@@ -1,5 +1,5 @@
-# AXI4 VIP Quick Start Guide - ULTRATHINK Edition
-Get up and running in 5 minutes with the revolutionary ULTRATHINK 10x10 bus matrix! ✅ **100% Pass Rate Verified**
+# AXI4 VIP Quick Start Guide - Version 2.8
+Get up and running in 5 minutes with the enhanced 10x10 bus matrix! ✅ **100% Pass Rate Verified**
 
 ## Prerequisites
 
@@ -16,12 +16,12 @@ git clone https://github.com/your-org/axi4_vip.git
 cd axi4_vip
 ```
 
-### 2. Configure ULTRATHINK Bus Matrix (Optional)
+### 2. Configure Enhanced Bus Matrix (Optional)
 ```systemverilog
-// Edit include/axi4_bus_config.svh for ULTRATHINK mode
-`define NUM_MASTERS 10          // ULTRATHINK 10x10 matrix
+// Edit include/axi4_bus_config.svh for enhanced mode
+`define NUM_MASTERS 10          // Enhanced 10x10 matrix
 `define NUM_SLAVES 10
-`define BUS_MATRIX_10X10        // Enable ULTRATHINK features
+`define BUS_MATRIX_10X10        // Enable enhanced features
 `define RUN_10X10_CONFIG 
 `define ID_MAP_BITS 16
 `define ENABLE_PERFORMANCE_METRICS  // Real-time KPI monitoring
@@ -39,7 +39,7 @@ python3 axi4_regression.py \
   --test-list axi4_transfers_regression.list --cov --lsf
 ```
 
-🎉 **Expected Result**: 100% PASS (All 135 tests pass - 117 standard + 18 performance KPI tests)
+🎉 **Expected Result**: 100% PASS (All 141 tests pass - 123 standard + 18 performance KPI tests)
 
 ## Common Commands
 
@@ -47,7 +47,7 @@ python3 axi4_regression.py \
 |------|---------|
 | Single test | `make TEST=<name>` |
 | With waves | `make TEST=<name> WAVES=1` |
-| ULTRATHINK test | `make TEST=<name> DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"` |
+| Enhanced test | `make TEST=<name> DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"` |
 | Performance KPI test | `make TEST=axi4_saturation_midburst_reset_qos_boundary_test DEFINES="+define+BUS_MATRIX_10X10"` |
 | Clean build | `make clean` |
 | Full regression | `python3 axi4_regression.py --test-list axi4_transfers_regression.list` |
@@ -64,16 +64,18 @@ python3 axi4_regression.py \
 💡 Use `--lsf --cov` for parallel execution  
 💡 All tests should pass - if not, check troubleshooting guide
 
-## ⚡ ULTRATHINK Features (v2.7)
+## ⚡ Features (v2.8)
 
-🚀 **ULTRATHINK Edition** - Revolutionary performance and visibility:
+🚀 **Version 2.8** - Complete and Production-Ready:
 
-- ✅ **ULTRATHINK 10x10 Bus Matrix**: Revolutionary 10-master × 10-slave configuration
+- ✅ **10x10 Bus Matrix**: Revolutionary 10-master × 10-slave configuration
 - ✅ **Real-Time Performance KPIs**: 6 comprehensive metrics with live monitoring
-- ✅ **135 Test Suite**: 117 standard + 18 performance KPI tests  
+- ✅ **141 Test Suite**: 123 standard + 18 performance KPI tests (21 fixed in v2.8)
 - ✅ **Performance Metrics Module**: Built-in `axi4_performance_metrics.sv`
-- ✅ **QoS & USER Signals**: Full support with 16-level priority arbitration
-- ✅ **3 Bus Matrix Modes**: NONE (1×1), BASE (4×4), ULTRATHINK (10×10)
+- ✅ **QoS Support**: 18 QoS tests with full AWQOS/ARQOS priority arbitration
+- ✅ **USER Signals**: 8 USER signal tests for security tagging and transaction tracing
+- ✅ **3 Bus Matrix Modes**: NONE (1×1), BASE (4×4), ENHANCED (10×10)
+- ✅ **Security Features**: AxPROT privilege/security access control verification
 
 **Key Performance Indicators**:
 - 📊 Throughput (GB/s)
@@ -86,14 +88,14 @@ python3 axi4_regression.py \
 ## Troubleshooting
 
 ### If Tests Fail:
-1. **Update to ULTRATHINK v2.7** - All known issues resolved
+1. **Update to v2.8** - All 21 regression failures resolved
 2. **Check log files**: `regression_result_*/logs/no_pass_logs/`
 3. **Run with debug**: `+UVM_VERBOSITY=UVM_HIGH +define+SLAVE_DRIVER_DEBUG`
 4. **Enable KPI monitoring**: `+define+ENABLE_PERFORMANCE_METRICS`
 
-### ULTRATHINK Mode Debugging:
+### Enhanced Mode Debugging:
 ```bash
-# Check ULTRATHINK configuration
+# Check enhanced configuration
 grep "BUS_MATRIX_10X10" <test>.log
 
 # Monitor performance KPIs
@@ -111,4 +113,4 @@ grep "QoS Priority" <test>.log
 📚 Full Guide: `doc/AXI4_VIP_User_Guide.html`  
 📧 Support: axi4_vip_support@company.com  
 🐛 Issues: GitHub Issues page  
-✅ **Status**: ULTRATHINK v2.7 - All 135 tests passing with real-time KPI monitoring
+✅ **Status**: Version 2.8 - All 141 tests passing with real-time KPI monitoring

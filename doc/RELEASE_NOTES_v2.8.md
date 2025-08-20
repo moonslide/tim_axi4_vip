@@ -105,7 +105,7 @@ expected WRITE_DECERR, got WRITE_OKAY
 ### Documentation Updated
 - `README.md` - Updated to version 2.8 with fix summary
 - `doc/AXI4_VIP_User_Guide.html` - Added v2.8 fixes section
-- `doc/AXI4_VIP_Quick_Start_ULTRATHINK.html` - Updated version references
+- `doc/AXI4_VIP_Quick_Start.md` - Updated version references
 - `doc/testcase_matrix.csv` - Added v2.8 fixed tests
 
 ## Testing Results

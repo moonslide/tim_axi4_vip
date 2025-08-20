@@ -1,8 +1,8 @@
 Category,Total Tests,Bus Matrix Mode,Masters,Slaves,QoS Support,USER Support,Typical Duration,Description
 Concurrent,5,BUS_ENHANCED_MATRIX,10,10,Yes,Yes,3-8s,Multi-master simultaneous access with RAW hazard detection and all master-slave combinations
 Enhanced,1,BUS_ENHANCED_MATRIX,10,10,Yes,Yes,5ms,Full 10x10 enhanced bus matrix functionality verification
-QoS,14,BUS_ENHANCED_MATRIX,10,10,Yes,Yes,10-15ms,Priority arbitration fairness starvation prevention and USER boost
-USER Signal,4,BUS_ENHANCED_MATRIX,10,10,No,Yes,5ms,Security tagging parity protection and signal passthrough verification
+QoS,18,BUS_ENHANCED_MATRIX,10/4,10/4,Yes,Yes/No,10-20ms,Priority arbitration fairness starvation prevention and USER boost (v2.8 fixed)
+USER Signal,8,BUS_ENHANCED_MATRIX,10,10,Yes/No,Yes,5-10ms,Security tagging parity protection transaction tracing and signal verification (v2.8 fixed)
 Boundary,13,NONE,4,4,No,No,8ms,Upper address 4K crossing unaligned and burst boundary validation
 Matrix,2,BASE_BUS_MATRIX,4,4,No,No,10-20ms,Bus matrix functionality
 Data Width,12,NONE,4,4,No,No,5ms,Different data width tests (8/16/32/64-bit)
@@ -11,29 +11,32 @@ Exclusive,8,NONE/BASE_BUS_MATRIX,4,4,No,No,10-15ms,Exclusive access tests
 Response,6,NONE,4,4,No,No,5ms,Response type tests (OKAY/EXOKAY/SLVERR/DECERR)
 Handshake,6,NONE,4,4,No,No,5ms,Ready/Valid handshake tests
 Ordering,3,NONE,4,4,No,No,10ms,Transaction ordering tests
-Outstanding,3,NONE,4,4,No,No,10-15ms,Outstanding transaction tests
+Outstanding,4,NONE/ALL,4,4,No,No,10-15ms,Outstanding transaction tests (v2.8 fixed)
 Error,9,NONE,4,4,No,No,5ms,Error injection and protocol violation
 Non-blocking,3,NONE,4,4,No,No,5ms,Non-blocking operation tests
 Cross,2,NONE,4,4,No,No,5-8ms,Cross boundary tests
 Random,4,NONE,4,4,No,No,15-20ms,Random pattern generation
-Stress,3,BASE_BUS_MATRIX,4,4,No,No,25-30ms,High stress conditions
+Stress,4,BASE_BUS_MATRIX/ALL,4,4,No,No,20-50ms,High stress conditions with reset (v2.8 fixed)
 Basic,5,NONE,4,4,No,No,5ms,Basic read/write operations
-Performance,4,NONE,4,4,No,No,10ms,Performance-oriented tests
+Performance,10,NONE/BUS_ENHANCED_MATRIX,4,4,Yes,Yes,10-35ms,Performance-oriented tests (v2.8 enhanced)
 Transfer,3,NONE,4,4,No,No,5-10ms,Transfer size variations
 Attributes,4,NONE,4,4,No,No,10ms,AXI attributes (cache/prot/lock/region)
 Assertion,1,NONE,4,4,No,No,5ms,Assertion infrastructure
 
 SUMMARY STATISTICS
 ================
-Total Test Cases,123
-Enhanced Configuration Tests (10x10),24
-Standard Configuration Tests (4x4),99
-Tests with QoS Support,19
-Tests with USER Support,19
-Tests using BUS_ENHANCED_MATRIX,24
-Tests using BASE_BUS_MATRIX,5
+Total Test Cases,141
+Enhanced Configuration Tests (10x10),30
+Standard Configuration Tests (4x4),111
+Tests with QoS Support,25
+Tests with USER Support,26
+Tests using BUS_ENHANCED_MATRIX,35
+Tests using BASE_BUS_MATRIX,7
 Tests using NONE mode,94
+Tests using ALL modes,5
 Infrastructure Tests,2
-Average Test Duration,~8ms
-Longest Test Category,Stress (30ms)
+Average Test Duration,~10ms
+Longest Test Category,Stress (50ms)
 Shortest Test Category,Basic/Response (5ms)
+Version 2.8 Fixed Tests,21
+New Tests Added in v2.8,18

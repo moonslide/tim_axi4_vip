@@ -1,38 +1,39 @@
-# AXI4 Verification IP (VIP) - ULTRATHINK Edition
+# AXI4 Verification IP (VIP) - Version 2.8
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.8--all--fixes-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
-[![Tests](https://img.shields.io/badge/tests-135%20passing-brightgreen.svg)](doc/AXI4_VIP_User_Guide.html)
+[![Version](https://img.shields.io/badge/version-2.8--complete-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Tests](https://img.shields.io/badge/tests-141%20passing-brightgreen.svg)](doc/testcase_matrix.csv)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![Performance](https://img.shields.io/badge/KPI-6%20metrics-orange.svg)](doc/performance_metrics.md)
-[![Fixes](https://img.shields.io/badge/fixes-21%20patterns%20resolved-blue.svg)](sim/synopsys_sim/ALL_21_FIXES_SUMMARY.md)
+[![Fixes](https://img.shields.io/badge/fixes-21%20patterns%20resolved-blue.svg)](doc/RELEASE_NOTES_v2.8.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
 
-**🚀 ULTRATHINK: Next-Generation SystemVerilog/UVM Verification IP for AXI4 Protocol**
+**🚀 Next-Generation SystemVerilog/UVM Verification IP for AXI4 Protocol**
 
 [Quick Start](doc/AXI4_VIP_Quick_Start.md) | [User Guide](doc/AXI4_VIP_User_Guide.html) | [Documentation](doc/) | [Performance KPIs](#performance-kpis) | [Support](#support)
 
 </div>
 
-## 🌟 ULTRATHINK Overview
+## 🌟 Overview
 
-The AXI4 Verification IP (VIP) **ULTRATHINK Edition** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **ULTRATHINK 10x10 bus matrix** configuration and comprehensive performance metrics.
+The AXI4 Verification IP (VIP) **Version 2.8** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **10x10 bus matrix** configuration and comprehensive performance metrics.
 
-The **ULTRATHINK Enhanced 10x10** bus matrix configuration delivers cutting-edge verification capabilities with full QoS arbitration, USER signal support, and real-time performance KPI monitoring, enabling exhaustive testing of complex multi-master SoC designs with unprecedented visibility and control.
+The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verification capabilities with full QoS arbitration, USER signal support, and real-time performance KPI monitoring, enabling exhaustive testing of complex multi-master SoC designs with unprecedented visibility and control.
 
-### ✨ ULTRATHINK Key Features
+### ✨ Key Features
 
-- **🌟 ULTRATHINK 10x10 Matrix**: Revolutionary 10-master × 10-slave bus matrix with full crossbar connectivity
+- **🌟 10x10 Bus Matrix**: Revolutionary 10-master × 10-slave bus matrix with full crossbar connectivity
 - **📊 Real-Time Performance KPIs**: 6 comprehensive metrics including throughput, latency, and fairness
-- **✅ 135 Test Suite**: 117 standard tests + 18 performance KPI tests (100% pass rate)
+- **✅ 141 Test Suite**: 123 standard tests + 18 performance KPI tests (100% pass rate)
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
 - **🎯 Enterprise Ready**: Production-tested with all critical issues resolved
-- **🔨 Version 2.8 Fixes**: All 21 regression failure patterns resolved (BFM, QoS, performance metrics)
-- **🆕 QoS & USER Signals**: Complete AWQOS/ARQOS and AWUSER/ARUSER/WUSER/RUSER/BUSER support
+- **🔨 Version 2.8 Complete**: All 21 regression failure patterns resolved with comprehensive fixes
+- **🆕 QoS & USER Signals**: Full AWQOS/ARQOS support with 18 QoS tests, complete USER signal verification with 8 tests
 - **📈 Performance Metrics Module**: Built-in axi4_performance_metrics.sv for comprehensive KPI collection
+- **🔒 Security Features**: AxPROT privilege/security verification with proper bus matrix access control
 
 ### 🏗️ Architecture Highlights
 
@@ -188,9 +189,9 @@ The 4x4 configuration is ideal for standard SoC verification:
 - Outstanding transactions
 - Protocol compliance checks
 
-### 🚀 ULTRATHINK 10x10 Bus Matrix (BUS_MATRIX_10X10)
+### 🚀 Enhanced 10x10 Bus Matrix (BUS_MATRIX_10X10)
 
-The **ULTRATHINK 10x10** configuration represents the pinnacle of AXI4 verification technology:
+The **Enhanced 10x10** configuration represents the pinnacle of AXI4 verification technology:
 
 **Specifications:**
 - **Masters**: 10 independent AXI4 master agents
@@ -202,13 +203,13 @@ The **ULTRATHINK 10x10** configuration represents the pinnacle of AXI4 verificat
 - **USER Signals**: Extended 32-bit USER signals for custom sideband data
 - **Use Cases**: Complex SoC, multi-cluster systems, QoS verification
 
-**ULTRATHINK Configuration:**
+**Enhanced Configuration:**
 ```systemverilog
 // In include/axi4_bus_config.svh
 `define NUM_MASTERS 10
 `define NUM_SLAVES  10
-`define BUS_MATRIX_10X10        // ULTRATHINK mode
-`define RUN_10X10_CONFIG        // Enable ULTRATHINK features
+`define BUS_MATRIX_10X10        // Enhanced mode
+`define RUN_10X10_CONFIG        // Enable enhanced features
 `define AXI_WUSER_WIDTH 32
 `define AXI_ARUSER_WIDTH 32
 `define ENABLE_PERFORMANCE_METRICS  // Real-time KPI monitoring
@@ -251,15 +252,15 @@ make TEST=axi4_base_matrix_test
 make TEST=axi4_all_master_slave_access_test
 ```
 
-**ULTRATHINK 10x10 Tests:**
+**Enhanced 10x10 Tests:**
 ```bash
-# Run concurrent reads with ULTRATHINK 10x10 matrix
+# Run concurrent reads with 10x10 matrix
 make TEST=axi4_concurrent_reads_test DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"
 
-# Run performance KPI tests with ULTRATHINK configuration
+# Run performance KPI tests with enhanced configuration
 make TEST=axi4_saturation_midburst_reset_qos_boundary_test DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"
 
-# Run USER signal test with ULTRATHINK configuration  
+# Run USER signal test with enhanced configuration  
 make TEST=axi4_user_signal_passthrough_test DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG"
 ```
 
@@ -329,7 +330,7 @@ These tests verify correct behavior at address and protocol boundaries:
 
 ## 📊 Performance KPIs
 
-The **ULTRATHINK** edition includes comprehensive performance monitoring with 6 key performance indicators:
+The VIP includes comprehensive performance monitoring with 6 key performance indicators:
 
 ### Real-Time KPI Metrics
 
@@ -356,7 +357,7 @@ The 6 core performance KPI tests run across 3 bus matrix modes:
 Each test runs in:
 - **NONE mode** (1×1 direct connection)
 - **BASE mode** (4×4 bus matrix)
-- **ULTRATHINK mode** (10×10 enhanced matrix)
+- **Enhanced mode** (10×10 matrix)
 
 ### Running Performance Tests
 
@@ -364,7 +365,7 @@ Each test runs in:
 # Run all performance KPI tests
 python3 axi4_regression.py --test-list axi4_transfers_regression.list --kpi
 
-# Run specific KPI test in ULTRATHINK mode
+# Run specific KPI test in enhanced mode
 make TEST=axi4_saturation_midburst_reset_qos_boundary_test \
      DEFINES="+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG +define+ENABLE_PERFORMANCE_METRICS"
 

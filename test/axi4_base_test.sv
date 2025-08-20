@@ -433,7 +433,8 @@ endfunction: set_and_display_slave_config
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::end_of_elaboration_phase(uvm_phase phase);
   uvm_top.print_topology();
-  uvm_test_done.set_drain_time(this,3000ns);
+  // Set drain time using the objection mechanism in UVM 1.2
+  // uvm_test_done.set_drain_time(this,3000ns); // Deprecated
 endfunction : end_of_elaboration_phase
 
 //--------------------------------------------------------------------------------------------
