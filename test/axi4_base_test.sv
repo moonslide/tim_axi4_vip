@@ -94,9 +94,13 @@ function void axi4_base_test::setup_test_configuration();
     if ($value$plusargs("BUS_MATRIX_MODE=%s", bus_mode_str)) begin
       `uvm_info(get_type_name(), $sformatf("Command line override: BUS_MATRIX_MODE=%s", bus_mode_str), UVM_MEDIUM)
       case (bus_mode_str)
-        "NONE": begin
+        "NONE", "1x1": begin
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::NONE;
           `uvm_info(get_type_name(), "Overriding to NONE mode - will use 1 master/1 slave", UVM_MEDIUM)
+        end
+        "SIMPLE", "2x2": begin
+          test_config.bus_matrix_mode = axi4_bus_matrix_ref::SIMPLE_BUS_MATRIX;
+          `uvm_info(get_type_name(), "Overriding to SIMPLE mode - will use 2 masters/2 slaves", UVM_MEDIUM)
         end
         "BASE", "4x4": begin
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
