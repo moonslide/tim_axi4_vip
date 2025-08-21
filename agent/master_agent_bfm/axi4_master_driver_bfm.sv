@@ -84,6 +84,15 @@ interface axi4_master_driver_bfm(input bit                      aclk,
   //Creating the handle for master driver proxy
   axi4_master_driver_proxy axi4_master_drv_proxy_h;
 
+  // X Injection Control Variables
+  bit x_inject_mode = 0;
+  bit awvalid_x_inject = 0;
+  bit awaddr_x_inject = 0;
+  bit wdata_x_inject = 0;
+  bit arvalid_x_inject = 0;
+  int x_inject_cycles = 0;
+  int x_inject_counter = 0;
+
   initial begin
     `uvm_info(name,$sformatf(name),UVM_LOW)
   end
@@ -338,6 +347,114 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
     rready <= 1'b0;
 
   endtask : axi4_read_data_channel_task
+
+  //-------------------------------------------------------
+  // Task: inject_x_on_awvalid
+  // Injects X value on AWVALID signal for specified cycles
+  //-------------------------------------------------------
+  task inject_x_on_awvalid(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on AWVALID for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Drive X on awvalid
+    awvalid <= 1'bx;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    awvalid <= 1'b0;
+    
+    `uvm_info(name, "X injection on AWVALID completed", UVM_MEDIUM)
+  endtask : inject_x_on_awvalid
+
+  //-------------------------------------------------------
+  // Task: inject_x_on_awaddr
+  // Injects X value on AWADDR signal with AWVALID=1
+  //-------------------------------------------------------
+  task inject_x_on_awaddr(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on AWADDR for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Set awvalid high with X on address
+    awvalid <= 1'b1;
+    awaddr <= 'x;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    awvalid <= 1'b0;
+    awaddr <= '0;
+    
+    `uvm_info(name, "X injection on AWADDR completed", UVM_MEDIUM)
+  endtask : inject_x_on_awaddr
+
+  //-------------------------------------------------------
+  // Task: inject_x_on_wdata
+  // Injects X value on WDATA signal with WVALID=1
+  //-------------------------------------------------------
+  task inject_x_on_wdata(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on WDATA for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Set wvalid high with X on data
+    wvalid <= 1'b1;
+    wdata <= 'x;
+    wstrb <= 'x;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    wvalid <= 1'b0;
+    wdata <= '0;
+    wstrb <= '0;
+    
+    `uvm_info(name, "X injection on WDATA completed", UVM_MEDIUM)
+  endtask : inject_x_on_wdata
+
+  //-------------------------------------------------------
+  // Task: inject_x_on_arvalid
+  // Injects X value on ARVALID signal for specified cycles
+  //-------------------------------------------------------
+  task inject_x_on_arvalid(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on ARVALID for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Drive X on arvalid
+    arvalid <= 1'bx;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    arvalid <= 1'b0;
+    
+    `uvm_info(name, "X injection on ARVALID completed", UVM_MEDIUM)
+  endtask : inject_x_on_arvalid
+
+  //-------------------------------------------------------
+  // Task: set_x_injection_mode
+  // Enables/disables X injection mode
+  //-------------------------------------------------------
+  task set_x_injection_mode(bit enable, string signal_name, int cycles);
+    x_inject_mode = enable;
+    x_inject_cycles = cycles;
+    
+    if(enable) begin
+      case(signal_name)
+        "AWVALID": awvalid_x_inject = 1;
+        "AWADDR":  awaddr_x_inject = 1;
+        "WDATA":   wdata_x_inject = 1;
+        "ARVALID": arvalid_x_inject = 1;
+        default: `uvm_error(name, $sformatf("Unknown signal for X injection: %s", signal_name))
+      endcase
+      `uvm_info(name, $sformatf("X injection enabled for %s, cycles=%0d", signal_name, cycles), UVM_LOW)
+    end else begin
+      awvalid_x_inject = 0;
+      awaddr_x_inject = 0;
+      wdata_x_inject = 0;
+      arvalid_x_inject = 0;
+      `uvm_info(name, "X injection disabled", UVM_LOW)
+    end
+  endtask : set_x_injection_mode
 
 endinterface : axi4_master_driver_bfm
 

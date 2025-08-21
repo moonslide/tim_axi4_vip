@@ -120,22 +120,50 @@ endtask : body
 
 //--------------------------------------------------------------------------------------------
 // Task: inject_x_on_awvalid
-// Inject X on AWVALID signal while bus is idle
-// Note: This is a conceptual test - actual X injection would need interface-level forcing
+// Inject X on AWVALID signal while bus is idle - Now with actual BFM X injection
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_awvalid();
+  virtual axi4_master_driver_bfm master_bfm;
   
-  `uvm_info(get_type_name(), "Starting AWVALID X injection conceptual test", UVM_MEDIUM)
+  `uvm_info(get_type_name(), "Starting AWVALID X injection test with actual X values", UVM_MEDIUM)
   
-  // Send a normal write transaction - in actual implementation, the driver or 
-  // interface would need to force X values at the signal level
+  // Get the BFM handle through hierarchical reference
+  // The BFM should be accessible through the hdl_top
+  master_bfm = hdl_top.axi4_master_agent_bfm_h.axi4_master_drv_bfm_h;
+  
+  // Call the BFM task to inject X on AWVALID
+  if(master_bfm != null) begin
+    `uvm_info(get_type_name(), $sformatf("Injecting X on AWVALID for %0d cycles via BFM", x_inject_cycles), UVM_LOW)
+    master_bfm.inject_x_on_awvalid(x_inject_cycles);
+  end else begin
+    `uvm_warning(get_type_name(), "BFM handle not available, falling back to conceptual test")
+    // Fallback to original behavior
+    start_item(req);
+    
+    assert(req.randomize() with {
+      tx_type == WRITE;
+      awaddr == local::target_addr;
+      awid == local::test_id;
+      awlen == 0; // Single beat
+      awsize == WRITE_4_BYTES;
+      awburst == WRITE_INCR;
+      transfer_type == BLOCKING_WRITE;
+    }) else `uvm_fatal(get_type_name(), "Randomization failed")
+    
+    finish_item(req);
+  end
+  
+  // Wait for recovery time
+  #(10ns);
+  
+  // Send a normal write transaction to verify recovery
   start_item(req);
   
   assert(req.randomize() with {
     tx_type == WRITE;
-    awaddr == local::target_addr;
+    awaddr == local::target_addr + 8;
     awid == local::test_id;
-    awlen == 0; // Single beat
+    awlen == 0;
     awsize == WRITE_4_BYTES;
     awburst == WRITE_INCR;
     transfer_type == BLOCKING_WRITE;
@@ -143,10 +171,7 @@ task axi4_master_x_inject_seq::inject_x_on_awvalid();
   
   finish_item(req);
   
-  `uvm_info(get_type_name(), $sformatf("X injection test completed - would inject X on AWVALID for %0d cycles", x_inject_cycles), UVM_HIGH)
-  
-  // Add delay to simulate X injection recovery
-  #(x_inject_cycles * 10ns);
+  `uvm_info(get_type_name(), "X injection on AWVALID completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_awvalid
 

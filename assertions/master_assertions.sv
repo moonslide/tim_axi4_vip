@@ -276,6 +276,76 @@ interface master_assertions (input                     aclk,
 //  endproperty : axi_read_data_channel_valid_stable_check
 //  AXI_RD_VALID_STABLE_CHECK : assert property (axi_read_data_channel_valid_stable_check);
 
+  //--------------------------------------------------------------------------------------------
+  // X Injection Detection Assertions 
+  //--------------------------------------------------------------------------------------------
+  
+  // Property to detect X on AWVALID
+  property detect_x_on_awvalid;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(awvalid);
+  endproperty : detect_x_on_awvalid
+  
+  // Cover property to track X injection on AWVALID
+  X_INJECT_AWVALID_COVER: cover property(detect_x_on_awvalid) 
+    $display("[%0t] X detected on AWVALID signal", $time);
+  
+  // Assertion to check no handshake occurs during X on AWVALID
+  property no_handshake_during_awvalid_x;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(awvalid) |-> !awready;
+  endproperty : no_handshake_during_awvalid_x
+  NO_HANDSHAKE_AWVALID_X: assert property(no_handshake_during_awvalid_x)
+    else `uvm_warning("X_INJECT", "AWREADY asserted while AWVALID has X value");
+  
+  // Property to detect X on AWADDR with valid high
+  property detect_x_on_awaddr;
+    @(posedge aclk) disable iff (!aresetn)
+    (awvalid === 1'b1) && $isunknown(awaddr);
+  endproperty : detect_x_on_awaddr
+  
+  X_INJECT_AWADDR_COVER: cover property(detect_x_on_awaddr)
+    $display("[%0t] X detected on AWADDR while AWVALID=1", $time);
+  
+  // Property to detect X on WDATA
+  property detect_x_on_wdata;
+    @(posedge aclk) disable iff (!aresetn)
+    (wvalid === 1'b1) && $isunknown(wdata);
+  endproperty : detect_x_on_wdata
+  
+  X_INJECT_WDATA_COVER: cover property(detect_x_on_wdata)
+    $display("[%0t] X detected on WDATA while WVALID=1", $time);
+  
+  // Property to detect X on ARVALID
+  property detect_x_on_arvalid;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(arvalid);
+  endproperty : detect_x_on_arvalid
+  
+  X_INJECT_ARVALID_COVER: cover property(detect_x_on_arvalid)
+    $display("[%0t] X detected on ARVALID signal", $time);
+  
+  // Assertion to check recovery after X injection
+  property awvalid_recovers_from_x;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(awvalid) |-> ##[1:10] (awvalid === 1'b0 || awvalid === 1'b1);
+  endproperty : awvalid_recovers_from_x
+  AWVALID_X_RECOVERY: assert property(awvalid_recovers_from_x)
+    else `uvm_error("X_RECOVERY", "AWVALID did not recover from X within 10 cycles");
+  
+  // Track X injection duration
+  int x_inject_cycle_count = 0;
+  always @(posedge aclk) begin
+    if($isunknown(awvalid) || $isunknown(arvalid) || 
+       ($isunknown(awaddr) && awvalid) || ($isunknown(wdata) && wvalid)) begin
+      x_inject_cycle_count++;
+      `uvm_info("X_INJECT_MONITOR", $sformatf("X injection active for %0d cycles", x_inject_cycle_count), UVM_HIGH)
+    end else if(x_inject_cycle_count > 0) begin
+      `uvm_info("X_INJECT_MONITOR", $sformatf("X injection completed after %0d cycles", x_inject_cycle_count), UVM_MEDIUM)
+      x_inject_cycle_count = 0;
+    end
+  end
+
 endinterface : master_assertions
 
 `endif
