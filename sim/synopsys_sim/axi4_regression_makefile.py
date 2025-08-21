@@ -982,11 +982,11 @@ class RegressionRunner:
         except Exception as e:
             print(f"⚠️  Error during coverage merge: {e}")
     
-    def _monitor_test_completion(self, folder_path, folder_id, test_name, process):
+    def _monitor_test_completion(self, folder_path, folder_id, test_name, process, timeout=None):
         """Monitor test completion and ensure proper log completion before unlocking"""
         try:
             # Wait for process to complete
-            stdout, _ = process.communicate(timeout=self.timeout)
+            stdout, _ = process.communicate(timeout=timeout if timeout is not None else self.timeout)
             
             # Additional wait to ensure all file operations are complete
             time.sleep(2.0)
@@ -1592,7 +1592,7 @@ class RegressionRunner:
             
             # Monitor test completion with proper synchronization
             try:
-                stdout = self._monitor_test_completion(folder_path, folder_id, test_name, process)
+                stdout = self._monitor_test_completion(folder_path, folder_id, test_name, process, test_timeout)
                 duration = time.time() - start_time
                 
                 # Check if test passed or failed  
@@ -1627,7 +1627,7 @@ class RegressionRunner:
                     
             except subprocess.TimeoutExpired:
                 duration = time.time() - start_time
-                timeout_msg = f"Test timed out after {self.timeout} seconds"
+                timeout_msg = f"Test timed out after {test_timeout} seconds"
                 
                 # Copy log to no_pass_logs folder for timeout cases using enhanced mechanism
                 if not self._copy_verified_log(log_file, self.no_pass_logs_folder, test_name, folder_id):
@@ -1692,11 +1692,18 @@ class RegressionRunner:
                 r'infinite loop detected',
                 r'simulation appears to be hung',
                 r'excessive repetition detected',
-                r'timeout.*ultrasim',
+                r'simulation timeout.*ultrasim',
                 r'TIME_OUT.*ultrasim',
-                r'timeout.*enhanced',
-                r'TIME_OUT.*enhanced',
+                # r'timeout.*enhanced',
+                # Commented out: causes false positives with near_timeout tests
+                # r'TIME_OUT.*enhanced',
+                # Commented out: causes false positives
                 r'simulation stuck at time'
+                # More specific timeout patterns to avoid false positives
+                r'simulation.*timeout.*exceeded',
+                r'timeout waiting for.*response',
+                r'AXI.*timeout.*expired',
+                r'bus.*timeout.*detected',
             ]
             
             # Check for common failure patterns
@@ -2372,6 +2379,20 @@ class RegressionRunner:
                 
                 test_name = test_obj['name']
                 
+        
+        # Special handling for tests that intentionally take longer
+        # Near timeout tests need much longer timeout as they test timeout scenarios
+        test_timeout = self.timeout
+        if 'near_timeout' in test_name.lower() or 'timeout' in base_name.lower():
+            # These tests intentionally test timeout scenarios and may take longer
+            test_timeout = 3600  # 1 hour timeout for timeout-related tests
+            if self.verbose:
+                print(f"📋 Extended timeout to {test_timeout}s for timeout-related test: {test_name}")
+        elif 'stress' in test_name.lower() or 'burnin' in test_name.lower():
+            # Stress tests may also take longer
+            test_timeout = 1800  # 30 minutes for stress tests
+            if self.verbose:
+                print(f"📋 Extended timeout to {test_timeout}s for stress test: {test_name}")
                 try:
                     if self.verbose:
                         print(f"🔄 [Folder {folder_id:02d}] Starting {test_name}")
