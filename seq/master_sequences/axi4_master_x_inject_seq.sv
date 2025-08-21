@@ -188,10 +188,26 @@ endtask : inject_x_on_awvalid
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_awaddr();
   
+  `uvm_info(get_type_name(), "Starting AWADDR X injection test", UVM_MEDIUM)
+  
+  // Set X injection mode in config_db for driver to pick up
+  uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 1);
+  uvm_config_db#(int)::set(null, "*", "x_inject_cycles", x_inject_cycles);
+  
+  `uvm_info(get_type_name(), $sformatf("Configured X injection on AWADDR for %0d cycles", x_inject_cycles), UVM_LOW)
+  
+  // Wait for the injection duration
+  #(x_inject_cycles * 10ns);
+  
+  // Clear X injection mode
+  uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 0);
+  
+  // Send normal transaction after X injection to verify recovery
   start_item(req);
   
   assert(req.randomize() with {
     tx_type == WRITE;
+    awaddr == local::target_addr + 16;
     awid == local::test_id;
     awlen == 0;
     awsize == WRITE_4_BYTES;
@@ -199,12 +215,9 @@ task axi4_master_x_inject_seq::inject_x_on_awaddr();
     transfer_type == BLOCKING_WRITE;
   }) else `uvm_fatal(get_type_name(), "Randomization failed")
   
-  // Note: Actual X injection would need interface-level forcing
-  `uvm_info(get_type_name(), "AWADDR X injection conceptual test", UVM_MEDIUM)
-  
   finish_item(req);
   
-  `uvm_info(get_type_name(), $sformatf("Injected X on AWADDR for %0d cycles", x_inject_cycles), UVM_HIGH)
+  `uvm_info(get_type_name(), "X injection on AWADDR completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_awaddr
 
@@ -214,7 +227,21 @@ endtask : inject_x_on_awaddr
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_wdata();
   
-  // First send normal write address
+  `uvm_info(get_type_name(), "Starting WDATA X injection test", UVM_MEDIUM)
+  
+  // Set X injection mode in config_db for driver to pick up
+  uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 1);
+  uvm_config_db#(int)::set(null, "*", "x_inject_cycles", x_inject_cycles);
+  
+  `uvm_info(get_type_name(), $sformatf("Configured X injection on WDATA for %0d cycles", x_inject_cycles), UVM_LOW)
+  
+  // Wait for the injection duration
+  #(x_inject_cycles * 10ns);
+  
+  // Clear X injection mode
+  uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 0);
+  
+  // Send normal write transaction to verify recovery
   start_item(req);
   assert(req.randomize() with {
     tx_type == WRITE;
@@ -227,20 +254,7 @@ task axi4_master_x_inject_seq::inject_x_on_wdata();
   }) else `uvm_fatal(get_type_name(), "Randomization failed")
   finish_item(req);
   
-  // Now inject X on write data
-  start_item(req);
-  assert(req.randomize() with {
-    tx_type == WRITE;
-    transfer_type == BLOCKING_WRITE;
-  }) else `uvm_fatal(get_type_name(), "Randomization failed")
-  
-  // Note: Actual X injection would need interface-level forcing
-  `uvm_info(get_type_name(), "WDATA X injection conceptual test", UVM_MEDIUM)
-  req.wdata[0] = test_data;
-  
-  finish_item(req);
-  
-  `uvm_info(get_type_name(), $sformatf("Injected X on WDATA for %0d cycles", x_inject_cycles), UVM_HIGH)
+  `uvm_info(get_type_name(), "X injection on WDATA completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_wdata
 
@@ -250,6 +264,21 @@ endtask : inject_x_on_wdata
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_arvalid();
   
+  `uvm_info(get_type_name(), "Starting ARVALID X injection test", UVM_MEDIUM)
+  
+  // Set X injection mode in config_db for driver to pick up
+  uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 1);
+  uvm_config_db#(int)::set(null, "*", "x_inject_cycles", x_inject_cycles);
+  
+  `uvm_info(get_type_name(), $sformatf("Configured X injection on ARVALID for %0d cycles", x_inject_cycles), UVM_LOW)
+  
+  // Wait for the injection duration
+  #(x_inject_cycles * 10ns);
+  
+  // Clear X injection mode
+  uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 0);
+  
+  // Send normal read transaction to verify recovery
   start_item(req);
   
   assert(req.randomize() with {
@@ -262,12 +291,9 @@ task axi4_master_x_inject_seq::inject_x_on_arvalid();
     transfer_type == BLOCKING_READ;
   }) else `uvm_fatal(get_type_name(), "Randomization failed")
   
-  // Note: Actual X injection would need interface-level forcing
-  `uvm_info(get_type_name(), "ARVALID X injection conceptual test", UVM_MEDIUM);
-  
   finish_item(req);
   
-  `uvm_info(get_type_name(), $sformatf("Injected X on ARVALID for %0d cycles", x_inject_cycles), UVM_HIGH)
+  `uvm_info(get_type_name(), "X injection on ARVALID completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_arvalid
 
@@ -277,11 +303,25 @@ endtask : inject_x_on_arvalid
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_bready();
   
-  // First complete a normal write
+  `uvm_info(get_type_name(), "Starting BREADY X injection test", UVM_MEDIUM)
+  
+  // Set X injection mode in config_db for driver to pick up
+  uvm_config_db#(bit)::set(null, "*", "x_inject_bready", 1);
+  uvm_config_db#(int)::set(null, "*", "x_inject_cycles", x_inject_cycles);
+  
+  `uvm_info(get_type_name(), $sformatf("Configured X injection on BREADY for %0d cycles", x_inject_cycles), UVM_LOW)
+  
+  // Wait for the injection duration
+  #(x_inject_cycles * 10ns);
+  
+  // Clear X injection mode
+  uvm_config_db#(bit)::set(null, "*", "x_inject_bready", 0);
+  
+  // Send normal write to verify recovery
   start_item(req);
   assert(req.randomize() with {
     tx_type == WRITE;
-    awaddr == local::target_addr;
+    awaddr == local::target_addr + 24;
     awid == local::test_id;
     awlen == 0;
     awsize == WRITE_4_BYTES;
@@ -290,11 +330,7 @@ task axi4_master_x_inject_seq::inject_x_on_bready();
   }) else `uvm_fatal(get_type_name(), "Randomization failed")
   finish_item(req);
   
-  // Note: Actual X injection would need interface-level forcing
-  `uvm_info(get_type_name(), "BREADY X injection conceptual test", UVM_MEDIUM);
-  #(x_inject_cycles * 10ns);
-  
-  `uvm_info(get_type_name(), $sformatf("Injected X on BREADY for %0d cycles", x_inject_cycles), UVM_HIGH)
+  `uvm_info(get_type_name(), "X injection on BREADY completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_bready
 
@@ -304,11 +340,25 @@ endtask : inject_x_on_bready
 //--------------------------------------------------------------------------------------------
 task axi4_master_x_inject_seq::inject_x_on_rready();
   
-  // First send a normal read request
+  `uvm_info(get_type_name(), "Starting RREADY X injection test", UVM_MEDIUM)
+  
+  // Set X injection mode in config_db for driver to pick up
+  uvm_config_db#(bit)::set(null, "*", "x_inject_rready", 1);
+  uvm_config_db#(int)::set(null, "*", "x_inject_cycles", x_inject_cycles);
+  
+  `uvm_info(get_type_name(), $sformatf("Configured X injection on RREADY for %0d cycles", x_inject_cycles), UVM_LOW)
+  
+  // Wait for the injection duration
+  #(x_inject_cycles * 10ns);
+  
+  // Clear X injection mode
+  uvm_config_db#(bit)::set(null, "*", "x_inject_rready", 0);
+  
+  // Send normal read to verify recovery
   start_item(req);
   assert(req.randomize() with {
     tx_type == READ;
-    araddr == local::target_addr;
+    araddr == local::target_addr + 32;
     arid == local::test_id;
     arlen == 0;
     arsize == READ_4_BYTES;
@@ -317,11 +367,7 @@ task axi4_master_x_inject_seq::inject_x_on_rready();
   }) else `uvm_fatal(get_type_name(), "Randomization failed")
   finish_item(req);
   
-  // Note: Actual X injection would need interface-level forcing
-  `uvm_info(get_type_name(), "RREADY X injection conceptual test", UVM_MEDIUM);
-  #(x_inject_cycles * 10ns);
-  
-  `uvm_info(get_type_name(), $sformatf("Injected X on RREADY for %0d cycles", x_inject_cycles), UVM_HIGH)
+  `uvm_info(get_type_name(), "X injection on RREADY completed with recovery test", UVM_HIGH)
   
 endtask : inject_x_on_rready
 

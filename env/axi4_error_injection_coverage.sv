@@ -15,46 +15,64 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
   axi4_master_tx master_tx_h;
   axi4_slave_tx slave_tx_h;
 
+  // Variables to track X injection
+  bit x_inject_awvalid_detected;
+  bit x_inject_awaddr_detected;
+  bit x_inject_wdata_detected;
+  bit x_inject_arvalid_detected;
+  bit x_inject_bready_detected;
+  bit x_inject_rready_detected;
+  int x_inject_duration;
+  
   //--------------------------------------------------------------------------------------------
   // Covergroup: error_injection_cg
   // Coverage for X-value injection scenarios
   //--------------------------------------------------------------------------------------------
-  covergroup error_injection_cg with function sample(axi4_master_tx m_tx, axi4_slave_tx s_tx);
+  covergroup error_injection_cg;
     option.per_instance = 1;
     option.name = "error_injection_cg";
     
     // X injection target signals
-    x_injection_signal_cp: coverpoint m_tx.tx_type iff (m_tx != null) {
+    x_injection_signal_cp: coverpoint 
+      (x_inject_awvalid_detected ? "AWVALID" :
+       x_inject_awaddr_detected ? "AWADDR" :
+       x_inject_wdata_detected ? "WDATA" :
+       x_inject_arvalid_detected ? "ARVALID" :
+       x_inject_bready_detected ? "BREADY" :
+       x_inject_rready_detected ? "RREADY" : "NONE") {
       option.comment = "X injection target signals";
-      bins awvalid_x = {0} iff (m_tx.awaddr == 64'hXXXX_XXXX_XXXX_XXXX);
-      bins awaddr_x = {0} iff (m_tx.awaddr[63:32] == 32'hXXXX_XXXX);
-      bins wdata_x = {0} iff (m_tx.wdata[0] == 32'hXXXX_XXXX);
-      bins arvalid_x = {1} iff (m_tx.araddr == 64'hXXXX_XXXX_XXXX_XXXX);
-      bins bready_x = {0} iff (s_tx != null && s_tx.bready === 1'bx);
-      bins rready_x = {1} iff (s_tx != null && s_tx.rready === 1'bx);
+      bins awvalid_x = {"AWVALID"};
+      bins awaddr_x = {"AWADDR"};
+      bins wdata_x = {"WDATA"};
+      bins arvalid_x = {"ARVALID"};
+      bins bready_x = {"BREADY"};
+      bins rready_x = {"RREADY"};
+      bins no_injection = {"NONE"};
     }
     
     // X injection duration (cycles)
-    x_injection_duration_cp: coverpoint m_tx.awlen {
+    x_injection_duration_cp: coverpoint x_inject_duration {
       option.comment = "X injection duration in cycles";
-      bins single_cycle = {0};
-      bins two_cycles = {1};
-      bins three_cycles = {2};
-      bins four_cycles = {3};
-      bins five_cycles = {4};
-      bins extended = {[5:15]};
+      bins single_cycle = {1};
+      bins two_cycles = {2};
+      bins three_cycles = {3};
+      bins four_cycles = {4};
+      bins five_cycles = {5};
+      bins extended = {[6:10]};
     }
     
     // X recovery behavior
-    x_recovery_cp: coverpoint s_tx.bresp iff (s_tx != null) {
+    x_recovery_cp: coverpoint 
+      (x_inject_awvalid_detected || x_inject_awaddr_detected || 
+       x_inject_wdata_detected || x_inject_arvalid_detected ||
+       x_inject_bready_detected || x_inject_rready_detected) {
       option.comment = "Recovery behavior after X injection";
-      bins recover_okay = {0};
-      bins recover_slverr = {2};
-      bins recover_decerr = {3};
+      bins injected = {1};
+      bins not_injected = {0};
     }
     
-    // Cross coverage: Signal x Duration x Recovery
-    x_injection_cross: cross x_injection_signal_cp, x_injection_duration_cp, x_recovery_cp {
+    // Cross coverage: Signal x Duration
+    x_injection_cross: cross x_injection_signal_cp, x_injection_duration_cp {
       option.comment = "Cross coverage of X injection scenarios";
     }
   endgroup : error_injection_cg
@@ -212,9 +230,25 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
       bus_mode = axi4_env_cfg_h.bus_type;
     end
     
-    // Sample error injection coverage
+    // Check for X injection signals via config_db
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", x_inject_awvalid_detected));
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", x_inject_awaddr_detected));
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", x_inject_wdata_detected));
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", x_inject_arvalid_detected));
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bready", x_inject_bready_detected));
+    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready_detected));
+    void'(uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_duration));
+    
+    // Sample X injection coverage if any X injection is active
+    if (x_inject_awvalid_detected || x_inject_awaddr_detected || 
+        x_inject_wdata_detected || x_inject_arvalid_detected ||
+        x_inject_bready_detected || x_inject_rready_detected) begin
+      error_injection_cg.sample();
+      `uvm_info(get_type_name(), $sformatf("X injection coverage sampled - Duration: %0d cycles", x_inject_duration), UVM_MEDIUM)
+    end
+    
+    // Sample other coverage
     if (master_tx_h != null) begin
-      error_injection_cg.sample(master_tx_h, slave_tx_h);
       exception_handling_cg.sample(master_tx_h, slave_tx_h);
       bus_matrix_error_cg.sample(bus_mode, master_tx_h);
     end

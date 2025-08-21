@@ -431,6 +431,44 @@ task axi4_read_data_channel_task (inout axi4_read_transfer_char_s data_read_pack
   endtask : inject_x_on_arvalid
 
   //-------------------------------------------------------
+  // Task: inject_x_on_bready
+  // Injects X value on BREADY signal for specified cycles
+  //-------------------------------------------------------
+  task inject_x_on_bready(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on BREADY for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Drive X on bready
+    bready <= 1'bx;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    bready <= 1'b0;
+    
+    `uvm_info(name, "X injection on BREADY completed", UVM_MEDIUM)
+  endtask : inject_x_on_bready
+
+  //-------------------------------------------------------
+  // Task: inject_x_on_rready
+  // Injects X value on RREADY signal for specified cycles
+  //-------------------------------------------------------
+  task inject_x_on_rready(int cycles);
+    `uvm_info(name, $sformatf("Injecting X on RREADY for %0d cycles", cycles), UVM_MEDIUM)
+    
+    // Drive X on rready
+    rready <= 1'bx;
+    
+    // Hold for specified cycles
+    repeat(cycles) @(posedge aclk);
+    
+    // Return to idle state
+    rready <= 1'b0;
+    
+    `uvm_info(name, "X injection on RREADY completed", UVM_MEDIUM)
+  endtask : inject_x_on_rready
+
+  //-------------------------------------------------------
   // Task: set_x_injection_mode
   // Enables/disables X injection mode
   //-------------------------------------------------------

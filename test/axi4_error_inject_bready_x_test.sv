@@ -48,37 +48,27 @@ endfunction : build_phase
 // Task: run_phase
 //--------------------------------------------------------------------------------------------
 task axi4_error_inject_bready_x_test::run_phase(uvm_phase phase);
-  
-  // Create virtual sequence
+  axi4_virtual_error_inject_bready_x_seq bready_x_seq;
   
   phase.raise_objection(this);
   
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  super.run_phase(phase);
-  
   `uvm_info(get_type_name(), "Starting BREADY X Injection Test", UVM_LOW)
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  super.run_phase(phase);
-  
   `uvm_info(get_type_name(), "Test Description:", UVM_LOW)
-  `uvm_info(get_type_name(), "  - Inject X on Master BREADY signal", UVM_LOW)
-  `uvm_info(get_type_name(), "  - Verify Slave BVALID/BRESP remain stable", UVM_LOW)
-  `uvm_info(get_type_name(), "  - Verify handshake completes after recovery", UVM_LOW)
-  `uvm_info(get_type_name(), $sformatf("  - Bus Matrix Mode: %s with %0dx%0d configuration", test_config.bus_matrix_mode.name(), test_config.num_masters, test_config.num_slaves), UVM_LOW)
+  `uvm_info(get_type_name(), "  - Inject X on BREADY signal", UVM_LOW)
+  `uvm_info(get_type_name(), "  - Verify protocol violation handling", UVM_LOW)
+  `uvm_info(get_type_name(), "  - Verify recovery after X clears", UVM_LOW)
+  `uvm_info(get_type_name(), $sformatf("  - Bus Matrix Mode: %s with %0dx%0d configuration", 
+            test_config.bus_matrix_mode.name(), test_config.num_masters, test_config.num_slaves), UVM_LOW)
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
   
-  // Call parent's run_phase which handles sequence selection and execution
-  super.run_phase(phase);
+  // Run the specific BREADY X injection sequence
+  bready_x_seq = axi4_virtual_error_inject_bready_x_seq::type_id::create("bready_x_seq");
+  bready_x_seq.start(axi4_env_h.axi4_virtual_seqr_h);
   
-  
-  // Run the virtual sequence
-  
-  // Wait for transactions to complete
-  #100ns;
+  // Wait for completion
+  #300ns;
   
   phase.drop_objection(this);
   
@@ -95,24 +85,12 @@ function void axi4_error_inject_bready_x_test::report_phase(uvm_phase phase);
   
   if(svr.get_severity_count(UVM_FATAL) + svr.get_severity_count(UVM_ERROR) == 0) begin
     `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  
     `uvm_info(get_type_name(), "BREADY X Injection Test PASSED", UVM_LOW)
     `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  
   end else begin
     `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  
     `uvm_info(get_type_name(), "BREADY X Injection Test FAILED", UVM_LOW)
     `uvm_info(get_type_name(), "===============================================", UVM_LOW)
-  
-  // Call parent's run_phase which handles sequence selection and execution
-  
   end
 endfunction : report_phase
 

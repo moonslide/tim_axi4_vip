@@ -333,11 +333,50 @@ interface master_assertions (input                     aclk,
   AWVALID_X_RECOVERY: assert property(awvalid_recovers_from_x)
     else `uvm_error("X_RECOVERY", "AWVALID did not recover from X within 10 cycles");
   
+  // Additional X detection for BREADY
+  property detect_x_on_bready;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(bready);
+  endproperty : detect_x_on_bready
+  
+  X_INJECT_BREADY_COVER: cover property(detect_x_on_bready)
+    $display("[%0t] X detected on BREADY signal", $time);
+  
+  // Additional X detection for RREADY
+  property detect_x_on_rready;
+    @(posedge aclk) disable iff (!aresetn)
+    $isunknown(rready);
+  endproperty : detect_x_on_rready
+  
+  X_INJECT_RREADY_COVER: cover property(detect_x_on_rready)
+    $display("[%0t] X detected on RREADY signal", $time);
+  
+  // Check no handshake during X on any valid signal
+  property no_handshake_during_x_valid;
+    @(posedge aclk) disable iff (!aresetn)
+    ($isunknown(awvalid) || $isunknown(arvalid) || $isunknown(wvalid)) |-> 
+    (!awready && !arready && !wready);
+  endproperty : no_handshake_during_x_valid
+  
+  NO_HANDSHAKE_DURING_X: assert property(no_handshake_during_x_valid)
+    else `uvm_error("X_PROTOCOL", "Handshake occurred during X on valid signal");
+  
+  // Check no handshake completion during X on ready signals
+  property no_handshake_during_x_ready;
+    @(posedge aclk) disable iff (!aresetn)
+    ($isunknown(bready) || $isunknown(rready)) |-> 
+    (!(bvalid && bready === 1'b1) && !(rvalid && rready === 1'b1));
+  endproperty : no_handshake_during_x_ready
+  
+  NO_READY_HANDSHAKE_DURING_X: assert property(no_handshake_during_x_ready)
+    else `uvm_error("X_PROTOCOL", "Handshake completed during X on ready signal");
+  
   // Track X injection duration
   int x_inject_cycle_count = 0;
   always @(posedge aclk) begin
     if($isunknown(awvalid) || $isunknown(arvalid) || 
-       ($isunknown(awaddr) && awvalid) || ($isunknown(wdata) && wvalid)) begin
+       ($isunknown(awaddr) && awvalid) || ($isunknown(wdata) && wvalid) ||
+       $isunknown(bready) || $isunknown(rready)) begin
       x_inject_cycle_count++;
       `uvm_info("X_INJECT_MONITOR", $sformatf("X injection active for %0d cycles", x_inject_cycle_count), UVM_HIGH)
     end else if(x_inject_cycle_count > 0) begin

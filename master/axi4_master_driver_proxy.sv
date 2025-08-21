@@ -209,6 +209,54 @@ task axi4_master_driver_proxy::axi4_write_task();
       // Clear the injection flag after use
       uvm_config_db#(bit)::set(null, "*", "x_inject_awvalid", 0);
     end
+    
+    // Check for AWADDR X injection
+    begin
+      bit x_inject_awaddr;
+      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", x_inject_awaddr))
+        x_inject_awaddr = 0;
+      
+      if(x_inject_awaddr) begin
+        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+          x_inject_cycles = 3;
+        
+        `uvm_info(get_type_name(), $sformatf("Triggering AWADDR X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+        axi4_master_drv_bfm_h.inject_x_on_awaddr(x_inject_cycles);
+        uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 0);
+      end
+    end
+    
+    // Check for WDATA X injection
+    begin
+      bit x_inject_wdata;
+      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", x_inject_wdata))
+        x_inject_wdata = 0;
+      
+      if(x_inject_wdata) begin
+        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+          x_inject_cycles = 3;
+        
+        `uvm_info(get_type_name(), $sformatf("Triggering WDATA X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+        axi4_master_drv_bfm_h.inject_x_on_wdata(x_inject_cycles);
+        uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 0);
+      end
+    end
+    
+    // Check for BREADY X injection
+    begin
+      bit x_inject_bready;
+      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_bready", x_inject_bready))
+        x_inject_bready = 0;
+      
+      if(x_inject_bready) begin
+        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+          x_inject_cycles = 3;
+        
+        `uvm_info(get_type_name(), $sformatf("Triggering BREADY X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+        axi4_master_drv_bfm_h.inject_x_on_bready(x_inject_cycles);
+        uvm_config_db#(bit)::set(null, "*", "x_inject_bready", 0);
+      end
+    end
 
     if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin 
       address = req_wr.awaddr;
@@ -619,6 +667,40 @@ task axi4_master_driver_proxy::axi4_read_task();
 
     axi_read_seq_item_port.get_next_item(req_rd);
     `uvm_info(get_type_name(),$sformatf("READ_TASK:: Before Sending_req_read_packet = \n %s",req_rd.sprint()),UVM_NONE); 
+
+    // Check for ARVALID X injection
+    begin
+      bit x_inject_arvalid;
+      int x_inject_cycles;
+      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", x_inject_arvalid))
+        x_inject_arvalid = 0;
+      
+      if(x_inject_arvalid) begin
+        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+          x_inject_cycles = 3;
+        
+        `uvm_info(get_type_name(), $sformatf("Triggering ARVALID X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+        axi4_master_drv_bfm_h.inject_x_on_arvalid(x_inject_cycles);
+        uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 0);
+      end
+    end
+    
+    // Check for RREADY X injection
+    begin
+      bit x_inject_rready;
+      int x_inject_cycles;
+      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready))
+        x_inject_rready = 0;
+      
+      if(x_inject_rready) begin
+        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+          x_inject_cycles = 3;
+        
+        `uvm_info(get_type_name(), $sformatf("Triggering RREADY X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+        axi4_master_drv_bfm_h.inject_x_on_rready(x_inject_cycles);
+        uvm_config_db#(bit)::set(null, "*", "x_inject_rready", 0);
+      end
+    end
 
     // Skip SLAVE_MEM_MODE logic for independent read operations
     // This was causing reads to hang waiting for write addresses in mixed operation tests
