@@ -205,6 +205,61 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
   }
 
     //-------------------------------------------------------
+    // Error Injection and Exception Handling Coverage (Slave Side)
+    //-------------------------------------------------------
+    
+    // X-value detection on slave inputs
+    X_VALUE_DETECTION_CP : coverpoint packet.tx_type {
+      option.comment = "Detection of X values on slave input signals";
+      bins x_on_awaddr = {WRITE} iff ($isunknown(packet.awaddr));
+      bins x_on_wdata = {WRITE} iff (packet.wdata.size() > 0 && $isunknown(packet.wdata[0]));
+      bins x_on_araddr = {READ} iff ($isunknown(packet.araddr));
+      bins normal_signals = default;
+    }
+    
+    // Slave timeout behavior
+    SLAVE_TIMEOUT_CP : coverpoint packet.awaddr[15:0] iff (packet.awaddr[31:16] == 16'hDEAD) {
+      option.comment = "Slave timeout stall behavior";
+      bins timeout_test_address = {16'hBEEF};
+      bins timeout_recovery = {16'hBEF0};
+    }
+    
+    // Protected address access attempts
+    PROTECTED_ACCESS_CP : coverpoint packet.awaddr {
+      option.comment = "Protected/illegal address access attempts";
+      bins protected_region_1A00 = {64'h0000_0000_0000_1A00};
+      bins ecc_error_region_1B00 = {64'h0000_0000_0000_1B00};
+      bins special_reg_region_1C00 = {64'h0000_0000_0000_1C00};
+      bins normal_regions = default;
+    }
+    
+    // Slave error response generation
+    SLAVE_ERROR_RESPONSE_CP : coverpoint packet.bresp {
+      option.comment = "Slave error response generation for exceptions";
+      bins slverr_for_protected = {2} iff (packet.awaddr == 64'h0000_0000_0000_1A00);
+      bins slverr_for_ecc = {2} iff (packet.awaddr == 64'h0000_0000_0000_1B00);
+      bins okay_response = {0};
+      bins normal_response = default;
+    }
+    
+    // Special register behavior
+    SPECIAL_REG_BEHAVIOR_CP : coverpoint packet.araddr[7:0] iff (packet.araddr == 64'h0000_0000_0000_1C00) {
+      option.comment = "Special register read behaviors";
+      bins read_to_clear = {8'h00};
+      bins counter_increment = {8'h01};
+      bins constant_value = {8'h02};
+      bins status_register = {8'h03};
+    }
+    
+    // Abort detection
+    ABORT_DETECTION_CP : coverpoint packet.tx_type {
+      option.comment = "Detection of aborted transactions";
+      bins awvalid_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB01);
+      bins arvalid_abort = {READ} iff (packet.araddr == 64'h0000_0000_0000_AB02);
+      bins normal_completion = default;
+    }
+    
+    //-------------------------------------------------------
     // Wait state coverage
     //-------------------------------------------------------
 

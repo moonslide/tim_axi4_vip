@@ -193,6 +193,11 @@ package axi4_master_seq_pkg;
   `include "axi4_master_read_reorder_seq.sv"
   `include "axi4_master_read_write_contention_seq.sv"
 
+  // Error injection and exception handling sequences  
+  `include "axi4_master_x_inject_seq.sv"
+  `include "axi4_master_exception_seq.sv"
+  `include "axi4_master_near_timeout_seq.sv"
+
 endpackage : axi4_master_seq_pkg
 
 `endif

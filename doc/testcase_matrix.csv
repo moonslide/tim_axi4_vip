@@ -142,3 +142,18 @@ axi4_qos_basic_priority_test,QoS,Basic QoS priority test,BUS_ENHANCED_MATRIX,4,4
 axi4_non_blocking_qos_write_read_test,QoS,Non-blocking QoS write-read,BUS_ENHANCED_MATRIX,4,4,10ms,Yes,No,PASS (v2.8 fixed)
 axi4_non_blocking_outstanding_transfer_write_read_test,Outstanding,Non-blocking outstanding transfer,ALL,4,4,10ms,No,No,PASS (v2.8 fixed)
 axi4_stress_reset_test,Stress,Stress test with reset,ALL,4,4,20ms,No,No,PASS (v2.8 fixed)
+# Error Injection and Exception Handling Tests - Added in v2.9
+axi4_error_inject_base_test,Error Injection,Base test for error injection,ALL,VAR,VAR,N/A,No,No,Infrastructure
+axi4_error_inject_x_drive_test,Error Injection,X-value injection on multiple signals,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_awvalid_x_test,Error Injection,AWVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_awaddr_x_test,Error Injection,AWADDR X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_wdata_x_test,Error Injection,WDATA X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_arvalid_x_test,Error Injection,ARVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_bready_x_test,Error Injection,BREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_error_inject_rready_x_test,Error Injection,RREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
+axi4_exception_abort_awvalid_test,Exception,AWVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
+axi4_exception_abort_arvalid_test,Exception,ARVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
+axi4_exception_near_timeout_test,Exception,Near timeout detection and recovery,ALL,VAR,VAR,10ms,No,No,PASS (v2.9 fixed)
+axi4_exception_illegal_access_test,Exception,Illegal address access handling,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
+axi4_exception_ecc_error_test,Exception,ECC error detection and recovery,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
+axi4_exception_special_reg_test,Exception,Special register access patterns,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)

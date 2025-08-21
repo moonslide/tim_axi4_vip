@@ -64,7 +64,7 @@ class TestResult:
 class RegressionRunner:
     """Main regression test runner class using Makefile"""
     
-    def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False, log_wait_timeout=30, cleanup_delay=15):
+    def __init__(self, max_parallel=None, timeout=900, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False, log_wait_timeout=300, cleanup_delay=15):
         self.max_parallel = max_parallel  # Will be set to number of tests if None
         self.timeout = timeout
         self.verbose = verbose

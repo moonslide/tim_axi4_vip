@@ -267,6 +267,61 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
     }
 
     //-------------------------------------------------------
+    //-------------------------------------------------------
+    // Error Injection and Exception Handling Coverage
+    //-------------------------------------------------------
+    
+    // X-value injection scenarios
+    X_INJECTION_TARGET_CP : coverpoint packet.awaddr[31:28] {
+      option.comment = "X injection target signals based on special addresses";
+      bins awvalid_x_inject = {4'hA};  // Address 0xAxxxxxxx for AWVALID X injection
+      bins awaddr_x_inject = {4'hB};   // Address 0xBxxxxxxx for AWADDR X injection  
+      bins wdata_x_inject = {4'hC};    // Address 0xCxxxxxxx for WDATA X injection
+      bins arvalid_x_inject = {4'hD};  // Address 0xDxxxxxxx for ARVALID X injection
+      bins normal_transaction = default;
+    }
+    
+    // Exception scenario addresses
+    EXCEPTION_SCENARIO_CP : coverpoint packet.awaddr[15:0] {
+      option.comment = "Exception handling test scenarios";
+      bins abort_awvalid = {16'hAB01};     // Abort AWVALID test
+      bins abort_arvalid = {16'hAB02};     // Abort ARVALID test
+      bins near_timeout = {16'hBEEF};      // Near timeout threshold test
+      bins illegal_access = {16'h1A00};    // Protected/illegal address
+      bins ecc_error_inject = {16'h1B00};  // ECC error injection
+      bins special_register = {16'h1C00};  // Special function register
+      bins normal_addr = default;
+    }
+    
+    // Timeout stall duration coverage
+    TIMEOUT_STALL_DURATION_CP : coverpoint packet.awaddr[15:0] iff (packet.awaddr[31:16] == 16'hDEAD) {
+      option.comment = "Stall duration for timeout testing (address 0xDEADBEEF = timeout test)";
+      bins stall_1020_cycles = {16'hBEEB};  // 1020 cycles
+      bins stall_1021_cycles = {16'hBEEC};  // 1021 cycles
+      bins stall_1022_cycles = {16'hBEED};  // 1022 cycles
+      bins stall_1023_cycles = {16'hBEEE};  // 1023 cycles (near threshold)
+      bins stall_1024_cycles = {16'hBEEF};  // 1024 cycles (at threshold)
+      bins stall_1025_cycles = {16'hBEF0};  // 1025 cycles (over threshold)
+    }
+    
+    // Error response handling
+    ERROR_RESPONSE_HANDLING_CP : coverpoint packet.bresp {
+      option.comment = "Error response handling for exception scenarios";
+      bins normal_okay = {0};
+      bins exclusive_okay = {1};
+      bins slave_error = {2};   // SLVERR for protected access, ECC errors
+      bins decode_error = {3};  // DECERR for invalid addresses
+    }
+    
+    // Recovery after error injection
+    ERROR_RECOVERY_CP : coverpoint packet.tx_type {
+      option.comment = "Transaction type after error injection (recovery test)";
+      bins write_recovery = {WRITE};
+      bins read_recovery = {READ};
+      bins normal_operation = default;
+    }
+    
+    //-------------------------------------------------------
     // Cross of coverpoints
     //-------------------------------------------------------
 
@@ -278,6 +333,11 @@ class axi4_master_coverage extends uvm_subscriber #(axi4_master_tx);
     ARBURST_CP_X_ARLEN_CP_X_ARSIZE_CP :cross ARBURST_CP,ARLEN_CP,ARSIZE_CP;
     ADDR_DATA_WIDTH_CP : cross ADDR_WIDTH_CP, DATA_WIDTH_CP;
     // TRANSFER_TYPE_CP_X_BURST_TYPE_CP  :cross TRANSFER_TYPE_CP,BURST_TYPE_CP;
+    
+    // Error injection cross coverage
+    X_INJECT_X_RESPONSE : cross X_INJECTION_TARGET_CP, ERROR_RESPONSE_HANDLING_CP;
+    EXCEPTION_X_RESPONSE : cross EXCEPTION_SCENARIO_CP, ERROR_RESPONSE_HANDLING_CP;
+    TIMEOUT_X_RESPONSE : cross TIMEOUT_STALL_DURATION_CP, packet.bresp;
 
   endgroup: axi4_master_covergroup
 

@@ -321,11 +321,67 @@ axi4_stability_burnin_longtail_backpressure_error_recovery_test run_cnt=5 comman
 # - KPI: All 6 metrics measured and reported in test output  
 #====================================================================================
 
+#------------------------------------------------------------------------------------
+# Error Injection and Exception Handling Tests with 3 Bus Matrix Modes
+# Based on error_inject_exception_scenarios_tests.md specification
+#------------------------------------------------------------------------------------
+
+# Error Injection Tests - X Value Injection (6 tests × 3 modes = 18 tests)
+# NONE Mode (no ref model, 4x4 topology)
+axi4_error_inject_awvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_awaddr_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_wdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_arvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_bready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_rready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_error_inject_awvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_awaddr_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_wdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_arvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_bready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_rready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_error_inject_awvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_awaddr_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_wdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_arvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_bready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_rready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+# Exception Handling Tests - Protocol Violations (6 tests × 3 modes = 18 tests)
+# NONE Mode (no ref model, 4x4 topology)
+axi4_exception_abort_awvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_abort_arvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_near_timeout_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_illegal_access_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_ecc_error_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_special_reg_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_exception_abort_awvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_abort_arvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_near_timeout_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_illegal_access_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_ecc_error_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_special_reg_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_exception_abort_awvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_abort_arvalid_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_near_timeout_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_illegal_access_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_ecc_error_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_special_reg_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+
 # Test execution notes:
-# - Total test cases: 180 (117 standard + 18 performance KPI + 45 QoS/USER with bus matrix modes)
+# - Total test cases: 216 (117 standard + 18 performance KPI + 45 QoS/USER + 36 error injection/exception)
 # - Standard tests run 2 iterations each for reliability
 # - axi4_stress_reset_test runs across 3 bus matrix modes (NONE, 4x4, ENHANCED)
 # - Performance KPI tests run 5 iterations each for statistical accuracy
 # - QoS and USER tests run 2 iterations each across 3 bus matrix modes (NONE, BASE 4x4, ENHANCED 10x10)
+# - Error injection and exception tests run 2 iterations each across 3 bus matrix modes for robustness testing
 # - All tests include comprehensive performance metrics collection via axi4_performance_metrics.sv
 # - Results automatically sorted into pass/fail categories with detailed KPI reports

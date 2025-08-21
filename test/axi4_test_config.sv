@@ -54,14 +54,16 @@ function void axi4_test_config::configure_for_test(string test_name);
   // Convert to lowercase for case-insensitive matching
   lower_test_name = test_name.tolower();
   
-  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test + QoS tests + concurrent tests)
+  // Enhanced matrix tests (TC01-TC05 + enhanced bus matrix test + QoS tests + concurrent tests + error injection tests)
   if (lower_test_name.match(".*tc.*00[1-5].*") || 
       lower_test_name.match(".*axi4_enhanced_bus_matrix_test.*") ||
       lower_test_name.match(".*concurrent.*") ||
       lower_test_name.match(".*sequential_mixed_ops.*") ||
       lower_test_name.match(".*exhaustive_random_reads.*") ||
       lower_test_name.match(".*qos.*") ||
-      lower_test_name.match(".*user.*")) begin
+      lower_test_name.match(".*user.*") ||
+      lower_test_name.match(".*error_inject.*") ||
+      lower_test_name.match(".*exception.*")) begin
     test_category = ENHANCED_MATRIX_TESTS;
     `uvm_info("TEST_CONFIG", $sformatf("Test %s categorized as ENHANCED_MATRIX_TESTS", test_name), UVM_MEDIUM)
   end
@@ -94,6 +96,7 @@ endfunction : configure_for_test
 // Apply bus matrix mode and interface configuration based on test category
 //--------------------------------------------------------------------------------------------
 function void axi4_test_config::apply_category_config();
+  // Set defaults based on test category
   case(test_category)
     ENHANCED_MATRIX_TESTS: begin
       bus_matrix_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
@@ -113,6 +116,9 @@ function void axi4_test_config::apply_category_config();
       num_slaves = 4;
     end
   endcase
+  
+  // Note: Command line override is now handled in axi4_base_test::setup_test_configuration()
+  // This ensures the override happens at the correct time in the build phase
   
   `uvm_info("TEST_CONFIG", get_config_summary(), UVM_MEDIUM)
 endfunction : apply_category_config

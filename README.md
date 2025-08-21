@@ -1,9 +1,9 @@
-# AXI4 Verification IP (VIP) - Version 2.8
+# AXI4 Verification IP (VIP) - Version 2.9
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.8--complete-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
-[![Tests](https://img.shields.io/badge/tests-141%20passing-brightgreen.svg)](doc/testcase_matrix.csv)
+[![Version](https://img.shields.io/badge/version-2.9--enhanced-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Tests](https://img.shields.io/badge/tests-154%20passing-brightgreen.svg)](doc/testcase_matrix.csv)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![Performance](https://img.shields.io/badge/KPI-6%20metrics-orange.svg)](doc/performance_metrics.md)
 [![Fixes](https://img.shields.io/badge/fixes-21%20patterns%20resolved-blue.svg)](doc/RELEASE_NOTES_v2.8.md)
@@ -17,7 +17,7 @@
 
 ## 🌟 Overview
 
-The AXI4 Verification IP (VIP) **Version 2.8** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **10x10 bus matrix** configuration and comprehensive performance metrics.
+The AXI4 Verification IP (VIP) **Version 2.9** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **10x10 bus matrix** configuration, comprehensive performance metrics, and robust error injection/exception handling capabilities.
 
 The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verification capabilities with full QoS arbitration, USER signal support, and real-time performance KPI monitoring, enabling exhaustive testing of complex multi-master SoC designs with unprecedented visibility and control.
 
@@ -25,12 +25,12 @@ The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verificati
 
 - **🌟 10x10 Bus Matrix**: Revolutionary 10-master × 10-slave bus matrix with full crossbar connectivity
 - **📊 Real-Time Performance KPIs**: 6 comprehensive metrics including throughput, latency, and fairness
-- **✅ 141 Test Suite**: 123 standard tests + 18 performance KPI tests (100% pass rate)
+- **✅ 154 Test Suite**: 123 standard tests + 18 performance KPI tests + 13 error injection/exception tests (100% pass rate)
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
 - **🎯 Enterprise Ready**: Production-tested with all critical issues resolved
-- **🔨 Version 2.8 Complete**: All 21 regression failure patterns resolved with comprehensive fixes
+- **🔨 Version 2.9 Enhanced**: All 21 regression failures resolved + 13 new error injection/exception tests added
 - **🆕 QoS & USER Signals**: Full AWQOS/ARQOS support with 18 QoS tests, complete USER signal verification with 8 tests
 - **📈 Performance Metrics Module**: Built-in axi4_performance_metrics.sv for comprehensive KPI collection
 - **🔒 Security Features**: AxPROT privilege/security verification with proper bus matrix access control
@@ -42,6 +42,29 @@ The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verificati
 - **Advanced Features**: QoS, exclusive access, out-of-order transactions
 - **Protocol Checking**: Comprehensive assertion-based protocol verification
 - **Error Injection**: Built-in error scenarios for robust DUT testing
+
+## 🆕 Version 2.9 - Error Injection & Exception Handling
+
+### New Features in v2.9
+
+#### Error Injection Tests (7 tests)
+- **X-value Injection**: Comprehensive X-value injection on critical AXI4 signals
+  - AWVALID, AWADDR, WDATA, ARVALID, BREADY, RREADY
+  - Multi-signal simultaneous injection test
+- **Dynamic Bus Mode Support**: All tests support NONE/BASE/ENHANCED modes via command line
+
+#### Exception Handling Tests (6 tests)
+- **Abort Scenarios**: AWVALID/ARVALID abort before handshake completion
+- **Timeout Detection**: Near-timeout detection and recovery mechanisms
+- **Access Violations**: Illegal address access handling with SLVERR responses
+- **ECC Errors**: ECC error detection and recovery
+- **Special Registers**: Special function register access patterns
+
+#### Key Improvements
+- **Automatic Error Detection**: Performance metrics module auto-detects error injection tests
+- **Flexible Configuration**: Command line override with `+BUS_MATRIX_MODE=NONE/BASE/ENHANCED`
+- **Proper Phase Management**: Fixed duplicate phase objection issues
+- **Enhanced Coverage**: Added error injection covergroups to existing coverage model
 
 ## 🔨 Version 2.8 - Critical Fixes Applied
 
@@ -71,6 +94,7 @@ This version includes comprehensive fixes for all regression failures identified
 | Enhanced mode limited to 4×4 | Cannot use full 10×10 in some tests | Compile with 10 BFMs for full matrix | Fixed in v2.8 |
 | QoS tests require error allowance | Performance metrics may show warnings | Use `allow_error_responses = 1` | Fixed in v2.8 |
 | Long simulation times for stress tests | Some tests take >3 minutes | Use timeout or reduce iterations | Optimized |
+| Error injection requires flag | Performance metrics fail without flag | Set `error_inject = 1` in config | Fixed in v2.9 |
 
 ### Test Configuration Guidelines
 
@@ -322,11 +346,13 @@ These tests verify correct behavior at address and protocol boundaries:
 | **USER Signal Tests** | 4 | 10×10 Enhanced | ✅ Pass |
 | **Bus Matrix Tests** | 2 | 4×4 Standard | ✅ Pass |
 | **Exclusive Access** | 8 | NONE/4×4 | ✅ Pass |
+| **Error Injection** | 7 | ALL | ✅ Pass |
+| **Exception Handling** | 6 | ALL | ✅ Pass |
 | **Error Scenarios** | 9 | NONE | ✅ Pass |
 | **Stress Tests** | 3 | 4×4 Standard | ✅ Pass |
 | **Other Tests** | 20 | Various | ✅ Pass |
 | **Performance KPI Tests** | 18 | 3 Modes × 6 Tests | **✅ Pass** |
-| **Total** | **135** | All Configs | **✅ 100% Pass** |
+| **Total** | **154** | All Configs | **✅ 100% Pass** |
 
 ## 📊 Performance KPIs
 

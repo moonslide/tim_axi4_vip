@@ -80,6 +80,8 @@ endfunction : build_phase
 // Setup test configuration based on test name for dynamic bus matrix mode and interface config
 //--------------------------------------------------------------------------------------------
 function void axi4_base_test::setup_test_configuration();
+  string bus_mode_str;
+  
   // Check if test_config already exists in config_db (set by derived test)
   if(!uvm_config_db#(axi4_test_config)::get(this, "*", "test_config", test_config)) begin
     // Create new test_config only if not already set
@@ -87,6 +89,28 @@ function void axi4_base_test::setup_test_configuration();
     
     // Configure based on current test name
     test_config.configure_for_test(get_type_name());
+    
+    // Check for command line override of bus matrix mode AFTER configuring
+    if ($value$plusargs("BUS_MATRIX_MODE=%s", bus_mode_str)) begin
+      `uvm_info(get_type_name(), $sformatf("Command line override: BUS_MATRIX_MODE=%s", bus_mode_str), UVM_MEDIUM)
+      case (bus_mode_str)
+        "NONE": begin
+          test_config.bus_matrix_mode = axi4_bus_matrix_ref::NONE;
+          `uvm_info(get_type_name(), "Overriding to NONE mode - will use 1 master/1 slave", UVM_MEDIUM)
+        end
+        "BASE", "4x4": begin
+          test_config.bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+          `uvm_info(get_type_name(), "Overriding to BASE mode - will use 4 masters/4 slaves", UVM_MEDIUM)
+        end
+        "ENHANCED", "10x10": begin
+          test_config.bus_matrix_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+          `uvm_info(get_type_name(), "Overriding to ENHANCED mode - will use all 10 masters/10 slaves", UVM_MEDIUM)
+        end
+        default: begin
+          `uvm_warning(get_type_name(), $sformatf("Unknown BUS_MATRIX_MODE: %s, keeping default", bus_mode_str))
+        end
+      endcase
+    end
     
     // Store in config_db for use by environment and other components
     uvm_config_db#(axi4_test_config)::set(this, "*", "test_config", test_config);

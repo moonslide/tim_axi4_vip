@@ -470,7 +470,8 @@ function void axi4_performance_metrics::report_phase(uvm_phase phase);
             uvm_is_match("*illegal*", test_name) || 
             uvm_is_match("*violation*", test_name) ||
             uvm_is_match("*raw*", test_name) ||
-            uvm_is_match("*slave_error*", test_name)) begin
+            uvm_is_match("*slave_error*", test_name) ||
+            uvm_is_match("*exception*", test_name)) begin
           errors_are_expected = 1;
           `uvm_info(get_type_name(), $sformatf("Auto-detected error injection test based on name: %s", test_name), UVM_MEDIUM)
         end

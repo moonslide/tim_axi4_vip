@@ -1,0 +1,56 @@
+#------------------------------------------------------------------------------------
+# Error Injection and Exception Handling Tests with 3 Bus Matrix Modes
+# Based on error_inject_exception_scenarios_tests.md specification
+#------------------------------------------------------------------------------------
+
+# Error Injection Tests - X Value Injection (6 tests × 3 modes = 18 tests)
+# NONE Mode (no ref model, 4x4 topology)
+axi4_error_inject_awvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_awaddr_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_wdata_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_arvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_bready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_rready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_error_inject_awvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_awaddr_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_wdata_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_arvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_bready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_rready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_error_inject_awvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_awaddr_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_wdata_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_arvalid_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_bready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_rready_x_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+# Exception Handling Tests - Protocol Violations (6 tests × 3 modes = 18 tests)
+# NONE Mode (no ref model, 4x4 topology)
+axi4_exception_abort_awvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_abort_arvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_near_timeout_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_illegal_access_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_ecc_error_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_special_reg_test run_cnt=20 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_exception_abort_awvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_abort_arvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_near_timeout_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_illegal_access_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_ecc_error_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_special_reg_test run_cnt=20 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_exception_abort_awvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_abort_arvalid_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_near_timeout_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_illegal_access_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_ecc_error_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_special_reg_test run_cnt=20 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+

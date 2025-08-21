@@ -170,6 +170,65 @@ class axi4_protocol_coverage extends uvm_subscriber#(axi4_master_tx);
     }
   endgroup : cg_error_responses
   
+  //--------------------------------------------------------------------------------------------
+  // Covergroup: cg_error_injection
+  // Coverage for error injection and exception handling scenarios
+  //--------------------------------------------------------------------------------------------
+  covergroup cg_error_injection;
+    // X-value injection scenarios
+    cp_x_injection_scenario: coverpoint master_tx_h.awaddr[31:24] {
+      bins awvalid_x = {8'hAA};  // X on AWVALID
+      bins awaddr_x = {8'hBB};   // X on AWADDR
+      bins wdata_x = {8'hCC};    // X on WDATA
+      bins arvalid_x = {8'hDD};  // X on ARVALID
+      bins bready_x = {8'hEE};   // X on BREADY
+      bins rready_x = {8'hFF};   // X on RREADY
+      bins no_injection = default;
+    }
+    
+    // Exception scenarios
+    cp_exception_type: coverpoint master_tx_h.awaddr[15:0] {
+      bins abort_awvalid = {16'hAB01};
+      bins abort_arvalid = {16'hAB02};
+      bins near_timeout = {16'hBEEF};
+      bins illegal_access = {16'h1A00};
+      bins ecc_error = {16'h1B00};
+      bins special_reg = {16'h1C00};
+    }
+    
+    // Bus matrix mode during error injection
+    cp_bus_mode_error: coverpoint axi4_env_cfg_h.bus_matrix_mode {
+      bins none_mode = {axi4_bus_matrix_ref::NONE};
+      bins base_4x4 = {axi4_bus_matrix_ref::BASE_BUS_MATRIX};
+      bins enhanced = {axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX};
+    }
+    
+    // Error recovery status
+    cp_error_recovery: coverpoint master_tx_h.bresp {
+      bins recovered_okay = {WRITE_OKAY};
+      bins recovered_exokay = {WRITE_EXOKAY};
+      bins persistent_error = {WRITE_SLVERR};
+      bins decode_error = {WRITE_DECERR};
+    }
+    
+    // Timeout stall cycles
+    cp_timeout_stall: coverpoint master_tx_h.awaddr[7:0] iff (master_tx_h.awaddr[31:16] == 16'hDEAD) {
+      bins under_threshold = {[0:250]};
+      bins near_threshold = {[251:253]};
+      bins at_threshold = {254};
+      bins over_threshold = {255};
+    }
+    
+    // Cross coverage: Error injection x Bus mode
+    cx_error_bus_mode: cross cp_x_injection_scenario, cp_bus_mode_error;
+    
+    // Cross coverage: Exception x Response
+    cx_exception_response: cross cp_exception_type, master_tx_h.bresp;
+    
+    // Cross coverage: Timeout x Bus mode
+    cx_timeout_bus_mode: cross cp_timeout_stall, cp_bus_mode_error;
+  endgroup : cg_error_injection
+  
   covergroup cg_address_alignment;
     // Address alignment with size
     cp_write_addr_align: coverpoint (master_tx_h.awaddr & ((1 << master_tx_h.awsize) - 1)) {
@@ -204,6 +263,7 @@ function axi4_protocol_coverage::new(string name = "axi4_protocol_coverage", uvm
   cg_exclusive_access = new();
   cg_protocol_violations = new();
   cg_error_responses = new();
+  cg_error_injection = new();
   cg_address_alignment = new();
 endfunction : new
 
@@ -222,6 +282,7 @@ function void axi4_protocol_coverage::write(axi4_master_tx t);
   cg_exclusive_access.sample();
   cg_protocol_violations.sample();
   cg_error_responses.sample();
+  cg_error_injection.sample();
   cg_address_alignment.sample();
 endfunction : write
 
@@ -232,7 +293,8 @@ function void axi4_protocol_coverage::report_phase(uvm_phase phase);
                    cg_exclusive_access.get_coverage() +
                    cg_protocol_violations.get_coverage() + 
                    cg_error_responses.get_coverage() + 
-                   cg_address_alignment.get_coverage()) / 5.0;
+                   cg_error_injection.get_coverage() +
+                   cg_address_alignment.get_coverage()) / 6.0;
   
   `uvm_info(get_type_name(), $sformatf("================================"), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("AXI4 Protocol Coverage Summary:"), UVM_LOW);
