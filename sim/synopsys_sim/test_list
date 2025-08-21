@@ -1,0 +1,2 @@
+axi4_exhaustive_random_reads_test run_cnt=50
+axi4_enhanced_bus_matrix_test run_cnt=50
