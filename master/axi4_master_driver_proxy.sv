@@ -187,9 +187,28 @@ task axi4_master_driver_proxy::axi4_write_task();
     axi4_master_tx             local_master_tx;
     axi4_transfer_cfg_s        struct_cfg;
     axi4_write_transfer_char_s struct_write_packet;
+    bit x_inject_awvalid;
+    int x_inject_cycles;
 
     axi_write_seq_item_port.get_next_item(req_wr);
     `uvm_info(get_type_name(),$sformatf("WRITE_TASK::Before Sending_req_write_packet = \n%s",req_wr.sprint()),UVM_HIGH); 
+
+    // Check for X injection configuration
+    if(!uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", x_inject_awvalid))
+      x_inject_awvalid = 0;
+    
+    if(x_inject_awvalid) begin
+      if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
+        x_inject_cycles = 3; // Default cycles
+      
+      `uvm_info(get_type_name(), $sformatf("Triggering AWVALID X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
+      
+      // Call BFM's X injection task
+      axi4_master_drv_bfm_h.inject_x_on_awvalid(x_inject_cycles);
+      
+      // Clear the injection flag after use
+      uvm_config_db#(bit)::set(null, "*", "x_inject_awvalid", 0);
+    end
 
     if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin 
       address = req_wr.awaddr;

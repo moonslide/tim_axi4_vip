@@ -47,6 +47,7 @@ endfunction : build_phase
 // Task: run_phase
 //--------------------------------------------------------------------------------------------
 task axi4_error_inject_awvalid_x_test::run_phase(uvm_phase phase);
+  axi4_virtual_error_inject_awvalid_x_seq awvalid_x_seq;
   
   phase.raise_objection(this);
   
@@ -61,8 +62,12 @@ task axi4_error_inject_awvalid_x_test::run_phase(uvm_phase phase);
             test_config.bus_matrix_mode.name(), test_config.num_masters, test_config.num_slaves), UVM_LOW)
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
   
-  // Call parent's run_phase which handles sequence selection and execution
-  super.run_phase(phase);
+  // Run the specific AWVALID X injection sequence
+  awvalid_x_seq = axi4_virtual_error_inject_awvalid_x_seq::type_id::create("awvalid_x_seq");
+  awvalid_x_seq.start(axi4_env_h.axi4_virtual_seqr_h);
+  
+  // Wait for completion
+  #300ns;
   
   phase.drop_objection(this);
   

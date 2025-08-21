@@ -161,6 +161,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_stress_reset_virtual_seq.sv"
 
   // Error injection and exception handling virtual sequences
+  `include "axi4_virtual_error_inject_seq.sv"
   `include "axi4_virtual_error_inject_simple_seq.sv"
   `include "axi4_virtual_error_inject_full_seq.sv"
   `include "axi4_virtual_near_timeout_seq.sv"

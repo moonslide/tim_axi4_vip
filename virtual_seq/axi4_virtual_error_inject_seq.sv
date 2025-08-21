@@ -36,10 +36,7 @@ class axi4_virtual_error_inject_awvalid_x_seq extends axi4_virtual_base_seq;
     #100ns;
     
     // Send normal transaction to verify recovery
-    `uvm_do_on_with(axi4_master_bk_write_seq_h, p_sequencer.axi4_master_write_seqr_h, {
-      awaddr == 64'h0000_0000_0000_1008;
-      awlen == 0;
-    })
+    axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
     
   endtask
 endclass
@@ -144,10 +141,7 @@ class axi4_virtual_error_inject_arvalid_x_seq extends axi4_virtual_base_seq;
     #100ns;
     
     // Send normal read to verify recovery
-    `uvm_do_on_with(axi4_master_bk_read_seq_h, p_sequencer.axi4_master_read_seqr_h, {
-      araddr == 64'h0000_0000_0000_1038;
-      arlen == 0;
-    })
+    axi4_master_bk_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
     
   endtask
 endclass
