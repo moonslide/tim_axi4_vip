@@ -134,13 +134,13 @@ verdi:
 	@echo "Starting Verdi for waveform analysis..."
 	@if [ -f $(VERDI_PATH)/default.fsdb ]; then \
 		echo "Using FSDB file: $(VERDI_PATH)/default.fsdb"; \
-		verdi -ssf $(VERDI_PATH)/default.fsdb -elab simv.daidir/kdb &; \
+		verdi -ssf $(VERDI_PATH)/default.fsdb -elab simv.daidir/kdb & \
 	elif [ -f default.fsdb ]; then \
 		echo "Using FSDB file: default.fsdb"; \
-		verdi -ssf default.fsdb -elab simv.daidir/kdb &; \
+		verdi -ssf default.fsdb -elab simv.daidir/kdb & \
 	else \
 		echo "No FSDB file found. Starting Verdi with database only."; \
-		verdi -elab simv.daidir/kdb &; \
+		verdi -elab simv.daidir/kdb & \
 	fi
 
 # Clean target
