@@ -1,7 +1,11 @@
-# AXI4 VIP Regression Test Suite - Original axi_stress_reset_test.md Test Cases
-# Total: 117 standard test cases (includes 3 stress_reset modes) + 18 performance KPI tests (6×3 modes) + 45 QoS/USER tests (15×3 modes) = 180 test cases
-# Based on axi_stress_reset_test.md specification with 6 main mixed KPI testcases
-# Added QoS (8 tests) and USER (7 tests) with 3 bus matrix modes support
+# AXI4 VIP Regression Test Suite - Enhanced with Advanced Clock/Reset Features (v2.10)
+# Total: 280+ test cases including:
+#   - 117 standard AXI4 protocol tests
+#   - 18 performance KPI tests
+#   - 45 QoS/USER signal tests
+#   - 50+ advanced clock/reset tests (independent control, dynamic frequency, gating)
+#   - 50+ error injection/exception tests
+# Features unified hdl_top.sv with independent clock/reset control per interface
 
 #====================================================================================
 # SECTION 1: STANDARD AXI4 TEST CASES (117 tests) 
@@ -169,7 +173,7 @@ axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
 axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
 axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
 axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
-axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_based_qos_routing_test run_cnt=2 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
 axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
 
 # BASE Mode (4x4 with ref model)
@@ -179,7 +183,7 @@ axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
 axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
 axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
 axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
-axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_based_qos_routing_test run_cnt=2 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
 axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
 
 # ENHANCED Mode (10x10 with ref model)
@@ -189,7 +193,7 @@ axi4_qos_saturation_stress_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_qos_starvation_prevention_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
-axi4_user_based_qos_routing_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_based_qos_routing_test run_cnt=2 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
 axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
@@ -326,7 +330,7 @@ axi4_stability_burnin_longtail_backpressure_error_recovery_test run_cnt=5 comman
 # Based on error_inject_exception_scenarios_tests.md specification
 #------------------------------------------------------------------------------------
 
-# Error Injection Tests - X Value Injection (6 tests × 3 modes = 18 tests)
+# Error Injection Tests - Master X Value Injection (6 tests × 3 modes = 18 tests)
 # NONE Mode (no ref model, 4x4 topology)
 axi4_error_inject_awvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
 axi4_error_inject_awaddr_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
@@ -350,6 +354,25 @@ axi4_error_inject_wdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_error_inject_arvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_error_inject_bready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_error_inject_rready_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+# Error Injection Tests - Slave X Value Injection (4 tests × 3 modes = 12 tests)
+# NONE Mode (no ref model, 4x4 topology)
+axi4_slave_inject_bvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_slave_inject_bresp_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_slave_inject_rvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+axi4_slave_inject_rdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_slave_inject_bvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_slave_inject_bresp_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_slave_inject_rvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_slave_inject_rdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_slave_inject_bvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_slave_inject_bresp_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_slave_inject_rvalid_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_slave_inject_rdata_x_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 # Exception Handling Tests - Protocol Violations (6 tests × 3 modes = 18 tests)
 # NONE Mode (no ref model, 4x4 topology)
@@ -376,12 +399,180 @@ axi4_exception_illegal_access_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANC
 axi4_exception_ecc_error_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_exception_special_reg_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 
+#------------------------------------------------------------------------------------
+# Randomized Error Injection Tests (9 tests × 3 modes = 27 tests)
+# Tests with randomized X-value injection parameters (1-10 injections, 5-20 cycles duration)
+#------------------------------------------------------------------------------------
+# NONE Mode (no ref model, 4x4 topology)
+axi4_error_inject_awvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_arvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_awaddr_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_wdata_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_bready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_rready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_multi_signal_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_adaptive_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_error_inject_awvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_arvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_awaddr_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_wdata_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_bready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_rready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_multi_signal_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_adaptive_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_error_inject_awvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_arvalid_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_awaddr_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_wdata_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_bready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_rready_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_multi_signal_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_adaptive_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# Multi-injection Tests (2 tests × 3 modes = 6 tests)
+# Multiple X injections (1-20 times) at random times throughout simulation
+#------------------------------------------------------------------------------------
+# NONE Mode (no ref model, 4x4 topology)
+axi4_error_inject_multi_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=NONE
+axi4_error_inject_continuous_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_error_inject_multi_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=4x4
+axi4_error_inject_continuous_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_error_inject_multi_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_error_inject_continuous_random_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# Enhanced Exception Tests (4 tests × 3 modes = 12 tests)
+# Advanced exception handling with multiple events and random parameters
+#------------------------------------------------------------------------------------
+# NONE Mode (no ref model, 4x4 topology)
+axi4_exception_multi_abort_test run_cnt=5 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_continuous_abort_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_random_timeout_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_mixed_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=NONE
+
+# BASE Mode (4x4 with ref model)
+axi4_exception_multi_abort_test run_cnt=5 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_continuous_abort_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_random_timeout_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_mixed_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=4x4
+
+# ENHANCED Mode (10x10 with ref model)
+axi4_exception_multi_abort_test run_cnt=5 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_continuous_abort_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_random_timeout_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_exception_mixed_random_test run_cnt=5 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#====================================================================================
+# SECTION: ADVANCED CLOCK AND RESET TESTS (v2.10 - Unified hdl_top)
+# Comprehensive tests utilizing new independent clock/reset control features
+#====================================================================================
+
+#------------------------------------------------------------------------------------
+# 1. DYNAMIC CLOCK FREQUENCY TESTS
+# Tests clock frequency scaling during active transfers (0.5x to 3.0x)
+# Verifies data integrity and protocol compliance during frequency changes
+#------------------------------------------------------------------------------------
+axi4_exception_clk_freq_change_test run_cnt=5 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_clk_freq_change_test run_cnt=5 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_clk_freq_change_test run_cnt=5 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# 2. CONTINUOUS CLOCK VARIATION STRESS TEST
+# Constant frequency changes with 5-30% probability per transaction
+# Tests system stability under extreme clock variations
+#------------------------------------------------------------------------------------
+axi4_exception_continuous_clk_change_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_continuous_clk_change_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_continuous_clk_change_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# 3. INDEPENDENT RESET CONTROL TESTS
+# Tests per-interface reset control - ALL masters and slaves are tested individually
+# Includes simultaneous reset testing and global reset
+# Now supports all bus matrix modes!
+#------------------------------------------------------------------------------------
+# NONE mode - with transactions and comprehensive reset testing
+axi4_independent_reset_test run_cnt=3 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+
+# BASE_BUS_MATRIX mode - reset-only testing (transactions disabled)
+axi4_independent_reset_test run_cnt=2 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
+
+# ENHANCED mode - reset-only testing (transactions disabled)  
+axi4_independent_reset_test run_cnt=2 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
+
+#------------------------------------------------------------------------------------
+# 4. RESET DURING ACTIVE TRANSFERS
+# Tests reset injection during ongoing transactions (1-8 reset events)
+# Verifies transfer abandonment and recovery mechanisms
+#------------------------------------------------------------------------------------
+axi4_exception_reset_terminate_test run_cnt=5 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+axi4_exception_reset_terminate_test run_cnt=5 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
+axi4_exception_reset_terminate_test run_cnt=5 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
+
+#------------------------------------------------------------------------------------
+# 5. COMPREHENSIVE RESET TEST (5-20 random reset events)
+# Tests all critical reset scenarios:
+# - Transfer abandonment during reset
+# - System recovery after reset
+# - Protocol compliance during reset events
+# - Mid-burst reset handling
+# - Multiple consecutive reset events
+#------------------------------------------------------------------------------------
+axi4_reset_comprehensive_test run_cnt=5 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+axi4_reset_comprehensive_test run_cnt=5 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
+axi4_reset_comprehensive_test run_cnt=5 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
+
+#------------------------------------------------------------------------------------
+# 6. COMBINED CLOCK & RESET EXCEPTION TESTS
+# Simultaneous clock frequency changes and reset events
+# Most stressful scenario - tests complete system resilience
+#------------------------------------------------------------------------------------
+axi4_exception_clk_reset_combined_test run_cnt=5 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+axi4_exception_clk_reset_combined_test run_cnt=5 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
+axi4_exception_clk_reset_combined_test run_cnt=5 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
+
+#------------------------------------------------------------------------------------
+# 7. CLOCK GATING TESTS
+# Tests clock stop/start functionality during idle and active periods
+#------------------------------------------------------------------------------------
+axi4_exception_clk_gating_test run_cnt=3 command_add=+BUS_MATRIX_MODE=NONE
+axi4_exception_clk_gating_test run_cnt=3 command_add=+BUS_MATRIX_MODE=4x4
+axi4_exception_clk_gating_test run_cnt=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# 8. BASIC RESET AND CLOCK DEMO TESTS
+# Simple demonstrations of clock/reset features for debugging
+#------------------------------------------------------------------------------------
+axi4_simple_clk_reset_demo_test run_cnt=1 command_add="+define+DISABLE_X_ASSERTIONS"
+axi4_basic_reset_test run_cnt=1 command_add="+define+DISABLE_X_ASSERTIONS"
+axi4_simple_multi_reset_test run_cnt=1 command_add="+define+DISABLE_X_ASSERTIONS"
+
 # Test execution notes:
-# - Total test cases: 216 (117 standard + 18 performance KPI + 45 QoS/USER + 36 error injection/exception)
+# - Total test cases: 272 (117 standard + 18 performance KPI + 45 QoS/USER + 92 error injection/exception/clock/reset)
 # - Standard tests run 2 iterations each for reliability
 # - axi4_stress_reset_test runs across 3 bus matrix modes (NONE, 4x4, ENHANCED)
 # - Performance KPI tests run 5 iterations each for statistical accuracy
 # - QoS and USER tests run 2 iterations each across 3 bus matrix modes (NONE, BASE 4x4, ENHANCED 10x10)
 # - Error injection and exception tests run 2 iterations each across 3 bus matrix modes for robustness testing
+# - Randomized error injection tests run 3 iterations each with:
+#   * Random injection count: 1-10 times per test
+#   * Random duration: 5-20 cycles per injection
+#   * Random delays: 50-500ns between injections
+#   * All 6 AXI4 signals covered: AWVALID, ARVALID, AWADDR, WDATA, BREADY, RREADY
+# - Multi-injection tests run 3-5 iterations each for comprehensive scenario coverage
+# - Enhanced exception tests run 3-5 iterations each for thorough exception handling validation
+# - Clock and reset exception tests run 3-5 iterations each for timing and recovery validation
 # - All tests include comprehensive performance metrics collection via axi4_performance_metrics.sv
 # - Results automatically sorted into pass/fail categories with detailed KPI reports

@@ -51,13 +51,22 @@ task axi4_virtual_write_seq::body();
     axi4_slave_bk_write_seq_h = axi4_slave_bk_write_seq::type_id::create("axi4_slave_bk_write_seq_h");
     axi4_slave_nbk_write_seq_h = axi4_slave_nbk_write_seq::type_id::create("axi4_slave_nbk_write_seq_h");
     
+    // Run master and slave sequences in parallel to avoid deadlock
+    // Slave sequences should be ready to respond when master sends transactions
     fork 
-      begin: T1_WRITE
+      begin: T1_MASTER_WRITE
         repeat(5) begin
           axi4_master_bk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
           axi4_master_nbk_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
-          axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
-          axi4_slave_nbk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+        end
+      end
+      begin: T2_SLAVE_WRITE
+        // Run more slave sequences to ensure they're available for all master transactions
+        repeat(10) begin
+          fork
+            axi4_slave_bk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+            axi4_slave_nbk_write_seq_h.start(p_sequencer.axi4_slave_write_seqr_h);
+          join_any
         end
       end
     join

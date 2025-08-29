@@ -32,3 +32,13 @@
 ../../top/hvl_top.sv
 ../../assertions/master_assertions.sv
 ../../assertions/slave_assertions.sv
+
+// All master sequences are included via the package file above
+// No individual sequence files needed here
+
+// All virtual sequences are included via the package file above
+// No individual virtual sequence files needed here
+
+// All test files are included via the package file above
+// No individual test files needed here
+

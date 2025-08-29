@@ -5,6 +5,7 @@
 // Importing Global Package
 //-------------------------------------------------------
 import axi4_globals_pkg::*;
+import uvm_pkg::*;
 `include "axi4_bus_config.svh"
 
 //--------------------------------------------------------------------------------------------
@@ -286,10 +287,13 @@ interface master_assertions (input                     aclk,
     $isunknown(awvalid);
   endproperty : detect_x_on_awvalid
   
+  `ifndef DISABLE_X_ASSERTIONS
   // Cover property to track X injection on AWVALID
   X_INJECT_AWVALID_COVER: cover property(detect_x_on_awvalid) 
     $display("[%0t] X detected on AWVALID signal", $time);
+  `endif
   
+  `ifndef DISABLE_X_ASSERTIONS
   // Assertion to check no handshake occurs during X on AWVALID
   property no_handshake_during_awvalid_x;
     @(posedge aclk) disable iff (!aresetn)
@@ -297,6 +301,7 @@ interface master_assertions (input                     aclk,
   endproperty : no_handshake_during_awvalid_x
   NO_HANDSHAKE_AWVALID_X: assert property(no_handshake_during_awvalid_x)
     else `uvm_warning("X_INJECT", "AWREADY asserted while AWVALID has X value");
+  `endif // DISABLE_X_ASSERTIONS
   
   // Property to detect X on AWADDR with valid high
   property detect_x_on_awaddr;
@@ -304,8 +309,10 @@ interface master_assertions (input                     aclk,
     (awvalid === 1'b1) && $isunknown(awaddr);
   endproperty : detect_x_on_awaddr
   
+  `ifndef DISABLE_X_ASSERTIONS
   X_INJECT_AWADDR_COVER: cover property(detect_x_on_awaddr)
     $display("[%0t] X detected on AWADDR while AWVALID=1", $time);
+  `endif
   
   // Property to detect X on WDATA
   property detect_x_on_wdata;
@@ -313,8 +320,10 @@ interface master_assertions (input                     aclk,
     (wvalid === 1'b1) && $isunknown(wdata);
   endproperty : detect_x_on_wdata
   
+  `ifndef DISABLE_X_ASSERTIONS
   X_INJECT_WDATA_COVER: cover property(detect_x_on_wdata)
     $display("[%0t] X detected on WDATA while WVALID=1", $time);
+  `endif
   
   // Property to detect X on ARVALID
   property detect_x_on_arvalid;
@@ -322,16 +331,20 @@ interface master_assertions (input                     aclk,
     $isunknown(arvalid);
   endproperty : detect_x_on_arvalid
   
+  `ifndef DISABLE_X_ASSERTIONS
   X_INJECT_ARVALID_COVER: cover property(detect_x_on_arvalid)
     $display("[%0t] X detected on ARVALID signal", $time);
+  `endif
   
+  `ifndef DISABLE_X_ASSERTIONS
   // Assertion to check recovery after X injection
   property awvalid_recovers_from_x;
-    @(posedge aclk) disable iff (!aresetn)
+    @(posedge aclk) disable iff (!aresetn || x_inject_mode)
     $isunknown(awvalid) |-> ##[1:10] (awvalid === 1'b0 || awvalid === 1'b1);
   endproperty : awvalid_recovers_from_x
   AWVALID_X_RECOVERY: assert property(awvalid_recovers_from_x)
     else `uvm_error("X_RECOVERY", "AWVALID did not recover from X within 10 cycles");
+  `endif // DISABLE_X_ASSERTIONS
   
   // Additional X detection for BREADY
   property detect_x_on_bready;
@@ -339,8 +352,10 @@ interface master_assertions (input                     aclk,
     $isunknown(bready);
   endproperty : detect_x_on_bready
   
+  `ifndef DISABLE_X_ASSERTIONS
   X_INJECT_BREADY_COVER: cover property(detect_x_on_bready)
     $display("[%0t] X detected on BREADY signal", $time);
+  `endif
   
   // Additional X detection for RREADY
   property detect_x_on_rready;
@@ -348,12 +363,41 @@ interface master_assertions (input                     aclk,
     $isunknown(rready);
   endproperty : detect_x_on_rready
   
+  `ifndef DISABLE_X_ASSERTIONS
   X_INJECT_RREADY_COVER: cover property(detect_x_on_rready)
     $display("[%0t] X detected on RREADY signal", $time);
+  `endif
   
+  // Control flag for X injection testing
+  bit x_inject_mode = 0;
+  
+  initial begin
+    bit awvalid_inject, arvalid_inject, wdata_inject;
+    bit bready_inject, rready_inject, awaddr_inject;
+    
+    forever begin
+      @(posedge aclk);
+      // Check config_db for X injection mode - set to 1 if any injection is active
+      awvalid_inject = 0; arvalid_inject = 0; wdata_inject = 0;
+      bready_inject = 0; rready_inject = 0; awaddr_inject = 0;
+      
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", awvalid_inject));
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", arvalid_inject));
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", wdata_inject));
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bready", bready_inject));
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", rready_inject));
+      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", awaddr_inject));
+      
+      // Set x_inject_mode to 1 if any injection is active
+      x_inject_mode = (awvalid_inject || arvalid_inject || wdata_inject || 
+                       bready_inject || rready_inject || awaddr_inject) ? 1 : 0;
+    end
+  end
+  
+  `ifndef DISABLE_X_ASSERTIONS
   // Check no handshake during X on any valid signal
   property no_handshake_during_x_valid;
-    @(posedge aclk) disable iff (!aresetn)
+    @(posedge aclk) disable iff (!aresetn || x_inject_mode)
     ($isunknown(awvalid) || $isunknown(arvalid) || $isunknown(wvalid)) |-> 
     (!awready && !arready && !wready);
   endproperty : no_handshake_during_x_valid
@@ -363,13 +407,14 @@ interface master_assertions (input                     aclk,
   
   // Check no handshake completion during X on ready signals
   property no_handshake_during_x_ready;
-    @(posedge aclk) disable iff (!aresetn)
+    @(posedge aclk) disable iff (!aresetn || x_inject_mode)
     ($isunknown(bready) || $isunknown(rready)) |-> 
     (!(bvalid && bready === 1'b1) && !(rvalid && rready === 1'b1));
   endproperty : no_handshake_during_x_ready
   
   NO_READY_HANDSHAKE_DURING_X: assert property(no_handshake_during_x_ready)
     else `uvm_error("X_PROTOCOL", "Handshake completed during X on ready signal");
+  `endif // DISABLE_X_ASSERTIONS
   
   // Track X injection duration
   int x_inject_cycle_count = 0;

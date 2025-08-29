@@ -192,6 +192,14 @@ package axi4_test_pkg;
   // Simple smoke test for debugging ENHANCED mode
   `include "axi4_smoke_test_enhanced.sv"
 
+  // Basic and sanity tests
+  `include "axi4_basic_sanity_test.sv"
+  `include "axi4_master_base_test.sv"
+  `include "axi4_basic_reset_test.sv"
+  `include "axi4_independent_reset_test.sv"
+  `include "axi4_reset_comprehensive_test.sv"
+  `include "axi4_simple_clk_reset_demo_test.sv"
+  
   // Error injection and exception handling tests
   `include "axi4_error_inject_base_test.sv"
   `include "axi4_error_inject_x_drive_test.sv"
@@ -201,12 +209,20 @@ package axi4_test_pkg;
   `include "axi4_error_inject_arvalid_x_test.sv"
   `include "axi4_error_inject_bready_x_test.sv"
   `include "axi4_error_inject_rready_x_test.sv"
+  
+  // Randomized error injection tests
+  `include "axi4_error_inject_randomized_tests.sv"
+  `include "axi4_error_inject_multi_random_tests.sv"
+  
+  // Exception tests
   `include "axi4_exception_abort_awvalid_test.sv"
   `include "axi4_exception_abort_arvalid_test.sv"
   `include "axi4_exception_near_timeout_test.sv"
   `include "axi4_exception_illegal_access_test.sv"
   `include "axi4_exception_ecc_error_test.sv"
   `include "axi4_exception_special_reg_test.sv"
+  `include "axi4_exception_multi_abort_tests.sv"
+  `include "axi4_exception_clk_reset_tests.sv"
 
 endpackage : axi4_test_pkg
 

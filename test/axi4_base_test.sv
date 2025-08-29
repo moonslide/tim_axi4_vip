@@ -96,11 +96,15 @@ function void axi4_base_test::setup_test_configuration();
       case (bus_mode_str)
         "NONE", "1x1": begin
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::NONE;
+          test_config.num_masters = 1;
+          test_config.num_slaves = 1;
           `uvm_info(get_type_name(), "Overriding to NONE mode - will use 1 master/1 slave", UVM_MEDIUM)
         end
         "SIMPLE", "2x2": begin
-          test_config.bus_matrix_mode = axi4_bus_matrix_ref::SIMPLE_BUS_MATRIX;
-          `uvm_info(get_type_name(), "Overriding to SIMPLE mode - will use 2 masters/2 slaves", UVM_MEDIUM)
+          test_config.bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+          test_config.num_masters = 2;
+          test_config.num_slaves = 2;
+          `uvm_info(get_type_name(), "Overriding to BASE mode with 2x2 config - will use 2 masters/2 slaves", UVM_MEDIUM)
         end
         "BASE", "4x4": begin
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
@@ -338,12 +342,21 @@ function void axi4_base_test::setup_axi4_slave_agent_cfg();
     axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: setup_enhanced_slave_agent_cfg();
     axi4_bus_matrix_ref::BASE_BUS_MATRIX: setup_base_slave_agent_cfg();
     axi4_bus_matrix_ref::NONE: begin 
-      // For NONE mode, set very wide address ranges to accept any address
+      // For NONE mode, configure single slave with specific address range
+      // This prevents multiple slaves from responding to the same transaction
       foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
-        axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'hFFFF_FFFF_FFFF_FFFF;
+        if(i == 0) begin
+          // Primary slave handles most of the address space
+          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0000_0000_0000;
+          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0000_FFFF_FFFF;
+        end else begin
+          // Additional slaves get non-overlapping ranges if present
+          // This prevents conflicts during testing
+          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].min_address = 64'h0000_0001_0000_0000 + (i * 64'h0000_0001_0000_0000);
+          axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].max_address = 64'h0000_0001_FFFF_FFFF + (i * 64'h0000_0001_0000_0000);
+        end
       end
-      `uvm_info(get_type_name(), "Configured NONE mode - all addresses accepted by all slaves", UVM_MEDIUM)
+      `uvm_info(get_type_name(), "Configured NONE mode - non-overlapping address ranges for slaves", UVM_MEDIUM)
     end
   endcase
 endfunction: setup_axi4_slave_agent_cfg

@@ -71,6 +71,25 @@ class axi4_env_config extends uvm_object;
   // When set to 0 (default), performance metrics will fail tests with error responses
   bit allow_error_responses = 0;
 
+  // Variable: has_reset_checker
+  // Enable reset behavior checker component
+  // When set to 1, creates axi4_reset_checker to monitor and verify reset behavior
+  // The reset checker tracks reset events for all masters/slaves and validates against expected counts
+  // It reports test pass/fail status with UVM_ERROR/UVM_FATAL counts similar to scoreboard
+  // Useful for reset-focused tests where scoreboard may be disabled
+  // Default: 0 (disabled)
+  bit has_reset_checker = 0;
+
+  // Variable: has_freq_checker
+  // Enable clock frequency checker component
+  // When set to 1, creates axi4_freq_checker to monitor and verify clock frequency changes
+  // The frequency checker tracks frequency change events and validates actual vs expected frequencies
+  // It measures clock periods, detects frequency scaling events (0.5x, 1.0x, 2.0x, etc.)
+  // Reports test pass/fail status with UVM_ERROR/UVM_FATAL counts
+  // Useful for clock frequency tests to verify dynamic frequency scaling functionality
+  // Default: 0 (disabled)
+  bit has_freq_checker = 0;
+
 //-------------------------------------------------------
 // Externally defined Tasks and Functions
 //-------------------------------------------------------

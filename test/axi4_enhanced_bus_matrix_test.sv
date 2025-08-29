@@ -41,6 +41,10 @@ endfunction : new
 function void axi4_enhanced_bus_matrix_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
   
+  // Allow error responses since Master 7 is a "Malicious Master" that generates errors
+  axi4_env_cfg_h.allow_error_responses = 1;
+  `uvm_info(get_type_name(), "Setting allow_error_responses=1 for Malicious Master (M7) testing", UVM_LOW);
+  
   // Configure all slaves for memory mode to support read-after-write testing
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].slave_response_mode = RESP_IN_ORDER;

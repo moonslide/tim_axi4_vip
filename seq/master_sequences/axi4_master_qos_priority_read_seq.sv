@@ -62,21 +62,27 @@ task axi4_master_qos_priority_read_seq::body();
     bus_mode = axi4_bus_matrix_ref::NONE; // Default to NONE (no bus matrix ref model)
   end
   
-  // Determine number of slaves based on bus matrix mode
-  case(bus_mode)
-    axi4_bus_matrix_ref::NONE: num_slaves = 4;  // No bus matrix ref model - use default 4 slaves
-    axi4_bus_matrix_ref::BASE_BUS_MATRIX: num_slaves = 4; // 4x4 bus matrix
-    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: num_slaves = 10; // 10x10 bus matrix
-    default: num_slaves = 4;
-  endcase
+  // Get actual number of slaves from configuration
+  if(!uvm_config_db#(int)::get(m_sequencer, "", "num_slaves", num_slaves)) begin
+    // Fallback to defaults based on bus matrix mode if not set
+    case(bus_mode)
+      axi4_bus_matrix_ref::NONE: num_slaves = 1;  // 1x1 for NONE mode
+      axi4_bus_matrix_ref::BASE_BUS_MATRIX: num_slaves = 4; // 4x4 bus matrix
+      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: num_slaves = 10; // 10x10 bus matrix
+      default: num_slaves = 1;
+    endcase
+  end
   
   // If target_slave_id not specified by test, select a random valid slave
   // Otherwise use the specified target_slave_id
   if (target_slave_id == -1) begin
     // Select a random slave that exists in current configuration
     // Respect access control rules for reads
-    if (bus_mode == axi4_bus_matrix_ref::NONE) begin
-      // For NONE mode, all masters can read all slaves
+    if (bus_mode == axi4_bus_matrix_ref::NONE && num_slaves == 1) begin
+      // For 1x1 mode, only slave 0 exists
+      target_slave_id = 0;
+    end else if (bus_mode == axi4_bus_matrix_ref::NONE) begin
+      // For NONE mode with multiple slaves, all masters can read all slaves
       target_slave_id = $urandom_range(0, num_slaves-1);
       end else if (bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
       // For BASE mode, respect read access control:

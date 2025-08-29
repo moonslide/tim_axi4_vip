@@ -22,6 +22,8 @@ package axi4_env_pkg;
   `include "axi4_env_config.sv"
   `include "axi4_virtual_sequencer.sv"
   `include "axi4_scoreboard.sv"
+  `include "axi4_reset_checker.sv"
+  `include "axi4_freq_checker.sv"
   `include "axi4_performance_metrics.sv"
   `include "axi4_protocol_coverage.sv"
   `include "axi4_env.sv"

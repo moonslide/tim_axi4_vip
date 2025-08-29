@@ -1,0 +1,5 @@
+{"vcs1":{"timestamp_begin":1756279548.477608777, "rt":0.11, "ut":0.05, "st":0.05}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1756279547.428089380}
+{"VCS_COMP_START_TIME": 1756279547.428089380}
+{"VCS_COMP_END_TIME": 1756279548.684610384}
+{"VCS_USER_OPTIONS": "-full64 -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 -override_timescale=1ps/1ps +nospecify +no_timing_check +define+UVM_NO_DEPRECATED -f ../axi4_compile.f -o simv_new"}

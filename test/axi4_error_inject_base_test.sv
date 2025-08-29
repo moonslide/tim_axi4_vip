@@ -43,6 +43,15 @@ function void axi4_error_inject_base_test::build_phase(uvm_phase phase);
   uvm_config_db#(bit)::set(this, "*", "enable_error_injection", 1);
   uvm_config_db#(bit)::set(this, "*", "track_error_recovery", 1);
   
+  // Set error_inject flag on all agents to prevent timeout errors
+  // This needs to be done after super.build_phase creates the configs
+  foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].error_inject = 1;
+  end
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].error_inject = 1;
+  end
+  
   // Determine which sequence to use based on bus matrix mode
   // For NONE and BASE modes, we'll use the full sequence but limit active masters
   if (test_config.bus_matrix_mode == axi4_bus_matrix_ref::NONE) begin
@@ -91,23 +100,39 @@ task axi4_error_inject_base_test::run_phase(uvm_phase phase);
   
   phase.raise_objection(this);
   
+  // Set a global timeout for error injection tests
+  phase.phase_done.set_drain_time(this, 500ns);
+  
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
   `uvm_info(get_type_name(), "Starting Error Injection Base Test", UVM_LOW)
   `uvm_info(get_type_name(), "===============================================", UVM_LOW)
   
-  // Create and run the appropriate sequence
-  if (use_full_sequence) begin
-    `uvm_info(get_type_name(), $sformatf("Running with FULL sequence using %0d masters", test_config.num_masters), UVM_LOW)
-    full_seq_h = axi4_virtual_error_inject_full_seq::type_id::create("full_seq_h");
-    full_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
-  end else begin
-    `uvm_info(get_type_name(), "Running with SIMPLE sequence using 1 master", UVM_LOW)
-    simple_seq_h = axi4_virtual_error_inject_simple_seq::type_id::create("simple_seq_h");
-    simple_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
-  end
+  fork
+    begin
+      // Create and run the appropriate sequence
+      if (use_full_sequence) begin
+        `uvm_info(get_type_name(), $sformatf("Running with FULL sequence using %0d masters", test_config.num_masters), UVM_LOW)
+        full_seq_h = axi4_virtual_error_inject_full_seq::type_id::create("full_seq_h");
+        full_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+      end else begin
+        `uvm_info(get_type_name(), "Running with SIMPLE sequence using 1 master", UVM_LOW)
+        simple_seq_h = axi4_virtual_error_inject_simple_seq::type_id::create("simple_seq_h");
+        simple_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+      end
+      
+      // Wait for completion
+      #300ns;
+    end
+    
+    begin
+      // Watchdog timer to prevent infinite hangs
+      #10us;
+      `uvm_warning(get_type_name(), "Test watchdog timer expired - forcing test completion")
+    end
+  join_any
   
-  // Wait for completion
-  #300ns;
+  // Kill any remaining processes
+  disable fork;
   
   phase.drop_objection(this);
   

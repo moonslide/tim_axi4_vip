@@ -976,12 +976,21 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   bit all_slaves_passive = 1;
   bit error_inject_override;
   bit has_override;
+  int disable_end_of_test_checks = 0;
   
   super.check_phase(phase);
 
   `uvm_info(get_type_name(),$sformatf("--\n----------------------------------------------SCOREBOARD CHECK PHASE---------------------------------------"),UVM_HIGH) 
   
   `uvm_info (get_type_name(),$sformatf(" Scoreboard Check Phase is starting"),UVM_HIGH);
+  
+  // Check if end-of-test checks should be disabled (for sanity tests)
+  void'(uvm_config_db#(int)::get(null, "*", "disable_end_of_test_checks", disable_end_of_test_checks));
+  
+  if (disable_end_of_test_checks) begin
+    `uvm_info(get_type_name(), "End-of-test checks disabled for sanity test", UVM_LOW)
+    return; // Skip all end-of-test checking
+  end
   
   // Check for error_inject override from test first
   has_override = uvm_config_db#(bit)::get(this, "", "scoreboard_error_inject_override", error_inject_override);

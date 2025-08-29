@@ -5,7 +5,7 @@
 // Class: axi4_error_injection_coverage
 // Functional coverage for error injection and exception handling scenarios
 //--------------------------------------------------------------------------------------------
-class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
+class axi4_error_injection_coverage extends uvm_subscriber#(axi4_master_tx);
   `uvm_component_utils(axi4_error_injection_coverage)
 
   // Configuration handle
@@ -24,6 +24,19 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
   bit x_inject_rready_detected;
   int x_inject_duration;
   
+  // Enum for X injection signal types
+  typedef enum int {
+    X_INJECT_NONE = 0,
+    X_INJECT_AWVALID = 1,
+    X_INJECT_AWADDR = 2,
+    X_INJECT_WDATA = 3,
+    X_INJECT_ARVALID = 4,
+    X_INJECT_BREADY = 5,
+    X_INJECT_RREADY = 6
+  } x_inject_signal_e;
+  
+  x_inject_signal_e x_inject_signal;
+  
   //--------------------------------------------------------------------------------------------
   // Covergroup: error_injection_cg
   // Coverage for X-value injection scenarios
@@ -33,21 +46,15 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
     option.name = "error_injection_cg";
     
     // X injection target signals
-    x_injection_signal_cp: coverpoint 
-      (x_inject_awvalid_detected ? "AWVALID" :
-       x_inject_awaddr_detected ? "AWADDR" :
-       x_inject_wdata_detected ? "WDATA" :
-       x_inject_arvalid_detected ? "ARVALID" :
-       x_inject_bready_detected ? "BREADY" :
-       x_inject_rready_detected ? "RREADY" : "NONE") {
+    x_injection_signal_cp: coverpoint x_inject_signal {
       option.comment = "X injection target signals";
-      bins awvalid_x = {"AWVALID"};
-      bins awaddr_x = {"AWADDR"};
-      bins wdata_x = {"WDATA"};
-      bins arvalid_x = {"ARVALID"};
-      bins bready_x = {"BREADY"};
-      bins rready_x = {"RREADY"};
-      bins no_injection = {"NONE"};
+      bins awvalid_x = {X_INJECT_AWVALID};
+      bins awaddr_x = {X_INJECT_AWADDR};
+      bins wdata_x = {X_INJECT_WDATA};
+      bins arvalid_x = {X_INJECT_ARVALID};
+      bins bready_x = {X_INJECT_BREADY};
+      bins rready_x = {X_INJECT_RREADY};
+      bins no_injection = {X_INJECT_NONE};
     }
     
     // X injection duration (cycles)
@@ -211,23 +218,26 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
   // Function: write
   // Samples coverage when transactions are received
   //--------------------------------------------------------------------------------------------
-  function void write(uvm_sequence_item t);
+  function void write(axi4_master_tx t);
     bit [1:0] bus_mode;
     bit error_injected;
     bit recovery_success;
     int recovery_cycles;
     
-    // Try to cast to master transaction
-    if (!$cast(master_tx_h, t)) begin
-      // Try to cast to slave transaction
-      if (!$cast(slave_tx_h, t)) begin
-        return;
-      end
+    // Store the master transaction
+    master_tx_h = t;
+    if (master_tx_h == null) begin
+      return;
     end
     
-    // Get bus mode from config
+    // Get bus mode from config - convert enum to bit value for coverage
     if (axi4_env_cfg_h != null) begin
-      bus_mode = axi4_env_cfg_h.bus_type;
+      case (axi4_env_cfg_h.bus_matrix_mode)
+        axi4_bus_matrix_ref::NONE: bus_mode = 0;
+        axi4_bus_matrix_ref::BASE_BUS_MATRIX: bus_mode = 1;
+        axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: bus_mode = 2;
+        default: bus_mode = 0;
+      endcase
     end
     
     // Check for X injection signals via config_db
@@ -239,12 +249,20 @@ class axi4_error_injection_coverage extends uvm_subscriber#(uvm_sequence_item);
     void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready_detected));
     void'(uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_duration));
     
+    // Determine which X injection signal is active
+    if (x_inject_awvalid_detected) x_inject_signal = X_INJECT_AWVALID;
+    else if (x_inject_awaddr_detected) x_inject_signal = X_INJECT_AWADDR;
+    else if (x_inject_wdata_detected) x_inject_signal = X_INJECT_WDATA;
+    else if (x_inject_arvalid_detected) x_inject_signal = X_INJECT_ARVALID;
+    else if (x_inject_bready_detected) x_inject_signal = X_INJECT_BREADY;
+    else if (x_inject_rready_detected) x_inject_signal = X_INJECT_RREADY;
+    else x_inject_signal = X_INJECT_NONE;
+    
     // Sample X injection coverage if any X injection is active
-    if (x_inject_awvalid_detected || x_inject_awaddr_detected || 
-        x_inject_wdata_detected || x_inject_arvalid_detected ||
-        x_inject_bready_detected || x_inject_rready_detected) begin
+    if (x_inject_signal != X_INJECT_NONE) begin
       error_injection_cg.sample();
-      `uvm_info(get_type_name(), $sformatf("X injection coverage sampled - Duration: %0d cycles", x_inject_duration), UVM_MEDIUM)
+      `uvm_info(get_type_name(), $sformatf("X injection coverage sampled - Signal: %s, Duration: %0d cycles", 
+                                          x_inject_signal.name(), x_inject_duration), UVM_MEDIUM)
     end
     
     // Sample other coverage

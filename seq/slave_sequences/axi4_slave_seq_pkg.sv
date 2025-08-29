@@ -122,6 +122,11 @@ package axi4_slave_seq_pkg;
   `include "axi4_slave_write_response_throttling_seq.sv"
   `include "axi4_slave_long_tail_latency_seq.sv"
   `include "axi4_slave_sparse_error_injection_seq.sv"
+  `include "axi4_slave_x_inject_seq.sv"
+  `include "axi4_slave_dummy_seq.sv"
+  `include "axi4_slave_inject_response_seq.sv"
+  `include "axi4_slave_qos_response_seq.sv"
+  `include "axi4_slave_immediate_response_seq.sv"
 
 endpackage : axi4_slave_seq_pkg
 

@@ -87,6 +87,20 @@ interface axi4_slave_driver_bfm(input                     aclk    ,
 
   initial begin
     `uvm_info("axi4 slave driver bfm",$sformatf("AXI4 SLAVE DRIVER BFM"),UVM_LOW);
+    // Initialize all AXI slave response signals to 0 at time 0 to avoid X propagation
+    awready = 1'b0;
+    wready  = 1'b0;
+    bvalid  = 1'b0;
+    bid     = '0;
+    bresp   = '0;
+    buser   = '0;
+    arready = 1'b0;
+    rvalid  = 1'b0;
+    rid     = '0;
+    rdata   = '0;
+    rresp   = '0;
+    rlast   = 1'b0;
+    ruser   = '0;
   end
 
   string name = "AXI4_SLAVE_DRIVER_BFM";

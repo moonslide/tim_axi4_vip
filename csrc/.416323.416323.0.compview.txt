@@ -1,0 +1,7 @@
+Command exited with non-zero status 255
+{"vcs1":{"timestamp_begin":1756279608.711783716, "rt":0.71, "ut":0.59, "st":0.11}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1756279607.577932428}
+{"VCS_COMP_START_TIME": 1756279607.577932428}
+{"VCS_COMP_END_TIME": 1756279609.574891368}
+{"VCS_USER_OPTIONS": "-full64 -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 -override_timescale=1ps/1ps +nospecify +notimingcheck +define+UVM_NO_DEPRECATED -f ../axi4_compile.f -top hvl_top -top hdl_top -o simv_test2"}
+{"vcs1": {"peak_mem": 312692}}

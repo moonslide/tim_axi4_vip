@@ -40,6 +40,14 @@ class axi4_env extends uvm_env;
   //Variable : axi4_performance_metrics_h
   //Handle for performance KPI measurements
   axi4_performance_metrics axi4_performance_metrics_h;
+  
+  //Variable : axi4_reset_checker_h
+  //Handle for reset behavior checker
+  axi4_reset_checker axi4_reset_checker_h;
+  
+  //Variable : axi4_freq_checker_h
+  //Handle for clock frequency checker
+  axi4_freq_checker axi4_freq_checker_h;
 
   
   // Variable: axi4_master_agent_cfg_h;
@@ -136,6 +144,8 @@ function void axi4_env::build_phase(uvm_phase phase);
   
   // Create performance metrics component
   axi4_performance_metrics_h = axi4_performance_metrics::type_id::create("axi4_performance_metrics_h", this);
+  
+  // Create error injection coverage component
 
   axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
   
@@ -150,6 +160,24 @@ function void axi4_env::build_phase(uvm_phase phase);
     uvm_config_db#(axi4_scoreboard)::set(null, "*", "axi4_scoreboard_h", axi4_scoreboard_h);
   end
 
+  // Create reset checker based on configuration
+  if(axi4_env_cfg_h.has_reset_checker) begin
+    axi4_reset_checker_h = axi4_reset_checker::type_id::create("axi4_reset_checker_h", this);
+    uvm_config_db#(int)::set(this, "axi4_reset_checker_h", "num_masters", axi4_env_cfg_h.no_of_masters);
+    uvm_config_db#(int)::set(this, "axi4_reset_checker_h", "num_slaves", axi4_env_cfg_h.no_of_slaves);
+    `uvm_info(get_type_name(), "Reset checker enabled and created", UVM_MEDIUM)
+  end else begin
+    `uvm_info(get_type_name(), "Reset checker disabled - not created", UVM_MEDIUM)
+  end
+  
+  // Create frequency checker based on configuration
+  if(axi4_env_cfg_h.has_freq_checker) begin
+    axi4_freq_checker_h = axi4_freq_checker::type_id::create("axi4_freq_checker_h", this);
+    // Virtual interface will be set from hdl_top if needed
+    `uvm_info(get_type_name(), "Frequency checker enabled and created", UVM_MEDIUM)
+  end else begin
+    `uvm_info(get_type_name(), "Frequency checker disabled - not created", UVM_MEDIUM)
+  end
   
   foreach(axi4_master_agent_h[i]) begin
     axi4_master_agent_h[i].axi4_master_agent_cfg_h = axi4_master_agent_cfg_h[i];

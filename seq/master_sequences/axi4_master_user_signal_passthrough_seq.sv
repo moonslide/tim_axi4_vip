@@ -129,7 +129,7 @@ task axi4_master_user_signal_passthrough_seq::body();
     req.awlen == 8'h00;  // Single beat burst for clean testing
     req.awuser == user_signal_pattern;
     req.wuser == user_signal_pattern;  // Same pattern for write data USER
-    req.awaddr == 64'h0000_0100_0000_0000 + (local::target_slave_id * 64'h1000_0000);
+    req.awaddr == 64'h0000_0008_0000_0000 + (local::target_slave_id * 64'h0000_1000);
   }) begin
     `uvm_fatal("axi4", "Randomization failed for passthrough sequence")
   end

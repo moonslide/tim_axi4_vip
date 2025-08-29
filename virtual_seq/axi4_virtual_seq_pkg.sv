@@ -159,12 +159,25 @@ package axi4_virtual_seq_pkg;
   
   // Stress Reset Virtual Sequence
   `include "axi4_stress_reset_virtual_seq.sv"
+  
+  // Dummy slave sequence (needed by many other sequences)
+  `include "axi4_virtual_dummy_slave_seq.sv"
+  
+  // Parallel and simple write sequences
+  `include "axi4_virtual_parallel_write_seq.sv"
+  `include "axi4_virtual_simple_write_seq.sv"
+  
 
   // Error injection and exception handling virtual sequences
   `include "axi4_virtual_error_inject_seq.sv"
   `include "axi4_virtual_error_inject_simple_seq.sv"
   `include "axi4_virtual_error_inject_full_seq.sv"
+  `include "axi4_virtual_error_inject_randomized_seq.sv"
+  `include "axi4_virtual_error_inject_multi_random_seq.sv"
+  `include "axi4_virtual_error_inject_continuous_random_seq.sv"
   `include "axi4_virtual_near_timeout_seq.sv"
+  `include "axi4_virtual_exception_multi_abort_seq.sv"
+  `include "axi4_virtual_exception_clk_reset_seq.sv"
 
 endpackage : axi4_virtual_seq_pkg
 

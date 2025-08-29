@@ -301,7 +301,7 @@ function void axi4_protocol_coverage::report_phase(uvm_phase phase);
   `uvm_info(get_type_name(), $sformatf("================================"), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("ID Management Coverage      : %.2f%%", cg_id_management.get_coverage()), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("Protocol Violations Coverage: %.2f%%", cg_protocol_violations.get_coverage()), UVM_LOW);
-  `uvm_info(get_type_name(), $sformatf("Error Responses Coverage    : %.2f%%", cg_error_responses.get_coverage()), UVM_LOW);
+  `uvm_info(get_type_name(), $sformatf("Response Status Coverage    : %.2f%%", cg_error_responses.get_coverage()), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("Address Alignment Coverage  : %.2f%%", cg_address_alignment.get_coverage()), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("================================"), UVM_LOW);
   `uvm_info(get_type_name(), $sformatf("Total Protocol Coverage     : %.2f%%", total_coverage), UVM_LOW);

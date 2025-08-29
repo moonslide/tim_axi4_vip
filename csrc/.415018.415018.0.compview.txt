@@ -1,0 +1,9 @@
+{"vcs1":{"timestamp_begin":1756279558.509005152, "rt":11.95, "ut":11.44, "st":0.43}}
+{"vcselab":{"timestamp_begin":1756279570.651908709, "rt":0.34, "ut":0.24, "st":0.12}}
+{"link":{"timestamp_begin":1756279571.114357976, "rt":0.64, "ut":0.39, "st":0.27}}
+{"SNPS_VCS_INTERNAL_ROOT_START_TIME": 1756279557.479768050}
+{"VCS_COMP_START_TIME": 1756279557.479768050}
+{"VCS_COMP_END_TIME": 1756279572.007997367}
+{"VCS_USER_OPTIONS": "-full64 -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 -override_timescale=1ps/1ps +nospecify +notimingcheck +define+UVM_NO_DEPRECATED -f ../axi4_compile.f -o simv_new"}
+{"vcs1": {"peak_mem": 384904}}
+{"vcselab": {"peak_mem": 158072}}

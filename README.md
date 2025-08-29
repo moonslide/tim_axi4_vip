@@ -1,12 +1,12 @@
-# AXI4 Verification IP (VIP) - Version 2.9
+# AXI4 Verification IP (VIP) - Version 3.0
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.9--enhanced-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
-[![Tests](https://img.shields.io/badge/tests-154%20passing-brightgreen.svg)](doc/testcase_matrix.csv)
+[![Version](https://img.shields.io/badge/version-3.0--production-purple.svg)](https://github.com/moonslide/tim_axi4_vip)
+[![Tests](https://img.shields.io/badge/tests-196%20passing-brightgreen.svg)](doc/testcase_matrix.csv)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](doc/axi4_avip_coverage_plan.md)
 [![Performance](https://img.shields.io/badge/KPI-6%20metrics-orange.svg)](doc/performance_metrics.md)
-[![Fixes](https://img.shields.io/badge/fixes-21%20patterns%20resolved-blue.svg)](doc/RELEASE_NOTES_v2.8.md)
+[![Fixes](https://img.shields.io/badge/fixes-42%20patterns%20resolved-blue.svg)](doc/RELEASE_NOTES_v2.8.md)
 [![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
 
 **🚀 Next-Generation SystemVerilog/UVM Verification IP for AXI4 Protocol**
@@ -17,7 +17,7 @@
 
 ## 🌟 Overview
 
-The AXI4 Verification IP (VIP) **Version 2.9** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **10x10 bus matrix** configuration, comprehensive performance metrics, and robust error injection/exception handling capabilities.
+The AXI4 Verification IP (VIP) **Version 3.0** is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it provides complete protocol compliance with the revolutionary **10x10 bus matrix** configuration, comprehensive performance metrics, and robust error injection/exception handling capabilities.
 
 The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verification capabilities with full QoS arbitration, USER signal support, and real-time performance KPI monitoring, enabling exhaustive testing of complex multi-master SoC designs with unprecedented visibility and control.
 
@@ -25,15 +25,16 @@ The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verificati
 
 - **🌟 10x10 Bus Matrix**: Revolutionary 10-master × 10-slave bus matrix with full crossbar connectivity
 - **📊 Real-Time Performance KPIs**: 6 comprehensive metrics including throughput, latency, and fairness
-- **✅ 154 Test Suite**: 123 standard tests + 18 performance KPI tests + 13 error injection/exception tests (100% pass rate)
+- **✅ 196 Test Suite**: 123 standard tests + 18 performance KPI tests + 55 error injection/exception/reset tests (100% pass rate)
 - **🔧 Scalable Architecture**: Seamlessly supports any bus matrix size without code modification
 - **⚡ High Performance**: Parallel test execution with LSF support (avg 7.9s per test)
 - **🛡️ Protocol Compliant**: Full IHI0022D AXI4 specification compliance
 - **🎯 Enterprise Ready**: Production-tested with all critical issues resolved
-- **🔨 Version 2.9 Enhanced**: All 21 regression failures resolved + 13 new error injection/exception tests added
+- **🔨 Version 3.0 Production**: All 42 regression failures resolved + 42 new error injection/exception/reset tests added
 - **🆕 QoS & USER Signals**: Full AWQOS/ARQOS support with 18 QoS tests, complete USER signal verification with 8 tests
 - **📈 Performance Metrics Module**: Built-in axi4_performance_metrics.sv for comprehensive KPI collection
 - **🔒 Security Features**: AxPROT privilege/security verification with proper bus matrix access control
+- **🔄 Reset & Clock Testing**: Comprehensive reset scenarios and clock frequency verification tests
 
 ### 🏗️ Architecture Highlights
 
@@ -43,28 +44,41 @@ The **Enhanced 10x10** bus matrix configuration delivers cutting-edge verificati
 - **Protocol Checking**: Comprehensive assertion-based protocol verification
 - **Error Injection**: Built-in error scenarios for robust DUT testing
 
-## 🆕 Version 2.9 - Error Injection & Exception Handling
+## 🆕 Version 3.0 - Comprehensive Error Injection, Exception Handling & Reset Testing
 
-### New Features in v2.9
+### New Features in v3.0
 
-#### Error Injection Tests (7 tests)
-- **X-value Injection**: Comprehensive X-value injection on critical AXI4 signals
-  - AWVALID, AWADDR, WDATA, ARVALID, BREADY, RREADY
-  - Multi-signal simultaneous injection test
+#### Error Injection Tests (20+ tests)
+- **X-value Injection**: Comprehensive X-value injection on all critical AXI4 signals
+  - Master signals: AWVALID, AWADDR, WDATA, WVALID, ARVALID, BREADY, RREADY
+  - Slave signals: BVALID, BRESP, RVALID, RDATA
+  - Active and randomized injection patterns
+  - Multi-signal simultaneous injection tests
 - **Dynamic Bus Mode Support**: All tests support NONE/BASE/ENHANCED modes via command line
 
-#### Exception Handling Tests (6 tests)
+#### Exception Handling Tests (15+ tests)
 - **Abort Scenarios**: AWVALID/ARVALID abort before handshake completion
 - **Timeout Detection**: Near-timeout detection and recovery mechanisms
 - **Access Violations**: Illegal address access handling with SLVERR responses
 - **ECC Errors**: ECC error detection and recovery
 - **Special Registers**: Special function register access patterns
+- **Clock Frequency**: Clock frequency verification and gating tests
+- **Multi-abort**: Multiple simultaneous abort scenarios
+
+#### Reset Testing (15+ tests)
+- **Basic Reset**: Simple reset functionality verification
+- **Comprehensive Reset**: Full reset scenario coverage
+- **Mid-burst Reset**: Reset during active transactions
+- **Independent Reset**: Master/slave independent reset handling
+- **Multi-interface Reset**: Reset across multiple interfaces
+- **Reset with Recovery**: Reset and proper recovery verification
 
 #### Key Improvements
 - **Automatic Error Detection**: Performance metrics module auto-detects error injection tests
 - **Flexible Configuration**: Command line override with `+BUS_MATRIX_MODE=NONE/BASE/ENHANCED`
 - **Proper Phase Management**: Fixed duplicate phase objection issues
 - **Enhanced Coverage**: Added error injection covergroups to existing coverage model
+- **Reset Checkers**: Built-in reset and frequency checker modules
 
 ## 🔨 Version 2.8 - Critical Fixes Applied
 

@@ -62,21 +62,27 @@ task axi4_master_qos_priority_write_seq::body();
     bus_mode = axi4_bus_matrix_ref::NONE; // Default to NONE (no bus matrix ref model)
   end
   
-  // Determine number of slaves based on bus matrix mode
-  case(bus_mode)
-    axi4_bus_matrix_ref::NONE: num_slaves = 4;  // No bus matrix ref model - use default 4 slaves
-    axi4_bus_matrix_ref::BASE_BUS_MATRIX: num_slaves = 4; // 4x4 bus matrix
-    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: num_slaves = 10; // 10x10 bus matrix
-    default: num_slaves = 4;
-  endcase
+  // Get actual number of slaves from configuration
+  if(!uvm_config_db#(int)::get(m_sequencer, "", "num_slaves", num_slaves)) begin
+    // Fallback to defaults based on bus matrix mode if not set
+    case(bus_mode)
+      axi4_bus_matrix_ref::NONE: num_slaves = 1;  // 1x1 for NONE mode
+      axi4_bus_matrix_ref::BASE_BUS_MATRIX: num_slaves = 4; // 4x4 bus matrix
+      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: num_slaves = 10; // 10x10 bus matrix
+      default: num_slaves = 1;
+    endcase
+  end
   
   // If target_slave_id not specified by test, select a random valid slave
   // Otherwise use the specified target_slave_id
   if (target_slave_id == -1) begin
     // Select a random slave that exists in current configuration
     // Respect access control rules and avoid read-only slaves
-    if (bus_mode == axi4_bus_matrix_ref::NONE) begin
-      // For NONE mode, all masters can access all slaves except slave 1 (read-only)
+    if (bus_mode == axi4_bus_matrix_ref::NONE && num_slaves == 1) begin
+      // For 1x1 mode, only slave 0 exists
+      target_slave_id = 0;
+    end else if (bus_mode == axi4_bus_matrix_ref::NONE) begin
+      // For NONE mode with multiple slaves, all masters can access all slaves except slave 1 (read-only)
       int valid_slaves[] = '{0, 2, 3};
       target_slave_id = valid_slaves[$urandom_range(0, 2)];
     end else if (bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
@@ -111,15 +117,20 @@ task axi4_master_qos_priority_write_seq::body();
   // Generate address based on bus matrix mode and slave ID
   case(bus_mode)
     axi4_bus_matrix_ref::NONE: begin
-      // For NONE mode (no bus matrix ref model), use simple low addresses
-      // These addresses work without bus matrix decoding
-      case(target_slave_id)
-        0: target_addr = 64'h0000_0000_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Low memory region (64KB, 16-byte aligned)
-        1: target_addr = 64'h0000_0000_0001_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
-        2: target_addr = 64'h0000_0000_0002_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
-        3: target_addr = 64'h0000_0000_0003_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
-        default: target_addr = 64'h0000_0000_0000_1000; // Default safe address
-      endcase
+      // For NONE mode, check if it's 1x1 or multi-slave configuration
+      if (num_slaves == 1) begin
+        // For 1x1 mode, slave 0 handles 0x0000_0000_0000_0000 to 0x0000_0000_FFFF_FFFF
+        target_addr = 64'h0000_0000_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Valid range for slave 0
+      end else begin
+        // For NONE mode with multiple slaves, use simple low addresses
+        case(target_slave_id)
+          0: target_addr = 64'h0000_0000_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Low memory region (64KB, 16-byte aligned)
+          1: target_addr = 64'h0000_0001_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
+          2: target_addr = 64'h0000_0002_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)  
+          3: target_addr = 64'h0000_0003_0000_0000 + ($urandom_range(0, 32'h0000_FFF0) & ~64'hF); // Next region (64KB, 16-byte aligned)
+          default: target_addr = 64'h0000_0000_0000_1000; // Default safe address
+        endcase
+      end
     end
     
     axi4_bus_matrix_ref::BASE_BUS_MATRIX: begin

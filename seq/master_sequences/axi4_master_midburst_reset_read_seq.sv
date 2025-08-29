@@ -101,17 +101,33 @@ task axi4_master_midburst_reset_read_seq::body();
   
   finish_item(req);
   
-  // Note: Reset will be injected by the test environment at the specified beat count
-  // The sequence doesn't directly control reset but provides the long transaction
-  
-  // Try to get response (may fail due to reset)
+  // Fork to inject reset mid-burst
   fork
     begin
+      // Wait for specified number of beats (approximate timing)
+      #(reset_after_beats * 10ns); // Assuming ~10ns per beat at 100MHz
+      
+      `uvm_info(get_type_name(), $sformatf("Injecting reset after ~%0d beats", reset_after_beats), UVM_MEDIUM)
+      
+      // Inject reset for 5-10 cycles
+      uvm_config_db#(int)::set(null, "*", "reset_duration_cycles", 8);
+      uvm_config_db#(bit)::set(null, "*", "reset_active", 1);
+      uvm_config_db#(string)::set(null, "*", "reset_phase", "MID_READ_BURST");
+      uvm_config_db#(bit)::set(null, "*", "inject_reset", 1);
+      
+      // Wait for reset to complete
+      #(100ns);
+      
+      // Clear reset flags
+      uvm_config_db#(bit)::set(null, "*", "reset_active", 0);
+    end
+    begin
+      // Try to get response (may fail due to reset)
       get_response(rsp);
       `uvm_info(get_type_name(), "Read transaction completed", UVM_HIGH)
     end
     begin
-      #5us;  // Timeout in case reset prevents completion (optimized)
+      #5us;  // Timeout in case reset prevents completion
       `uvm_info(get_type_name(), "Read transaction timeout (expected during reset)", UVM_HIGH)
     end
   join_any

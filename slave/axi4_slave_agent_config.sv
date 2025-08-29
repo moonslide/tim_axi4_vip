@@ -62,6 +62,10 @@ class axi4_slave_agent_config extends uvm_object;
 
   //Used to set the qos mode
   qos_mode_e qos_mode_type;
+  
+  //Variable: reset_test_mode
+  //When set, slave driver doesn't wait for sequences (for reset testing)
+  bit reset_test_mode = 0;
 
   //Variable: user_rdata
   //Used to set default read data

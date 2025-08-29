@@ -95,6 +95,12 @@ interface axi4_master_driver_bfm(input bit                      aclk,
 
   initial begin
     `uvm_info(name,$sformatf(name),UVM_LOW)
+    // Initialize all AXI signals to 0 at time 0 to avoid X propagation
+    awvalid = 1'b0;
+    wvalid  = 1'b0;
+    bready  = 1'b0;
+    arvalid = 1'b0;
+    rready  = 1'b0;
   end
 
   //-------------------------------------------------------

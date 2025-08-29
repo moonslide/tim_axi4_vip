@@ -14,6 +14,36 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
 
   // Functional coverage for WSTRB patterns
   bit [3:0] cov_wstrb;
+  
+  // Variables to track X injection detection on slave side
+  bit x_inject_bvalid_detected;
+  bit x_inject_bresp_detected;
+  bit x_inject_rvalid_detected;
+  bit x_inject_rdata_detected;
+  int x_inject_duration;
+  
+  // Enum for slave X injection signal types
+  typedef enum int {
+    X_INJECT_NONE = 0,
+    X_INJECT_BVALID = 1,
+    X_INJECT_BRESP = 2,
+    X_INJECT_RVALID = 3,
+    X_INJECT_RDATA = 4
+  } x_inject_signal_e;
+  
+  x_inject_signal_e x_inject_signal;
+  
+  // Variables for clock frequency tracking on slave side
+  real clk_freq_scale_factor = 1.0;
+  int clk_freq_scale_idx;
+  int clk_freq_change_count;
+  real prev_freq_scale_factor = 1.0;
+  int freq_transition_pattern;
+  int consecutive_freq_changes;
+  int freq_change_interval_cycles;
+  int freq_hold_duration_cycles;
+  bit freq_change_during_response;
+  int slave_interface_id;  // Which slave interface experienced freq change
   covergroup wstrb_cg;
     option.per_instance = 1;
     cp_wstrb : coverpoint cov_wstrb {
@@ -251,12 +281,67 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
       bins status_register = {8'h03};
     }
     
-    // Abort detection
+    // Enhanced abort detection with multiple abort types
     ABORT_DETECTION_CP : coverpoint packet.tx_type {
       option.comment = "Detection of aborted transactions";
       bins awvalid_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB01);
       bins arvalid_abort = {READ} iff (packet.araddr == 64'h0000_0000_0000_AB02);
+      bins wvalid_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB03);
+      bins wlast_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB04);
+      bins bready_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB05);
+      bins rready_abort = {READ} iff (packet.araddr == 64'h0000_0000_0000_AB06);
+      bins multi_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB10);
+      bins continuous_abort = {WRITE} iff (packet.awaddr == 64'h0000_0000_0000_AB11);
       bins normal_completion = default;
+    }
+    
+    // Enhanced X injection signal detection on slave side
+    X_INJECT_SLAVE_SIGNAL_CP : coverpoint x_inject_signal {
+      option.comment = "X injection on slave response signals";
+      bins bvalid_x_detected = {X_INJECT_BVALID};
+      bins bresp_x_detected = {X_INJECT_BRESP};
+      bins rvalid_x_detected = {X_INJECT_RVALID};
+      bins rdata_x_detected = {X_INJECT_RDATA};
+      bins no_x_injection = {X_INJECT_NONE};
+    }
+    
+    // X injection duration coverage for slave (updated for 5-20 cycles range)
+    X_INJECT_SLAVE_DURATION_CP : coverpoint x_inject_duration {
+      option.comment = "X injection duration on slave signals";
+      bins single_cycle = {1};
+      bins two_cycles = {2};
+      bins three_cycles = {3};
+      bins four_cycles = {4};
+      bins standard_range = {[5:20]};  // New standard range 5-20 cycles
+      bins extended_range = {[21:50]};  // Extended for stress testing
+      bins long_duration = {[51:$]};
+    }
+    
+    // Multiple X injection count coverage on slave (new)
+    X_INJECT_SLAVE_COUNT_CP : coverpoint packet.awlen {
+      option.comment = "Number of X injection events on slave (1-20)";
+      bins single_injection = {1};
+      bins few_injections = {[2:5]};
+      bins moderate_injections = {[6:10]};
+      bins many_injections = {[11:15]};
+      bins maximum_injections = {[16:20]};
+    }
+    
+    // Exception response delay coverage (new)
+    EXCEPTION_RESPONSE_DELAY_CP : coverpoint packet.awsize {
+      option.comment = "Response delay for exception scenarios";
+      bins immediate_response = {0};
+      bins short_delay = {[1:2]};
+      bins medium_delay = {[3:4]};
+      bins long_delay = {[5:7]};
+    }
+    
+    // Abort recovery time coverage (new)
+    ABORT_RECOVERY_TIME_CP : coverpoint packet.awburst {
+      option.comment = "Recovery time after abort events";
+      bins quick_recovery = {0};     // <10 cycles
+      bins normal_recovery = {1};    // 10-50 cycles
+      bins slow_recovery = {2};      // >50 cycles
     }
     
     //-------------------------------------------------------
@@ -332,6 +417,87 @@ class axi4_slave_coverage extends uvm_subscriber#(axi4_slave_tx);
     AWBURST_CP_X_AWLEN_CP_X_AWSIZE_CP :cross AWBURST_CP,AWLEN_CP,AWSIZE_CP;
     ARBURST_CP_X_ARLEN_CP_X_ARSIZE_CP :cross ARBURST_CP,ARLEN_CP,ARSIZE_CP;
     ADDR_DATA_WIDTH_CP : cross ADDR_WIDTH_CP, DATA_WIDTH_CP;
+    
+    // Enhanced error injection cross coverage
+    X_SLAVE_SIGNAL_X_DURATION : cross X_INJECT_SLAVE_SIGNAL_CP, X_INJECT_SLAVE_DURATION_CP;
+    X_SLAVE_SIGNAL_X_RESPONSE : cross X_INJECT_SLAVE_SIGNAL_CP, SLAVE_ERROR_RESPONSE_CP;
+    PROTECTED_ACCESS_X_RESPONSE : cross PROTECTED_ACCESS_CP, SLAVE_ERROR_RESPONSE_CP;
+    
+    // New cross coverage for multiple injections on slave
+    X_SLAVE_SIGNAL_X_COUNT : cross X_INJECT_SLAVE_SIGNAL_CP, X_INJECT_SLAVE_COUNT_CP;
+    X_SLAVE_COUNT_X_DURATION : cross X_INJECT_SLAVE_COUNT_CP, X_INJECT_SLAVE_DURATION_CP;
+    
+    // New cross coverage for enhanced exceptions on slave
+    ABORT_X_RECOVERY : cross ABORT_DETECTION_CP, ABORT_RECOVERY_TIME_CP;
+    EXCEPTION_X_DELAY : cross ABORT_DETECTION_CP, EXCEPTION_RESPONSE_DELAY_CP;
+    TIMEOUT_X_RECOVERY : cross SLAVE_TIMEOUT_CP, ABORT_RECOVERY_TIME_CP;
+    
+    //-------------------------------------------------------
+    // Clock frequency coverage for slave interfaces
+    //-------------------------------------------------------
+    
+    // Slave clock frequency scale coverage
+    SLAVE_CLK_FREQ_SCALE_CP : coverpoint clk_freq_scale_idx {
+      option.comment = "Slave clock frequency scaling factor";
+      bins halt = {-1};                // 0x speed (clock gated)
+      bins slow_25 = {7};              // 0.25x speed
+      bins slow_50 = {0};              // 0.5x speed
+      bins slow_75 = {1};              // 0.75x speed  
+      bins normal = {2};               // 1.0x speed
+      bins fast_125 = {3};             // 1.25x speed
+      bins fast_150 = {4};             // 1.5x speed
+      bins fast_200 = {5};             // 2.0x speed
+      bins fast_300 = {6};             // 3.0x speed
+      bins fast_400 = {8};             // 4.0x speed
+    }
+    
+    // Frequency change count on slave
+    SLAVE_FREQ_CHANGE_COUNT_CP : coverpoint clk_freq_change_count {
+      option.comment = "Number of slave clock frequency changes";
+      bins single_change = {1};
+      bins few_changes = {[2:3]};
+      bins moderate_changes = {[4:6]};
+      bins many_changes = {[7:10]};
+      bins excessive_changes = {[11:$]};
+    }
+    
+    // Frequency transition pattern on slave
+    SLAVE_FREQ_PATTERN_CP : coverpoint freq_transition_pattern {
+      option.comment = "Slave frequency transition pattern";
+      bins steady = {0};
+      bins speed_up = {1};
+      bins slow_down = {2};
+      bins oscillating = {3};
+    }
+    
+    // Consecutive frequency changes on slave
+    SLAVE_CONSECUTIVE_FREQ_CP : coverpoint consecutive_freq_changes {
+      option.comment = "Back-to-back slave frequency changes";
+      bins single = {1};
+      bins burst_2_3 = {[2:3]};
+      bins burst_4_6 = {[4:6]};
+      bins burst_many = {[7:$]};
+    }
+    
+    // Frequency change during response phase
+    FREQ_DURING_RESPONSE_CP : coverpoint freq_change_during_response {
+      option.comment = "Frequency changed during response phase";
+      bins no_change = {0};
+      bins changed = {1};
+    }
+    
+    // Slave interface frequency change
+    SLAVE_INTF_FREQ_CP : coverpoint slave_interface_id {
+      option.comment = "Slave interface with frequency change";
+      bins slave[10] = {[0:9]};
+    }
+    
+    // Cross coverage for slave frequency scenarios
+    SLAVE_FREQ_X_RESPONSE : cross SLAVE_CLK_FREQ_SCALE_CP, packet.bresp;
+    SLAVE_FREQ_X_TRANSFER : cross SLAVE_CLK_FREQ_SCALE_CP, TRANSFER_TYPE_CP;
+    SLAVE_FREQ_X_PATTERN : cross SLAVE_CLK_FREQ_SCALE_CP, SLAVE_FREQ_PATTERN_CP;
+    SLAVE_INTF_X_SCALE : cross SLAVE_INTF_FREQ_CP, SLAVE_CLK_FREQ_SCALE_CP;
+    FREQ_DURING_RESP_X_TYPE : cross FREQ_DURING_RESPONSE_CP, TRANSFER_TYPE_CP;
 
   endgroup: axi4_slave_covergroup
 
@@ -371,6 +537,77 @@ function void axi4_slave_coverage::write(axi4_slave_tx t);
     `uvm_warning(get_type_name(), "Coverage configuration not set - skipping coverage collection")
     return;
   end
+  
+  // Check for X injection signals on slave side via config_db
+  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bvalid", x_inject_bvalid_detected));
+  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bresp", x_inject_bresp_detected));
+  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rvalid", x_inject_rvalid_detected));
+  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rdata", x_inject_rdata_detected));
+  void'(uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_duration));
+  
+  // Determine which X injection signal is active on slave
+  if (x_inject_bvalid_detected) x_inject_signal = X_INJECT_BVALID;
+  else if (x_inject_bresp_detected) x_inject_signal = X_INJECT_BRESP;
+  else if (x_inject_rvalid_detected) x_inject_signal = X_INJECT_RVALID;
+  else if (x_inject_rdata_detected) x_inject_signal = X_INJECT_RDATA;
+  else x_inject_signal = X_INJECT_NONE;
+  
+  // Report X injection detection on slave
+  if (x_inject_signal != X_INJECT_NONE) begin
+    `uvm_info(get_type_name(), $sformatf("Slave X injection detected - Signal: %s, Duration: %0d cycles", 
+                                        x_inject_signal.name(), x_inject_duration), UVM_MEDIUM)
+  end
+  
+  // Check for clock frequency changes on slave via config_db
+  void'(uvm_config_db#(real)::get(null, "*", "slave_clk_freq_scale", clk_freq_scale_factor));
+  if (clk_freq_scale_factor == 0.0) begin
+    // If no slave-specific frequency, check global
+    void'(uvm_config_db#(real)::get(null, "*", "clk_freq_scale", clk_freq_scale_factor));
+  end
+  void'(uvm_config_db#(int)::get(null, "*", "slave_freq_change_count", clk_freq_change_count));
+  void'(uvm_config_db#(int)::get(null, "*", "slave_intf_id", slave_interface_id));
+  
+  // Map frequency scale to index for coverage
+  if (clk_freq_scale_factor == 0.0) clk_freq_scale_idx = -1;      // Halted/gated
+  else if (clk_freq_scale_factor <= 0.25) clk_freq_scale_idx = 7; // 0.25x
+  else if (clk_freq_scale_factor <= 0.5) clk_freq_scale_idx = 0;  // 0.5x
+  else if (clk_freq_scale_factor <= 0.75) clk_freq_scale_idx = 1; // 0.75x
+  else if (clk_freq_scale_factor <= 1.0) clk_freq_scale_idx = 2;  // 1.0x
+  else if (clk_freq_scale_factor <= 1.25) clk_freq_scale_idx = 3; // 1.25x
+  else if (clk_freq_scale_factor <= 1.5) clk_freq_scale_idx = 4;  // 1.5x
+  else if (clk_freq_scale_factor <= 2.0) clk_freq_scale_idx = 5;  // 2.0x
+  else if (clk_freq_scale_factor <= 3.0) clk_freq_scale_idx = 6;  // 3.0x
+  else clk_freq_scale_idx = 8;                                     // 4.0x+
+  
+  // Determine frequency transition pattern
+  if (clk_freq_scale_factor > prev_freq_scale_factor) begin
+    freq_transition_pattern = 1; // Speed up
+    consecutive_freq_changes++;
+  end else if (clk_freq_scale_factor < prev_freq_scale_factor) begin
+    freq_transition_pattern = 2; // Slow down
+    consecutive_freq_changes++;
+  end else begin
+    freq_transition_pattern = 0; // Steady
+    consecutive_freq_changes = 0;
+  end
+  
+  // Check if frequency change occurred during response phase
+  if ((t.transfer_type == BLOCKING_WRITE || t.transfer_type == NON_BLOCKING_WRITE) && 
+      (t.bresp != 2'b00) && (clk_freq_scale_factor != prev_freq_scale_factor)) begin
+    freq_change_during_response = 1;
+  end else if ((t.transfer_type == BLOCKING_READ || t.transfer_type == NON_BLOCKING_READ) && 
+               (t.rresp != 2'b00) && (clk_freq_scale_factor != prev_freq_scale_factor)) begin
+    freq_change_during_response = 1;
+  end else begin
+    freq_change_during_response = 0;
+  end
+  
+  // Update previous frequency for next comparison
+  prev_freq_scale_factor = clk_freq_scale_factor;
+  
+  // Get timing metrics from config_db
+  void'(uvm_config_db#(int)::get(null, "*", "freq_change_interval", freq_change_interval_cycles));
+  void'(uvm_config_db#(int)::get(null, "*", "freq_hold_duration", freq_hold_duration_cycles));
   
   `uvm_info(get_type_name(),$sformatf("Before calling SAMPLE METHOD"),UVM_HIGH);
 

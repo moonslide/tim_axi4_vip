@@ -26,7 +26,9 @@ package axi4_master_seq_pkg;
   `include "axi4_master_write_seq.sv"
   `include "axi4_master_read_seq.sv"
   `include "axi4_master_bk_write_seq.sv"
+  `include "axi4_master_bk_write_constrained_seq.sv"
   `include "axi4_master_bk_read_seq.sv"
+  `include "axi4_master_bk_read_constrained_seq.sv"
   `include "axi4_master_targeted_write_seq.sv"
   `include "axi4_master_targeted_read_seq.sv"
   `include "axi4_master_nbk_write_seq.sv"
@@ -180,6 +182,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_reset_smoke_seq.sv"
   `include "axi4_master_midburst_reset_read_seq.sv"
   `include "axi4_master_midburst_reset_write_seq.sv"
+  `include "axi4_master_reset_injection_base.sv"
   
   // Stress test sequences from markdown
   `include "axi4_master_all_to_all_saturation_seq.sv"
@@ -195,8 +198,20 @@ package axi4_master_seq_pkg;
 
   // Error injection and exception handling sequences  
   `include "axi4_master_x_inject_seq.sv"
+  `include "axi4_master_x_inject_active_seq.sv"
+  
+  // Slave injection test sequences
+  `include "axi4_master_slave_inject_write_seq.sv"
+  `include "axi4_master_slave_inject_read_seq.sv"
+  `include "axi4_master_x_inject_random_seq.sv"
   `include "axi4_master_exception_seq.sv"
+  `include "axi4_master_exception_random_seq.sv"
+  `include "axi4_master_exception_multi_abort_seq.sv"
   `include "axi4_master_near_timeout_seq.sv"
+  
+  // Clock and reset exception sequences
+  `include "axi4_master_exception_clk_freq_seq.sv"
+  `include "axi4_master_exception_reset_terminate_seq.sv"
 
 endpackage : axi4_master_seq_pkg
 

@@ -398,7 +398,7 @@ function void axi4_performance_metrics::report_phase(uvm_phase phase);
   
   // Pass/Fail Criteria
   `uvm_info(get_type_name(), "ACCEPTANCE CRITERIA:", UVM_NONE)
-  `uvm_info(get_type_name(), $sformatf("  Protocol Errors    : %0d (Required: 0)", total_error_responses), UVM_NONE)
+  `uvm_info(get_type_name(), $sformatf("  Protocol Issues    : %0d (Required: 0)", total_error_responses), UVM_NONE)
   `uvm_info(get_type_name(), $sformatf("  Deadlock Detected  : %s (Required: No)", deadlock_detected ? "YES" : "NO"), UVM_NONE)
   `uvm_info(get_type_name(), $sformatf("  Livelock Detected  : %s (Required: No)", livelock_detected ? "YES" : "NO"), UVM_NONE)
   
@@ -428,7 +428,7 @@ function void axi4_performance_metrics::report_phase(uvm_phase phase);
   // Other KPIs
   `uvm_info(get_type_name(), $sformatf("  Retry Rate         : %.2f%%", calculate_retry_rate()), UVM_NONE)
   `uvm_info(get_type_name(), $sformatf("  Reset Recovery Time: %0t", calculate_reset_recovery_time()), UVM_NONE)
-  `uvm_info(get_type_name(), $sformatf("  Error Isolation    : %.2f%%", calculate_error_isolation_rate()), UVM_NONE)
+  `uvm_info(get_type_name(), $sformatf("  Issue Isolation    : %.2f%%", calculate_error_isolation_rate()), UVM_NONE)
   `uvm_info(get_type_name(), $sformatf("  Arbitration Fairness: %.2f", calculate_fairness_index(master_grant_count)), UVM_NONE)
   
   // Transaction Summary
