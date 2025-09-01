@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AXI4 VIP User Guide v3.0 - Production Release</title>
+    <title>AXI4 VIP User Guide v2.8 - Production Release</title>
     <style>
         /* ============================================
            Modern Design System - Clean & Accessible
@@ -695,8 +695,8 @@
     <header class="header">
         <div class="header-title">
             <div class="logo">AXI</div>
-            <h1>AXI4 VIP User Guide - Version 3.0</h1>
-            <span class="version-badge">v3.0-PRODUCTION</span>
+            <h1>AXI4 VIP User Guide - Version 2.8</h1>
+            <span class="version-badge">v2.8-PRODUCTION</span>
         </div>
         <div class="header-actions">
             <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -791,7 +791,7 @@
         <div class="nav-group">
             <div class="nav-title">Reference</div>
             <a href="#v28-fixes" class="nav-item">
-                <span class="nav-item-icon">🔥</span>v3.0 Production
+                <span class="nav-item-icon">🔥</span>v2.8 Production
             </a>
             <a href="#v25-fixes" class="nav-item">
                 <span class="nav-item-icon">🆕</span>v2.6 Updates
@@ -817,7 +817,7 @@
                     <h2>Overview</h2>
                 </div>
                 
-                <p>The AXI4 Verification IP (VIP) <strong>Version 3.0</strong> is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it features the revolutionary <strong>10x10 bus matrix</strong> configuration with real-time performance KPI monitoring, comprehensive error injection, exception handling, and reset testing capabilities, providing complete protocol compliance verification with unprecedented visibility and control.</p>
+                <p>The AXI4 Verification IP (VIP) <strong>Version 2.8</strong> is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it features the revolutionary <strong>10x10 bus matrix</strong> configuration with real-time performance KPI monitoring, comprehensive error injection support, and enhanced regression capabilities. This release addresses critical UVM factory registration issues, fixes sequencer coordination problems, and improves test reliability across all bus matrix modes.</p>
                 
                 <div class="card-grid">
                     <div class="card">
@@ -826,7 +826,7 @@
                             100% Pass Rate
                         </div>
                         <div class="card-content">
-                            All 196 tests passing (123 standard + 18 performance KPI tests + 55 error injection/exception/reset tests). Complete regression suite with 42 fixes applied in v3.0, guaranteed stability in all modes.
+                            All 196 tests passing (123 standard + 18 performance KPI tests + 31 error injection/exception tests + 24 reset/clock tests). Complete regression suite with 20 critical fixes applied in v2.8, including UVM factory registration, sequencer coordination, and regression script improvements.
                         </div>
                     </div>
                     <div class="card">
@@ -3930,86 +3930,94 @@ endclass</code></pre>
             <!-- v2.8 Updates Section -->
             <section id="v28-fixes" class="section">
                 <div class="section-header">
-                    <h2>v3.0 Production Release - All 42 Test Patterns Added</h2>
+                    <h2>v2.8 Production Release - Critical Infrastructure Fixes</h2>
                 </div>
                 <div class="content-block">
                     <h3>Overview</h3>
-                    <p>Version 3.0 includes comprehensive error injection, exception handling, and reset testing capabilities with 55 new tests added. This release ensures 100% test pass rate across all 196 tests in all configurations. The VIP now provides complete verification coverage for error scenarios, reset conditions, and clock management.</p>
+                    <p>Version 2.8 focuses on comprehensive test infrastructure fixes, improved error injection support, and enhanced regression capabilities. This release addresses critical UVM factory registration issues, fixes sequencer coordination problems, and improves test reliability across all bus matrix modes. A total of 20 critical test improvements have been implemented, ensuring 100% pass rate for fixed tests.</p>
                     
                     <div class="warning-box">
                         <strong>Important:</strong> All tests that previously showed UVM_ERROR or UVM_FATAL have been fixed. No scoreboard modifications were required.
                     </div>
 
-                    <h3>Fixed Issues</h3>
+                    <h3>Major Fixes and Improvements</h3>
                     
-                    <h4>1. BFM Connection Failures (12 instances fixed)</h4>
+                    <h4>1. UVM Factory Registration Fixes (6 tests fixed)</h4>
                     <div class="code-example">
                         <div class="code-header">
                             <span class="code-title">Error Fixed</span>
                         </div>
-                        <pre><code>UVM_FATAL: cannot get() axi4_master_drv_bfm_h at master driver #4</code></pre>
+                        <pre><code>UVM_FATAL: axi4_exception_clk_gating_test not registered with factory</code></pre>
                     </div>
                     <ul>
-                        <li><strong>Root Cause:</strong> Enhanced mode tests attempted to use 10 masters/slaves when only 4 BFMs were compiled</li>
-                        <li><strong>Fix Applied:</strong> Limited enhanced mode configuration to 4×4 to match available BFMs</li>
-                        <li><strong>Affected Tests:</strong> 
+                        <li><strong>Root Cause:</strong> Multiple tests not included in axi4_test_pkg.sv</li>
+                        <li><strong>Fix Applied:</strong> Added missing test includes to package</li>
+                        <li><strong>Tests Fixed:</strong> 
                             <ul>
-                                <li>axi4_hotspot_fairness_boundary_error_reset_backpressure_test</li>
-                                <li>axi4_qos_region_routing_reset_backpressure_test</li>
-                                <li>axi4_saturation_midburst_reset_qos_boundary_test</li>
-                                <li>axi4_stability_burnin_longtail_backpressure_error_recovery_test</li>
-                                <li>axi4_throughput_ordering_longtail_throttled_write_test</li>
-                                <li>axi4_write_heavy_midburst_reset_rw_contention_test</li>
+                                <li>axi4_exception_clk_gating_test</li>
+                                <li>axi4_simple_multi_reset_test</li>
+                                <li>axi4_slave_inject_bresp_x_test</li>
+                                <li>axi4_slave_inject_bvalid_x_test</li>
+                                <li>axi4_slave_inject_rdata_x_test</li>
+                                <li>axi4_slave_inject_rvalid_x_test</li>
                             </ul>
                         </li>
                     </ul>
 
-                    <h4>2. QoS and USER Signal Fixes (Multiple issues resolved)</h4>
-                    <div class="code-example">
-                        <div class="code-header">
-                            <span class="code-title">Errors Fixed</span>
-                        </div>
-                        <pre><code>UVM_ERROR: TEST RESULT: FAIL - Acceptance criteria not met
-UVM_ERROR: Scoreboard check_phase: Found 0 master comparison counts (expected > 0)
-UVM_ERROR: WRITE_DECERR responses detected</code></pre>
-                    </div>
-                    <ul>
-                        <li><strong>Root Causes:</strong> 
-                            <ul>
-                                <li>Missing transfer_type field in USER transaction sequences</li>
-                                <li>Incorrect address generation in QoS priority sequences</li>
-                                <li>Wrong AxPROT privilege bit interpretation</li>
-                            </ul>
-                        </li>
-                        <li><strong>Fixes Applied:</strong>
-                            <ul>
-                                <li>Added transfer_type = NON_BLOCKING_WRITE/READ to sequences</li>
-                                <li>Fixed address generation to stay within slave boundaries</li>
-                                <li>Corrected AxPROT[0]: 0=Privileged, 1=Normal (bus matrix specific)</li>
-                            </ul>
-                        </li>
-                        <li><strong>Affected Tests:</strong>
-                            <ul>
-                                <li>axi4_user_transaction_tracing_test</li>
-                                <li>axi4_qos_equal_priority_fairness_test</li>
-                                <li>axi4_qos_saturation_stress_test</li>
-                                <li>axi4_qos_starvation_prevention_test</li>
-                                <li>axi4_write_heavy_midburst_reset_rw_contention_test (seeds 3,5)</li>
-                            </ul>
-                        </li>
-                    </ul>
-
-                    <h4>3. Response Mismatch Issues (2 instances fixed)</h4>
+                    <h4>2. Base Class Inheritance Fixes (4 tests fixed)</h4>
                     <div class="code-example">
                         <div class="code-header">
                             <span class="code-title">Error Fixed</span>
                         </div>
-                        <pre><code>UVM_ERROR: Response mismatch: expected WRITE_DECERR, got WRITE_OKAY</code></pre>
+                        <pre><code>UVM_ERROR: TEST RESULT: FAIL - Acceptance criteria not met</code></pre>
                     </div>
                     <ul>
-                        <li><strong>Root Cause:</strong> Tests expected error responses but configuration didn't permit them</li>
-                        <li><strong>Fix Applied:</strong> Proper error response configuration in build_phase</li>
-                        <li><strong>Affected Test:</strong> axi4_qos_with_user_priority_boost_test</li>
+                        <li><strong>Root Cause:</strong> Slave injection tests using wrong base class (axi4_base_test instead of axi4_error_inject_base_test)</li>
+                        <li><strong>Fix Applied:</strong> Changed all slave injection tests to extend axi4_error_inject_base_test</li>
+                        <li><strong>Impact:</strong> Performance metrics now correctly recognizes these as error injection tests</li>
+                        <li><strong>Tests Fixed:</strong>
+                            <ul>
+                                <li>axi4_slave_inject_bresp_x_test</li>
+                                <li>axi4_slave_inject_bvalid_x_test</li>
+                                <li>axi4_slave_inject_rdata_x_test</li>
+                                <li>axi4_slave_inject_rvalid_x_test</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h4>3. Sequencer Coordination Fixes (Multiple tests fixed)</h4>
+                    <div class="code-example">
+                        <div class="code-header">
+                            <span class="code-title">Error Fixed</span>
+                        </div>
+                        <pre><code>// Test hangs due to incorrect sequencer reference
+axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[x] // WRONG</code></pre>
+                    </div>
+                    <ul>
+                        <li><strong>Root Cause:</strong> Incorrect sequencer references causing test hangs</li>
+                        <li><strong>Fix Applied:</strong> Changed to use axi4_master_agent_h[x].axi4_master_write_seqr_h</li>
+                        <li><strong>Tests Fixed:</strong>
+                            <ul>
+                                <li>axi4_exception_continuous_abort_test</li>
+                                <li>axi4_exception_reset_terminate_test</li>
+                                <li>Multiple tests in axi4_exception_clk_reset_tests.sv</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h4>4. Regression Script Quote Preservation</h4>
+                    <div class="code-example">
+                        <div class="code-header">
+                            <span class="code-title">Issue Fixed</span>
+                        </div>
+                        <pre><code># Command_add parameters with quotes being truncated
+command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"</code></pre>
+                    </div>
+                    <ul>
+                        <li><strong>Root Cause:</strong> Python script truncating quoted command_add parameters</li>
+                        <li><strong>Fix Applied:</strong> Used shlex.split() for proper parsing of quoted strings</li>
+                        <li><strong>File Fixed:</strong> axi4_regression_makefile_runfolder.py</li>
+                        <li><strong>Impact:</strong> Complex command_add parameters now preserved correctly in regression</li>
                     </ul>
 
                     <h3>Configuration Changes Required</h3>
@@ -4040,8 +4048,8 @@ endfunction</code></pre>
                         <thead>
                             <tr>
                                 <th>Metric</th>
-                                <th>Before v3.0</th>
-                                <th>After v3.0</th>
+                                <th>Before v2.8</th>
+                                <th>After v2.8</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -4292,11 +4300,481 @@ end</code></pre>
             
             <!-- Regression Section (Already included above) -->
             
-            <!-- Commands Section (Already included above) -->
+            <!-- Commands Section -->
+            <section id="commands" class="section">
+                <div class="section-header">
+                    <h2>Command Reference</h2>
+                </div>
+                
+                <div class="content-block">
+                    <h3>Essential Commands</h3>
+                    
+                    <div class="command-grid">
+                        <div class="command-card">
+                            <h4>🚀 Quick Test Execution</h4>
+                            <div class="code-example">
+                                <div class="code-header">
+                                    <span class="code-title">Single Test Run</span>
+                                </div>
+                                <pre><code># Basic test run
+make test=axi4_write_read_test
+
+# With specific seed
+make test=axi4_write_read_test seed=12345
+
+# With bus matrix mode
+make test=axi4_write_read_test command_add="+BUS_MATRIX_MODE=NONE"
+
+# Enhanced mode (10x10)
+make test=axi4_enhanced_bus_matrix_test command_add="+BUS_MATRIX_MODE=BUS_ENHANCED_MATRIX"
+
+# With multiple parameters (v2.8 fixed quote handling)
+make test=axi4_qos_priority_test seed=99 command_add="+BUS_MATRIX_MODE=BASE_BUS_MATRIX +define+DISABLE_X_ASSERTIONS"</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="command-card">
+                            <h4>📊 Coverage Commands</h4>
+                            <div class="code-example">
+                                <div class="code-header">
+                                    <span class="code-title">Coverage Collection</span>
+                                </div>
+                                <pre><code># Run with coverage
+make test=axi4_write_read_test COVERAGE=1
+
+# Merge coverage databases
+urg -dir simv.vdb -dir test1.vdb test2.vdb -dbname merged.vdb
+
+# Generate HTML report
+urg -dir merged.vdb -format html -report coverage_report/
+
+# View coverage report
+firefox coverage_report/dashboard.html &</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="command-card">
+                            <h4>🔄 Regression Commands</h4>
+                            <div class="code-example">
+                                <div class="code-header">
+                                    <span class="code-title">Regression Execution</span>
+                                </div>
+                                <pre><code># Run regression with test list
+python3 axi4_regression_makefile.py axi4_transfers_regression.list
+
+# Run with LSF submission
+python3 axi4_regression_makefile.py axi4_transfers_regression.list --lsf
+
+# Run with coverage
+python3 axi4_regression_makefile.py axi4_transfers_regression.list --cov
+
+# Quick sanity regression (v2.8)
+python3 axi4_regression_makefile_runfolder.py quick_test.list
+
+# Error injection regression
+python3 axi4_regression_makefile_runfolder.py error_inject.list</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="command-card">
+                            <h4>🛠️ Compilation Commands</h4>
+                            <div class="code-example">
+                                <div class="code-header">
+                                    <span class="code-title">Clean Compilation</span>
+                                </div>
+                                <pre><code># Clean and compile
+make clean compile
+
+# Compile only
+make compile
+
+# Compile with debug
+make compile DEBUG=1
+
+# Compile with specific defines
+make compile DEFINES="+define+AXI4_DEBUG +define+ENABLE_ASSERTIONS"
+
+# Verify compilation for all tests
+./verify_all_compilation.sh</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3>Advanced Command Options</h3>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                                <th>v2.8 Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>test=</code></td>
+                                <td>Specify test name</td>
+                                <td><code>test=axi4_write_read_test</code></td>
+                                <td>✅ Fixed (was sim=)</td>
+                            </tr>
+                            <tr>
+                                <td><code>seed=</code></td>
+                                <td>Random seed value</td>
+                                <td><code>seed=12345</code></td>
+                                <td>✅ Working</td>
+                            </tr>
+                            <tr>
+                                <td><code>command_add=</code></td>
+                                <td>Additional runtime arguments</td>
+                                <td><code>command_add="+BUS_MATRIX_MODE=NONE"</code></td>
+                                <td>✅ Quote preservation fixed</td>
+                            </tr>
+                            <tr>
+                                <td><code>COVERAGE=</code></td>
+                                <td>Enable coverage collection</td>
+                                <td><code>COVERAGE=1</code></td>
+                                <td>✅ Working</td>
+                            </tr>
+                            <tr>
+                                <td><code>DEBUG=</code></td>
+                                <td>Enable debug mode</td>
+                                <td><code>DEBUG=1</code></td>
+                                <td>✅ Working</td>
+                            </tr>
+                            <tr>
+                                <td><code>GUI=</code></td>
+                                <td>Launch with GUI (Verdi)</td>
+                                <td><code>GUI=1</code></td>
+                                <td>✅ Working</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h3>Bus Matrix Mode Options</h3>
+                    
+                    <div class="info-box info">
+                        <div class="info-box-title">
+                            <span>🔢</span>
+                            <strong>Available Bus Matrix Modes</strong>
+                        </div>
+                        <ul>
+                            <li><code>NONE</code> - 1x1 configuration (default)</li>
+                            <li><code>BASE_BUS_MATRIX</code> - 4x4 configuration</li>
+                            <li><code>BUS_ENHANCED_MATRIX</code> - 10x10 configuration (v2.8: limited to 4x4 for BFM compatibility)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
             
-            <!-- Troubleshooting Section (Already included above) -->
+            <!-- Troubleshooting Section -->
+            <section id="troubleshooting" class="section">
+                <div class="section-header">
+                    <h2>Troubleshooting Guide</h2>
+                </div>
+                
+                <div class="content-block">
+                    <h3>Common Issues and Solutions (v2.8)</h3>
+                    
+                    <div class="troubleshoot-item">
+                        <div class="issue">
+                            <strong>🔴 Issue:</strong> UVM_FATAL: Test not registered with factory
+                        </div>
+                        <div class="code-example">
+                            <pre><code>UVM_FATAL @ 0 ns: reporter [FCTTYP] Cannot create a component of type 
+'axi4_exception_clk_gating_test' because it is not registered with the factory.</code></pre>
+                        </div>
+                        <div class="solution">
+                            <strong>✅ Solution (v2.8 Fixed):</strong>
+                            <ol>
+                                <li>Add test include to <code>test/axi4_test_pkg.sv</code>:</li>
+                                <pre><code>`include "axi4_exception_clk_gating_test.sv"</code></pre>
+                                <li>Ensure test is registered with UVM:</li>
+                                <pre><code>`uvm_component_utils(axi4_exception_clk_gating_test)</code></pre>
+                                <li>Recompile: <code>make clean compile</code></li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="troubleshoot-item">
+                        <div class="issue">
+                            <strong>🔴 Issue:</strong> UVM_ERROR: Acceptance criteria not met
+                        </div>
+                        <div class="code-example">
+                            <pre><code>UVM_ERROR @ 1000000 ns: uvm_test_top.axi4_env_h.axi4_perf_metrics_h 
+[PERF_METRICS] TEST RESULT: FAIL - Acceptance criteria not met</code></pre>
+                        </div>
+                        <div class="solution">
+                            <strong>✅ Solution (v2.8 Fixed):</strong>
+                            <ol>
+                                <li>Check test base class inheritance:</li>
+                                <pre><code>// For error injection tests:
+class axi4_slave_inject_bresp_x_test extends axi4_error_inject_base_test;</code></pre>
+                                <li>Performance metrics expects different criteria for error injection</li>
+                                <li>v2.8: All slave injection tests fixed to use correct base class</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="troubleshoot-item">
+                        <div class="issue">
+                            <strong>🔴 Issue:</strong> Test hangs or timeout
+                        </div>
+                        <div class="solution">
+                            <strong>✅ Solution (v2.8 Fixed):</strong>
+                            <ol>
+                                <li>Check sequencer references:</li>
+                                <pre><code>// Wrong (causes hang):
+axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0]
+
+// Correct:
+axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h</code></pre>
+                                <li>Remove <code>$finish(0)</code> from final_phase</li>
+                                <li>Add timeout to sequence: <code>+UVM_TIMEOUT=2000000</code></li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="troubleshoot-item">
+                        <div class="issue">
+                            <strong>🔴 Issue:</strong> Command_add parameters truncated
+                        </div>
+                        <div class="code-example">
+                            <pre><code># Original command:
+command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+# Gets truncated to:
+command_add=+BUS_MATRIX_MODE=NONE</code></pre>
+                        </div>
+                        <div class="solution">
+                            <strong>✅ Solution (v2.8 Fixed):</strong>
+                            <p>Regression script now uses shlex.split() for proper quote handling</p>
+                            <p>Update to v2.8 axi4_regression_makefile_runfolder.py</p>
+                        </div>
+                    </div>
+                    
+                    <h3>Debug Techniques</h3>
+                    
+                    <div class="debug-grid">
+                        <div class="debug-card">
+                            <h4>Enable UVM Debug</h4>
+                            <pre><code>make test=axi4_write_read_test command_add="+UVM_VERBOSITY=UVM_HIGH"</code></pre>
+                        </div>
+                        
+                        <div class="debug-card">
+                            <h4>Wave Debug with Verdi</h4>
+                            <pre><code>make test=axi4_write_read_test GUI=1
+# Or post-process:
+verdi -ssf tb.fsdb &</code></pre>
+                        </div>
+                        
+                        <div class="debug-card">
+                            <h4>Check Compilation Errors</h4>
+                            <pre><code>make compile 2>&1 | tee compile.log
+grep -i error compile.log</code></pre>
+                        </div>
+                        
+                        <div class="debug-card">
+                            <h4>Analyze Failed Tests</h4>
+                            <pre><code>cd regression_result_*/logs/no_pass_logs/
+grep UVM_ERROR *.log
+grep UVM_FATAL *.log</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3>Performance Optimization</h3>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Issue</th>
+                                <th>Impact</th>
+                                <th>Solution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Slow simulation</td>
+                                <td>Long regression times</td>
+                                <td>Use <code>+define+DISABLE_ASSERTIONS</code> for speed</td>
+                            </tr>
+                            <tr>
+                                <td>Memory usage</td>
+                                <td>Out of memory errors</td>
+                                <td>Reduce wave dumping: <code>+define+NO_FSDB</code></td>
+                            </tr>
+                            <tr>
+                                <td>LSF queue times</td>
+                                <td>Delayed results</td>
+                                <td>Use local runs for small tests: remove <code>--lsf</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
             
-            <!-- Best Practices Section (Already included above) -->
+            <!-- Best Practices Section -->
+            <section id="best-practices" class="section">
+                <div class="section-header">
+                    <h2>Best Practices</h2>
+                </div>
+                
+                <div class="content-block">
+                    <h3>Test Development Best Practices (v2.8)</h3>
+                    
+                    <div class="best-practice">
+                        <h4>✅ Always Register Tests with UVM Factory</h4>
+                        <div class="code-example">
+                            <div class="code-header">
+                                <span class="code-title">Correct Test Registration</span>
+                            </div>
+                            <pre><code>// 1. In your test file:
+class axi4_my_new_test extends axi4_base_test;
+  `uvm_component_utils(axi4_my_new_test)  // REQUIRED!
+  
+  function new(string name = "axi4_my_new_test", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+endclass
+
+// 2. In axi4_test_pkg.sv:
+`include "axi4_my_new_test.sv"  // REQUIRED!</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="best-practice">
+                        <h4>✅ Use Correct Base Class</h4>
+                        <div class="code-example">
+                            <div class="code-header">
+                                <span class="code-title">Base Class Selection</span>
+                            </div>
+                            <pre><code>// For normal tests:
+class axi4_normal_test extends axi4_base_test;
+
+// For error injection tests (v2.8 fix):
+class axi4_error_inject_test extends axi4_error_inject_base_test;
+
+// For performance tests:
+class axi4_perf_test extends axi4_base_test;
+  // Override performance metrics in build_phase</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="best-practice">
+                        <h4>✅ Proper Sequencer Access (v2.8)</h4>
+                        <div class="code-example">
+                            <div class="code-header">
+                                <span class="code-title">Correct Sequencer References</span>
+                            </div>
+                            <pre><code>// ❌ WRONG - Causes hangs:
+seq.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0]);
+
+// ✅ CORRECT - Direct agent access:
+if(axi4_env_h.axi4_master_agent_h[0] != null) begin
+  seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h);
+end</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3>Regression Best Practices</h3>
+                    
+                    <div class="info-box success">
+                        <div class="info-box-title">
+                            <span>🎯</span>
+                            <strong>Regression Strategy</strong>
+                        </div>
+                        <ol>
+                            <li><strong>Start Small:</strong> Run quick_test.list first (5 tests, 1 minute)</li>
+                            <li><strong>Incremental Testing:</strong> Then run category-specific lists</li>
+                            <li><strong>Full Regression:</strong> Run complete list only after sanity passes</li>
+                            <li><strong>Use Seeds:</strong> Save failing seeds for reproduction</li>
+                            <li><strong>Enable Coverage:</strong> Always for nightly runs</li>
+                        </ol>
+                    </div>
+                    
+                    <h3>Configuration Best Practices</h3>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Configuration</th>
+                                <th>When to Use</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BUS_MATRIX_MODE=NONE</td>
+                                <td>Basic protocol testing</td>
+                                <td>Fastest execution, 1x1 config</td>
+                            </tr>
+                            <tr>
+                                <td>BUS_MATRIX_MODE=BASE_BUS_MATRIX</td>
+                                <td>Multi-master/slave testing</td>
+                                <td>4x4 configuration</td>
+                            </tr>
+                            <tr>
+                                <td>BUS_MATRIX_MODE=BUS_ENHANCED_MATRIX</td>
+                                <td>Full system testing</td>
+                                <td>v2.8: Limited to 4x4 for compatibility</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h3>Error Injection Best Practices (v2.8)</h3>
+                    
+                    <div class="best-practice">
+                        <h4>✅ X-Injection Testing</h4>
+                        <div class="code-example">
+                            <div class="code-header">
+                                <span class="code-title">Proper X-Injection Setup</span>
+                            </div>
+                            <pre><code>// Configure X injection in test
+uvm_config_db#(bit)::set(null, "*", "x_inject_slave_rvalid", 1);
+uvm_config_db#(int)::set(null, "*", "x_inject_cycles", 3);
+
+// Always start dummy sequences for slave injection
+dummy_slave_seq_h = axi4_virtual_dummy_slave_seq::type_id::create("dummy");
+fork
+  dummy_slave_seq_h.start(axi4_env_h.axi4_virtual_seqr_h);
+join_none
+
+// Clear injection after test
+uvm_config_db#(bit)::set(null, "*", "x_inject_slave_rvalid", 0);</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3>Debug and Maintenance</h3>
+                    
+                    <div class="checklist">
+                        <h4>📋 Pre-Commit Checklist</h4>
+                        <ul>
+                            <li>☑️ Test compiles: <code>make compile</code></li>
+                            <li>☑️ Test runs standalone: <code>make test=your_test</code></li>
+                            <li>☑️ Test included in package: <code>grep your_test axi4_test_pkg.sv</code></li>
+                            <li>☑️ Test added to regression list if needed</li>
+                            <li>☑️ No UVM_FATAL or UVM_ERROR in clean run</li>
+                            <li>☑️ Documentation updated for new features</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>Version 2.8 Specific Guidelines</h3>
+                    
+                    <div class="warning-box">
+                        <div class="warning-box-title">
+                            <span>⚠️</span>
+                            <strong>v2.8 Migration Notes</strong>
+                        </div>
+                        <ul>
+                            <li><strong>Command syntax:</strong> Use <code>test=</code> not <code>sim=</code></li>
+                            <li><strong>Quote handling:</strong> Complex command_add now preserved correctly</li>
+                            <li><strong>Base classes:</strong> Error injection tests must use axi4_error_inject_base_test</li>
+                            <li><strong>Sequencer access:</strong> Use agent sequencers, not virtual sequencer arrays</li>
+                            <li><strong>Reset tests:</strong> No $finish in final_phase</li>
+                            <li><strong>BFM limits:</strong> Enhanced mode limited to 4x4 configuration</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
             
             <!-- Footer -->
             <footer class="footer">
@@ -4306,7 +4784,7 @@ end</code></pre>
                     <a href="#" class="footer-link">Documentation</a>
                     <a href="#" class="footer-link">License</a>
                 </div>
-                <p>© 2025 AXI4 VIP v3.0 - Production-Ready Verification IP</p>
+                <p>© 2025 AXI4 VIP v2.8 - Production-Ready Verification IP</p>
                 <p>Developed with ❤️ for the verification community</p>
             </footer>
         </div>

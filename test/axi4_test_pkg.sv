@@ -199,6 +199,7 @@ package axi4_test_pkg;
   `include "axi4_independent_reset_test.sv"
   `include "axi4_reset_comprehensive_test.sv"
   `include "axi4_simple_clk_reset_demo_test.sv"
+  `include "axi4_simple_multi_reset_test.sv"
   
   // Error injection and exception handling tests
   `include "axi4_error_inject_base_test.sv"
@@ -223,6 +224,13 @@ package axi4_test_pkg;
   `include "axi4_exception_special_reg_test.sv"
   `include "axi4_exception_multi_abort_tests.sv"
   `include "axi4_exception_clk_reset_tests.sv"
+  `include "axi4_exception_clk_gating_test.sv"
+  
+  // Slave injection tests
+  `include "axi4_slave_inject_bresp_x_test.sv"
+  `include "axi4_slave_inject_bvalid_x_test.sv"
+  `include "axi4_slave_inject_rdata_x_test.sv"
+  `include "axi4_slave_inject_rvalid_x_test.sv"
 
 endpackage : axi4_test_pkg
 

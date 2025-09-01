@@ -40,6 +40,7 @@ import shutil
 import random
 import fcntl
 import tempfile
+import shlex
 from pathlib import Path
 from datetime import datetime, timedelta
 import signal
@@ -208,7 +209,13 @@ class RegressionRunner:
             
             # Parse and expand tests with parameters
             for test_entry in tests:
-                parts = test_entry.split()
+                # Use shlex to properly handle quoted strings
+                try:
+                    parts = shlex.split(test_entry)
+                except ValueError as e:
+                    print(f"⚠️  Warning: Error parsing test entry '{test_entry}': {e}")
+                    continue
+                    
                 if not parts:
                     print(f"⚠️  Warning: Empty test entry, skipping")
                     continue
@@ -336,7 +343,15 @@ class RegressionRunner:
                     if actual_seed is not None:
                         params.append(f"seed={actual_seed}")
                     if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                        # Always quote command_add if it contains spaces or special chars
+                        if ' ' in command_add or '+' in command_add:
+                            # Check if already has quotes
+                            if command_add.startswith('"') and command_add.endswith('"'):
+                                params.append(f"command_add={command_add}")
+                            else:
+                                params.append(f'command_add="{command_add}"')
+                        else:
+                            params.append(f"command_add={command_add}")
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
@@ -373,7 +388,15 @@ class RegressionRunner:
                     if actual_seed is not None:
                         params.append(f"seed={actual_seed}")
                     if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                        # Always quote command_add if it contains spaces or special chars
+                        if ' ' in command_add or '+' in command_add:
+                            # Check if already has quotes
+                            if command_add.startswith('"') and command_add.endswith('"'):
+                                params.append(f"command_add={command_add}")
+                            else:
+                                params.append(f'command_add="{command_add}"')
+                        else:
+                            params.append(f"command_add={command_add}")
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
@@ -410,7 +433,15 @@ class RegressionRunner:
                     if actual_seed is not None:
                         params.append(f"seed={actual_seed}")
                     if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                        # Always quote command_add if it contains spaces or special chars
+                        if ' ' in command_add or '+' in command_add:
+                            # Check if already has quotes
+                            if command_add.startswith('"') and command_add.endswith('"'):
+                                params.append(f"command_add={command_add}")
+                            else:
+                                params.append(f'command_add="{command_add}"')
+                        else:
+                            params.append(f"command_add={command_add}")
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
@@ -1536,7 +1567,15 @@ class RegressionRunner:
             
             # Add variables to make command
             for var, value in make_vars.items():
-                make_cmd.append(f'{var}={value}')
+                # Special handling for COMMAND_ADD to preserve quotes
+                if var == 'COMMAND_ADD' and ' ' in value:
+                    # If command_add contains spaces, ensure it's properly quoted
+                    if not (value.startswith('"') and value.endswith('"')):
+                        make_cmd.append(f'{var}="{value}"')
+                    else:
+                        make_cmd.append(f'{var}={value}')
+                else:
+                    make_cmd.append(f'{var}={value}')
 
             if self.verbose:
                 print(f"    Make command: {' '.join(make_cmd)} (using synopsys_sim/Makefile)")

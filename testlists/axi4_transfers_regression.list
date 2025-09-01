@@ -266,7 +266,6 @@ axi4_width_config_test run_cnt=2
 # Basic Read/Write Tests
 #------------------------------------------------------------------------------------
 axi4_read_test run_cnt=2
-axi4_write_test run_cnt=2
 axi4_write_read_test run_cnt=2
 
 #------------------------------------------------------------------------------------

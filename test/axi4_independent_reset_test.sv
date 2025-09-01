@@ -93,7 +93,7 @@ class axi4_independent_reset_test extends axi4_base_test;
   // Override to prevent any lingering processes
   function void final_phase(uvm_phase phase);
     super.final_phase(phase);
-    $finish(0);
+    // Don't use $finish as it can cause LSF to interpret as error
   endfunction : final_phase
 
   //--------------------------------------------------------------------------------------------

@@ -12,10 +12,10 @@ Response,6,NONE,4,4,No,No,5ms,Response type tests (OKAY/EXOKAY/SLVERR/DECERR)
 Handshake,6,NONE,4,4,No,No,5ms,Ready/Valid handshake tests
 Ordering,3,NONE,4,4,No,No,10ms,Transaction ordering tests
 Outstanding,4,NONE/ALL,4,4,No,No,10-15ms,Outstanding transaction tests (v2.8 fixed)
-Error Injection,14,ALL,VAR,VAR,No,No,5ms,X-value injection on AXI4 signals (v3.0 expanded)
-Exception,9,ALL,VAR,VAR,No,No,5-10ms,Exception handling and recovery (v3.0 enhanced)
-Reset,12,ALL,VAR,VAR,No/Yes,No,5-20ms,Reset functionality and recovery (v3.0)
-Clock,7,ALL,VAR,VAR,No,No,5-10ms,Clock frequency and monitoring (v3.0)
+Error Injection,20,ALL,VAR,VAR,No,No,5ms,X-value injection on AXI4 signals (v2.8 expanded)
+Exception,11,ALL,VAR,VAR,No,No,5-10ms,Exception handling and recovery (v2.8 enhanced)
+Reset,12,ALL,VAR,VAR,No/Yes,No,5-20ms,Reset functionality and recovery (v2.8)
+Clock,7,ALL,VAR,VAR,No,No,5-10ms,Clock frequency and monitoring
 Error,9,NONE,4,4,No,No,5ms,Error injection and protocol violation
 Non-blocking,3,NONE,4,4,No,No,5ms,Non-blocking operation tests
 Cross,2,NONE,4,4,No,No,5-8ms,Cross boundary tests
@@ -32,16 +32,17 @@ SUMMARY STATISTICS
 Total Test Cases,196
 Enhanced Configuration Tests (10x10),30
 Standard Configuration Tests (4x4),111
-Error Injection/Exception Tests (Variable),13
+Error Injection/Exception Tests (Variable),31
 Tests with QoS Support,25
 Tests with USER Support,26
 Tests using BUS_ENHANCED_MATRIX,35
 Tests using BASE_BUS_MATRIX,7
 Tests using NONE mode,94
-Tests using ALL modes,5
+Tests using ALL modes,23
 Infrastructure Tests,2
 Average Test Duration,~10ms
 Longest Test Category,Stress (50ms)
 Shortest Test Category,Basic/Response (5ms)
-Version 2.8 Fixed Tests,21
-New Tests Added in v2.8,18
+Version 2.8 Fixed Tests,14
+Version 2.8 New Tests Added,6
+Version 2.8 Total Improvements,20

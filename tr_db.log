@@ -1,7 +1,0 @@
-  CREATE_STREAM @0 {NAME:axi4_virtual_qos_starvation_prevention_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_virtual_seqr_h STREAM:18992}
-  CREATE_STREAM @0 {NAME:slave_wr_seq T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_slave_agent_h[0].axi4_slave_write_seqr_h STREAM:19065}
-  CREATE_STREAM @0 {NAME:slave_rd_seq T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_slave_agent_h[0].axi4_slave_read_seqr_h STREAM:19074}
-  CREATE_STREAM @0 {NAME:low_priority_write_seq_h T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:19077}
-  CREATE_STREAM @100000 {NAME:high_priority_write_seq_h[0] T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:449941}
-  CREATE_STREAM @150000 {NAME:high_priority_write_seq_h[1] T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:665158}
-  CREATE_STREAM @200000 {NAME:high_priority_write_seq_h[2] T:Transactions SCOPE:uvm_test_top.axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h STREAM:880375}

@@ -5,7 +5,7 @@
 // Class: axi4_slave_inject_bvalid_x_test
 // Test for X injection on slave BVALID signal (fixed to avoid deadlock)
 //--------------------------------------------------------------------------------------------
-class axi4_slave_inject_bvalid_x_test extends axi4_base_test;
+class axi4_slave_inject_bvalid_x_test extends axi4_error_inject_base_test;
   `uvm_component_utils(axi4_slave_inject_bvalid_x_test)
 
   // Virtual sequence handles

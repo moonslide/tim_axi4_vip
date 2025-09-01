@@ -142,51 +142,52 @@ axi4_qos_basic_priority_test,QoS,Basic QoS priority test,BUS_ENHANCED_MATRIX,4,4
 axi4_non_blocking_qos_write_read_test,QoS,Non-blocking QoS write-read,BUS_ENHANCED_MATRIX,4,4,10ms,Yes,No,PASS (v2.8 fixed)
 axi4_non_blocking_outstanding_transfer_write_read_test,Outstanding,Non-blocking outstanding transfer,ALL,4,4,10ms,No,No,PASS (v2.8 fixed)
 axi4_stress_reset_test,Stress,Stress test with reset,ALL,4,4,20ms,No,No,PASS (v2.8 fixed)
-# Error Injection and Exception Handling Tests - Added in v2.9
+# Version 2.8 New Tests - UVM Factory Registration Fixes
+axi4_exception_clk_gating_test,Exception,Clock gating exception handling,ALL,VAR,VAR,5ms,No,No,PASS (v2.8 added)
+axi4_simple_multi_reset_test,Reset,Multiple reset scenario test,ALL,VAR,VAR,10ms,No,No,PASS (v2.8 added)
+axi4_slave_inject_bresp_x_test,Error Injection,BRESP X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v2.8 added)
+axi4_slave_inject_bvalid_x_test,Error Injection,BVALID X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v2.8 added)
+axi4_slave_inject_rdata_x_test,Error Injection,RDATA X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v2.8 added)
+axi4_slave_inject_rvalid_x_test,Error Injection,RVALID X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v2.8 added)
+# Error Injection and Exception Handling Tests - Existing
 axi4_error_inject_base_test,Error Injection,Base test for error injection,ALL,VAR,VAR,N/A,No,No,Infrastructure
-axi4_error_inject_x_drive_test,Error Injection,X-value injection on multiple signals,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_awvalid_x_test,Error Injection,AWVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_awaddr_x_test,Error Injection,AWADDR X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_wdata_x_test,Error Injection,WDATA X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_arvalid_x_test,Error Injection,ARVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_bready_x_test,Error Injection,BREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_error_inject_rready_x_test,Error Injection,RREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS (v2.9)
-axi4_exception_abort_awvalid_test,Exception,AWVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
-axi4_exception_abort_arvalid_test,Exception,ARVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
-axi4_exception_near_timeout_test,Exception,Near timeout detection and recovery,ALL,VAR,VAR,10ms,No,No,PASS (v2.9 fixed)
-axi4_exception_illegal_access_test,Exception,Illegal address access handling,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
-axi4_exception_ecc_error_test,Exception,ECC error detection and recovery,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
-axi4_exception_special_reg_test,Exception,Special register access patterns,ALL,VAR,VAR,5ms,No,No,PASS (v2.9 fixed)
-# Additional Error Injection Tests - Added in v3.0
-axi4_error_inject_multi_random_tests,Error Injection,Multi-signal random X injection,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_error_inject_randomized_tests,Error Injection,Randomized error injection patterns,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_slave_inject_bresp_x_test,Error Injection,BRESP X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_slave_inject_bvalid_x_test,Error Injection,BVALID X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_slave_inject_rdata_x_test,Error Injection,RDATA X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_slave_inject_rvalid_x_test,Error Injection,RVALID X-value injection from slave,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_x_inject_active_test,Error Injection,Active X injection during transactions,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-# Additional Exception Tests - Added in v3.0
-axi4_exception_clk_gating_test,Exception,Clock gating exception handling,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_exception_clk_reset_tests,Exception,Clock and reset exception scenarios,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-axi4_exception_multi_abort_tests,Exception,Multiple simultaneous abort scenarios,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-# Reset Tests - Added in v3.0
-axi4_basic_reset_test,Reset,Basic reset functionality,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_basic_sanity_test,Reset,Basic sanity with reset,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_independent_reset_test,Reset,Independent master/slave reset,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-axi4_pure_reset_test,Reset,Pure reset scenario verification,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_reset_comprehensive_test,Reset,Comprehensive reset coverage,ALL,VAR,VAR,15ms,No,No,PASS (v3.0)
-axi4_simple_clk_reset_demo_test,Reset,Simple clock reset demonstration,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_simple_multi_reset_test,Reset,Multiple reset scenario test,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-axi4_hotspot_fairness_boundary_error_reset_backpressure_test,Reset,Complex reset with backpressure,ALL,VAR,VAR,20ms,No,No,PASS (v3.0)
-axi4_qos_region_routing_reset_backpressure_test,Reset,QoS region routing with reset,BUS_ENHANCED_MATRIX,10,10,15ms,Yes,No,PASS (v3.0)
-axi4_saturation_midburst_reset_qos_boundary_test,Reset,Mid-burst reset with QoS,BUS_ENHANCED_MATRIX,10,10,15ms,Yes,No,PASS (v3.0)
-axi4_write_heavy_midburst_reset_rw_contention_test,Reset,Mid-burst reset during RW contention,ALL,VAR,VAR,15ms,No,No,PASS (v3.0)
-axi4_stress_reset_test_simplified,Reset,Simplified stress reset test,ALL,VAR,VAR,15ms,No,No,PASS (v3.0)
-# Clock and Frequency Tests - Added in v3.0
-axi4_clock_freq_verify_test,Clock,Clock frequency verification,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_clock_monitor_test,Clock,Clock monitoring and checking,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_clock_verify_test,Clock,Clock signal verification,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_freq_test,Clock,Frequency test scenarios,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
-axi4_multi_intf_clk_freq_test,Clock,Multi-interface clock frequency,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-axi4_multi_intf_clk_test,Clock,Multi-interface clock verification,ALL,VAR,VAR,10ms,No,No,PASS (v3.0)
-test_clock_freq,Clock,Clock frequency test utility,ALL,VAR,VAR,5ms,No,No,PASS (v3.0)
+axi4_error_inject_x_drive_test,Error Injection,X-value injection on multiple signals,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_awvalid_x_test,Error Injection,AWVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_awaddr_x_test,Error Injection,AWADDR X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_wdata_x_test,Error Injection,WDATA X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_arvalid_x_test,Error Injection,ARVALID X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_bready_x_test,Error Injection,BREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_rready_x_test,Error Injection,RREADY X-value injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_exception_abort_awvalid_test,Exception,AWVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_exception_abort_arvalid_test,Exception,ARVALID abort before handshake,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_exception_near_timeout_test,Exception,Near timeout detection and recovery,ALL,VAR,VAR,10ms,No,No,PASS
+axi4_exception_illegal_access_test,Exception,Illegal address access handling,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_exception_ecc_error_test,Exception,ECC error detection and recovery,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_exception_special_reg_test,Exception,Special register access patterns,ALL,VAR,VAR,5ms,No,No,PASS
+# Additional Error Injection Tests
+axi4_error_inject_multi_random_tests,Error Injection,Multi-signal random X injection,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_error_inject_randomized_tests,Error Injection,Randomized error injection patterns,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_x_inject_active_test,Error Injection,Active X injection during transactions,ALL,VAR,VAR,5ms,No,No,PASS
+# Additional Exception Tests
+axi4_exception_clk_reset_tests,Exception,Clock and reset exception scenarios,ALL,VAR,VAR,10ms,No,No,PASS
+axi4_exception_multi_abort_tests,Exception,Multiple simultaneous abort scenarios,ALL,VAR,VAR,10ms,No,No,PASS
+# Reset Tests
+axi4_basic_reset_test,Reset,Basic reset functionality,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_basic_sanity_test,Reset,Basic sanity with reset,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_independent_reset_test,Reset,Independent master/slave reset,ALL,VAR,VAR,10ms,No,No,PASS
+axi4_pure_reset_test,Reset,Pure reset scenario verification,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_reset_comprehensive_test,Reset,Comprehensive reset coverage,ALL,VAR,VAR,15ms,No,No,PASS
+axi4_simple_clk_reset_demo_test,Reset,Simple clock reset demonstration,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_hotspot_fairness_boundary_error_reset_backpressure_test,Reset,Complex reset with backpressure,ALL,VAR,VAR,20ms,No,No,PASS
+axi4_qos_region_routing_reset_backpressure_test,Reset,QoS region routing with reset,BUS_ENHANCED_MATRIX,10,10,15ms,Yes,No,PASS
+axi4_saturation_midburst_reset_qos_boundary_test,Reset,Mid-burst reset with QoS,BUS_ENHANCED_MATRIX,10,10,15ms,Yes,No,PASS
+axi4_write_heavy_midburst_reset_rw_contention_test,Reset,Mid-burst reset during RW contention,ALL,VAR,VAR,15ms,No,No,PASS
+axi4_stress_reset_test_simplified,Reset,Simplified stress reset test,ALL,VAR,VAR,15ms,No,No,PASS
+# Clock and Frequency Tests
+axi4_clock_freq_verify_test,Clock,Clock frequency verification,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_clock_monitor_test,Clock,Clock monitoring and checking,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_clock_verify_test,Clock,Clock signal verification,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_freq_test,Clock,Frequency test scenarios,ALL,VAR,VAR,5ms,No,No,PASS
+axi4_multi_intf_clk_freq_test,Clock,Multi-interface clock frequency,ALL,VAR,VAR,10ms,No,No,PASS
+axi4_multi_intf_clk_test,Clock,Multi-interface clock verification,ALL,VAR,VAR,10ms,No,No,PASS
+test_clock_freq,Clock,Clock frequency test utility,ALL,VAR,VAR,5ms,No,No,PASS
