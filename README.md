@@ -652,6 +652,161 @@ tim_axi4_vip/
 └── doc/                 # Documentation
 ```
 
+### 📐 VIP Block Diagram
+
+The AXI4 VIP is built as a layered UVM environment. Masters and slaves each expose a
+BFM that drives the DUT interface, while a central bus matrix reference model, scoreboard,
+coverage collectors and performance metrics module observe all five AXI channels
+(AW/W/B/AR/R) for end-to-end protocol and data checking.
+
+```
+                         ┌──────────────────────────────────────────────────────┐
+                         │                 axi4_test (UVM Test)                 │
+                         │     build_phase → configure env & virtual_seq        │
+                         └──────────────────────────┬───────────────────────────┘
+                                                    │ uvm_config_db
+                                                    ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                              axi4_env (UVM Environment)                               │
+│                                                                                       │
+│  ┌─────────────────────┐      ┌─────────────────────────┐     ┌────────────────────┐  │
+│  │ Virtual Sequencer   │─────▶│   axi4_scoreboard       │◀────│  Coverage          │  │
+│  │ (coordinates        │      │  • TX/RX compare        │     │  • Protocol cov    │  │
+│  │  master sequences)  │      │  • QoS / USER checks    │     │  • QoS / USER cov  │  │
+│  └──────────┬──────────┘      │  • Exclusive monitor    │     │  • Error-inj cov   │  │
+│             │                 └───────────┬─────────────┘     └────────────────────┘  │
+│             │                             │                                           │
+│             │                 ┌───────────▼─────────────┐     ┌────────────────────┐  │
+│             │                 │ axi4_bus_matrix_ref     │     │ axi4_performance_  │  │
+│             │                 │ (NONE / 4x4 / 10x10)    │     │   metrics          │  │
+│             │                 │ • Address decode        │     │ • Throughput/BW    │  │
+│             │                 │ • QoS arbitration       │     │ • Latency p50/p99  │  │
+│             │                 │ • Access permissions    │     │ • Fairness (Jain)  │  │
+│             │                 └─────────────────────────┘     └────────────────────┘  │
+│             │                                                                         │
+│  ┌──────────▼──────────┐                                  ┌────────────────────────┐  │
+│  │ Master Agents [N]   │                                  │ Slave Agents [N]       │  │
+│  │ ┌─────────────────┐ │                                  │ ┌────────────────────┐ │  │
+│  │ │ Sequencer       │ │                                  │ │ Sequencer          │ │  │
+│  │ │ Driver (proxy)  │ │      ┌───────────────────┐       │ │ Driver (proxy)     │ │  │
+│  │ │ Monitor (proxy) │─┼─────▶│  Reset / Freq /   │◀──────┼─│ Monitor (proxy)    │ │  │
+│  │ └────────┬────────┘ │      │  Protocol Asserts │       │ └──────────┬─────────┘ │  │
+│  │          │ BFM IF   │      └───────────────────┘       │            │ BFM IF    │  │
+│  └──────────┼──────────┘                                  └────────────┼───────────┘  │
+└─────────────┼──────────────────────────────────────────────────────────┼──────────────┘
+              │                                                          │
+              ▼                                                          ▼
+     ┌──────────────────┐      AW / W / B / AR / R channels    ┌──────────────────┐
+     │ Master BFM (HDL) │◀──────────────────────────────────── │ Slave BFM (HDL)  │
+     └──────────────────┘                                      └──────────────────┘
+              │                                                          │
+              └─────────────────────► hdl_top / DUT ◀───────────────────┘
+```
+
+**Component summary**
+
+| Block | Role |
+|-------|------|
+| `axi4_master_agent` | Generates AW/W/AR transactions; drives BFM; monitors B/R responses |
+| `axi4_slave_agent` | Accepts AW/W/AR; returns B/R per `SLAVE_MEM_MODE` or sequences |
+| `axi4_bus_matrix_ref` | Scalable 1×1 / 4×4 / 10×10 reference with decode, QoS arbitration, PROT checks |
+| `axi4_scoreboard` | End-to-end compare including AWUSER/ARUSER and exclusive access tracking |
+| `axi4_performance_metrics` | Collects the 6 KPI metrics (throughput, latency, retry, recovery, isolation, fairness) |
+| `axi4_protocol_coverage` / `axi4_error_injection_coverage` | Functional coverage of AXI channels, QoS, USER, error injection patterns |
+| `axi4_reset_checker` / `axi4_freq_checker` | Asserts reset recovery and clock frequency invariants |
+| Virtual sequencer | Orchestrates multi-master sequences for concurrent / stress / KPI tests |
+
+## 🔀 Test Flows
+
+### 1. UVM Phase & Simulation Flow
+
+```
+  run_test()
+     │
+     ▼
+  build_phase ─▶ axi4_test builds env_cfg ─▶ axi4_env builds agents + ref model + sb
+     │
+     ▼
+  connect_phase ─▶ monitor→scoreboard, agents→virtual_sequencer, BFM↔interface
+     │
+     ▼
+  end_of_elaboration ─▶ print topology, select bus matrix mode
+     │                 (plusarg +BUS_MATRIX_MODE=NONE/4x4/ENHANCED/RANDOM)
+     ▼
+  start_of_simulation ─▶ freq & reset checkers armed
+     │
+     ▼
+  run_phase  ──────────────────────────────────────────────────────────────────┐
+     │  reset_phase → main_phase (virtual_seq.start) → shutdown_phase          │
+     │        │                                                                │
+     │        ▼                                                                │
+     │   master_seq → sequencer → driver_proxy → BFM ─▶ DUT ─▶ slave BFM       │
+     │                                                    │                    │
+     │                                             slave_driver_proxy ◀────────┘
+     │                                                    │
+     │   monitor_proxy ◀── BFM ◀── DUT ◀── slave responses
+     │        │
+     │        ▼
+     │   scoreboard compare ─▶ coverage sample ─▶ performance metrics update
+     ▼
+  extract / check / report_phase ─▶ UVM_ERROR count, KPI report, coverage merge
+```
+
+### 2. Typical Transaction Flow (Write → Read)
+
+```
+   Master seq            Master drv/BFM         DUT / Bus Matrix        Slave BFM / drv
+       │                       │                       │                       │
+       │ create axi4_master_tx │                       │                       │
+       ├──────────────────────▶│ AWVALID/AWADDR/AWQOS  │                       │
+       │                       ├──────────────────────▶│   decode + arbitrate  │
+       │                       │          AWREADY◀─────┤◀──────────────────────│
+       │                       │ WVALID/WDATA/WSTRB    │                       │
+       │                       ├──────────────────────▶│──────────────────────▶│ write to mem
+       │                       │          BVALID/BRESP │◀──────────────────────│
+       │                       │◀──────────────────────│                       │
+       │◀──────────────────────│ response to seq       │                       │
+       │ create read for same addr                     │                       │
+       ├──────────────────────▶│ ARVALID/ARADDR        │                       │
+       │                       ├──────────────────────▶│──────────────────────▶│ read from mem
+       │                       │    RVALID/RDATA/RRESP │◀──────────────────────│
+       │                       │◀──────────────────────│                       │
+       │◀──── scoreboard compares expected vs. observed (data, resp, USER) ────┤
+```
+
+### 3. Regression / KPI Flow
+
+```
+  axi4_transfers_regression.list
+        │
+        ▼
+  axi4_regression.py ──▶ spawn jobs (LSF or local, up to --parallel N)
+        │                     │
+        │                     ├─▶ per test: vcs compile → simv +BUS_MATRIX_MODE=…
+        │                     ├─▶ capture UVM_ERROR / UVM_FATAL / KPI json
+        │                     └─▶ write regression_result_<ts>/{pass,no_pass}.list
+        ▼
+  Post-processing
+        ├─▶ scripts/generate_kpi_report.py  (throughput, latency, fairness)
+        ├─▶ urg coverage merge              (functional + code)
+        └─▶ HTML summary / badges
+```
+
+### 4. Bus Matrix Mode Selection Flow
+
+```
+  simv +BUS_MATRIX_MODE=<opt>
+        │
+        ▼
+  axi4_test_config
+        │      ┌─ NONE      → 1×1 direct, no ref model (boundary/basic tests)
+        ├──────┼─ 4x4/BASE  → axi4_bus_matrix_ref in BASE_BUS_MATRIX
+        │      ├─ 10x10/ENH → axi4_bus_matrix_ref in BUS_ENHANCED_MATRIX (+QoS/USER)
+        │      └─ RANDOM    → pick one of the above at start_of_simulation
+        ▼
+  env build_phase consumes mode → sizes agent arrays, configures scoreboard & ref model
+```
+
 ### Key Components
 
 - **Master Agent**: Generates AXI4 transactions with full protocol support
