@@ -73,8 +73,8 @@ tim_axi4_vip/
 ├── sim/
 │   ├── axi4_compile.f              baseline (no interconnect)
 │   ├── axi4_compile_nic400.f       Track-B 10×10
-│   ├── axi4_compile_nic400_4x4.f   Track-B 4×4
-│   ├── nic400_rtl.f, nic400_4x4_rtl.f
+│   ├── axi4_compile_*_4x4.f        Track-B 4×4 (commercial fabric IP)
+│   ├── *_rtl.f                     commercial fabric IP RTL file lists
 │   ├── coverage_scope.cm_hier      code-coverage instrumentation scope
 │   ├── run_fabric_smoke.sh         fabric-only sanity, no UVM
 │   └── synopsys_sim/               build/run area, axi4_regression.py
@@ -148,9 +148,9 @@ reporting success.
 ### `NONE` is not a safe default
 
 `NONE` routes every address to slave 0 and answers `OKAY` unconditionally, so a test bound
-to it **cannot fail an access check**. Track-B tests therefore bind their topology from the
-compiled fabric (`` `ifdef NIC400_4X4 ``) and `uvm_fatal` if `+BUS_MATRIX_MODE` contradicts
-it, instead of silently degrading.
+to it **cannot fail an access check**. Track-B tests therefore bind their topology at
+compile time and `uvm_fatal` if `+BUS_MATRIX_MODE` contradicts it, instead of silently
+degrading.
 
 ---
 
