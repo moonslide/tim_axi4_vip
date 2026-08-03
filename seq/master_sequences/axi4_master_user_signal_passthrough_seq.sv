@@ -97,7 +97,9 @@ task axi4_master_user_signal_passthrough_seq::body();
   bit [31:0] user_signal_pattern;
   string pattern_description;
   int target_slave_id;
-  
+  bit [63:0] target_addr;
+  axi4_bus_matrix_ref::bus_matrix_mode_e bus_mode;
+
   req = axi4_master_tx::type_id::create("req");
   start_item(req);
   
@@ -118,10 +120,50 @@ task axi4_master_user_signal_passthrough_seq::body();
   `uvm_info(get_type_name(), $sformatf("  Pattern ID: 0x%02h, Seq: %0d, Master: %0d, Payload: 0x%02h", 
                                       test_pattern_type, sequence_counter, master_id, data_payload), UVM_MEDIUM)
 
-  // Configure the transaction with the test pattern
-  // For enhanced 10x10 configuration, use proper address mapping
-  target_slave_id = $urandom_range(0, 9); // Select random slave 0-9 for 10x10 matrix
-  
+  // Configure the transaction with the test pattern.
+  //
+  // The target address MUST follow the active bus-matrix mode. This sequence
+  // used to hardcode the 10x10 map (`64'h0000_0008_0000_0000 + slave*0x1000`,
+  // commented "For enhanced 10x10 configuration"), but the regression list runs
+  // this test in all three modes (testlists/axi4_transfers_regression.list:216,
+  // 225, 234). In BASE_BUS_MATRIX that base decodes to nothing, so every one of
+  // the 146 writes came back DECERR and axi4_performance_metrics counted 146
+  // "Protocol Issues" against a required 0 -- a stimulus/address-map mismatch
+  // reported as a performance failure. NONE passed only because get_write_resp()
+  // returns OKAY without decoding, and ENHANCED passed because the hardcoded
+  // base happens to be its S0.
+  //
+  // Mode-aware selection follows the idiom already used by
+  // seq/master_sequences/axi4_master_qos_priority_write_seq.sv:61.
+  if(!uvm_config_db#(axi4_bus_matrix_ref::bus_matrix_mode_e)::get(m_sequencer, "", "bus_matrix_mode", bus_mode)) begin
+    bus_mode = axi4_bus_matrix_ref::NONE;
+  end
+
+  case(bus_mode)
+    // 4x4: S0 DDR_Memory is the only region every master may write
+    // (S1 Boot_ROM and S3 HW_Fuse_Box are read-only, S2 Peripheral_Regs
+    // excludes M3) - see bm/axi4_bus_matrix_ref.sv:79.
+    axi4_bus_matrix_ref::BASE_BUS_MATRIX: begin
+      target_slave_id = $urandom_range(0, 9);
+      target_addr     = 64'h0000_0100_0000_0000 + (target_slave_id * 64'h0000_1000);
+    end
+
+    // 10x10: S0 DDR Secure Kernel, as before.
+    axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX: begin
+      target_slave_id = $urandom_range(0, 9);
+      target_addr     = 64'h0000_0008_0000_0000 + (target_slave_id * 64'h0000_1000);
+    end
+
+    // NONE (1x1 direct wiring): slave 0 covers the low 4GB.
+    default: begin
+      target_slave_id = $urandom_range(0, 9);
+      target_addr     = 64'h0000_0000_0000_0000 + (target_slave_id * 64'h0000_1000);
+    end
+  endcase
+
+  `uvm_info(get_type_name(), $sformatf("  Bus mode %s -> target address 0x%016h",
+                                       bus_mode.name(), target_addr), UVM_MEDIUM)
+
   if(!req.randomize() with {
     req.transfer_type == NON_BLOCKING_WRITE;
     req.awburst == WRITE_INCR;
@@ -129,7 +171,7 @@ task axi4_master_user_signal_passthrough_seq::body();
     req.awlen == 8'h00;  // Single beat burst for clean testing
     req.awuser == user_signal_pattern;
     req.wuser == user_signal_pattern;  // Same pattern for write data USER
-    req.awaddr == 64'h0000_0008_0000_0000 + (local::target_slave_id * 64'h0000_1000);
+    req.awaddr == local::target_addr;
   }) begin
     `uvm_fatal("axi4", "Randomization failed for passthrough sequence")
   end

@@ -74,6 +74,9 @@ class RegressionRunner:
         
         # LSF job tracking
         self.lsf_jobs = {}  # job_id -> test_info
+        # Completions drained by the submission throttle, waiting to be reported
+        # by the monitoring loop (see _run_lsf_regression).
+        self._pending_completions = []
         self.pending_jobs = 0
         self.running_jobs = 0
         
@@ -598,7 +601,15 @@ class RegressionRunner:
             f.write(f'cd {folder_path}\n')
             f.write('\n')
             f.write('# Clean up VCS artifacts before running test\n')
-            f.write('rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++ *.log\n')
+            # NOTE: *.log is deliberately NOT removed. Execution folders are reused by
+            # later tests, and the runner reads each result from
+            # <folder>/<test_name>.log AFTER the job finishes. Deleting *.log here made
+            # the next occupant of the folder destroy the previous test's log before it
+            # was collected, which the runner then reported as "Log file not found" --
+            # an ERROR verdict for a test that had actually run. Log names carry the
+            # test name, so they cannot collide; the folder itself is recreated clean at
+            # the start of every regression.
+            f.write('rm -rf simv* csrc vc_hdrs.h ucli.key *.fsdb *.daidir work.lib++\n')
             f.write('\n')
             
             # Use custom seed if provided, otherwise generate random seed
@@ -1384,7 +1395,17 @@ class RegressionRunner:
             for pattern in timeout_patterns:
                 matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
                 if matches:
-                    return 'TIMEOUT', f"Simulation hung or stuck - pattern: {pattern}"
+                    # Must return the same 4-tuple as every other exit of this
+                    # function: the caller unpacks
+                    #   status, error_msg, uvm_errors, uvm_fatals = self._analyze_test_result(...)
+                    # This branch used to return only 2 values, so the FIRST test whose
+                    # log matched a hang pattern raised
+                    #   ValueError: not enough values to unpack (expected 4, got 2)
+                    # which the top-level handler reported as "Fatal error during
+                    # regression" and aborted the WHOLE run - 753 jobs killed by one
+                    # test's log. Measured 2026-08-03: run 20260803_094455 died this way
+                    # with 674 tests already finished and no summary file written.
+                    return 'TIMEOUT', f"Simulation hung or stuck - pattern: {pattern}", 0, 0
             
             # Detect potential infinite loops by checking for excessive repetition
             # Look for the same UVM_INFO message repeated many times
@@ -1848,17 +1869,54 @@ class RegressionRunner:
                 print(f"   View summary: cat {self._to_relative_path(self.results_folder / 'regression_summary.txt')}")
                 print(f"   View detailed results: cat {self._to_relative_path(self.results_folder / f'regression_results_{self.timestamp}.txt')}")
     
+    def _folder_busy(self, folder_id):
+        """True while some still-running LSF job owns this execution folder."""
+        for job_info in self.lsf_jobs.values():
+            if job_info['folder_id'] == folder_id and job_info.get('status') in (None, 'RUN', 'PEND'):
+                return True
+        return False
+
     def _run_lsf_regression(self, tests, folders):
         """Run regression using LSF job submission"""
-        # Submit all jobs
+        # Submit jobs, but never put two live jobs in the same execution folder.
+        #
+        # This loop used to submit ALL tests up front with folder_id = i % len(folders),
+        # so with 753 tests and 4 folders ~188 independent LSF jobs shared one directory.
+        # Each job's script starts with `rm -rf simv* csrc ...` and then runs a full VCS
+        # compile in that directory, so concurrent jobs deleted and rewrote each other's
+        # build products. Result: Error-[VFS_SDB_ERROR] "... simv.daidir/dsa.sdb ... it is
+        # corrupted", the job exits 255, no test log is produced, and the runner reports
+        # the generic "LSF job exited with error". Measured 741/753 and then 749/753
+        # failures this way, with empty no_pass_logs -- none of them functional.
+        #
+        # --max-parallel only ever sized the folder pool; in LSF mode it throttled
+        # nothing, because LSF schedules submitted jobs independently of this process.
+        # Holding a folder until its occupant finishes makes that flag mean what it says.
         for i, test_obj in enumerate(tests):
             if self.stop_all.is_set():
                 break
-                
+
             test_name = test_obj['name']
-            folder_id = i % len(folders)
+
+            # Wait for a free folder, servicing completions so folders are released.
+            folder_id = None
+            while folder_id is None and not self.stop_all.is_set():
+                for candidate in range(len(folders)):
+                    if not self._folder_busy(candidate):
+                        folder_id = candidate
+                        break
+                if folder_id is None:
+                    # _monitor_lsf_jobs() CONSUMES completions -- it returns each job id
+                    # exactly once and then marks it 'completed'. Buffer what we drain
+                    # here so the monitoring loop below still reports those results
+                    # instead of losing them.
+                    self._pending_completions.extend(self._monitor_lsf_jobs())
+                    time.sleep(5)
+            if folder_id is None:
+                break
+
             folder_path = folders[folder_id]
-            
+
             try:
                 self._submit_lsf_job(test_obj, folder_path, folder_id)
             except Exception as e:
@@ -1885,7 +1943,8 @@ class RegressionRunner:
         # Monitor jobs until completion
         last_status_update = time.time()
         while self.completed_tests < self.total_tests and not self.stop_all.is_set():
-            completed_job_ids = self._monitor_lsf_jobs()
+            completed_job_ids = self._pending_completions + self._monitor_lsf_jobs()
+            self._pending_completions = []
             
             # Update LSF status every 10 seconds
             if time.time() - last_status_update >= 10:

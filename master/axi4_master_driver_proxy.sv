@@ -762,8 +762,9 @@ task axi4_master_driver_proxy::axi4_read_task();
       end
 
       fork
-        begin : READ_ADDRESS_CHANNEL  
+        begin : READ_ADDRESS_CHANNEL
           axi4_read_transfer_char_s struct_read_address_packet;
+          axi4_master_tx            req_rd_addr_dbg;
 
           //Added the read_addr_process to keep track of this read address channel thread
           //self is a static method which creates the read_addr_process of type process
@@ -782,9 +783,27 @@ task axi4_master_driver_proxy::axi4_read_task();
           //Calls the read address channel to drive the read address channel signals
           axi4_master_drv_bfm_h.axi4_read_address_channel_task(struct_read_address_packet,struct_cfg);
 
-          //Converting transactions into struct data type
-          axi4_master_seq_item_converter::to_read_class(struct_read_packet,req_rd);
-          `uvm_info(get_type_name(),$sformatf("READ_ADDRESS_THREAD::Checking struct packet = %p",req_rd.sprint()),UVM_MEDIUM); 
+          // Debug-only read-back of what was just driven on the AR channel.
+          //
+          // Two defects in the previous form,
+          //     to_read_class(struct_read_packet, req_rd);
+          // whose only consumer is the `uvm_info` on the next line:
+          //   1. Wrong source. `struct_read_packet` is the OUTER-scope variable
+          //      (declared at the top of axi4_read_task), written only by the
+          //      BLOCKING branch. In this NON_BLOCKING branch it still holds
+          //      whatever the last blocking read left there, so the print
+          //      describes an unrelated transaction rather than the AR just
+          //      driven. `struct_read_address_packet` is the packet this thread
+          //      actually handed to axi4_read_address_channel_task().
+          //   2. Wrong destination. `req_rd` is a CLASS MEMBER (line 46,
+          //      `REQ req_wr, req_rd;`), shared by every iteration of this
+          //      forever loop and by the sibling READ_DATA_CHANNEL thread. Since
+          //      to_read_class() declares its second argument `output`, it
+          //      constructs a fresh object and rebinds the member - a debug
+          //      print silently repointing driver-wide state.
+          // A local handle keeps the print truthful and side-effect free.
+          axi4_master_seq_item_converter::to_read_class(struct_read_address_packet,req_rd_addr_dbg);
+          `uvm_info(get_type_name(),$sformatf("READ_ADDRESS_THREAD::Checking struct packet = %p",req_rd_addr_dbg.sprint()),UVM_MEDIUM);
         end
 
         begin : READ_DATA_CHANNEL

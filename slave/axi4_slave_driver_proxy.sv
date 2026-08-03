@@ -1,3 +1,4 @@
+`include "axi4_bus_config.svh"
 `ifndef AXI4_SLAVE_DRIVER_PROXY_INCLUDED_
 `define AXI4_SLAVE_DRIVER_PROXY_INCLUDED_
 
@@ -59,8 +60,8 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   int wr_resp_cnt;
 
   // Variables used for out of order support
-  bit[3:0] response_id_queue[$];
-  bit[3:0] response_id_cont_queue[$];
+  bit[`AXI_ID_WIDTH-1:0] response_id_queue[$];
+  bit[`AXI_ID_WIDTH-1:0] response_id_cont_queue[$];
   bit      drive_id_cont;
   bit      drive_rd_id_cont;
   axi4_read_transfer_char_s rd_response_id_queue[$];
@@ -102,6 +103,8 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   extern virtual task task_memory_write(input axi4_slave_tx struct_write_packet);
   extern virtual task task_memory_read(input axi4_slave_tx read_pkt,ref axi4_read_transfer_char_s struct_read_packet);
   extern virtual task out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
+  extern virtual function bresp_e mid_safe_write_resp(int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] awprot);
+  extern virtual function rresp_e mid_safe_read_resp (int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] arprot);
   extern virtual function void setup_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id, bit [7:0] size, bit [7:0] len);
   extern virtual function bit check_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id);
   extern virtual function void clear_exclusive_monitors(bit [ADDRESS_WIDTH-1:0] addr);
@@ -247,7 +250,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       axi4_slave_tx              local_slave_addr_tx;
       axi4_write_transfer_char_s struct_write_packet;
       axi4_transfer_cfg_s        struct_cfg;
-      bit[3:0]                   local_awid;
+      bit[`AXI_ID_WIDTH-1:0]     local_awid;
     
       //returns status of address thread
       addr_tx=process::self();
@@ -341,9 +344,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
 
       //putting back the semaphore key
       semaphore_write_key.put(1);
-    
+
     end
-  
+
   begin : WRITE_RESPONSE_CHANNEL
 
       axi4_slave_tx              local_slave_addr_tx;
@@ -353,7 +356,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       axi4_slave_tx              qos_value_check_1;
       axi4_write_transfer_char_s struct_write_packet;
       axi4_transfer_cfg_s        struct_cfg;
-      bit[3:0]                   bid_local;
+      bit[`AXI_ID_WIDTH-1:0]     bid_local;   // Track-B: must follow AXI_ID_WIDTH
       bit [ADDRESS_WIDTH-1:0]    end_wrap_addr;
       bit                        slave_err;
       int                        start_sid;
@@ -365,12 +368,23 @@ task axi4_slave_driver_proxy::axi4_write_task();
       response_tx=process::self();
 
       data_tx.await();
-      
-      //getting the key from semaphore 
+
+      //getting the key from semaphore
       semaphore_rsp_write_key.get(1);
 
       if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
-        qos_value_check_1 = qos_queue[$];
+        // qos_queue is filled by WRITE_ADDRESS_CHANNEL, but this thread only
+        // awaits WRITE_DATA_CHANNEL. AXI permits the write data phase to finish
+        // before the write address phase, so the queue can legitimately still be
+        // empty here. Unguarded, `qos_queue[$]` yielded null and
+        // `qos_queue.delete(queue_index)` then aborted the simulation with
+        // "DT-MCWII ... delete method called with invalid index (size:0, index:0)"
+        // -- reproduced with axi4_qos_basic_priority_test +BUS_MATRIX_MODE=ENHANCED.
+        // `queue_index` is also a class member, so a stale value from a previous
+        // response survived into this one; seed it here instead.
+        wait(qos_queue.size() > 0);
+        queue_index       = 0;
+        qos_value_check_1 = qos_queue[0];
         for(int i=0;i<qos_queue.size();i++) begin
           if(qos_queue[i].awqos >= qos_value_check_1.awqos) begin
             qos_value_check_1 = qos_queue[i];
@@ -513,20 +527,51 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // - Direct mapping: AWID 0->M0, AWID 1->M1, etc.
           // Use modulo mapping based on actual bus matrix configuration
           // Check bus matrix mode and use appropriate modulo
-          if (axi4_bus_matrix_h != null) begin
-            if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-              master_id = awid_value % 4; // 4x4 base matrix
-            end else begin
-              master_id = awid_value % 10; // 10x10 enhanced matrix
-            end
-          end else begin
-            master_id = awid_value % 4; // Default to 4x4 if no bus matrix
-          end
+          // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+          // that from the monitor's source-port stamp. The two must agree or the
+          // slave's response and the scoreboard's expectation are computed against
+          // different rows of the access matrix. With the 1:1 direct wiring
+          // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+          // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+          // and the egress AxID carries the ingress port instead, so the historical
+          // AxID rule is kept there.
+          `ifdef BUS_MATRIX_NIC400
+            // The fabric's egress AxID is {original AxID, ingress-port index} with the
+            // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+            // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+            // only right when the manager happens to drive an AxID equal to its own port
+            // index, and disagreed with the scoreboard (which uses the monitor's source
+            // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+            // mismatch' errors, in both directions, on the coverage sweep.
+            // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+            // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+            // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+            // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+            // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+            if (((local_slave_addr_tx.awuser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+              master_id = int'((local_slave_addr_tx.awuser) & 32'hF);
+            else
+              // No AXI4_MID_TAG in AxUSER: this is not fabric traffic that carries manager
+              // identity, and the egress AxID is a reversed permutation of the ingress port
+              // index (measured), so deriving an id from it attributes the access to the
+              // wrong access-matrix row and denies legal in-range transfers. Mark the
+              // manager UNKNOWN and let the scoreboard -- which has the true master port --
+              // own the permission check.
+              master_id = -1;
+          `else
+            master_id = axi4_slave_agent_cfg_h.slave_id;
+          `endif
           
           if (axi4_bus_matrix_h != null) begin
-            struct_write_packet.bresp = axi4_bus_matrix_h.get_write_resp(master_id,
+            // AWPROT must come from the SAME packet as the address. It was taken
+            // from struct_write_packet, which in SLAVE_MEM_MODE is the reactive
+            // dummy the proxy randomizes -- an unrelated, random AWPROT. The
+            // address was already read from local_slave_addr_tx; the protection
+            // attribute has to be too, or the access matrix is queried with one
+            // transaction's address and another's security attributes.
+            struct_write_packet.bresp = mid_safe_write_resp(master_id,
                                                                          local_slave_addr_tx.awaddr,
-                                                                         struct_write_packet.awprot);
+                                                                         local_slave_addr_tx.awprot);
             `uvm_info("SLAVE_DRIVER_BOUNDARY_DEBUG", $sformatf("Bus matrix returned bresp=%0d for addr 0x%16h", 
                      struct_write_packet.bresp, local_slave_addr_tx.awaddr), UVM_LOW);
           end else begin
@@ -618,8 +663,31 @@ task axi4_slave_driver_proxy::axi4_write_task();
      
      semaphore_rsp_write_key.put(1);
    end
- 
-  join_any
+  // `join_any` restarted the forever loop as soon as ANY of the three channel
+  // threads finished -- normally the address thread, which is the shortest. A
+  // fresh WRITE_RESPONSE_CHANNEL thread was then forked while the previous one
+  // was still blocked on `data_tx.await()` holding the single-entry
+  // `semaphore_rsp_write_key`. Response threads pile up on that semaphore and
+  // most writes never reach axi4_write_response_phase, so BVALID is never
+  // driven and the write never retires.
+  //
+  // Against 1:1 direct wiring the timing happened to serialise and hid this.
+  // Against any real DUT -- an interconnect, or any IP where several masters
+  // funnel into one slave port with independent AW/W interleaving -- it bites:
+  // measured 13 write-data phases entered, 9 completed, only 2 responses issued.
+  //
+  // Completing all three channel phases before accepting the next write is the
+  // correct behaviour for a reactive slave model.
+  //
+  // NOTE (2026-08-02): this `join` no longer gates AW ACCEPTANCE. The subordinate
+  // BFM accepts and captures write addresses in a background thread, so a new
+  // AWVALID is taken while this iteration is still finishing its data and
+  // response phases (see the header of axi4_write_address_phase in the slave
+  // driver BFM). Detaching the RESPONSE from this join as well was tried and
+  // reverted: with responses lagging, the accept loop raced ahead until
+  // `axi4_slave_write_response_fifo_h` (depth 16) blocked on put, which stalls
+  // the data phase and is worse than the throttling this join provides.
+  join
 
   // Only check thread status if we actually have threads running (non-SLAVE_MEM_MODE)
   if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE) begin
@@ -646,9 +714,39 @@ task axi4_slave_driver_proxy::axi4_read_task();
   
   forever begin
     
-    //Declaring the process for read address channel and read data channel for status check 
-    process rd_addr;
-    process rd_data;
+    //Declaring the process for read address channel and read data channel for status check
+    //
+    // AUTOMATIC matters here. Variables declared inside a loop in an automatic
+    // class method are allocated per CALL, not per iteration, so with the
+    // `join_any` below iteration N+1 was overwriting the handles that
+    // iteration N's data thread was about to `.await()`. Making them automatic
+    // gives every iteration its own pair and removes that race.
+    //
+    // The fork below stays `join_any` on purpose: converting it to `join` (as
+    // the write task did) serialises AR acceptance to one outstanding read per
+    // slave agent, and the QoS read path then deadlocks on its own
+    // `wait(qos_read_queue.size>=2)` -- measured as 5-8 `timeout waiting for
+    // arready` in axi4_qos_basic_priority_test / _equal_priority_fairness_test.
+    automatic process rd_addr;
+    automatic process rd_data;
+
+    // The read address THIS iteration accepted, handed from the address thread
+    // to the data thread that answers it (known-landmines #14).
+    //
+    // AUTOMATIC for the same reason as the process handles above: one per
+    // iteration, so iteration N+1 cannot overwrite the address iteration N's
+    // data thread is still answering.
+    //
+    // What it replaces: `axi4_slave_read_addr_fifo_h.peek(...)`, an UNKEYED read
+    // of the FIFO head. The head is only this transaction while every read is
+    // answered strictly in acceptance order with nothing else consuming the
+    // FIFO, which is an assumption about thread scheduling, not a protocol fact
+    // -- and it is false in the out-of-order mode below, where the proxy
+    // deliberately answers a read that is NOT at the head. The data thread has
+    // already `await()`ed its own address thread, so it can simply be told which
+    // address it accepted.
+    automatic axi4_slave_tx rd_addr_tx = null;
+
     int master_id; // Variable for bus matrix master ID mapping
 
     // In SLAVE_MEM_MODE, don't wait for sequencer transactions - be reactive to BFM signals
@@ -734,6 +832,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
         qos_read_queue.push_front(local_slave_tx);
       end
      
+     // Hand THIS accepted read address to the data thread of this same
+     // iteration (see the rd_addr_tx declaration). Set before the FIFO put so it
+     // is valid the instant this thread ends, which is what rd_addr.await()
+     // waits for.
+     rd_addr_tx = local_slave_tx;
+
      //Putting back the sampled read address data into fifo
      axi4_slave_read_addr_fifo_h.put(local_slave_tx);
      `uvm_info("DEBUG_SLAVE_READ_ADDR_PROXY", $sformatf("AFTER :: Received req packet \n %s",local_slave_tx.sprint()), UVM_NONE);
@@ -773,7 +877,14 @@ task axi4_slave_driver_proxy::axi4_read_task();
          wait(qos_read_queue.size>=2);
        end
        qos_wait_enable = 1'b0;
-       qos_value_check_1 = qos_read_queue[$];
+       // Same defect as the QoS write response branch: after the first read
+       // qos_wait_enable is 0, so nothing guarantees the queue is non-empty here.
+       // Selecting from an empty queue yields null and the delete() below aborts
+       // the simulation with DT-MCWII. read_queue_index is a class member too, so
+       // seed it rather than inheriting a stale index from the previous read.
+       wait(qos_read_queue.size() > 0);
+       read_queue_index  = 0;
+       qos_value_check_1 = qos_read_queue[0];
        for(int i=0;i<qos_read_queue.size();i++) begin
          if(qos_read_queue[i].arqos >= qos_value_check_1.arqos) begin
            qos_value_check_1 = qos_read_queue[i];
@@ -818,6 +929,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
       bit error_response;
       bit error_response_inside;
       bit error_response_inside_wrap;
+      bit perm_denied;
       rd_cycles = 0;
       // In SLAVE_MEM_MODE, we don't need to wait for write completion as reads are independent
       if(axi4_slave_agent_cfg_h.read_data_mode != SLAVE_MEM_MODE) begin
@@ -847,12 +959,46 @@ task axi4_slave_driver_proxy::axi4_read_task();
          `uvm_info(get_type_name(), $sformatf("from_read_class:: struct_read_packet = \n %0p",struct_read_packet), UVM_HIGH); 
        end
 
+     // ------------------------------------------------------------------
+     // Bind the response to the read it is answering (known-landmines #14).
+     //
+     // Everything below -- the bus-matrix permission/decode query, the RRESP
+     // array, the memory read and the error-data fill -- is computed from
+     // local_slave_addr_chk_tx, so that handle decides WHICH read this response
+     // belongs to. It must be the read whose data phase is about to be driven,
+     // and each of the three response policies picks a different one:
+     //
+     //   QoS       - the highest-priority queued read, selected above.
+     //   Out-of-order - the read that out_of_order_for_reads() just selected
+     //                  into struct_read_packet; the BFM drives that read's
+     //                  ARID/ARLEN, so the response must be computed for it too.
+     //   In-order  - the read THIS iteration accepted (rd_addr_tx).
+     //
+     // It used to be `peek()` on the read address FIFO head for the last two.
+     // For out-of-order that is provably the wrong transaction whenever the
+     // shuffle picks anything but the head, and for in-order it is right only
+     // as long as no other consumer touches the FIFO and every data thread runs
+     // in acceptance order -- an assumption about thread scheduling rather than
+     // a protocol fact. The response is now bound to its own transaction by
+     // construction in all three cases.
+     // ------------------------------------------------------------------
      if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
         local_slave_addr_chk_tx = local_slave_rdata_tx;
       end
-      else begin
-        axi4_slave_read_addr_fifo_h.peek(local_slave_addr_chk_tx);
+      else if((axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) || (axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER)) begin
+        axi4_slave_seq_item_converter::to_read_class(struct_read_packet,local_slave_addr_chk_tx);
       end
+      else if(rd_addr_tx != null) begin
+        local_slave_addr_chk_tx = rd_addr_tx;
+      end
+      else begin
+        // Cannot happen: the data thread only runs after rd_addr.await(), and
+        // the address thread sets rd_addr_tx before it ends. Kept as the old
+        // behaviour rather than a null dereference if it ever does.
+        axi4_slave_read_addr_fifo_h.peek(local_slave_addr_chk_tx);
+        `uvm_info("slave_driver_proxy","read data thread ran with no bound read address - fell back to the read address FIFO head",UVM_LOW)
+      end
+      `uvm_info("RDBG",$sformatf("READ_RESP_BOUND arid=0x%0h araddr=0x%0h arprot=%0b arlen=%0d arsize=%0d",local_slave_addr_chk_tx.arid,local_slave_addr_chk_tx.araddr,local_slave_addr_chk_tx.arprot,local_slave_addr_chk_tx.arlen,local_slave_addr_chk_tx.arsize),UVM_HIGH)
       total_bytes = (local_slave_addr_chk_tx.arlen+1)*(2**(local_slave_addr_chk_tx.arsize));
       `uvm_info("SLAVE_DRIVER_ALWAYS", $sformatf("Slave %0d checking address 0x%16h against range [0x%16h:0x%16h]", 
                axi4_slave_agent_cfg_h.slave_id, local_slave_addr_chk_tx.araddr, 
@@ -860,6 +1006,58 @@ task axi4_slave_driver_proxy::axi4_read_task();
       if(local_slave_addr_chk_tx.araddr inside {[axi4_slave_agent_cfg_h.min_address : axi4_slave_agent_cfg_h.max_address]}) begin : ADDR_INSIDE_SLAVE_MEM_RANGE
         `uvm_info("SLAVE_DRIVER_ALWAYS", $sformatf("Address 0x%16h IS INSIDE slave %0d range", 
                  local_slave_addr_chk_tx.araddr, axi4_slave_agent_cfg_h.slave_id), UVM_LOW);
+        perm_denied = 1'b0;
+        // Access-matrix permission is a property of (master, address, AxPROT). It
+        // does NOT depend on the burst type or on whether the burst crosses a
+        // boundary, but the per-burst branches below only consult the matrix
+        // inside `if(crossed_read_addr)`, so an in-range read that the matrix
+        // forbids was answered OKAY straight out of slave memory. Measured on the
+        // Track-B sweep: 12x "expected READ_SLVERR, got READ_OKAY" at S7
+        // (Secure-Only, 0xA_0002_xxxx) plus 10x expected DECERR at S0, with both
+        // sides agreeing on master 7 and arprot=011 -- the subordinate simply
+        // never asked. Decide it once, here, before any memory access.
+        if (axi4_bus_matrix_h != null) begin
+          rresp_e perm_rresp;
+          // Derive the requesting master the same way every other site does; the
+          // outer master_id is only assigned inside the per-burst branches below.
+`ifdef BUS_MATRIX_NIC400
+          if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+            master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+          else
+            // No AXI4_MID_TAG in AxUSER: this is not fabric traffic that carries manager
+            // identity, and the egress AxID is a reversed permutation of the ingress port
+            // index (measured), so deriving an id from it attributes the access to the
+            // wrong access-matrix row and denies legal in-range transfers. Mark the
+            // manager UNKNOWN and let the scoreboard -- which has the true master port --
+            // own the permission check.
+            master_id = -1;
+`else
+          master_id = axi4_slave_agent_cfg_h.slave_id;
+`endif
+          perm_rresp = mid_safe_read_resp(master_id,
+                                                       local_slave_addr_chk_tx.araddr,
+                                                       local_slave_addr_chk_tx.arprot);
+          if (perm_rresp != READ_OKAY && perm_rresp != READ_EXOKAY) begin
+            `uvm_info("SLAVE_DRIVER_DEBUG",
+                      $sformatf("In-range read denied by the access matrix: master=%0d addr=0x%16h arprot=%03b -> %s",
+                                master_id, local_slave_addr_chk_tx.araddr,
+                                local_slave_addr_chk_tx.arprot, perm_rresp.name()), UVM_LOW);
+            for(int d = 0; d < (local_slave_addr_chk_tx.arlen + 1); d++) begin
+              struct_read_packet.rresp[d] = perm_rresp;
+              struct_read_packet.rdata[d] = '0;
+            end
+            axi4_slave_drv_bfm_h.axi4_read_data_phase(struct_read_packet, struct_cfg,
+                                                      axi4_slave_agent_cfg_h.slave_response_mode);
+            axi4_slave_seq_item_converter::to_read_class(struct_read_packet, local_slave_rdata_tx);
+            axi4_slave_read_addr_fifo_h.get(local_slave_raddr_tx);
+            axi4_slave_seq_item_converter::tx_read_packet(local_slave_raddr_tx, local_slave_rdata_tx, packet);
+            semaphore_read_key.put(1);
+            perm_denied = 1'b1;   // `continue` is illegal inside this fork branch
+          end
+        end
+
+        if (!perm_denied) begin
+
         if(local_slave_addr_chk_tx.arburst == READ_FIXED) begin
           // Check bus matrix response first before memory operations
           error_response_inside = 1'b0;
@@ -871,18 +1069,37 @@ task axi4_slave_driver_proxy::axi4_read_task();
               
               // Use configuration-aware modulo mapping based on actual bus matrix configuration
               // Check bus matrix mode and use appropriate modulo
-              if (axi4_bus_matrix_h != null) begin
-                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-                  master_id = arid_value % 4; // 4x4 base matrix
-                end else begin
-                  master_id = arid_value % 10; // 10x10 enhanced matrix
-                end
-              end else begin
-                master_id = arid_value % 4; // Default to 4x4 if no bus matrix
-              end
+              // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+              // that from the monitor's source-port stamp. The two must agree or the
+              // slave's response and the scoreboard's expectation are computed against
+              // different rows of the access matrix. With the 1:1 direct wiring
+              // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // and the egress AxID carries the ingress port instead, so the historical
+              // AxID rule is kept there.
+              `ifdef BUS_MATRIX_NIC400
+                // The fabric's egress AxID is {original AxID, ingress-port index} with the
+                // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+                // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+                // only right when the manager happens to drive an AxID equal to its own port
+                // index, and disagreed with the scoreboard (which uses the monitor's source
+                // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+                // mismatch' errors, in both directions, on the coverage sweep.
+                // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+                // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+                // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+                // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+                // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+                if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+                  master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+                else
+                  master_id = -1;  // manager unknown -- see the first such site above
+              `else
+                master_id = axi4_slave_agent_cfg_h.slave_id;
+              `endif
               
               if (axi4_bus_matrix_h != null) begin
-                struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                                  local_slave_addr_chk_tx.araddr,
                                                                                  local_slave_addr_chk_tx.arprot);
               end else begin
@@ -902,18 +1119,37 @@ task axi4_slave_driver_proxy::axi4_read_task();
             
             // Use configuration-aware modulo mapping based on actual bus matrix configuration
             // Check bus matrix mode and use appropriate modulo
-            if (axi4_bus_matrix_h != null) begin
-              if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-                master_id = arid_value % 4; // 4x4 base matrix
-              end else begin
-                master_id = arid_value % 10; // 10x10 enhanced matrix
-              end
-            end else begin
-              master_id = arid_value % 4; // Default to 4x4 if no bus matrix
-            end
+            // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+            // that from the monitor's source-port stamp. The two must agree or the
+            // slave's response and the scoreboard's expectation are computed against
+            // different rows of the access matrix. With the 1:1 direct wiring
+            // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+            // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+            // and the egress AxID carries the ingress port instead, so the historical
+            // AxID rule is kept there.
+            `ifdef BUS_MATRIX_NIC400
+              // The fabric's egress AxID is {original AxID, ingress-port index} with the
+              // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+              // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+              // only right when the manager happens to drive an AxID equal to its own port
+              // index, and disagreed with the scoreboard (which uses the monitor's source
+              // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+              // mismatch' errors, in both directions, on the coverage sweep.
+              // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+              // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+              // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+              // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+              // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+              if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+                master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+              else
+                master_id = -1;  // manager unknown -- see the first such site above
+            `else
+              master_id = axi4_slave_agent_cfg_h.slave_id;
+            `endif
             
             if (axi4_bus_matrix_h != null) begin
-              struct_read_packet.rresp = axi4_bus_matrix_h.get_read_resp(master_id,
+              struct_read_packet.rresp = mid_safe_read_resp(master_id,
                                                                          local_slave_addr_chk_tx.araddr,
                                                                          local_slave_addr_chk_tx.arprot);
             end else begin
@@ -960,20 +1196,39 @@ task axi4_slave_driver_proxy::axi4_read_task();
               int arid_value_wrap = int'(local_slave_addr_chk_tx.arid);
               // Use configuration-aware modulo mapping based on actual bus matrix configuration
               // Check bus matrix mode and use appropriate modulo
-              if (axi4_bus_matrix_h != null) begin
-                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-                  master_id = arid_value_wrap % 4; // 4x4 base matrix
-                end else begin
-                  master_id = arid_value_wrap % 10; // 10x10 enhanced matrix
-                end
-              end else begin
-                master_id = arid_value_wrap % 4; // Default to 4x4 if no bus matrix
-              end
+              // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+              // that from the monitor's source-port stamp. The two must agree or the
+              // slave's response and the scoreboard's expectation are computed against
+              // different rows of the access matrix. With the 1:1 direct wiring
+              // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // and the egress AxID carries the ingress port instead, so the historical
+              // AxID rule is kept there.
+              `ifdef BUS_MATRIX_NIC400
+                // The fabric's egress AxID is {original AxID, ingress-port index} with the
+                // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+                // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+                // only right when the manager happens to drive an AxID equal to its own port
+                // index, and disagreed with the scoreboard (which uses the monitor's source
+                // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+                // mismatch' errors, in both directions, on the coverage sweep.
+                // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+                // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+                // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+                // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+                // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+                if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+                  master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+                else
+                  master_id = -1;  // manager unknown -- see the first such site above
+              `else
+                master_id = axi4_slave_agent_cfg_h.slave_id;
+              `endif
             end
             
             // First, check if any address in the burst has access restrictions
             for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
-              struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+              struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                                local_slave_addr_chk_tx.araddr + (depth * (1 << local_slave_addr_chk_tx.arsize)),
                                                                                local_slave_addr_chk_tx.arprot);
               if (struct_read_packet.rresp[depth] == 2 || struct_read_packet.rresp[depth] == 3) begin
@@ -991,10 +1246,10 @@ task axi4_slave_driver_proxy::axi4_read_task();
                   
                   for(int depth=0;depth<(local_slave_addr_chk_tx.arlen+1);depth++) begin
                     if (axi4_bus_matrix_h != null) begin
-                      if(depth > loc) struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                      if(depth > loc) struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                                                      local_slave_addr_chk_tx.araddr,
                                                                                                      local_slave_addr_chk_tx.arprot);
-                      else struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                      else struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                                                local_slave_addr_chk_tx.araddr,
                                                                                                local_slave_addr_chk_tx.arprot);
                     end else begin
@@ -1036,18 +1291,37 @@ task axi4_slave_driver_proxy::axi4_read_task();
               
               // Use configuration-aware modulo mapping based on actual bus matrix configuration
               // Check bus matrix mode and use appropriate modulo
-              if (axi4_bus_matrix_h != null) begin
-                if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-                  master_id = arid_value % 4; // 4x4 base matrix
-                end else begin
-                  master_id = arid_value % 10; // 10x10 enhanced matrix
-                end
-              end else begin
-                master_id = arid_value % 4; // Default to 4x4 if no bus matrix
-              end
+              // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+              // that from the monitor's source-port stamp. The two must agree or the
+              // slave's response and the scoreboard's expectation are computed against
+              // different rows of the access matrix. With the 1:1 direct wiring
+              // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // and the egress AxID carries the ingress port instead, so the historical
+              // AxID rule is kept there.
+              `ifdef BUS_MATRIX_NIC400
+                // The fabric's egress AxID is {original AxID, ingress-port index} with the
+                // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+                // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+                // only right when the manager happens to drive an AxID equal to its own port
+                // index, and disagreed with the scoreboard (which uses the monitor's source
+                // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+                // mismatch' errors, in both directions, on the coverage sweep.
+                // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+                // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+                // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+                // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+                // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+                if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+                  master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+                else
+                  master_id = -1;  // manager unknown -- see the first such site above
+              `else
+                master_id = axi4_slave_agent_cfg_h.slave_id;
+              `endif
               
               if (axi4_bus_matrix_h != null) begin
-                struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+                struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                                  local_slave_addr_chk_tx.araddr,
                                                                                  local_slave_addr_chk_tx.arprot);
               end else begin
@@ -1096,6 +1370,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
             end
           end
         end
+        end  // if (!perm_denied)
       end
       else begin : ADDR_NOT_INSIDE_SLAVE_MEM_RANGE
         int master_id;  // Declare variable at the beginning of the block
@@ -1111,22 +1386,41 @@ task axi4_slave_driver_proxy::axi4_read_task();
           int arid_value_last = int'(local_slave_addr_chk_tx.arid);
           // Use configuration-aware modulo mapping based on actual bus matrix configuration
           // Check bus matrix mode and use appropriate modulo
-          if (axi4_bus_matrix_h != null) begin
-            if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-              master_id = arid_value_last % 4; // 4x4 base matrix
-            end else begin
-              master_id = arid_value_last % 10; // 10x10 enhanced matrix
-            end
-          end else begin
-            master_id = arid_value_last % 4; // Default to 4x4 if no bus matrix
-          end
+          // The bus matrix wants the SOURCE MASTER, and the scoreboard now derives
+          // that from the monitor's source-port stamp. The two must agree or the
+          // slave's response and the scoreboard's expectation are computed against
+          // different rows of the access matrix. With the 1:1 direct wiring
+          // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
+          // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+          // and the egress AxID carries the ingress port instead, so the historical
+          // AxID rule is kept there.
+          `ifdef BUS_MATRIX_NIC400
+            // The fabric's egress AxID is {original AxID, ingress-port index} with the
+            // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
+            // is decodable here rather than guessed. `AxID % nports` was a guess: it is
+            // only right when the manager happens to drive an AxID equal to its own port
+            // index, and disagreed with the scoreboard (which uses the monitor's source
+            // stamp) the moment a sweep drove arbitrary IDs -- measured 75 'Response
+            // mismatch' errors, in both directions, on the coverage sweep.
+            // Manager identity is carried EXPLICITLY in AxUSER behind the fabric
+            // (AXI4_MID_TAG, include/axi4_bus_config.svh). Deriving it from the egress
+            // AxID was wrong: that field is a per-sub-block REVERSED permutation of the
+            // ingress port index on the 10x10 build -- measured 960/960 reads attributed
+            // to the wrong access-matrix row. Untagged traffic falls back to the old rule.
+            if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
+              master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
+            else
+              master_id = -1;  // manager unknown -- see the first such site above
+          `else
+            master_id = axi4_slave_agent_cfg_h.slave_id;
+          `endif
         end
         
         for(int depth=0;depth<(((axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER)
           || (axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
           (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))  ? (struct_read_packet.arlen+1) : (local_slave_addr_chk_tx.arlen+1));depth++) begin
-          struct_read_packet.rresp[depth] = axi4_bus_matrix_h.get_read_resp(master_id,
+          struct_read_packet.rresp[depth] = mid_safe_read_resp(master_id,
                                                                            local_slave_addr_chk_tx.araddr,
                                                                            local_slave_addr_chk_tx.arprot);
           `uvm_info("SLAVE_DRIVER_DEBUG", $sformatf("Bus matrix returned rresp[%0d] = %0d for address 0x%16h", 
@@ -1169,6 +1463,9 @@ task axi4_slave_driver_proxy::axi4_read_task();
      //Putting back the key
      semaphore_read_key.put(1);
    end
+  // See the `automatic` note on rd_addr/rd_data above: join_any is retained so
+  // the slave can keep accepting read addresses while a read data phase runs,
+  // and the handle race it used to cause is fixed by the automatic declaration.
   join_any
 
   // Only check thread status if we actually have threads running (non-SLAVE_MEM_MODE)
@@ -1194,9 +1491,68 @@ endtask : axi4_read_task
 //  struct_packet   - axi4_write_transfer_char_s
 //--------------------------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------------------------
+// WSTRB is a BYTE ENABLE, not a byte counter.
+//
+// The INCR and WRAP branches used to carry a cursor `k` that was incremented
+// ONLY when a strobe bit was set, and wrote each enabled byte to `awaddr + k`.
+// That silently compresses the address space: a beat whose only asserted lane is
+// lane 2 wrote its byte to `awaddr + 0` instead of `awaddr + 2`, and any gap in
+// the strobe pattern pulled every following byte of the burst down by the width
+// of the gap. WRAP had it worse - the same cursor also drove the wrap
+// bookkeeping (`k_t`), so a sparse pattern moved the wrap point as well.
+//
+// Directed stimulus that hits this exists today: test/axi4_wstrb_alternating_test
+// drives 0101 / 1010 through seq/master_sequences/axi4_master_wstrb_seq.sv, and
+// its read-back only agreed with the write because the reference memory and the
+// expectation were wrong in the same direction.
+//
+// The address of an enabled byte is now derived from the BEAT, independently of
+// how many other lanes happen to be enabled:
+//
+//   beat_bytes   = 2**AWSIZE                            bytes carried per beat
+//   aligned_addr = AWADDR - AWADDR % beat_bytes         AXI4 A3.4.1 aligned_address
+//   beat_addr(j) = INCR: AWADDR + j*beat_bytes
+//                  WRAP: lower + ((AWADDR + j*beat_bytes - lower) % wrap_bytes)
+//   lane_base(j) = (aligned_addr + j*beat_bytes) % STROBE_WIDTH
+//   byte address = beat_addr(j) + (lane - lane_base(j))
+//
+// lane_base is the lowest byte lane this beat occupies on the data bus, and it
+// is what makes the lane index mean "offset within the beat". It is derived the
+// same way axi4_master_tx::post_randomize places the strobes (`remainder_check =
+// awaddr % STROBE_WIDTH`, shifted left by 2**awsize per beat), so the two sides
+// agree by construction instead of by accident.
+//
+// Equivalence with the old code, which is why this is not a behavioural change
+// for anything except sparse strobes: when a beat's strobes are CONTIGUOUS and
+// start at lane_base - which is every burst the master generates for an
+// AWSIZE-aligned address - the old cursor produced exactly beat_addr(j) +
+// (lane - lane_base(j)) for every enabled byte, in both INCR and WRAP including
+// the wrapped beats. Worked examples are in the report accompanying this change.
+//
+// FIXED is left alone: it already applies the lane offset (`awaddr + strb`) and
+// was cited as the correct counter-example.
+//--------------------------------------------------------------------------------------------
 task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write_packet);
-  int lower_addr,end_addr,k_t;
-  bit [DATA_WIDTH-1:0] tmp_wdata, write_data;
+  bit [DATA_WIDTH-1:0] tmp_wdata;
+  // lower_addr/end_addr used to be plain `int`, i.e. 32 bits signed, while an
+  // address here is ADDRESS_WIDTH (64) bits. Every WRAP burst above 4GB - and
+  // the DDR base this VIP's own tests use is 0x0000_0100_0000_0000 - therefore
+  // computed its wrap boundary from the low 32 bits and wrote the wrapped half
+  // of the burst to a truncated `lower_addr + k` near zero, while the
+  // un-wrapped half went to the full 64-bit address. They carry addresses now.
+  bit [ADDRESS_WIDTH-1:0] lower_addr;
+  bit [ADDRESS_WIDTH-1:0] aligned_addr;
+  bit [ADDRESS_WIDTH-1:0] beat_addr;
+  bit [ADDRESS_WIDTH-1:0] byte_addr;
+  int                     beat_bytes;
+  int                     wrap_bytes;
+  int                     lane_base;
+  int                     lane_off;
+
+  beat_bytes   = 2**struct_write_packet.awsize;
+  aligned_addr = struct_write_packet.awaddr - (struct_write_packet.awaddr % beat_bytes);
+
   if(struct_write_packet.awburst == WRITE_FIXED) begin
     for(int j=0;j<(struct_write_packet.awlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_awlen=%d",struct_write_packet.awlen),UVM_HIGH)
@@ -1219,62 +1575,70 @@ task axi4_slave_driver_proxy::task_memory_write(input axi4_slave_tx struct_write
     end
   end
   if(struct_write_packet.awburst == WRITE_INCR) begin
-    for(int j=0,int k=0;j<(struct_write_packet.awlen+1);j++)begin
+    for(int j=0;j<(struct_write_packet.awlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_awlen=%d",struct_write_packet.awlen),UVM_HIGH)
+      // This beat's address and its lowest occupied byte lane - both derived
+      // from the burst, never from how many strobes were asserted.
+      beat_addr = struct_write_packet.awaddr + j*beat_bytes;
+      lane_base = (aligned_addr + j*beat_bytes) % STROBE_WIDTH;
         for(int strb=0;strb<STROBE_WIDTH;strb++) begin
-        `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,k=%0d",struct_write_packet.wstrb[strb],k), UVM_HIGH);
+        `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,lane_base=%0d",struct_write_packet.wstrb[j],lane_base), UVM_HIGH);
         if(struct_write_packet.wstrb[j][strb] == 1) begin
+          lane_off = strb - lane_base;
+          if(lane_off < 0) begin
+            // A strobe below this beat's active byte lanes. AXI4 A3.4.3 requires
+            // those to be deasserted, so this is illegal stimulus rather than a
+            // byte with an address; dropping it is preferable to writing below
+            // the beat's own address.
+            `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("Beat %0d: WSTRB bit %0d is below this beat's lane base %0d - byte dropped (AXI4 A3.4.3)", j, strb, lane_base), UVM_MEDIUM);
+            continue;
+          end
+          byte_addr = beat_addr + lane_off;
           tmp_wdata = '0;
           tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
           // Store in slave memory with proper DATA_WIDTH formatting
           if (axi4_bus_matrix_h != null) begin
-            axi4_bus_matrix_h.store_write(struct_write_packet.awaddr+k, tmp_wdata);
+            axi4_bus_matrix_h.store_write(byte_addr, tmp_wdata);
           end else if (axi4_slave_mem_h != null) begin
-            axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, tmp_wdata);
+            axi4_slave_mem_h.mem_write(byte_addr, tmp_wdata);
           end
-          `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("INCR: Stored byte 0x%02x at address 0x%16h", 
-                   struct_write_packet.wdata[j][8*strb+7 -: 8], struct_write_packet.awaddr+k), UVM_HIGH);
-          k++;
+          `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("INCR: Stored byte 0x%02x at address 0x%16h (beat %0d, lane %0d, lane_base %0d)",
+                   struct_write_packet.wdata[j][8*strb+7 -: 8], byte_addr, j, strb, lane_base), UVM_HIGH);
         end
       end
     end
   end
   if(struct_write_packet.awburst == WRITE_WRAP) begin
-    lower_addr = struct_write_packet.awaddr - int'(struct_write_packet.awaddr%((struct_write_packet.awlen+1)*(2**struct_write_packet.awsize)));
-    end_addr = lower_addr + ((struct_write_packet.awlen+1)*(2**struct_write_packet.awsize));
-    k_t = struct_write_packet.awaddr;
-    for(int j=0,int k=0;j<(struct_write_packet.awlen+1);j++)begin
+    wrap_bytes = (struct_write_packet.awlen+1)*beat_bytes;
+    lower_addr = struct_write_packet.awaddr - (struct_write_packet.awaddr % wrap_bytes);
+    for(int j=0;j<(struct_write_packet.awlen+1);j++)begin
       `uvm_info("DEBUG_MEMORY_WRITE",$sformatf("memory_task_awlen=%d",struct_write_packet.awlen),UVM_HIGH)
+      // The wrap is now arithmetic on the BEAT address (AXI4 A3.4.1: a WRAP
+      // burst's address wraps back to the wrap boundary once it reaches the
+      // upper limit), instead of a byte cursor that only advanced on asserted
+      // strobes and therefore moved the wrap point whenever a strobe was low.
+      beat_addr = lower_addr + ((struct_write_packet.awaddr + j*beat_bytes - lower_addr) % wrap_bytes);
+      lane_base = (aligned_addr + j*beat_bytes) % STROBE_WIDTH;
         for(int strb=0;strb<STROBE_WIDTH;strb++) begin
-        `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,k=%0d",struct_write_packet.wstrb[strb],k), UVM_HIGH);
+        `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("task_memory_write inside for loop wstrb = %0h,lane_base=%0d",struct_write_packet.wstrb[j],lane_base), UVM_HIGH);
           if(struct_write_packet.wstrb[j][strb] == 1) begin
-            if(k_t < end_addr)  begin
-            write_data = '0;
-            write_data[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
-            if (axi4_bus_matrix_h != null) begin
-              axi4_bus_matrix_h.store_write(struct_write_packet.awaddr+k, write_data);
-            end else if (axi4_slave_mem_h != null) begin
-              axi4_slave_mem_h.mem_write(struct_write_packet.awaddr+k, write_data);
+            lane_off = strb - lane_base;
+            if(lane_off < 0) begin
+              // See the identical guard in the INCR branch.
+              `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("Beat %0d: WSTRB bit %0d is below this beat's lane base %0d - byte dropped (AXI4 A3.4.3)", j, strb, lane_base), UVM_MEDIUM);
+              continue;
             end
-            `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("WRAP: Stored byte 0x%02x at address 0x%16h", 
-                     struct_write_packet.wdata[j][8*strb+7 -: 8], struct_write_packet.awaddr+k), UVM_HIGH);
-            k++;
-            k_t++;
-            if(k_t == end_addr) k = 0;
-          end
-          else begin
-            write_data = '0;
-            write_data[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
+            byte_addr = beat_addr + lane_off;
+            tmp_wdata = '0;
+            tmp_wdata[7:0] = struct_write_packet.wdata[j][8*strb+7 -: 8];
             if (axi4_bus_matrix_h != null) begin
-              axi4_bus_matrix_h.store_write(lower_addr+k, write_data);
+              axi4_bus_matrix_h.store_write(byte_addr, tmp_wdata);
             end else if (axi4_slave_mem_h != null) begin
-              axi4_slave_mem_h.mem_write(lower_addr+k, write_data);
+              axi4_slave_mem_h.mem_write(byte_addr, tmp_wdata);
             end
-            `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("WRAP(wrapped): Stored byte 0x%02x at address 0x%16h", 
-                     struct_write_packet.wdata[j][8*strb+7 -: 8], lower_addr+k), UVM_HIGH);
-            k++;
+            `uvm_info("DEBUG_MEMORY_WRITE", $sformatf("WRAP: Stored byte 0x%02x at address 0x%16h (beat %0d, lane %0d, lane_base %0d, wrap [0x%16h:0x%16h))",
+                     struct_write_packet.wdata[j][8*strb+7 -: 8], byte_addr, j, strb, lane_base, lower_addr, lower_addr+wrap_bytes), UVM_HIGH);
           end
-        end
       end
     end
   end
@@ -1369,27 +1733,58 @@ endtask : task_memory_read
 
 task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
  int read_wait;
- read_wait = 0;
- // Fix: Skip FIFO wait loop if minimum_transactions is 0 (out-of-order mode)
- // When minimum_transactions=0, we should not wait for FIFO to drain as this creates deadlock
- if(axi4_slave_agent_cfg_h.get_minimum_transactions > 0) begin
-   while(axi4_slave_read_addr_fifo_h.size > axi4_slave_agent_cfg_h.get_minimum_transactions) begin
-     @(posedge axi4_slave_drv_bfm_h.aclk);  //wait for outstanding transfers
-     if(read_wait++ > 1000) begin
-       `uvm_error("slave_driver_proxy","read response wait timeout")
-       break;
-     end
+ int min_backlog;
+ read_wait   = 0;
+ min_backlog = axi4_slave_agent_cfg_h.get_minimum_transactions;
+
+ // Gate 1 - CORRECTNESS. Never pop from an empty queue: `pop_front()` on an
+ // empty SystemVerilog queue returns a default-constructed struct, and the
+ // caller drives that straight onto the R channel as an all-zero response for a
+ // read nobody answered. This must hold whatever minimum_transactions is.
+ //
+ // What this replaces: a wait on `axi4_slave_read_addr_fifo_h.size >
+ // minimum_transactions` that (a) tested the wrong direction and (b) tested the
+ // wrong object. The reference VIP waits for the backlog to BUILD
+ // (ref_vip/src/hvl_top/slave/axi4_slave_driver_proxy.sv:805,
+ // `wait(size > minimum_transactions)`) because reordering needs several
+ // pending reads to choose between; this copy waited for it to DRAIN, which in
+ // ONLY_READ_RESP_OUT_OF_ORDER never happens, so every response burned 1000
+ // clocks and raised "read response wait timeout". It also polled the AR fifo
+ // rather than the queue actually popped below, so the empty-pop above was
+ // never actually prevented - and the `minimum_transactions == 0` early-out
+ // skipped the wait entirely, which is the configuration the sibling
+ // out-of-order tests all select.
+ while((drive_rd_id_cont == 1) ? (rd_response_id_cont_queue.size() == 0)
+                               : (rd_response_id_queue.size()      == 0)) begin
+   @(posedge axi4_slave_drv_bfm_h.aclk);
+   if(read_wait++ > 1000) begin
+     `uvm_error("slave_driver_proxy","read response wait timeout: no read pending to respond to")
+     break;
    end
  end
+
+ // Gate 2 - REORDER QUALITY, best effort, never an error. Let a backlog of more
+ // than minimum_transactions accumulate so the shuffle below has something to
+ // reorder. Bounded, because a manager that simply has no more reads in flight
+ // must not stall the R channel: responding in order is a weaker stimulus, not
+ // a failure.
+ read_wait = 0;
+ while(drive_rd_id_cont == 0 && rd_response_id_queue.size() <= min_backlog && read_wait < 50) begin
+   @(posedge axi4_slave_drv_bfm_h.aclk);
+   read_wait++;
+ end
  `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
- if(drive_rd_id_cont == 1) begin
-   oor_read_data_struct_read_packet = rd_response_id_cont_queue.pop_front(); 
+ if(drive_rd_id_cont == 1 && rd_response_id_cont_queue.size() > 0) begin
+   oor_read_data_struct_read_packet = rd_response_id_cont_queue.pop_front();
    if(rd_response_id_cont_queue.size()==0) drive_rd_id_cont = 1'b0;
  end
- else begin
+ else if(rd_response_id_queue.size() > 0) begin
    rd_response_id_queue.shuffle();
-   oor_read_data_struct_read_packet = rd_response_id_queue.pop_front(); 
+   oor_read_data_struct_read_packet = rd_response_id_queue.pop_front();
  end
+ // else: gate 1 timed out and already raised the error. Falling through without
+ // a pop leaves the caller's packet as the output default rather than silently
+ // consuming an unrelated entry from the other queue.
 endtask : out_of_order_for_reads
 
 //--------------------------------------------------------------------------------------------
@@ -1401,6 +1796,31 @@ endtask : out_of_order_for_reads
 //  size      - Transfer size
 //  len       - Transfer length
 //--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
+// Function: mid_safe_write_resp / mid_safe_read_resp
+//
+// The access matrix answers a per-manager question, so it needs a manager. Behind
+// the fabric that identity arrives in AxUSER (AXI4_MID_TAG); on traffic that does
+// not carry the tag the subordinate simply cannot know who issued the transfer.
+// Guessing it from the egress AxID denied legal in-range transfers -- observed as
+// "Response mismatch for address 0x0000000800001058: expected WRITE_OKAY, got
+// WRITE_DECERR" while the very same bus matrix logged that address decoding to
+// slave 0.
+//
+// Address DECODE is still knowable without a manager, and an unmapped address is
+// still a DECERR, so only the permission half is dropped. The scoreboard holds
+// the true master port index and keeps checking permissions there.
+//--------------------------------------------------------------------------------------------
+function bresp_e axi4_slave_driver_proxy::mid_safe_write_resp(int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] awprot);
+  if (mid >= 0) return axi4_bus_matrix_h.get_write_resp(mid, addr, awprot);
+  return (axi4_bus_matrix_h.decode(addr) < 0) ? WRITE_DECERR : WRITE_OKAY;
+endfunction : mid_safe_write_resp
+
+function rresp_e axi4_slave_driver_proxy::mid_safe_read_resp(int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] arprot);
+  if (mid >= 0) return axi4_bus_matrix_h.get_read_resp(mid, addr, arprot);
+  return (axi4_bus_matrix_h.decode(addr) < 0) ? READ_DECERR : READ_OKAY;
+endfunction : mid_safe_read_resp
+
 function void axi4_slave_driver_proxy::setup_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id, bit [7:0] size, bit [7:0] len);
   int monitor_idx = -1;
   
