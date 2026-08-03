@@ -535,7 +535,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // slave_id IS the source master. Behind the NIC-400 fabric it is not,
           // and the egress AxID carries the ingress port instead, so the historical
           // AxID rule is kept there.
-          `ifdef BUS_MATRIX_NIC400
+          `ifdef BUS_MATRIX_FABRIC_IP
             // The fabric's egress AxID is {original AxID, ingress-port index} with the
             // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
             // is decodable here rather than guessed. `AxID % nports` was a guess: it is
@@ -1020,7 +1020,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           rresp_e perm_rresp;
           // Derive the requesting master the same way every other site does; the
           // outer master_id is only assigned inside the per-burst branches below.
-`ifdef BUS_MATRIX_NIC400
+`ifdef BUS_MATRIX_FABRIC_IP
           if (((local_slave_addr_chk_tx.aruser) & `AXI4_MID_TAG_MASK) == {`AXI4_MID_TAG, 4'h0})
             master_id = int'((local_slave_addr_chk_tx.aruser) & 32'hF);
           else
@@ -1077,7 +1077,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave_id IS the source master. Behind the NIC-400 fabric it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
-              `ifdef BUS_MATRIX_NIC400
+              `ifdef BUS_MATRIX_FABRIC_IP
                 // The fabric's egress AxID is {original AxID, ingress-port index} with the
                 // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
                 // is decodable here rather than guessed. `AxID % nports` was a guess: it is
@@ -1127,7 +1127,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
             // slave_id IS the source master. Behind the NIC-400 fabric it is not,
             // and the egress AxID carries the ingress port instead, so the historical
             // AxID rule is kept there.
-            `ifdef BUS_MATRIX_NIC400
+            `ifdef BUS_MATRIX_FABRIC_IP
               // The fabric's egress AxID is {original AxID, ingress-port index} with the
               // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
               // is decodable here rather than guessed. `AxID % nports` was a guess: it is
@@ -1204,7 +1204,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave_id IS the source master. Behind the NIC-400 fabric it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
-              `ifdef BUS_MATRIX_NIC400
+              `ifdef BUS_MATRIX_FABRIC_IP
                 // The fabric's egress AxID is {original AxID, ingress-port index} with the
                 // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
                 // is decodable here rather than guessed. `AxID % nports` was a guess: it is
@@ -1299,7 +1299,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave_id IS the source master. Behind the NIC-400 fabric it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
-              `ifdef BUS_MATRIX_NIC400
+              `ifdef BUS_MATRIX_FABRIC_IP
                 // The fabric's egress AxID is {original AxID, ingress-port index} with the
                 // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
                 // is decodable here rather than guessed. `AxID % nports` was a guess: it is
@@ -1394,7 +1394,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           // slave_id IS the source master. Behind the NIC-400 fabric it is not,
           // and the egress AxID carries the ingress port instead, so the historical
           // AxID rule is kept there.
-          `ifdef BUS_MATRIX_NIC400
+          `ifdef BUS_MATRIX_FABRIC_IP
             // The fabric's egress AxID is {original AxID, ingress-port index} with the
             // port in the LOW AXI_ID_WIDTH-AXI_VID_WIDTH bits, so the requesting master
             // is decodable here rather than guessed. `AxID % nports` was a guess: it is

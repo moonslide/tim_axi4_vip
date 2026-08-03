@@ -277,7 +277,7 @@ Format: Symptom → Cause → Fix → **Trap**. Landmines are EARNED in this rep
 - With the 1:1 direct wiring `top/hdl_top.sv` connects master[j] to slave[j], so
   the slave agent's own `slave_id` IS the source master; that is now used.
   Behind the NIC-400 fabric it is not, and the egress AxID carries the ingress
-  port, so the AxID rule is kept under `BUS_MATRIX_NIC400`.
+  port, so the AxID rule is kept under `BUS_MATRIX_FABRIC_IP`.
 - Fixing this also cleared `axi4_error_inject_multi_signal_random_test ENHANCED`,
   which was failing at HEAD.
 - **Trap**: any change to how one side identifies the requesting master must be

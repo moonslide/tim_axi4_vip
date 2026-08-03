@@ -46,7 +46,7 @@ evidence rules, ignore reference-program paths.
     commented-out uvm_errors in `axi4_master_driver_bfm.sv`; B-timeout even
     FABRICATES a response. Treat "no error" as weak evidence on write paths.
 - Track-B first checks: fabric smoke `bash sim/run_fabric_smoke.sh` (3/3),
-  then `+define+NIC400_DEBUG_PROBE` boundary probes, then BFM phase counts.
+  then `+define+FABRIC_IP_DEBUG_PROBE` boundary probes, then BFM phase counts.
 - Debug narrative for the fabric bring-up (worked example with all dead ends):
   `TRACKB_DEBUG_NOTES.md`.
 

@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
 # Third-party licensed IP — NEVER commit, push, or upload.
-# ARM NIC-400 fabric RTL deliverable (Track-B DUT). Local-only by policy.
+# Commercial fabric IP RTL deliverable (Track-B DUT). Local-only by policy.
 # See CLAUDE.md / AGENTS.md "Publish & upload policy".
 # ---------------------------------------------------------------------------
 ext/

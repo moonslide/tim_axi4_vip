@@ -6,11 +6,11 @@
 //
 // Minimum viable Track-B test: proves the VIP's UVM stack (sequences, driver
 // BFMs, monitors, scoreboard) works end to end through the real ARM CoreLink
-// NIC-400 fabric DUT, not just through the 1:1 direct wiring.
+// commercial fabric IP DUT, not just through the 1:1 direct wiring.
 //
 // Build with:
-//   +define+BUS_MATRIX_NIC400 +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255
-//   -f ../../sim/axi4_compile_nic400.f
+//   +define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255
+//   -f ../../sim/axi4_compile_fabric_ip.f
 //
 // It differs from the stock tests only in that its addresses are constrained
 // to a region the fabric actually maps (see axi4_master_trackb_base_seq).
@@ -55,9 +55,9 @@ class axi4_trackb_smoke_test extends axi4_base_test;
   // answers OKAY (bm/axi4_bus_matrix_ref.sv:220,287) -- a green run that
   // proved nothing about the fabric's decode.
   //
-  // The topology of a Track-B run is not a runtime choice: the NIC-400 has
+  // The topology of a Track-B run is not a runtime choice: the fabric has
   // its port count and address decode burned into RTL, and which fabric is in
-  // the design is decided at COMPILE time by +define+NIC400_4X4. So the same
+  // the design is decided at COMPILE time by +define+FABRIC_IP_4X4. So the same
   // define selects the bound topology here (identical precedent:
   // seq/master_sequences/axi4_master_trackb_base_seq.sv:54,92 and
   // include/axi4_bus_config.svh:140 already switch on it), and a
@@ -97,7 +97,7 @@ class axi4_trackb_smoke_test extends axi4_base_test;
 
   function new(string name = "axi4_trackb_smoke_test", uvm_component parent = null);
     super.new(name, parent);
-`ifdef NIC400_4X4
+`ifdef FABRIC_IP_4X4
     // ext/nic400_vip4x4q: four ingress, four egress, VIP BASE map.
     trackb_bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
     trackb_num_masters     = 4;
@@ -148,12 +148,12 @@ class axi4_trackb_smoke_test extends axi4_base_test;
     // Contradicting or misspelled +BUS_MATRIX_MODE => UVM_FATAL at time 0.
     trackb_cfg.check_bus_matrix_plusarg(get_type_name());
 
-`ifndef BUS_MATRIX_NIC400
+`ifndef BUS_MATRIX_FABRIC_IP
     // Warning, not fatal: the Track-B classes still run against the baseline
     // 1:1 wiring (that is a useful A/B), but a "Track-B" result quoted from a
     // build with no fabric in it is not a fabric result.
     `uvm_warning(get_type_name(),
-      {"compiled WITHOUT +define+BUS_MATRIX_NIC400: there is no NIC-400 fabric in this ",
+      {"compiled WITHOUT +define+BUS_MATRIX_FABRIC_IP: there is no fabric IP in this ",
        "design, so this run exercises the 1:1 direct wiring, not the Track-B DUT."})
 `endif
   endfunction : bind_trackb_topology
@@ -179,7 +179,7 @@ class axi4_trackb_smoke_test extends axi4_base_test;
     axi4_env_cfg_h.axregion_passthrough_chk_cfg = 0;
     axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 0;
     `uvm_info(get_type_name(), "==========================================", UVM_LOW)
-    `uvm_info(get_type_name(), "AXI4 TRACK-B SMOKE TEST (NIC-400 fabric DUT)", UVM_LOW)
+    `uvm_info(get_type_name(), "AXI4 TRACK-B SMOKE TEST (commercial fabric IP DUT)", UVM_LOW)
     `uvm_info(get_type_name(),
               $sformatf("Bound topology: %s / %0d masters / %0d slaves",
                         axi4_env_cfg_h.bus_matrix_mode.name(),

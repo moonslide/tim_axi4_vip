@@ -5,7 +5,7 @@
 // Class: axi4_master_trackb_base_seq
 //
 // Shared address-map knowledge for Track-B sequences, i.e. the ones that run
-// against the real ARM CoreLink NIC-400 fabric DUT (+define+BUS_MATRIX_NIC400)
+// against the real commercial fabric IP DUT (+define+BUS_MATRIX_FABRIC_IP)
 // instead of the 1:1 direct wiring in hdl_top.
 //
 // Why this exists
@@ -48,10 +48,10 @@ endfunction : new
 
 //--------------------------------------------------------------------------------------------
 // Function: region_base
-// Start address of slave region <idx> as mapped in the NIC-400 fabric.
+// Start address of slave region <idx> as mapped in the fabric IP.
 //--------------------------------------------------------------------------------------------
 function bit [63:0] axi4_master_trackb_base_seq::region_base(int unsigned idx);
-`ifdef NIC400_4X4
+`ifdef FABRIC_IP_4X4
   // The 4x4 fabric (ext/nic400_vip4x4q) carries the VIP's BASE bus-matrix map
   // in its decoder, verbatim from bm/axi4_bus_matrix_ref.sv:85-118.
   case (idx)
@@ -89,7 +89,7 @@ endfunction : region_base
 // Size in bytes of slave region <idx>.
 //--------------------------------------------------------------------------------------------
 function bit [63:0] axi4_master_trackb_base_seq::region_size(int unsigned idx);
-`ifdef NIC400_4X4
+`ifdef FABRIC_IP_4X4
   case (idx)
     0: return 64'h0000_0008_0000_0000; // 32GB
     1: return 64'h0000_0000_0002_0000; // 128KB

@@ -130,26 +130,26 @@
 
 // Track-B fabric selection.
 //
-// BUS_MATRIX_NIC400      -> ext/nic400_vip4x4q ... 4x4, QoS, VIP BASE map
-//                           when NIC400_4X4 is also defined,
+// BUS_MATRIX_FABRIC_IP      -> ext/nic400_vip4x4q ... 4x4, QoS, VIP BASE map
+//                           when FABRIC_IP_4X4 is also defined,
 //                           ext/nic400_vipv3b  ... 10x10, QoS, VIP ENHANCED map
 //                           otherwise.
-// NIC400_PORTS           -> how many of the VIP's agents attach to the fabric.
-// NIC400_EGRESS_ID_WIDTH -> the fabric's egress AxID width, which is
+// FABRIC_IP_PORTS           -> how many of the VIP's agents attach to the fabric.
+// FABRIC_IP_EGRESS_ID_WIDTH -> the fabric's egress AxID width, which is
 //                           GlobalIDWidth = VIDWidth(4) + ceil(log2(ports)).
-`ifdef NIC400_4X4
-  `ifndef NIC400_PORTS
-    `define NIC400_PORTS 4
+`ifdef FABRIC_IP_4X4
+  `ifndef FABRIC_IP_PORTS
+    `define FABRIC_IP_PORTS 4
   `endif
-  `ifndef NIC400_EGRESS_ID_WIDTH
-    `define NIC400_EGRESS_ID_WIDTH 6
+  `ifndef FABRIC_IP_EGRESS_ID_WIDTH
+    `define FABRIC_IP_EGRESS_ID_WIDTH 6
   `endif
 `else
-  `ifndef NIC400_PORTS
-    `define NIC400_PORTS 10
+  `ifndef FABRIC_IP_PORTS
+    `define FABRIC_IP_PORTS 10
   `endif
-  `ifndef NIC400_EGRESS_ID_WIDTH
-    `define NIC400_EGRESS_ID_WIDTH 8
+  `ifndef FABRIC_IP_EGRESS_ID_WIDTH
+    `define FABRIC_IP_EGRESS_ID_WIDTH 8
   `endif
 `endif
 

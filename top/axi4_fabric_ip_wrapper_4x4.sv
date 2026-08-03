@@ -1,18 +1,18 @@
 //------------------------------------------------------------------------------
-// axi4_nic400_fabric_wrapper
+// axi4_fabric_ip_wrapper
 //
 // GENERATED from nic400_vip4x4q.v -- do not hand edit.
 //
-// Presents the flat, per-port NIC-400 fabric top (nic400_vip4x4q) as vectorised
+// Presents the flat, per-port commercial fabric IP top (nic400_vip4x4q) as vectorised
 // buses so hdl_top can connect the VIP interface arrays in a generate loop.
 //
 //   m_*  : fabric INGRESS  (fabric AXI4_Slave<N>)  <- VIP master agents drive
 //   s_*  : fabric EGRESS   (fabric AXI4_Master<N>) -> VIP slave  agents respond
 //------------------------------------------------------------------------------
-`ifndef AXI4_NIC400_FABRIC_WRAPPER_INCLUDED_
-`define AXI4_NIC400_FABRIC_WRAPPER_INCLUDED_
+`ifndef AXI4_FABRIC_IP_WRAPPER_INCLUDED_
+`define AXI4_FABRIC_IP_WRAPPER_INCLUDED_
 
-module axi4_nic400_fabric_wrapper #(
+module axi4_fabric_ip_wrapper #(
   parameter int NUM = 4
 ) (
   input logic clk,
@@ -455,6 +455,6 @@ module axi4_nic400_fabric_wrapper #(
     .WVALID_AXI4_Master3(s_wvalid[3])
   );
 
-endmodule : axi4_nic400_fabric_wrapper
+endmodule : axi4_fabric_ip_wrapper
 
 `endif

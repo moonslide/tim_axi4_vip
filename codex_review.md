@@ -257,7 +257,7 @@ Process exit code 0；log 明確包含 `TestCase PASSED!!!`、`UVM_ERROR : 0`、
 以下不計入 8 P1 + 2 P2，但在提交前應處理：
 
 - 新增的 Track-B-specific tests、sequences、NIC-400 wrappers/filelists 與 smoke script 目前全是 untracked；`git ls-files` 對這些路徑均無輸出。若只提交 tracked diff，整條 Track-B flow 會遺失。
-- [top/axi4_nic400_fabric_wrapper.sv:4](top/axi4_nic400_fabric_wrapper.sv#L4) 宣稱由 `scratchpad/gen_wrapper.py` 生成，但該 generator 不在 worktree；兩個 wrapper 合計 1,439 lines，無法可靠重建或 diff source-of-truth。
+- [top/axi4_fabric_ip_wrapper.sv:4](top/axi4_fabric_ip_wrapper.sv#L4) 宣稱由 `scratchpad/gen_wrapper.py` 生成，但該 generator 不在 worktree；兩個 wrapper 合計 1,439 lines，無法可靠重建或 diff source-of-truth。
 - [sim/coverage_scope.cm_hier:1](sim/coverage_scope.cm_hier#L1) 使用 `#` comments，fresh VCS build 產生 20 個 hierarchy-region warnings。應改用工具支援的 comment syntax，並確認 include/exclude directives 實際套用後再採信 code coverage。
 
 ## Agent 狀態

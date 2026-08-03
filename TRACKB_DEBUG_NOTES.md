@@ -1,4 +1,4 @@
-# Track-B (NIC-400 fabric DUT) — read-path investigation notes
+# Track-B (commercial fabric IP DUT) — read-path investigation notes
 
 Status (2026-08-01, re-measured, supersedes everything below): **the read path
 is closed.** Reads now reach the fabric egress and return data through it. The
@@ -196,9 +196,9 @@ none.
 cd sim/synopsys_sim
 vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
     -override_timescale=1ps/1ps +nospecify +no_timing_check \
-    +define+BUS_MATRIX_NIC400 +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 \
-    +define+NIC400_DEBUG_PROBE \
-    -f ../../sim/axi4_compile_nic400.f -o simv
+    +define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 \
+    +define+FABRIC_IP_DEBUG_PROBE \
+    -f ../../sim/axi4_compile_fabric_ip.f -o simv
 ./simv +UVM_TESTNAME=axi4_trackb_smoke_test +BUS_MATRIX_MODE=ENHANCED
 ```
 
@@ -209,7 +209,7 @@ bash ../run_fabric_smoke.sh      # 3/3 PASS
 
 ## What is PROVEN good
 
-* **ARM NIC-400 RTL + `axi4_nic400_fabric_wrapper` are correct.**
+* **ARM NIC-400 RTL + `axi4_fabric_ip_wrapper` are correct.**
   `top/tb_fabric_smoke.sv` passes 3/3: unmapped address -> DECERR, S0 write ->
   OKAY, S0 read -> OKAY with the correct RID routed back to ingress 0.
   Treat the ARM RTL as golden; every remaining problem is on the VIP side.
@@ -314,7 +314,7 @@ Masters then hit `timeout waiting for rvalid`
    — a single edge. Stateless direct wiring does not care; NIC-400 arbiters,
    outstanding-transaction FIFOs and CDC structures do. `top/hdl_top.sv` now
    holds reset for 16 cycles and idles 8 more before traffic, under
-   `BUS_MATRIX_NIC400` only.
+   `BUS_MATRIX_FABRIC_IP` only.
 
 Neither patch fixed the read stall on its own, but both are genuine defects
 exposed by putting real RTL in the path.
@@ -368,7 +368,7 @@ Specific things worth checking in that trace:
 
 | Hypothesis | How it was refuted |
 |---|---|
-| Reset must be asserted from time 0 (as the passing standalone TB does), because `hdl_top` starts with `aresetn = 1'b1` and only asserts at `#10`, letting real RTL latch X | Tried `aresetn = 1'b0` from time 0 under `BUS_MATRIX_NIC400`. Made it **worse**: the simulation hangs after "Initial reset completed" at t=490 with **zero** egress activity (previously writes at least reached EGRESS[2]). Change reverted |
+| Reset must be asserted from time 0 (as the passing standalone TB does), because `hdl_top` starts with `aresetn = 1'b1` and only asserts at `#10`, letting real RTL latch X | Tried `aresetn = 1'b0` from time 0 under `BUS_MATRIX_FABRIC_IP`. Made it **worse**: the simulation hangs after "Initial reset completed" at t=490 with **zero** egress activity (previously writes at least reached EGRESS[2]). Change reverted |
 
 Remaining reset-related patch that IS kept: 16 cycles asserted + 8 idle cycles
 after release (still starting from `aresetn = 1'b1` at time 0, as upstream).

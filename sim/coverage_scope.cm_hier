@@ -1,8 +1,8 @@
-# Code-coverage instrumentation scope for the Track-B (NIC-400 fabric) builds.
+# Code-coverage instrumentation scope for the Track-B (commercial fabric IP) builds.
 #
 # Project scope decision (2026-08-02): the VIP verifies up to the fabric
-# INTERFACE only. The ARM NIC-400 internals are licensed third-party IP,
-# delivered pre-verified by ARM, and are golden here (project iron rule 1:
+# INTERFACE only. The commercial fabric IP internals are licensed third-party
+# IP, delivered pre-verified, and are golden here (project iron rule 1:
 # never patch ext/). Leaving them instrumented put ~300 .v files of ARM RTL in
 # the code-coverage denominator, which is neither our verification target nor
 # something our stimulus is meant to close -- it just deflated LINE/TOGGLE and
@@ -10,13 +10,13 @@
 #
 # What stays instrumented:
 #   hdl_top                      - clock/reset, the VIP<->fabric wiring block
-#   u_nic400_fabric              - axi4_nic400_fabric_wrapper, the vectorised
-#                                  interface adapter we wrote and DO own
+#   u_fabric_ip     - axi4_fabric_ip_wrapper, the vectorised interface
+#                      adapter we wrote and DO own
 #   the whole VIP (agents, env, bfm interfaces)
 # What is excluded:
-#   u_nic400_fabric.u_fabric     - the generated NIC-400 itself (ASIBs, AMIBs,
-#                                  busmatrix, arbiters, CDC, default slave)
+#   u_fabric_ip.u_fabric - the generated fabric IP itself (ASIBs, AMIBs,
+#                          busmatrix, arbiters, CDC, default slave)
 #
 # Usage: vcs ... -cm_hier ../../sim/coverage_scope.cm_hier
 +tree hdl_top
--tree hdl_top.u_nic400_fabric.u_fabric
+-tree hdl_top.u_fabric_ip.u_fabric

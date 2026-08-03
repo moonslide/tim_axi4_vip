@@ -5,7 +5,7 @@
 // Class: axi4_master_trackb_read_seq
 //
 // Read counterpart of axi4_master_trackb_write_seq: address constrained to a
-// mapped NIC-400 region. If read_addr is set (non-zero) the sequence reads
+// mapped fabric IP region. If read_addr is set (non-zero) the sequence reads
 // exactly that address, which lets a test do a write-then-read-back pair.
 //--------------------------------------------------------------------------------------------
 class axi4_master_trackb_read_seq extends axi4_master_trackb_base_seq;

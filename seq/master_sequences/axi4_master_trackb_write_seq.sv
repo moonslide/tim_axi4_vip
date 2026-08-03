@@ -5,7 +5,7 @@
 // Class: axi4_master_trackb_write_seq
 //
 // Non-blocking write whose address is constrained to a mapped region of the
-// NIC-400 fabric, so the transaction actually reaches a VIP slave agent
+// commercial fabric IP, so the transaction actually reaches a VIP slave agent
 // instead of being answered with DECERR by the fabric's default slave.
 // See axi4_master_trackb_base_seq for the reasoning and the region table.
 //--------------------------------------------------------------------------------------------

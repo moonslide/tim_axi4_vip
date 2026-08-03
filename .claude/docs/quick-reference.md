@@ -4,7 +4,7 @@ Build/run/test-select/pass-criteria: see project `CLAUDE.md` (single source).
 
 | Thing | Where |
 |---|---|
-| Compile filelists | `sim/axi4_compile.f` (baseline), `sim/axi4_compile_nic400.f` (Track-B) |
+| Compile filelists | `sim/axi4_compile.f` (baseline), `sim/axi4_compile_fabric_ip.f` (Track-B) |
 | Regression lists (x2, keep in sync) | `sim/` and `testlists/axi4_transfers_regression.list` |
 | Fabric RTL (golden, do not edit) | `ext/nic400_vipv3b/` |
 | Fabric sanity | `bash sim/run_fabric_smoke.sh` → 3/3 PASS |

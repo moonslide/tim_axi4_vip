@@ -26,11 +26,11 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
     -f ../../sim/axi4_compile.f -o simv
 ./simv +UVM_TESTNAME=<test> +UVM_VERBOSITY=UVM_LOW
 
-# Track-B (real ARM NIC-400 fabric DUT in ext/nic400_vipv3b)
-#   +define+BUS_MATRIX_NIC400 +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255
-#   -f ../../sim/axi4_compile_nic400.f
+# Track-B (real commercial fabric IP DUT in ext/nic400_vipv3b)
+#   +define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255
+#   -f ../../sim/axi4_compile_fabric_ip.f
 #   run with +BUS_MATRIX_MODE=ENHANCED
-#   optional +define+NIC400_DEBUG_PROBE for fabric-boundary tracing
+#   optional +define+FABRIC_IP_DEBUG_PROBE for fabric-boundary tracing
 
 # fabric-only sanity (no UVM): bash ../run_fabric_smoke.sh   # expect 3/3 PASS
 ```
@@ -46,28 +46,28 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
   include-order decides; see landmines.
 
 ### Coverage scope (decided 2026-08-02)
-- Code coverage is measured **to the fabric interface only**. The ARM NIC-400
-  internals are licensed third-party IP, delivered pre-verified, and golden
+- Code coverage is measured **to the fabric interface only**. The commercial
+  fabric IP internals are licensed third-party IP, delivered pre-verified, and golden
   here (iron rule 1) - they are not a VIP verification target and ~300 .v files
   of them in the denominator only deflate LINE/TOGGLE.
 - Enforced at instrumentation time, not in the report:
   `vcs ... -cm_hier ../../sim/coverage_scope.cm_hier`
-  which keeps `hdl_top` and `u_nic400_fabric` (our wrapper) and drops
-  `u_nic400_fabric.u_fabric` (the generated NIC-400).
+  which keeps `hdl_top` and `u_fabric_ip` (our wrapper) and drops
+  `u_fabric_ip.u_fabric` (the generated fabric IP).
 - Functional coverage has no such carve-out: the covergroups live in the VIP
   and all of them count.
 
 ### Key documents
 - `claude.md` — 10x10 access matrix + address map (authoritative spec)
 - `VIP_future.md` — improvement plan (rev 3, post adversarial review)
-- `TRACKB_DEBUG_NOTES.md` — NIC-400 integration evidence chain + open items
+- `TRACKB_DEBUG_NOTES.md` — fabric IP integration evidence chain + open items
 - `AXI-Case-list.csv`, `doc/testcase_matrix.csv` — case status
   (matrix.csv had stale fake-PASS entries; verify before trusting)
 
 ## Publish & upload policy (HARD GATE — no exceptions without human consent)
 
-**Never upload the NIC-400 fabric RTL.** The ARM NIC-400 deliverable under
-`ext/` (`nic400_vipv3b/`, `nic400_vip4x4q/` — ~705 RTL files) is licensed
+**Never upload the commercial fabric IP RTL.** The licensed fabric IP deliverable
+under `ext/` (`nic400_vipv3b/`, `nic400_vip4x4q/` — ~705 RTL files) is licensed
 third-party IP. It is local-only.
 
 Forbidden without explicit, per-instance human approval — for `ext/**` and
@@ -83,7 +83,7 @@ Enforced mechanically by `.gitignore` (`ext/` + build artifacts). The
 `.gitignore` entry is part of the policy — do not remove or override it.
 
 **What IS ours and may be committed** (project-authored, no ARM source inside):
-`top/axi4_nic400_fabric_wrapper*.sv`, `sim/*nic400*.f` file lists,
+`top/axi4_fabric_ip_wrapper*.sv`, `sim/axi4_compile_fabric_ip*.f`, `sim/fabric_ip*.f` file lists,
 `sim/run_fabric_smoke.sh`, `test/axi4_trackb_*`, `seq/master_sequences/axi4_master_trackb_*`,
 `TRACKB_DEBUG_NOTES.md`. These reference `ext/` by *path* only — that is fine;
 never inline ARM RTL source into them to "make them self-contained".

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Directed smoke test for the NIC-400 fabric + axi4_nic400_fabric_wrapper.
+# Directed smoke test for the commercial fabric IP + axi4_fabric_ip_wrapper.
 # Proves the Track-B wiring carries a transaction end to end:
 #   CASE1 unmapped address -> DECERR from the fabric's default slave
 #   CASE2 S0 base address  -> routed to egress 0, OKAY returned to ingress 0
@@ -18,8 +18,8 @@ set -e
 OUT=${1:-./fabric_smoke_work}
 mkdir -p "$OUT"
 vcs -full64 -sverilog +v2k -override_timescale=1ps/1ps +nospecify +no_timing_check \
-    -f ../../sim/nic400_rtl.f \
-    ../../top/axi4_nic400_fabric_wrapper.sv \
+    -f ../../sim/fabric_ip_rtl.f \
+    ../../top/axi4_fabric_ip_wrapper.sv \
     ../../top/tb_fabric_smoke.sv \
     -top tb_fabric_smoke -Mdir="$OUT/csrc" -l "$OUT/vcs.log" -o "$OUT/simv"
 

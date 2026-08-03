@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------
-// tb_fabric_smoke -- directed smoke test for the NIC-400 fabric + the
-// generated axi4_nic400_fabric_wrapper.
+// tb_fabric_smoke -- directed smoke test for the commercial fabric IP + the
+// generated axi4_fabric_ip_wrapper.
 //
 // Purpose: prove the wrapper wiring actually carries a transaction end to end,
 // with fail-then-pass evidence from the fabric's own address decoder:
@@ -54,7 +54,7 @@ module tb_fabric_smoke;
   logic [NUM-1:0][255:0] s_rdata;
   logic [NUM-1:0][15:0]  s_buser, s_ruser;
 
-  axi4_nic400_fabric_wrapper #(.NUM(NUM)) dut (
+  axi4_fabric_ip_wrapper #(.NUM(NUM)) dut (
     .clk(clk), .resetn(resetn),
     .m_awid(m_awid), .m_awaddr(m_awaddr), .m_awlen(m_awlen), .m_awsize(m_awsize),
     .m_awburst(m_awburst), .m_awlock(m_awlock), .m_awcache(m_awcache), .m_awprot(m_awprot),

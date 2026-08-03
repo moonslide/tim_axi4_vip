@@ -5,7 +5,7 @@
 //--------------------------------------------------------------------------------------------
 // Class: axi4_master_trackb_cov_sweep_seq
 //
-// Coverage-directed sweep for the Track-B (NIC-400 fabric) builds.
+// Coverage-directed sweep for the Track-B (commercial fabric IP) builds.
 //
 // The two existing Track-B sequences drive ONE write and ONE read per master with
 // mostly-random attributes, which leaves nearly every attribute bin unhit: measured

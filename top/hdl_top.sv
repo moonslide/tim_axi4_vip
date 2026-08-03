@@ -288,7 +288,7 @@ module hdl_top;
     aresetn = 1'b1;
     #10 aresetn = 1'b0;
 
-`ifdef BUS_MATRIX_NIC400
+`ifdef BUS_MATRIX_FABRIC_IP
     // The 1:1 direct wiring is stateless, so a single-edge reset is enough for
     // it. Real RTL is not: the NIC-400 fabric has arbiters, outstanding-
     // transaction FIFOs and clock-domain structures that need several cycles of
@@ -306,7 +306,7 @@ module hdl_top;
 
     aresetn = 1'b1;
 
-`ifdef BUS_MATRIX_NIC400
+`ifdef BUS_MATRIX_FABRIC_IP
     // Give the fabric a few idle cycles after release before traffic starts.
     repeat (8) @(posedge aclk);
 `endif
@@ -545,9 +545,9 @@ module hdl_top;
     end
   endgenerate
   //-------------------------------------------------------------------------
-  // Track-B DUT: ARM CoreLink NIC-400 arbitrated AXI4 fabric
+  // Track-B DUT: commercial fabric IP, arbitrated AXI4 fabric
   //
-  // Compile with +define+BUS_MATRIX_NIC400 (plus +define+DATA_WIDTH=256 and
+  // Compile with +define+BUS_MATRIX_FABRIC_IP (plus +define+DATA_WIDTH=256 and
   // +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255) to route every master through a real crossbar
   // with arbitration, instead of the 1:1 direct wiring below. Only then are
   // cyclic-dependency deadlock, same-ID head-of-line blocking and hotspot
@@ -556,109 +556,109 @@ module hdl_top;
   // Fabric: ext/nic400_vipv3b (10 ingress x 10 egress, QoS from_master).
   // GENERATED connection block -- see scratchpad/gen_hdltop_block.py
   //-------------------------------------------------------------------------
-`ifdef BUS_MATRIX_NIC400
+`ifdef BUS_MATRIX_FABRIC_IP
 
   // ---- ingress vectors: VIP master agents -> fabric AXI4_Slave<N> ----
-  // NOTE: sized by `NIC400_PORTS (4 under NIC400_4X4, else 10), NOT by
+  // NOTE: sized by `FABRIC_IP_PORTS (4 under FABRIC_IP_4X4, else 10), NOT by
   // NO_OF_MASTERS/NO_OF_SLAVES -- those are the VIP-wide agent count, gated
   // by the unrelated RUN_4X4_CONFIG knob, and stay 10 in a Track-B 4x4 build
-  // (BUS_MATRIX_NIC400 + NIC400_4X4). Using NO_OF_MASTERS/NO_OF_SLAVES here
+  // (BUS_MATRIX_FABRIC_IP + FABRIC_IP_4X4). Using NO_OF_MASTERS/NO_OF_SLAVES here
   // silently over-sized these vectors 10-wide against the wrapper's 4-wide
   // ports -> VCS Warning-[PCWM-W] port width mismatch on every signal.
-  logic [`NIC400_PORTS-1:0][63:0] nic_m_araddr;
-  logic [`NIC400_PORTS-1:0][1:0] nic_m_arburst;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_arcache;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_arid;
-  logic [`NIC400_PORTS-1:0][7:0] nic_m_arlen;
-  logic [`NIC400_PORTS-1:0]      nic_m_arlock;
-  logic [`NIC400_PORTS-1:0][2:0] nic_m_arprot;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_arqos;
-  logic [`NIC400_PORTS-1:0]      nic_m_arready;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_arregion;
-  logic [`NIC400_PORTS-1:0][2:0] nic_m_arsize;
-  logic [`NIC400_PORTS-1:0][31:0] nic_m_aruser;
-  logic [`NIC400_PORTS-1:0]      nic_m_arvalid;
-  logic [`NIC400_PORTS-1:0][63:0] nic_m_awaddr;
-  logic [`NIC400_PORTS-1:0][1:0] nic_m_awburst;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_awcache;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_awid;
-  logic [`NIC400_PORTS-1:0][7:0] nic_m_awlen;
-  logic [`NIC400_PORTS-1:0]      nic_m_awlock;
-  logic [`NIC400_PORTS-1:0][2:0] nic_m_awprot;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_awqos;
-  logic [`NIC400_PORTS-1:0]      nic_m_awready;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_awregion;
-  logic [`NIC400_PORTS-1:0][2:0] nic_m_awsize;
-  logic [`NIC400_PORTS-1:0][31:0] nic_m_awuser;
-  logic [`NIC400_PORTS-1:0]      nic_m_awvalid;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_bid;
-  logic [`NIC400_PORTS-1:0]      nic_m_bready;
-  logic [`NIC400_PORTS-1:0][1:0] nic_m_bresp;
-  logic [`NIC400_PORTS-1:0][15:0] nic_m_buser;
-  logic [`NIC400_PORTS-1:0]      nic_m_bvalid;
-  logic [`NIC400_PORTS-1:0][255:0] nic_m_rdata;
-  logic [`NIC400_PORTS-1:0][3:0] nic_m_rid;
-  logic [`NIC400_PORTS-1:0]      nic_m_rlast;
-  logic [`NIC400_PORTS-1:0]      nic_m_rready;
-  logic [`NIC400_PORTS-1:0][1:0] nic_m_rresp;
-  logic [`NIC400_PORTS-1:0][15:0] nic_m_ruser;
-  logic [`NIC400_PORTS-1:0]      nic_m_rvalid;
-  logic [`NIC400_PORTS-1:0][255:0] nic_m_wdata;
-  logic [`NIC400_PORTS-1:0]      nic_m_wlast;
-  logic [`NIC400_PORTS-1:0]      nic_m_wready;
-  logic [`NIC400_PORTS-1:0][31:0] nic_m_wstrb;
-  logic [`NIC400_PORTS-1:0][31:0] nic_m_wuser;
-  logic [`NIC400_PORTS-1:0]      nic_m_wvalid;
+  logic [`FABRIC_IP_PORTS-1:0][63:0] nic_m_araddr;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_arburst;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arcache;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arid;
+  logic [`FABRIC_IP_PORTS-1:0][7:0] nic_m_arlen;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_arlock;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_arprot;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arqos;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_arready;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arregion;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_arsize;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_aruser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_arvalid;
+  logic [`FABRIC_IP_PORTS-1:0][63:0] nic_m_awaddr;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_awburst;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awcache;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awid;
+  logic [`FABRIC_IP_PORTS-1:0][7:0] nic_m_awlen;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_awlock;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_awprot;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awqos;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_awready;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awregion;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_awsize;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_awuser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_awvalid;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_bid;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_bready;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_bresp;
+  logic [`FABRIC_IP_PORTS-1:0][15:0] nic_m_buser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_bvalid;
+  logic [`FABRIC_IP_PORTS-1:0][255:0] nic_m_rdata;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_rid;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_rlast;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_rready;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_rresp;
+  logic [`FABRIC_IP_PORTS-1:0][15:0] nic_m_ruser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_rvalid;
+  logic [`FABRIC_IP_PORTS-1:0][255:0] nic_m_wdata;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_wlast;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_wready;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_wstrb;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_wuser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_m_wvalid;
 
   // ---- egress vectors: fabric AXI4_Master<N> -> VIP slave agents ----
-  logic [`NIC400_PORTS-1:0][63:0] nic_s_araddr;
-  logic [`NIC400_PORTS-1:0][1:0] nic_s_arburst;
-  logic [`NIC400_PORTS-1:0][3:0] nic_s_arcache;
-  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_arid;
-  logic [`NIC400_PORTS-1:0][7:0] nic_s_arlen;
-  logic [`NIC400_PORTS-1:0]      nic_s_arlock;
-  logic [`NIC400_PORTS-1:0][2:0] nic_s_arprot;
-  logic [`NIC400_PORTS-1:0]      nic_s_arready;
-  logic [`NIC400_PORTS-1:0][3:0] nic_s_arregion;
-  logic [`NIC400_PORTS-1:0][2:0] nic_s_arsize;
-  logic [`NIC400_PORTS-1:0][31:0] nic_s_aruser;
-  logic [`NIC400_PORTS-1:0]      nic_s_arvalid;
-  logic [`NIC400_PORTS-1:0][63:0] nic_s_awaddr;
-  logic [`NIC400_PORTS-1:0][1:0] nic_s_awburst;
-  logic [`NIC400_PORTS-1:0][3:0] nic_s_awcache;
-  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_awid;
-  logic [`NIC400_PORTS-1:0][7:0] nic_s_awlen;
-  logic [`NIC400_PORTS-1:0]      nic_s_awlock;
-  logic [`NIC400_PORTS-1:0][2:0] nic_s_awprot;
-  logic [`NIC400_PORTS-1:0]      nic_s_awready;
-  logic [`NIC400_PORTS-1:0][3:0] nic_s_awregion;
-  logic [`NIC400_PORTS-1:0][2:0] nic_s_awsize;
-  logic [`NIC400_PORTS-1:0][31:0] nic_s_awuser;
-  logic [`NIC400_PORTS-1:0]      nic_s_awvalid;
-  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_bid;
-  logic [`NIC400_PORTS-1:0]      nic_s_bready;
-  logic [`NIC400_PORTS-1:0][1:0] nic_s_bresp;
-  logic [`NIC400_PORTS-1:0][15:0] nic_s_buser;
-  logic [`NIC400_PORTS-1:0]      nic_s_bvalid;
-  logic [`NIC400_PORTS-1:0][255:0] nic_s_rdata;
-  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_rid;
-  logic [`NIC400_PORTS-1:0]      nic_s_rlast;
-  logic [`NIC400_PORTS-1:0]      nic_s_rready;
-  logic [`NIC400_PORTS-1:0][1:0] nic_s_rresp;
-  logic [`NIC400_PORTS-1:0][15:0] nic_s_ruser;
-  logic [`NIC400_PORTS-1:0]      nic_s_rvalid;
-  logic [`NIC400_PORTS-1:0][255:0] nic_s_wdata;
-  logic [`NIC400_PORTS-1:0]      nic_s_wlast;
-  logic [`NIC400_PORTS-1:0]      nic_s_wready;
-  logic [`NIC400_PORTS-1:0][31:0] nic_s_wstrb;
-  logic [`NIC400_PORTS-1:0][31:0] nic_s_wuser;
-  logic [`NIC400_PORTS-1:0]      nic_s_wvalid;
+  logic [`FABRIC_IP_PORTS-1:0][63:0] nic_s_araddr;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_s_arburst;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_s_arcache;
+  logic [`FABRIC_IP_PORTS-1:0][`FABRIC_IP_EGRESS_ID_WIDTH-1:0] nic_s_arid;
+  logic [`FABRIC_IP_PORTS-1:0][7:0] nic_s_arlen;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_arlock;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_s_arprot;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_arready;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_s_arregion;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_s_arsize;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_s_aruser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_arvalid;
+  logic [`FABRIC_IP_PORTS-1:0][63:0] nic_s_awaddr;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_s_awburst;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_s_awcache;
+  logic [`FABRIC_IP_PORTS-1:0][`FABRIC_IP_EGRESS_ID_WIDTH-1:0] nic_s_awid;
+  logic [`FABRIC_IP_PORTS-1:0][7:0] nic_s_awlen;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_awlock;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_s_awprot;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_awready;
+  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_s_awregion;
+  logic [`FABRIC_IP_PORTS-1:0][2:0] nic_s_awsize;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_s_awuser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_awvalid;
+  logic [`FABRIC_IP_PORTS-1:0][`FABRIC_IP_EGRESS_ID_WIDTH-1:0] nic_s_bid;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_bready;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_s_bresp;
+  logic [`FABRIC_IP_PORTS-1:0][15:0] nic_s_buser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_bvalid;
+  logic [`FABRIC_IP_PORTS-1:0][255:0] nic_s_rdata;
+  logic [`FABRIC_IP_PORTS-1:0][`FABRIC_IP_EGRESS_ID_WIDTH-1:0] nic_s_rid;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_rlast;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_rready;
+  logic [`FABRIC_IP_PORTS-1:0][1:0] nic_s_rresp;
+  logic [`FABRIC_IP_PORTS-1:0][15:0] nic_s_ruser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_rvalid;
+  logic [`FABRIC_IP_PORTS-1:0][255:0] nic_s_wdata;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_wlast;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_wready;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_s_wstrb;
+  logic [`FABRIC_IP_PORTS-1:0][31:0] nic_s_wuser;
+  logic [`FABRIC_IP_PORTS-1:0]      nic_s_wvalid;
 
   genvar jn;
   generate
     // Only the ports this fabric actually has are wired; the rest of the VIP's
     // agents stay on their idle defaults.
-    for (jn = 0; jn < `NIC400_PORTS; jn++) begin : nic_ingress_connect
+    for (jn = 0; jn < `FABRIC_IP_PORTS; jn++) begin : nic_ingress_connect
       // VIP master drives the fabric ingress
       assign nic_m_araddr[jn] = master_if_gen[jn].master_intf.araddr;
       assign nic_m_arburst[jn] = master_if_gen[jn].master_intf.arburst;
@@ -730,7 +730,7 @@ module hdl_top;
       assign nic_m_wvalid[jn] = (master_if_gen[jn].master_intf.wvalid === 1'b1);
     end
 
-    for (jn = 0; jn < `NIC400_PORTS; jn++) begin : nic_egress_connect
+    for (jn = 0; jn < `FABRIC_IP_PORTS; jn++) begin : nic_egress_connect
       // fabric egress drives the VIP slave agent
       assign slave_if_gen[jn].slave_intf.araddr = nic_s_araddr[jn];
       assign slave_if_gen[jn].slave_intf.arburst = nic_s_arburst[jn];
@@ -780,13 +780,13 @@ module hdl_top;
     end
   endgenerate
 
-  // Fabric boundary probe. Compile with +define+NIC400_DEBUG_PROBE to trace what
+  // Fabric boundary probe. Compile with +define+FABRIC_IP_DEBUG_PROBE to trace what
   // the VIP actually presents to the fabric and what the fabric issues back.
   // This is how the read-path investigation established that reads are accepted
   // at ingress (arready=1) yet never issued on any egress port.
-`ifdef NIC400_DEBUG_PROBE
+`ifdef FABRIC_IP_DEBUG_PROBE
   always @(posedge aclk) begin
-    for (int pp = 0; pp < `NIC400_PORTS; pp++) begin
+    for (int pp = 0; pp < `FABRIC_IP_PORTS; pp++) begin
       if (nic_s_arvalid[pp] === 1'bx)
         $display("  [NICPROBE] t=%0t EGRESS[%0d] ARVALID is X", $time, pp);
       else if (nic_s_arvalid[pp])
@@ -800,7 +800,7 @@ module hdl_top;
       else if (nic_s_bvalid[pp])
         $display("  [NICPROBE] t=%0t EGRESS[%0d] BVALID bid=0x%02h bready=%0b", $time, pp, nic_s_bid[pp], nic_s_bready[pp]);
     end
-    for (int pp = 0; pp < `NIC400_PORTS; pp++) begin
+    for (int pp = 0; pp < `FABRIC_IP_PORTS; pp++) begin
       if (nic_m_arvalid[pp] === 1'b1)
         $display("  [NICPROBE] t=%0t INGRESS[%0d] ARVALID araddr=0x%016h arready=%0b",
                  $time, pp, nic_m_araddr[pp], nic_m_arready[pp]);
@@ -814,7 +814,7 @@ module hdl_top;
   end
 `endif
 
-  axi4_nic400_fabric_wrapper #(.NUM(`NIC400_PORTS)) u_nic400_fabric (
+  axi4_fabric_ip_wrapper #(.NUM(`FABRIC_IP_PORTS)) u_fabric_ip (
     .clk   (aclk),
     .resetn(aresetn),
     .m_araddr(nic_m_araddr),
@@ -967,7 +967,7 @@ module hdl_top;
       assign slave_if_gen[j].slave_intf.rready   = master_if_gen[j].master_intf.rready;
     end
   endgenerate 
-`endif // BUS_MATRIX_NIC400
+`endif // BUS_MATRIX_FABRIC_IP
   //-------------------------------------------------------
   // Reset Signal Monitor Instance
   // Monitors and verifies all reset signal transitions

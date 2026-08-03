@@ -1,7 +1,7 @@
-// Track-B 4x4 compile filelist: VIP + the 4x4 QoS NIC-400 fabric.
+// Track-B 4x4 compile filelist: VIP + the 4x4 QoS commercial fabric IP.
 //
 // Use together with:
-//   +define+BUS_MATRIX_NIC400 +define+NIC400_4X4
+//   +define+BUS_MATRIX_FABRIC_IP +define+FABRIC_IP_4X4
 //   +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=6 +define+AXI_ID_LAST=63
 //
 // The fabric in ext/nic400_vip4x4q carries the VIP's BASE (4x4) bus-matrix
@@ -11,6 +11,6 @@
 // Paths are relative to sim/<simulator>/ like axi4_compile.f.
 -f ../../sim/axi4_compile.f
 
-// generated NIC-400 4x4 QoS fabric + vectorised wrapper
--f ../../sim/nic400_4x4_rtl.f
-../../top/axi4_nic400_fabric_wrapper_4x4.sv
+// generated fabric IP 4x4 QoS fabric + vectorised wrapper
+-f ../../sim/fabric_ip_4x4_rtl.f
+../../top/axi4_fabric_ip_wrapper_4x4.sv

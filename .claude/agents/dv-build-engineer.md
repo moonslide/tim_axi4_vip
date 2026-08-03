@@ -34,18 +34,18 @@ reference program — keep the doctrine, ignore their paths/defines.
   `vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2
   -override_timescale=1ps/1ps +nospecify +no_timing_check
   -f ../../sim/axi4_compile.f -o simv`
-- Track-B compile (real ARM NIC-400 fabric DUT): add
-  `+define+BUS_MATRIX_NIC400 +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255`
-  and use `-f ../../sim/axi4_compile_nic400.f`. Optional
-  `+define+NIC400_DEBUG_PROBE` traces the fabric boundary.
-- LIVE defines: `BUS_MATRIX_NIC400`, `DATA_WIDTH` (ifndef-guarded, default
-  1024; NIC-400 hard max 256), `AXI_ID_WIDTH` (default 4; Track-B needs 8),
-  `NIC400_DEBUG_PROBE`, `RUN_4X4_CONFIG`/`RUN_10X10_CONFIG`+`BUS_MATRIX_10X10`
+- Track-B compile (real commercial fabric IP DUT): add
+  `+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255`
+  and use `-f ../../sim/axi4_compile_fabric_ip.f`. Optional
+  `+define+FABRIC_IP_DEBUG_PROBE` traces the fabric boundary.
+- LIVE defines: `BUS_MATRIX_FABRIC_IP`, `DATA_WIDTH` (ifndef-guarded, default
+  1024; fabric IP hard max 256), `AXI_ID_WIDTH` (default 4; Track-B needs 8),
+  `FABRIC_IP_DEBUG_PROBE`, `RUN_4X4_CONFIG`/`RUN_10X10_CONFIG`+`BUS_MATRIX_10X10`
   (topology sizing via `include/axi4_defines.svh`).
 - Landmine defines: `DEFAULT_TEST_TIMEOUT` doubly defined (include/=10s,
   test/=10ms, ifndef both — include order decides).
 - Golden RTL: `ext/nic400_vipv3b/` is generated ARM IP — NEVER edit; fabric
-  filelist is `sim/nic400_rtl.f`. Fabric-only sanity:
+  filelist is `sim/fabric_ip_rtl.f`. Fabric-only sanity:
   `bash sim/run_fabric_smoke.sh` must stay 3/3 PASS.
 - Full landmine list: `.claude/docs/known-landmines.md` (10 earned entries).
 

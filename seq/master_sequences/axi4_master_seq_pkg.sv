@@ -219,7 +219,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_cross_id_write_reorder_seq.sv"
   `include "axi4_master_cross_id_read_reorder_seq.sv"
 
-  // Track-B sequences: addresses constrained to the NIC-400 fabric memory map
+  // Track-B sequences: addresses constrained to the fabric IP memory map
   `include "axi4_master_trackb_base_seq.sv"
   `include "axi4_master_trackb_write_seq.sv"
   `include "axi4_master_trackb_read_seq.sv"

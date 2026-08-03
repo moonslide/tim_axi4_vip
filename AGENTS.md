@@ -238,7 +238,7 @@ this paragraph is the fallback summary and still binds.
    (coordinator recommends; humans decide). 12. Git commits/tags/pushes
    (consent-gated). Everything between the gates is agent-executable.
 
-**Licensed-IP egress gate (this repo, absolute).** The ARM NIC-400 fabric
+**Licensed-IP egress gate (this repo, absolute).** The commercial fabric IP
 RTL under `ext/` is licensed third-party IP: never `git add`/commit/push it,
 never upload it to a remote/gist/PR/web tool/MCP service, never bundle it or
 its simulator artifacts (`sim/synopsys_sim/csrc*`, `simv*`, `*.daidir`) into

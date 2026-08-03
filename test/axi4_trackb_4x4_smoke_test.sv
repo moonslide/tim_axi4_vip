@@ -4,16 +4,16 @@
 //--------------------------------------------------------------------------------------------
 // Class: axi4_trackb_4x4_smoke_test
 //
-// Track-B smoke test against the 4x4 QoS NIC-400 fabric (ext/nic400_vip4x4q).
+// Track-B smoke test against the 4x4 QoS commercial fabric IP (ext/nic400_vip4x4q).
 //
 // Build with:
-//   +define+BUS_MATRIX_NIC400 +define+NIC400_4X4
+//   +define+BUS_MATRIX_FABRIC_IP +define+FABRIC_IP_4X4
 //   +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=6 +define+AXI_ID_LAST=63
-//   -f ../../sim/axi4_compile_nic400_4x4.f
+//   -f ../../sim/axi4_compile_fabric_ip_4x4.f
 //
 // Why a separate fabric rather than `+BUS_MATRIX_MODE=4x4` on the 10x10 build
 // -------------------------------------------------------------------------
-// A NIC-400 decodes addresses in hardware. The 10x10 fabric's decoder lists
+// The fabric IP decodes addresses in hardware. The 10x10 fabric's decoder lists
 // exactly the ten ENHANCED regions
 // (nic400_asib_AXI4_Slave0_decode_vipv3b.v:97-115), so switching only the VIP's
 // reference model to the BASE map left every transaction undecodable: measured

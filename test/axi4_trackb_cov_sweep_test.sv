@@ -12,7 +12,7 @@
 // at 28.76% (10x10) / 24.53% (4x4). This exists to move that number.
 //
 // Runs on either fabric: the topology is bound by axi4_trackb_smoke_test from the
-// compiled fabric (+define+NIC400_4X4 => BASE / 4x4, else ENHANCED / 10x10), and
+// compiled fabric (+define+FABRIC_IP_4X4 => BASE / 4x4, else ENHANCED / 10x10), and
 // max_slave comes from the environment's slave count, so the 4x4 build sweeps
 // S0..S3 and the 10x10 build sweeps S0..S9.
 //

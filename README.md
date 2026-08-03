@@ -72,7 +72,7 @@ tim_axi4_vip/
 ├── top/                        hdl_top.sv, hvl_top.sv, fabric IP wrappers, fabric smoke TB
 ├── sim/
 │   ├── axi4_compile.f              baseline (no interconnect)
-│   ├── axi4_compile_nic400.f       Track-B 10×10
+│   ├── axi4_compile_fabric_ip.f       Track-B 10×10
 │   ├── axi4_compile_*_4x4.f        Track-B 4×4 (commercial fabric IP)
 │   ├── *_rtl.f                     commercial fabric IP RTL file lists
 │   ├── coverage_scope.cm_hier      code-coverage instrumentation scope
@@ -173,9 +173,9 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 ```bash
 vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
     -override_timescale=1ps/1ps +nospecify +no_timing_check \
-    +define+BUS_MATRIX_NIC400 \
+    +define+BUS_MATRIX_FABRIC_IP \
     +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 \
-    -f ../../sim/axi4_compile_nic400.f -o simv_trackb
+    -f ../../sim/axi4_compile_fabric_ip.f -o simv_trackb
 
 ./simv_trackb +UVM_TESTNAME=axi4_trackb_smoke_test +UVM_VERBOSITY=UVM_LOW
 ```
@@ -187,9 +187,9 @@ the two agree at time 0.
 ### 3. Track-B — commercial fabric IP, 4×4
 
 ```bash
-vcs ... +define+BUS_MATRIX_NIC400 +define+NIC400_4X4 \
+vcs ... +define+BUS_MATRIX_FABRIC_IP +define+FABRIC_IP_4X4 \
         +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=6 +define+AXI_ID_LAST=63 \
-        -f ../../sim/axi4_compile_nic400_4x4.f -o simv_trackb4x4
+        -f ../../sim/axi4_compile_fabric_ip_4x4.f -o simv_trackb4x4
 
 ./simv_trackb4x4 +UVM_TESTNAME=axi4_trackb_4x4_smoke_test +UVM_VERBOSITY=UVM_LOW
 ```
@@ -217,9 +217,9 @@ Gates on **log content**, not on exit status — a VCS run that ends in `$fatal`
 | `AXI_VID_WIDTH` | 4 | ingress-port tag width inside the fabric |
 | `AXI_{AW,W,B,AR,R}USER_WIDTH` | 16 | per-channel USER widths |
 | `AXI4_END_OF_TEST_DRAIN_NS` | 5000 | end-of-test drain, in ns (see below) |
-| `BUS_MATRIX_NIC400` | off | build against the commercial fabric IP |
-| `NIC400_4X4` | off | select the 4×4 fabric instead of 10×10 |
-| `NIC400_DEBUG_PROBE` | off | fabric-boundary tracing |
+| `BUS_MATRIX_FABRIC_IP` | off | build against the commercial fabric IP |
+| `FABRIC_IP_4X4` | off | select the 4×4 fabric instead of 10×10 |
+| `FABRIC_IP_DEBUG_PROBE` | off | fabric-boundary tracing |
 | `DUMP_FSDB` | off | enable FSDB waveform dumping |
 | `DISABLE_X_ASSERTIONS` | off | drop the X-injection assertion block |
 
@@ -310,8 +310,8 @@ urg -dir cov.vdb -format text -report cov_rpt
 ```
 
 **Code coverage is scoped to the fabric interface only.** `coverage_scope.cm_hier` keeps
-`hdl_top` and the project-authored `u_nic400_fabric` wrapper and drops
-`u_nic400_fabric.u_fabric` — the generated fabric IP internals are licensed, pre-verified
+`hdl_top` and the project-authored `u_fabric_ip` wrapper and drops
+`u_fabric_ip.u_fabric` — the generated fabric IP internals are licensed, pre-verified
 third-party IP and are not a VIP verification target; ~300 vendor `.v` files in the
 denominator only deflate LINE and TOGGLE. Functional coverage has no such carve-out.
 
