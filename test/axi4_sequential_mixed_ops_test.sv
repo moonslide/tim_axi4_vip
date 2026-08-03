@@ -26,6 +26,18 @@ task axi4_sequential_mixed_ops_test::run_phase(uvm_phase phase);
   axi4_env_h.axi4_env_cfg_h.write_read_mode_h = WRITE_READ_DATA;
   `uvm_info(get_type_name(), "TC003: Configured as WRITE_READ_DATA test mode for mixed operations", UVM_MEDIUM);
 
+  // Step 3 of axi4_sequential_mixed_ops_virtual_seq is a deliberate access-control probe
+  // (M7 -> S7 write, "Expect: SLVERR" - see virtual_seq/axi4_sequential_mixed_ops_virtual_seq.sv:128),
+  // mixed in among three legitimate OKAY transactions. The scoreboard already validates it
+  // correctly ("Correctly generated WRITE_SLVERR ... access control validation successful"),
+  // but axi4_performance_metrics counted the SLVERR as a "Protocol Issue" and failed the test:
+  // this class's name matches none of its auto-detect patterns (*error*, *illegal*,
+  // *violation*, *raw*, *slave_error*, *exception*), and allow_error_responses defaults to 0
+  // (axi4_base_test.sv:172). Same convention as axi4_enhanced_bus_matrix_test.sv:45, which
+  // sets this for the identical M7-security-violation scenario.
+  axi4_env_h.axi4_env_cfg_h.allow_error_responses = 1;
+  `uvm_info(get_type_name(), "TC003: allow_error_responses=1 - step 3 deliberately provokes SLVERR", UVM_MEDIUM);
+
   fork
     timeout_watchdog();
   join_none
