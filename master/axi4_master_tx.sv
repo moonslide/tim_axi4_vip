@@ -12,6 +12,15 @@ class axi4_master_tx extends uvm_sequence_item;
 
   axi4_master_agent_config axi4_master_agent_cfg_h; 
   
+
+  //Variable: sb_src_index
+  //Index of the agent that OBSERVED this transaction (master port on the master
+  //side, slave port on the slave side). Stamped by the monitor proxy purely so
+  //the scoreboard can pair transactions by source instead of by arrival order.
+  //Deliberately non-rand and deliberately excluded from do_compare/do_print --
+  //it is scoreboard bookkeeping, not part of the transaction.
+  int sb_src_index = -1;
+
   //-------------------------------------------------------
   // WRITE ADDRESS CHANNEL SIGNALS
   //-------------------------------------------------------
@@ -142,7 +151,14 @@ class axi4_master_tx extends uvm_sequence_item;
 
   //Variable : arregion
   //Used to send the read address region data
-  rand bit arregion;
+  //
+  //Declared as a single bit while axi4_if, both monitor/driver BFM ports, the
+  //axi4_read_transfer_char_s field and axi4_slave_tx all carry 4 bits. The
+  //struct->class converter therefore truncated the sampled ARREGION to bit 0,
+  //so the scoreboard compared a 1-bit master value against the subordinate's
+  //full 4-bit one. It only became visible once the slave side stopped dropping
+  //ARREGION entirely; before that both sides read zero and agreed by accident.
+  rand bit [3:0] arregion;
 
   //-------------------------------------------------------
   // READ DATA CHANNEL SIGNALS 
@@ -570,6 +586,7 @@ function void axi4_master_tx::do_copy(uvm_object rhs);
   //WRITE DATA CHANNEL
   wdata = axi4_master_tx_copy_obj.wdata;
   wstrb = axi4_master_tx_copy_obj.wstrb;
+  awuser = axi4_master_tx_copy_obj.awuser;
   wuser = axi4_master_tx_copy_obj.wuser;
   //WRITE RESPONSE CHANNEL
   bid   = axi4_master_tx_copy_obj.bid;

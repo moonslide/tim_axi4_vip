@@ -17,6 +17,12 @@ class axi4_master_agent_config extends uvm_object;
   //Used for enabling the master agent coverage
   bit has_coverage;
 
+  //Variable: master_id
+  //Index of this master agent, mirroring axi4_slave_agent_config::slave_id.
+  //The scoreboard needs the SOURCE PORT of a transaction; it used to substitute
+  //AWID/ARID for it, which is only the same number by coincidence.
+  int master_id;
+
   //Variable: addr_width
   //Address width for this master
   int addr_width = ADDRESS_WIDTH;

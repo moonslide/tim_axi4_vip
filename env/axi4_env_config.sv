@@ -60,6 +60,47 @@ class axi4_env_config extends uvm_object;
   // Enable AxCACHE attribute checking and monitoring (Claude.md requirement)
   bit axcache_chk_cfg = 1;
 
+  //-------------------------------------------------------
+  // Scoreboard behaviour when a real interconnect sits between the master and
+  // slave agents. All default to today's 1:1-direct-wiring behaviour, so an
+  // existing test sees no change unless it opts in.
+  //-------------------------------------------------------
+
+  //Variable: sb_keyed_pairing
+  //0 = pair master-side and slave-side transactions by ARRIVAL ORDER.
+  //    Only valid when the two sides cannot reorder relative to each other,
+  //    i.e. 1:1 direct wiring.
+  //1 = pair them by matching (address, len, size, burst). An arbitrating
+  //    interconnect is free to reorder, and with order-based pairing that
+  //    shows up as a mismatch between two perfectly legal values.
+  bit sb_keyed_pairing = 0;
+
+  //Variable: axid_passthrough_chk_cfg
+  //1 = require slave-side AxID/BID/RID to equal the master-side value.
+  //An interconnect legitimately remaps IDs (NIC-400 appends the ingress-port
+  //index to the egress AxID), so set this to 0 when a DUT is in the path. The
+  //stronger, still-valid property -- the manager gets its OWN id back on B/R --
+  //is checked separately and unconditionally by validate_response_correctness.
+  bit axid_passthrough_chk_cfg = 1;
+
+  //Variable: axqos_passthrough_chk_cfg
+  //1 = require slave-side AxQOS to equal the master-side value. AXI4 does not
+  //require an interconnect to forward QoS downstream, and NIC-400 does not: the
+  //generated fabric has QoS ports on the ingress side only. Set to 0 with a DUT.
+  bit axqos_passthrough_chk_cfg = 1;
+
+  //Variable: axregion_passthrough_chk_cfg
+  //1 = require slave-side AxREGION to equal the master-side value. An
+  //interconnect generates REGION from its own address decode, so set to 0
+  //with a DUT.
+  bit axregion_passthrough_chk_cfg = 1;
+
+  //Variable: axuser_passthrough_chk_cfg
+  //1 = require slave-side AxUSER to equal the master-side value. USER
+  //propagation is fabric-configuration dependent; set to 0 with a DUT that
+  //does not carry it.
+  bit axuser_passthrough_chk_cfg = 1;
+
   // Variable: bus_matrix_mode
   // Bus matrix reference model mode: BASE_BUS_MATRIX (4x4), BUS_ENHANCED_MATRIX (10x10), NONE
   // Import the enum type from bus matrix package
@@ -128,6 +169,12 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_field ("axprot_chk_cfg",axprot_chk_cfg,1, UVM_DEC);
   printer.print_field ("axcache_chk_cfg",axcache_chk_cfg,1, UVM_DEC);
   printer.print_string ("bus_matrix_mode",bus_matrix_mode.name());
+  printer.print_field ("allow_error_responses",allow_error_responses,1, UVM_DEC);
+  printer.print_field ("sb_keyed_pairing",sb_keyed_pairing,1, UVM_DEC);
+  printer.print_field ("axid_passthrough_chk_cfg",axid_passthrough_chk_cfg,1, UVM_DEC);
+  printer.print_field ("axqos_passthrough_chk_cfg",axqos_passthrough_chk_cfg,1, UVM_DEC);
+  printer.print_field ("axregion_passthrough_chk_cfg",axregion_passthrough_chk_cfg,1, UVM_DEC);
+  printer.print_field ("axuser_passthrough_chk_cfg",axuser_passthrough_chk_cfg,1, UVM_DEC);
 
 endfunction : do_print
 

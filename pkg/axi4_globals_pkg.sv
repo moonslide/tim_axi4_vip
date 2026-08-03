@@ -3,6 +3,7 @@
 
 // Include compile-time configuration defines
 `include "axi4_defines.svh"
+`include "axi4_bus_config.svh"
 
 //--------------------------------------------------------------------------------------------
 // Package: axi4_globals_pkg
@@ -33,9 +34,14 @@ package axi4_globals_pkg;
   //Used to set the address width to the address bus
   parameter int ADDRESS_WIDTH = 64;
 
-  `define DATA_WIDTH 1024
+  // Default stays 1024 so existing regressions are unaffected. Track-B builds
+  // against the NIC-400 fabric compile with +define+DATA_WIDTH=256, which is
+  // the widest data bus NIC-400 supports (legal values 32/64/128/256).
+  `ifndef DATA_WIDTH
+    `define DATA_WIDTH 1024
+  `endif
   //Parameter: DATA_WIDTH
-  //Used to set the data width 
+  //Used to set the data width
   parameter int DATA_WIDTH = `DATA_WIDTH;
 
   //Parameter: SLAVE_MEMORY_SIZE
@@ -181,86 +187,54 @@ package axi4_globals_pkg;
 
   //Enum: awid_e
   //Used to declare the enum type of write address id
+  // The named range expands to AWID_0 .. AWID_{2**AXI_ID_WIDTH-1}. At the
+  // default AXI_ID_WIDTH of 4 that is AWID_0..AWID_15 with values 0..15, i.e.
+  // bit-identical to the explicit list this replaced. It has to follow
+  // AXI_ID_WIDTH because the converters assign these fields with $cast, which
+  // is runtime-checked against the member list: behind an interconnect that
+  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
-    AWID_0  = 16'd0,
-    AWID_1  = 16'd1,
-    AWID_2  = 16'd2,
-    AWID_3  = 16'd3,
-    AWID_4  = 16'd4,
-    AWID_5  = 16'd5,
-    AWID_6  = 16'd6,
-    AWID_7  = 16'd7,
-    AWID_8  = 16'd8,
-    AWID_9  = 16'd9,
-    AWID_10 = 16'd10,
-    AWID_11 = 16'd11,
-    AWID_12 = 16'd12,
-    AWID_13 = 16'd13,
-    AWID_14 = 16'd14,
-    AWID_15 = 16'd15
+    AWID_[0:`AXI_ID_LAST]
   } awid_e;
 
   //Enum: bid_e
   //Used to declare the enum type of write response id
+  // The named range expands to AWID_0 .. AWID_{2**AXI_ID_WIDTH-1}. At the
+  // default AXI_ID_WIDTH of 4 that is AWID_0..AWID_15 with values 0..15, i.e.
+  // bit-identical to the explicit list this replaced. It has to follow
+  // AXI_ID_WIDTH because the converters assign these fields with $cast, which
+  // is runtime-checked against the member list: behind an interconnect that
+  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
-    BID_0  = 16'd0,
-    BID_1  = 16'd1,
-    BID_2  = 16'd2,
-    BID_3  = 16'd3,
-    BID_4  = 16'd4,
-    BID_5  = 16'd5,
-    BID_6  = 16'd6,
-    BID_7  = 16'd7,
-    BID_8  = 16'd8,
-    BID_9  = 16'd9,
-    BID_10 = 16'd10,
-    BID_11 = 16'd11,
-    BID_12 = 16'd12,
-    BID_13 = 16'd13,
-    BID_14 = 16'd14,
-    BID_15 = 16'd15
+    BID_[0:`AXI_ID_LAST]
   } bid_e;
 
   //Enum: arid_e
   //Used to declare the enum type of read address id
+  // The named range expands to AWID_0 .. AWID_{2**AXI_ID_WIDTH-1}. At the
+  // default AXI_ID_WIDTH of 4 that is AWID_0..AWID_15 with values 0..15, i.e.
+  // bit-identical to the explicit list this replaced. It has to follow
+  // AXI_ID_WIDTH because the converters assign these fields with $cast, which
+  // is runtime-checked against the member list: behind an interconnect that
+  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
-    ARID_0  = 16'd0,
-    ARID_1  = 16'd1,
-    ARID_2  = 16'd2,
-    ARID_3  = 16'd3,
-    ARID_4  = 16'd4,
-    ARID_5  = 16'd5,
-    ARID_6  = 16'd6,
-    ARID_7  = 16'd7,
-    ARID_8  = 16'd8,
-    ARID_9  = 16'd9,
-    ARID_10 = 16'd10,
-    ARID_11 = 16'd11,
-    ARID_12 = 16'd12,
-    ARID_13 = 16'd13,
-    ARID_14 = 16'd14,
-    ARID_15 = 16'd15
+    ARID_[0:`AXI_ID_LAST]
   } arid_e;
 
   //Enum: rid_e
   //Used to declare the enum type of read data/response id
+  // The named range expands to AWID_0 .. AWID_{2**AXI_ID_WIDTH-1}. At the
+  // default AXI_ID_WIDTH of 4 that is AWID_0..AWID_15 with values 0..15, i.e.
+  // bit-identical to the explicit list this replaced. It has to follow
+  // AXI_ID_WIDTH because the converters assign these fields with $cast, which
+  // is runtime-checked against the member list: behind an interconnect that
+  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
-    RID_0  = 16'd0,
-    RID_1  = 16'd1,
-    RID_2  = 16'd2,
-    RID_3  = 16'd3,
-    RID_4  = 16'd4,
-    RID_5  = 16'd5,
-    RID_6  = 16'd6,
-    RID_7  = 16'd7,
-    RID_8  = 16'd8,
-    RID_9  = 16'd9,
-    RID_10 = 16'd10,
-    RID_11 = 16'd11,
-    RID_12 = 16'd12,
-    RID_13 = 16'd13,
-    RID_14 = 16'd14,
-    RID_15 = 16'd15
+    RID_[0:`AXI_ID_LAST]
   } rid_e;
 
   //Enum: bresp_e
@@ -342,7 +316,7 @@ package axi4_globals_pkg;
   //This struct datatype consists of all write signals which are used for seq item conversion
   typedef struct {
     //Write Address Channel Signals
-    bit [3:0]               awid;
+    bit [`AXI_ID_WIDTH-1:0] awid;
     bit [ADDRESS_WIDTH-1:0] awaddr;
     bit [7:0]               awlen;
     bit [2:0]               awsize;
@@ -351,19 +325,32 @@ package axi4_globals_pkg;
     bit [3:0]               awcache;
     bit [3:0]               awqos;
     bit [3:0]               awregion;
-    bit                     awuser;
+    // USER fields follow the configured widths (axi4_bus_config.svh), the same
+    // way axi4_if, the *_tx classes and the driver/monitor BFM ports already
+    // do. They used to be hard-coded 1 bit (awuser/buser), 4 bits (aruser) and
+    // 1 bit-per-beat (wuser), so this struct -- the ONLY hop between the class
+    // layer and the pin layer -- silently truncated every USER signal:
+    //   * class -> struct -> driver: AWUSER was cut to its LSB before it ever
+    //     reached the pins, so a USER passthrough/tagging test drove a value
+    //     the DUT never saw.
+    //   * pins -> monitor -> struct -> class: the monitor's per-beat
+    //     `req.wuser[i] = wuser` wrote a whole WUSER bus into a single bit.
+    // Widening the field is the fix, NOT widening the consumers: every
+    // consumer (BFM ports, converters, tx classes) was already correct.
+    bit [`AXI_AWUSER_WIDTH-1:0] awuser;
     bit [2:0]               awprot;
     bit                     awvalid;
     bit	                    awready;
     //Write Data Channel Signals
     bit     [2**LENGTH:0][DATA_WIDTH-1:0] wdata;
     bit [2**LENGTH:0][(DATA_WIDTH/8)-1:0] wstrb;
-    bit                     [2**LENGTH:0] wuser;
+    // One full WUSER per beat, indexed exactly like wdata/wstrb.
+    bit [2**LENGTH:0][`AXI_WUSER_WIDTH-1:0] wuser;
     bit                                   wlast;
     //Write Response Channel Signals
-    bit [3:0] bid;
+    bit [`AXI_ID_WIDTH-1:0] bid;
     bit [1:0] bresp;
-    bit       buser;
+    bit [`AXI_BUSER_WIDTH-1:0] buser;
     bit       bvalid;
     bit       tx_type; 
     int       wait_count_write_address_channel;
@@ -379,7 +366,7 @@ package axi4_globals_pkg;
   //This struct datatype consists of all read signals which are used for seq item conversion
   typedef struct {
     //Read Address Channel Signals
-    bit               [3:0] arid;
+    bit [`AXI_ID_WIDTH-1:0] arid;
     bit [ADDRESS_WIDTH-1:0] araddr;
     bit               [7:0] arlen;
     bit               [2:0] arsize;
@@ -388,13 +375,15 @@ package axi4_globals_pkg;
     bit               [2:0] arprot;
     bit               [3:0] arqos;
     bit               [3:0] arregion;
-    bit               [3:0] aruser;
+    // See the USER note on axi4_write_transfer_char_s above.
+    bit [`AXI_ARUSER_WIDTH-1:0] aruser;
     bit                     arlock;
     //Read Data Channel Signals
-    bit                         [3:0] rid;
+    bit [`AXI_ID_WIDTH-1:0] rid;
     bit [2**LENGTH:0][DATA_WIDTH-1:0] rdata;
-    bit            [2**LENGTH:0][1:0] rresp; 
-    bit            [2**LENGTH:0][3:0] ruser;
+    bit            [2**LENGTH:0][1:0] rresp;
+    // One full RUSER per beat, indexed exactly like rdata/rresp.
+    bit [2**LENGTH:0][`AXI_RUSER_WIDTH-1:0] ruser;
     bit                               rlast;
     bit                               rvalid;
     bit                               tx_type; 

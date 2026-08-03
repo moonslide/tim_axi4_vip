@@ -22,8 +22,21 @@ class axi4_base_test extends uvm_test;
   axi4_env_config axi4_env_cfg_h;
 
   // Variable: axi4_env_h
-  // Handle for environment 
+  // Handle for environment
   axi4_env axi4_env_h;
+
+  // Variable: test_timeout
+  // Optional test-scoped bound for timeout_watchdog(), in simulation time.
+  //
+  // 0 (the default, set in new()) means "use `DEFAULT_TEST_TIMEOUT", i.e. the
+  // behaviour every existing test has today -- this knob is additive and
+  // changes nothing unless a derived test assigns it. A derived test whose
+  // real runtime is known can set a tighter bound so a hang ends as a UVM
+  // verdict with test context instead of an external kill (codex_review.md
+  // Finding 8). A test that fully overrides run_phase() must still arrange to
+  // start a watchdog itself -- see axi4_trackb_smoke_test, which races its
+  // body against its own bound rather than relying on this one.
+  time test_timeout;
 
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -56,6 +69,9 @@ endclass : axi4_base_test
 //--------------------------------------------------------------------------------------------
 function axi4_base_test::new(string name = "axi4_base_test",uvm_component parent = null);
   super.new(name, parent);
+  // 0 => timeout_watchdog() keeps using `DEFAULT_TEST_TIMEOUT (unchanged for
+  // every existing test); a derived test may assign a tighter bound.
+  test_timeout = 0;
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
@@ -107,11 +123,23 @@ function void axi4_base_test::setup_test_configuration();
           `uvm_info(get_type_name(), "Overriding to BASE mode with 2x2 config - will use 2 masters/2 slaves", UVM_MEDIUM)
         end
         "BASE", "4x4": begin
+          // These two used to set the MODE only, unlike the NONE and SIMPLE
+          // cases above, while logging that they had resized the environment.
+          // A test whose name matches the qos/user/error_inject/concurrent/
+          // exception patterns in axi4_test_config::configure_for_test() is
+          // already 10x10, so `+BUS_MATRIX_MODE=4x4` gave it BASE_BUS_MATRIX
+          // with TEN agents -- and slaves 4..9 then fall through to the
+          // `default:` address range 0x0-0xFFFF_FFFF, which overlaps S1
+          // Boot_ROM, so several slave agents claim the same addresses.
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;
+          test_config.num_masters = 4;
+          test_config.num_slaves  = 4;
           `uvm_info(get_type_name(), "Overriding to BASE mode - will use 4 masters/4 slaves", UVM_MEDIUM)
         end
         "ENHANCED", "10x10": begin
           test_config.bus_matrix_mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX;
+          test_config.num_masters = 10;
+          test_config.num_slaves  = 10;
           `uvm_info(get_type_name(), "Overriding to ENHANCED mode - will use all 10 masters/10 slaves", UVM_MEDIUM)
         end
         default: begin
@@ -184,6 +212,7 @@ function void axi4_base_test::setup_axi4_master_agent_cfg();
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].is_active   = uvm_active_passive_enum'(UVM_ACTIVE);
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].has_coverage = 1; 
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = QOS_MODE_DISABLE;
+    axi4_env_cfg_h.axi4_master_agent_cfg_h[i].master_id   = i;
   end
   
   // Configure address ranges based on bus matrix mode
@@ -508,8 +537,15 @@ endtask : run_phase
 // Timeout value is configurable via DEFAULT_TEST_TIMEOUT define
 //--------------------------------------------------------------------------------------------
 task axi4_base_test::timeout_watchdog();
-  #`DEFAULT_TEST_TIMEOUT;
-  `uvm_fatal(get_type_name(), $sformatf("TEST TIMEOUT: Test exceeded %0s execution time limit!", `"DEFAULT_TEST_TIMEOUT`"))
+  if (test_timeout == 0) begin
+    // Unchanged default path for every test that does not opt in.
+    #`DEFAULT_TEST_TIMEOUT;
+    `uvm_fatal(get_type_name(), $sformatf("TEST TIMEOUT: Test exceeded %0s execution time limit!", `"DEFAULT_TEST_TIMEOUT`"))
+  end
+  else begin
+    #(test_timeout);
+    `uvm_fatal(get_type_name(), $sformatf("TEST TIMEOUT: Test exceeded its test-scoped limit of %0t!", test_timeout))
+  end
 endtask : timeout_watchdog
 
 `endif

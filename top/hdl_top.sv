@@ -1,3 +1,4 @@
+`include "axi4_bus_config.svh"
 `ifndef HDL_TOP_INCLUDED_
 `define HDL_TOP_INCLUDED_
 
@@ -197,21 +198,20 @@ module hdl_top;
       prev_edge = curr_edge;
     end
   end
-//`ifdef DUMP_FSDB
-//        initial begin
-//            string fsdb_filename;
-//        
-//            // ? +fsdbfile=my_dump.fsdb
-//            if (!$value$plusargs("fsdbfile=%s", fsdb_filename)) begin
-//                fsdb_filename = "default.fsdb"; // if no used for default.fsdb
-//            end
-//        
-//            $fsdbDumpfile(fsdb_filename);  // 
-//            $fsdbDumpvars(0, hvl_top);   //
-////            $fsdbDumpvars(" uvm_test_top.axi4_env_h.axi4_master_agent_h[0]", "+class","+object_level=5");   //
-//
-//        end
-//`endif
+`ifdef DUMP_FSDB
+  // Re-enabled. Was commented out, and dumped only hvl_top -- the AXI pins live
+  // in hdl_top, so a waveform taken with it could not answer any question about
+  // WVALID/WREADY/WLAST timing. Dumping hdl_top is what makes signal-level debug
+  // of the channel handshakes possible at all.
+  initial begin
+    string fsdb_filename;
+    if (!$value$plusargs("fsdbfile=%s", fsdb_filename)) begin
+      fsdb_filename = "default.fsdb";
+    end
+    $fsdbDumpfile(fsdb_filename);
+    $fsdbDumpvars(0, hdl_top);
+  end
+`endif
 
 
   //-------------------------------------------------------
@@ -264,6 +264,16 @@ module hdl_top;
     end
   endgenerate
   
+  // AXI_ID_LAST is a hand-written literal because VCS will not take a computed
+  // enum name range. Catch the two defines drifting apart here rather than
+  // letting $cast silently drop out-of-range transaction IDs at run time.
+  initial begin
+    if (((1 << `AXI_ID_WIDTH) - 1) != `AXI_ID_LAST) begin
+      $fatal(1, "AXI_ID_LAST is %0d but AXI_ID_WIDTH=%0d requires %0d -- set both (see include/axi4_bus_config.svh)",
+             `AXI_ID_LAST, `AXI_ID_WIDTH, (1 << `AXI_ID_WIDTH) - 1);
+    end
+  end
+
   // Initialize independent resets
   initial begin
     // Initialize flags - no interface is using independent reset initially
@@ -278,11 +288,28 @@ module hdl_top;
     aresetn = 1'b1;
     #10 aresetn = 1'b0;
 
+`ifdef BUS_MATRIX_NIC400
+    // The 1:1 direct wiring is stateless, so a single-edge reset is enough for
+    // it. Real RTL is not: the NIC-400 fabric has arbiters, outstanding-
+    // transaction FIFOs and clock-domain structures that need several cycles of
+    // asserted reset to leave X. With the original single edge the fabric came
+    // out of reset with X internal state, its egress AxVALID stayed X forever,
+    // and reads were accepted at the ingress but never issued downstream.
+    repeat (16) begin
+      @(posedge aclk);
+    end
+`else
     repeat (1) begin
       @(posedge aclk);
     end
-    
+`endif
+
     aresetn = 1'b1;
+
+`ifdef BUS_MATRIX_NIC400
+    // Give the fabric a few idle cycles after release before traffic starts.
+    repeat (8) @(posedge aclk);
+`endif
     
     `uvm_info("HDL_TOP", "Initial reset completed, monitoring for injection requests", UVM_LOW)
     
@@ -518,6 +545,368 @@ module hdl_top;
     end
   endgenerate
   //-------------------------------------------------------------------------
+  // Track-B DUT: ARM CoreLink NIC-400 arbitrated AXI4 fabric
+  //
+  // Compile with +define+BUS_MATRIX_NIC400 (plus +define+DATA_WIDTH=256 and
+  // +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255) to route every master through a real crossbar
+  // with arbitration, instead of the 1:1 direct wiring below. Only then are
+  // cyclic-dependency deadlock, same-ID head-of-line blocking and hotspot
+  // arbitration fairness physically reachable.
+  //
+  // Fabric: ext/nic400_vipv3b (10 ingress x 10 egress, QoS from_master).
+  // GENERATED connection block -- see scratchpad/gen_hdltop_block.py
+  //-------------------------------------------------------------------------
+`ifdef BUS_MATRIX_NIC400
+
+  // ---- ingress vectors: VIP master agents -> fabric AXI4_Slave<N> ----
+  // NOTE: sized by `NIC400_PORTS (4 under NIC400_4X4, else 10), NOT by
+  // NO_OF_MASTERS/NO_OF_SLAVES -- those are the VIP-wide agent count, gated
+  // by the unrelated RUN_4X4_CONFIG knob, and stay 10 in a Track-B 4x4 build
+  // (BUS_MATRIX_NIC400 + NIC400_4X4). Using NO_OF_MASTERS/NO_OF_SLAVES here
+  // silently over-sized these vectors 10-wide against the wrapper's 4-wide
+  // ports -> VCS Warning-[PCWM-W] port width mismatch on every signal.
+  logic [`NIC400_PORTS-1:0][63:0] nic_m_araddr;
+  logic [`NIC400_PORTS-1:0][1:0] nic_m_arburst;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_arcache;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_arid;
+  logic [`NIC400_PORTS-1:0][7:0] nic_m_arlen;
+  logic [`NIC400_PORTS-1:0]      nic_m_arlock;
+  logic [`NIC400_PORTS-1:0][2:0] nic_m_arprot;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_arqos;
+  logic [`NIC400_PORTS-1:0]      nic_m_arready;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_arregion;
+  logic [`NIC400_PORTS-1:0][2:0] nic_m_arsize;
+  logic [`NIC400_PORTS-1:0][31:0] nic_m_aruser;
+  logic [`NIC400_PORTS-1:0]      nic_m_arvalid;
+  logic [`NIC400_PORTS-1:0][63:0] nic_m_awaddr;
+  logic [`NIC400_PORTS-1:0][1:0] nic_m_awburst;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_awcache;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_awid;
+  logic [`NIC400_PORTS-1:0][7:0] nic_m_awlen;
+  logic [`NIC400_PORTS-1:0]      nic_m_awlock;
+  logic [`NIC400_PORTS-1:0][2:0] nic_m_awprot;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_awqos;
+  logic [`NIC400_PORTS-1:0]      nic_m_awready;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_awregion;
+  logic [`NIC400_PORTS-1:0][2:0] nic_m_awsize;
+  logic [`NIC400_PORTS-1:0][31:0] nic_m_awuser;
+  logic [`NIC400_PORTS-1:0]      nic_m_awvalid;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_bid;
+  logic [`NIC400_PORTS-1:0]      nic_m_bready;
+  logic [`NIC400_PORTS-1:0][1:0] nic_m_bresp;
+  logic [`NIC400_PORTS-1:0][15:0] nic_m_buser;
+  logic [`NIC400_PORTS-1:0]      nic_m_bvalid;
+  logic [`NIC400_PORTS-1:0][255:0] nic_m_rdata;
+  logic [`NIC400_PORTS-1:0][3:0] nic_m_rid;
+  logic [`NIC400_PORTS-1:0]      nic_m_rlast;
+  logic [`NIC400_PORTS-1:0]      nic_m_rready;
+  logic [`NIC400_PORTS-1:0][1:0] nic_m_rresp;
+  logic [`NIC400_PORTS-1:0][15:0] nic_m_ruser;
+  logic [`NIC400_PORTS-1:0]      nic_m_rvalid;
+  logic [`NIC400_PORTS-1:0][255:0] nic_m_wdata;
+  logic [`NIC400_PORTS-1:0]      nic_m_wlast;
+  logic [`NIC400_PORTS-1:0]      nic_m_wready;
+  logic [`NIC400_PORTS-1:0][31:0] nic_m_wstrb;
+  logic [`NIC400_PORTS-1:0][31:0] nic_m_wuser;
+  logic [`NIC400_PORTS-1:0]      nic_m_wvalid;
+
+  // ---- egress vectors: fabric AXI4_Master<N> -> VIP slave agents ----
+  logic [`NIC400_PORTS-1:0][63:0] nic_s_araddr;
+  logic [`NIC400_PORTS-1:0][1:0] nic_s_arburst;
+  logic [`NIC400_PORTS-1:0][3:0] nic_s_arcache;
+  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_arid;
+  logic [`NIC400_PORTS-1:0][7:0] nic_s_arlen;
+  logic [`NIC400_PORTS-1:0]      nic_s_arlock;
+  logic [`NIC400_PORTS-1:0][2:0] nic_s_arprot;
+  logic [`NIC400_PORTS-1:0]      nic_s_arready;
+  logic [`NIC400_PORTS-1:0][3:0] nic_s_arregion;
+  logic [`NIC400_PORTS-1:0][2:0] nic_s_arsize;
+  logic [`NIC400_PORTS-1:0][31:0] nic_s_aruser;
+  logic [`NIC400_PORTS-1:0]      nic_s_arvalid;
+  logic [`NIC400_PORTS-1:0][63:0] nic_s_awaddr;
+  logic [`NIC400_PORTS-1:0][1:0] nic_s_awburst;
+  logic [`NIC400_PORTS-1:0][3:0] nic_s_awcache;
+  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_awid;
+  logic [`NIC400_PORTS-1:0][7:0] nic_s_awlen;
+  logic [`NIC400_PORTS-1:0]      nic_s_awlock;
+  logic [`NIC400_PORTS-1:0][2:0] nic_s_awprot;
+  logic [`NIC400_PORTS-1:0]      nic_s_awready;
+  logic [`NIC400_PORTS-1:0][3:0] nic_s_awregion;
+  logic [`NIC400_PORTS-1:0][2:0] nic_s_awsize;
+  logic [`NIC400_PORTS-1:0][31:0] nic_s_awuser;
+  logic [`NIC400_PORTS-1:0]      nic_s_awvalid;
+  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_bid;
+  logic [`NIC400_PORTS-1:0]      nic_s_bready;
+  logic [`NIC400_PORTS-1:0][1:0] nic_s_bresp;
+  logic [`NIC400_PORTS-1:0][15:0] nic_s_buser;
+  logic [`NIC400_PORTS-1:0]      nic_s_bvalid;
+  logic [`NIC400_PORTS-1:0][255:0] nic_s_rdata;
+  logic [`NIC400_PORTS-1:0][`NIC400_EGRESS_ID_WIDTH-1:0] nic_s_rid;
+  logic [`NIC400_PORTS-1:0]      nic_s_rlast;
+  logic [`NIC400_PORTS-1:0]      nic_s_rready;
+  logic [`NIC400_PORTS-1:0][1:0] nic_s_rresp;
+  logic [`NIC400_PORTS-1:0][15:0] nic_s_ruser;
+  logic [`NIC400_PORTS-1:0]      nic_s_rvalid;
+  logic [`NIC400_PORTS-1:0][255:0] nic_s_wdata;
+  logic [`NIC400_PORTS-1:0]      nic_s_wlast;
+  logic [`NIC400_PORTS-1:0]      nic_s_wready;
+  logic [`NIC400_PORTS-1:0][31:0] nic_s_wstrb;
+  logic [`NIC400_PORTS-1:0][31:0] nic_s_wuser;
+  logic [`NIC400_PORTS-1:0]      nic_s_wvalid;
+
+  genvar jn;
+  generate
+    // Only the ports this fabric actually has are wired; the rest of the VIP's
+    // agents stay on their idle defaults.
+    for (jn = 0; jn < `NIC400_PORTS; jn++) begin : nic_ingress_connect
+      // VIP master drives the fabric ingress
+      assign nic_m_araddr[jn] = master_if_gen[jn].master_intf.araddr;
+      assign nic_m_arburst[jn] = master_if_gen[jn].master_intf.arburst;
+      assign nic_m_arcache[jn] = master_if_gen[jn].master_intf.arcache;
+      assign nic_m_arid[jn] = master_if_gen[jn].master_intf.arid[3:0]; // fabric ingress AxID is 4b (VIDWidth)
+      assign nic_m_arlen[jn] = master_if_gen[jn].master_intf.arlen;
+      assign nic_m_arlock[jn] = master_if_gen[jn].master_intf.arlock[0];   // VIP awlock/arlock is AXI3-style [1:0]
+      assign nic_m_arprot[jn] = master_if_gen[jn].master_intf.arprot;
+      assign nic_m_arqos[jn] = master_if_gen[jn].master_intf.arqos;
+      assign master_if_gen[jn].master_intf.arready = nic_m_arready[jn];
+      assign nic_m_arregion[jn] = master_if_gen[jn].master_intf.arregion;
+      assign nic_m_arsize[jn] = master_if_gen[jn].master_intf.arsize;
+      assign nic_m_aruser[jn] = master_if_gen[jn].master_intf.aruser;
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_arvalid[jn] = (master_if_gen[jn].master_intf.arvalid === 1'b1);
+      assign nic_m_awaddr[jn] = master_if_gen[jn].master_intf.awaddr;
+      assign nic_m_awburst[jn] = master_if_gen[jn].master_intf.awburst;
+      assign nic_m_awcache[jn] = master_if_gen[jn].master_intf.awcache;
+      assign nic_m_awid[jn] = master_if_gen[jn].master_intf.awid[3:0]; // fabric ingress AxID is 4b (VIDWidth)
+      assign nic_m_awlen[jn] = master_if_gen[jn].master_intf.awlen;
+      assign nic_m_awlock[jn] = master_if_gen[jn].master_intf.awlock[0];   // VIP awlock/arlock is AXI3-style [1:0]
+      assign nic_m_awprot[jn] = master_if_gen[jn].master_intf.awprot;
+      assign nic_m_awqos[jn] = master_if_gen[jn].master_intf.awqos;
+      assign master_if_gen[jn].master_intf.awready = nic_m_awready[jn];
+      assign nic_m_awregion[jn] = master_if_gen[jn].master_intf.awregion;
+      assign nic_m_awsize[jn] = master_if_gen[jn].master_intf.awsize;
+      assign nic_m_awuser[jn] = master_if_gen[jn].master_intf.awuser;
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_awvalid[jn] = (master_if_gen[jn].master_intf.awvalid === 1'b1);
+      assign master_if_gen[jn].master_intf.bid = {{(`AXI_ID_WIDTH-4){1'b0}}, nic_m_bid[jn]};
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_bready[jn] = (master_if_gen[jn].master_intf.bready === 1'b1);
+      assign master_if_gen[jn].master_intf.bresp = nic_m_bresp[jn];
+      assign master_if_gen[jn].master_intf.buser = nic_m_buser[jn];
+      assign master_if_gen[jn].master_intf.bvalid = nic_m_bvalid[jn];
+      assign master_if_gen[jn].master_intf.rdata = nic_m_rdata[jn];
+      assign master_if_gen[jn].master_intf.rid = {{(`AXI_ID_WIDTH-4){1'b0}}, nic_m_rid[jn]};
+      assign master_if_gen[jn].master_intf.rlast = nic_m_rlast[jn];
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_rready[jn] = (master_if_gen[jn].master_intf.rready === 1'b1);
+      assign master_if_gen[jn].master_intf.rresp = nic_m_rresp[jn];
+      assign master_if_gen[jn].master_intf.ruser = nic_m_ruser[jn];
+      assign master_if_gen[jn].master_intf.rvalid = nic_m_rvalid[jn];
+      assign nic_m_wdata[jn] = master_if_gen[jn].master_intf.wdata;
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_wlast[jn] = (master_if_gen[jn].master_intf.wlast === 1'b1);
+      assign master_if_gen[jn].master_intf.wready = nic_m_wready[jn];
+      assign nic_m_wstrb[jn] = master_if_gen[jn].master_intf.wstrb;
+      assign nic_m_wuser[jn] = master_if_gen[jn].master_intf.wuser;
+      // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
+      // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
+      // VALID/READY input poisons the fabric arbiters and no egress request is ever
+      // issued. Force X to 0 so the fabric only ever sees a clean handshake.
+      assign nic_m_wvalid[jn] = (master_if_gen[jn].master_intf.wvalid === 1'b1);
+    end
+
+    for (jn = 0; jn < `NIC400_PORTS; jn++) begin : nic_egress_connect
+      // fabric egress drives the VIP slave agent
+      assign slave_if_gen[jn].slave_intf.araddr = nic_s_araddr[jn];
+      assign slave_if_gen[jn].slave_intf.arburst = nic_s_arburst[jn];
+      assign slave_if_gen[jn].slave_intf.arcache = nic_s_arcache[jn];
+      assign slave_if_gen[jn].slave_intf.arid = nic_s_arid[jn];
+      assign slave_if_gen[jn].slave_intf.arlen = nic_s_arlen[jn];
+      assign slave_if_gen[jn].slave_intf.arlock = {1'b0, nic_s_arlock[jn]};
+      assign slave_if_gen[jn].slave_intf.arprot = nic_s_arprot[jn];
+      assign nic_s_arready[jn] = slave_if_gen[jn].slave_intf.arready;
+      assign slave_if_gen[jn].slave_intf.arregion = nic_s_arregion[jn];
+      assign slave_if_gen[jn].slave_intf.arsize = nic_s_arsize[jn];
+      assign slave_if_gen[jn].slave_intf.aruser = nic_s_aruser[jn];
+      assign slave_if_gen[jn].slave_intf.arvalid = nic_s_arvalid[jn];
+      assign slave_if_gen[jn].slave_intf.awaddr = nic_s_awaddr[jn];
+      assign slave_if_gen[jn].slave_intf.awburst = nic_s_awburst[jn];
+      assign slave_if_gen[jn].slave_intf.awcache = nic_s_awcache[jn];
+      assign slave_if_gen[jn].slave_intf.awid = nic_s_awid[jn];
+      assign slave_if_gen[jn].slave_intf.awlen = nic_s_awlen[jn];
+      assign slave_if_gen[jn].slave_intf.awlock = {1'b0, nic_s_awlock[jn]};
+      assign slave_if_gen[jn].slave_intf.awprot = nic_s_awprot[jn];
+      assign nic_s_awready[jn] = slave_if_gen[jn].slave_intf.awready;
+      assign slave_if_gen[jn].slave_intf.awregion = nic_s_awregion[jn];
+      assign slave_if_gen[jn].slave_intf.awsize = nic_s_awsize[jn];
+      assign slave_if_gen[jn].slave_intf.awuser = nic_s_awuser[jn];
+      assign slave_if_gen[jn].slave_intf.awvalid = nic_s_awvalid[jn];
+      assign nic_s_bid[jn] = slave_if_gen[jn].slave_intf.bid;
+      assign slave_if_gen[jn].slave_intf.bready = nic_s_bready[jn];
+      assign nic_s_bresp[jn] = slave_if_gen[jn].slave_intf.bresp;
+      assign nic_s_buser[jn] = slave_if_gen[jn].slave_intf.buser;
+      assign nic_s_bvalid[jn] = slave_if_gen[jn].slave_intf.bvalid;
+      assign nic_s_rdata[jn] = slave_if_gen[jn].slave_intf.rdata;
+      assign nic_s_rid[jn] = slave_if_gen[jn].slave_intf.rid;
+      assign nic_s_rlast[jn] = slave_if_gen[jn].slave_intf.rlast;
+      assign slave_if_gen[jn].slave_intf.rready = nic_s_rready[jn];
+      assign nic_s_rresp[jn] = slave_if_gen[jn].slave_intf.rresp;
+      assign nic_s_ruser[jn] = slave_if_gen[jn].slave_intf.ruser;
+      assign nic_s_rvalid[jn] = slave_if_gen[jn].slave_intf.rvalid;
+      assign slave_if_gen[jn].slave_intf.wdata = nic_s_wdata[jn];
+      assign slave_if_gen[jn].slave_intf.wlast = nic_s_wlast[jn];
+      assign nic_s_wready[jn] = slave_if_gen[jn].slave_intf.wready;
+      assign slave_if_gen[jn].slave_intf.wstrb = nic_s_wstrb[jn];
+      assign slave_if_gen[jn].slave_intf.wuser = nic_s_wuser[jn];
+      assign slave_if_gen[jn].slave_intf.wvalid = nic_s_wvalid[jn];
+      // fabric does not forward QoS downstream; keep VIP slave inputs quiet
+      assign slave_if_gen[jn].slave_intf.awqos = 4'b0;
+      assign slave_if_gen[jn].slave_intf.arqos = 4'b0;
+    end
+  endgenerate
+
+  // Fabric boundary probe. Compile with +define+NIC400_DEBUG_PROBE to trace what
+  // the VIP actually presents to the fabric and what the fabric issues back.
+  // This is how the read-path investigation established that reads are accepted
+  // at ingress (arready=1) yet never issued on any egress port.
+`ifdef NIC400_DEBUG_PROBE
+  always @(posedge aclk) begin
+    for (int pp = 0; pp < `NIC400_PORTS; pp++) begin
+      if (nic_s_arvalid[pp] === 1'bx)
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] ARVALID is X", $time, pp);
+      else if (nic_s_arvalid[pp])
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] ARVALID araddr=0x%016h", $time, pp, nic_s_araddr[pp]);
+      if (nic_s_awvalid[pp])
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] AWVALID awaddr=0x%016h", $time, pp, nic_s_awaddr[pp]);
+      if (nic_s_wvalid[pp] === 1'b1)
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] WVALID wlast=%0b wready=%0b", $time, pp, nic_s_wlast[pp], nic_s_wready[pp]);
+      if (nic_s_bvalid[pp] === 1'bx)
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] BVALID is X (slave->fabric)", $time, pp);
+      else if (nic_s_bvalid[pp])
+        $display("  [NICPROBE] t=%0t EGRESS[%0d] BVALID bid=0x%02h bready=%0b", $time, pp, nic_s_bid[pp], nic_s_bready[pp]);
+    end
+    for (int pp = 0; pp < `NIC400_PORTS; pp++) begin
+      if (nic_m_arvalid[pp] === 1'b1)
+        $display("  [NICPROBE] t=%0t INGRESS[%0d] ARVALID araddr=0x%016h arready=%0b",
+                 $time, pp, nic_m_araddr[pp], nic_m_arready[pp]);
+      if (nic_m_awvalid[pp] === 1'b1)
+        $display("  [NICPROBE] t=%0t INGRESS[%0d] AWVALID awaddr=0x%016h awready=%0b",
+                 $time, pp, nic_m_awaddr[pp], nic_m_awready[pp]);
+      if (nic_m_bvalid[pp] === 1'b1)
+        $display("  [NICPROBE] t=%0t INGRESS[%0d] BVALID bid=0x%01h bready=%0b (fabric->master)",
+                 $time, pp, nic_m_bid[pp], nic_m_bready[pp]);
+    end
+  end
+`endif
+
+  axi4_nic400_fabric_wrapper #(.NUM(`NIC400_PORTS)) u_nic400_fabric (
+    .clk   (aclk),
+    .resetn(aresetn),
+    .m_araddr(nic_m_araddr),
+    .m_arburst(nic_m_arburst),
+    .m_arcache(nic_m_arcache),
+    .m_arid(nic_m_arid),
+    .m_arlen(nic_m_arlen),
+    .m_arlock(nic_m_arlock),
+    .m_arprot(nic_m_arprot),
+    .m_arqos(nic_m_arqos),
+    .m_arready(nic_m_arready),
+    .m_arregion(nic_m_arregion),
+    .m_arsize(nic_m_arsize),
+    .m_aruser(nic_m_aruser),
+    .m_arvalid(nic_m_arvalid),
+    .m_awaddr(nic_m_awaddr),
+    .m_awburst(nic_m_awburst),
+    .m_awcache(nic_m_awcache),
+    .m_awid(nic_m_awid),
+    .m_awlen(nic_m_awlen),
+    .m_awlock(nic_m_awlock),
+    .m_awprot(nic_m_awprot),
+    .m_awqos(nic_m_awqos),
+    .m_awready(nic_m_awready),
+    .m_awregion(nic_m_awregion),
+    .m_awsize(nic_m_awsize),
+    .m_awuser(nic_m_awuser),
+    .m_awvalid(nic_m_awvalid),
+    .m_bid(nic_m_bid),
+    .m_bready(nic_m_bready),
+    .m_bresp(nic_m_bresp),
+    .m_buser(nic_m_buser),
+    .m_bvalid(nic_m_bvalid),
+    .m_rdata(nic_m_rdata),
+    .m_rid(nic_m_rid),
+    .m_rlast(nic_m_rlast),
+    .m_rready(nic_m_rready),
+    .m_rresp(nic_m_rresp),
+    .m_ruser(nic_m_ruser),
+    .m_rvalid(nic_m_rvalid),
+    .m_wdata(nic_m_wdata),
+    .m_wlast(nic_m_wlast),
+    .m_wready(nic_m_wready),
+    .m_wstrb(nic_m_wstrb),
+    .m_wuser(nic_m_wuser),
+    .m_wvalid(nic_m_wvalid),
+    .s_araddr(nic_s_araddr),
+    .s_arburst(nic_s_arburst),
+    .s_arcache(nic_s_arcache),
+    .s_arid(nic_s_arid),
+    .s_arlen(nic_s_arlen),
+    .s_arlock(nic_s_arlock),
+    .s_arprot(nic_s_arprot),
+    .s_arready(nic_s_arready),
+    .s_arregion(nic_s_arregion),
+    .s_arsize(nic_s_arsize),
+    .s_aruser(nic_s_aruser),
+    .s_arvalid(nic_s_arvalid),
+    .s_awaddr(nic_s_awaddr),
+    .s_awburst(nic_s_awburst),
+    .s_awcache(nic_s_awcache),
+    .s_awid(nic_s_awid),
+    .s_awlen(nic_s_awlen),
+    .s_awlock(nic_s_awlock),
+    .s_awprot(nic_s_awprot),
+    .s_awready(nic_s_awready),
+    .s_awregion(nic_s_awregion),
+    .s_awsize(nic_s_awsize),
+    .s_awuser(nic_s_awuser),
+    .s_awvalid(nic_s_awvalid),
+    .s_bid(nic_s_bid),
+    .s_bready(nic_s_bready),
+    .s_bresp(nic_s_bresp),
+    .s_buser(nic_s_buser),
+    .s_bvalid(nic_s_bvalid),
+    .s_rdata(nic_s_rdata),
+    .s_rid(nic_s_rid),
+    .s_rlast(nic_s_rlast),
+    .s_rready(nic_s_rready),
+    .s_rresp(nic_s_rresp),
+    .s_ruser(nic_s_ruser),
+    .s_rvalid(nic_s_rvalid),
+    .s_wdata(nic_s_wdata),
+    .s_wlast(nic_s_wlast),
+    .s_wready(nic_s_wready),
+    .s_wstrb(nic_s_wstrb),
+    .s_wuser(nic_s_wuser),
+    .s_wvalid(nic_s_wvalid)
+  );
+
+`else
+  //-------------------------------------------------------------------------
   // Simple direct connection between each master and slave interface instance
   //-------------------------------------------------------------------------
   genvar j;
@@ -578,6 +967,7 @@ module hdl_top;
       assign slave_if_gen[j].slave_intf.rready   = master_if_gen[j].master_intf.rready;
     end
   endgenerate 
+`endif // BUS_MATRIX_NIC400
   //-------------------------------------------------------
   // Reset Signal Monitor Instance
   // Monitors and verifies all reset signal transitions

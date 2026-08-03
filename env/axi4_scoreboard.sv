@@ -210,11 +210,126 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern virtual task axi4_read_address_comparision(input axi4_master_tx axi4_master_tx_h4,input axi4_slave_tx axi4_slave_tx_h4);
   extern virtual task axi4_read_data_comparision(input axi4_master_tx axi4_master_tx_h5,input axi4_slave_tx axi4_slave_tx_h5);
   extern virtual function void check_phase (uvm_phase phase);
-  extern virtual function bit is_valid_write_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
-  extern virtual function bit is_valid_read_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
-  extern virtual function bresp_e get_expected_write_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
+  //-------------------------------------------------------
+  // Keyed pairing (axi4_env_config::sb_keyed_pairing)
+  //
+  // The channel tasks below used to take one transaction off the master fifo
+  // and one off the slave fifo and compare them, i.e. they paired by ARRIVAL
+  // ORDER. Both fifos are fed by EVERY agent (env/axi4_env.sv), so that only
+  // holds when nothing between the two sides can reorder -- true for the 1:1
+  // direct wiring, false for any arbitrating interconnect. Behind the NIC-400
+  // fabric it reported mismatches between two perfectly legal addresses that
+  // had simply swapped places.
+  //
+  // When keyed pairing is on, slave-side transactions are drawn into a holding
+  // pool and the OLDEST one whose (address, len, size, burst) matches the
+  // master-side transaction is used. Address is the key rather than AxID
+  // because an interconnect remaps IDs but must not alter the address. Oldest
+  // match wins, which is what AXI's same-ID ordering rule guarantees and is in
+  // any case the only defensible choice when two entries are indistinguishable
+  // in every field being compared.
+  //-------------------------------------------------------
+  axi4_slave_tx sb_slave_waddr_pool[$];
+  axi4_slave_tx sb_slave_wdata_pool[$];
+  axi4_slave_tx sb_slave_raddr_pool[$];
+
+  //Outstanding transaction IDs per master port, as a multiset (count per id).
+  //A manager may have several transactions in flight and an interconnect or an
+  //out-of-order subordinate may answer them in any order, so the checkable
+  //property is "the BID/RID I received is one I am still waiting on", not
+  //"it equals the id of whichever address packet happens to be paired here".
+  int sb_outstanding_awid[int][int];
+  int sb_outstanding_arid[int][int];
+
+  //B/R responses and their AW/AR are consumed by independent forever loops, so
+  //a response can reach the scoreboard before the address packet that issued
+  //it. Ids that do not match yet are parked here and re-tested in check_phase,
+  //by which time every address packet has been consumed.
+  int sb_pending_bid[$][2];
+  int sb_pending_rid[$][2];
+
+  //Counters for the id-returned-to-originating-manager checks. These replace
+  //the master-vs-slave AxID equality comparisons when an interconnect remaps
+  //IDs: the remapped value is the DUT's business, but AXI4 still requires the
+  //manager to receive its own BID/RID back, and nothing checked that before.
+  int byte_data_cmp_verified_bid_to_master_count;
+  int byte_data_cmp_failed_bid_to_master_count;
+  int byte_data_cmp_verified_rid_to_master_count;
+  int byte_data_cmp_failed_rid_to_master_count;
+
+  //-------------------------------------------------------
+  // FINDING 1 -- end-of-test completeness accounting
+  //
+  // check_phase used to inspect only the analysis-fifo SIZES. Every channel
+  // task below pulls a master item OUT of its fifo and then blocks waiting for
+  // its slave partner, so a transaction that was dropped, misrouted or simply
+  // never answered leaves both fifos empty and the run reports UVM_ERROR 0 /
+  // TEST RESULT PASS. Reproduced at seed 424242: 10 writes issued, 9 BIDs
+  // verified, exit code 0.
+  //
+  // Every place a transaction can still be sitting when the run ends is now
+  // recorded and inspected by sb_end_of_test_completeness_check():
+  //   sb_inflight[]         a master item taken off a fifo whose partner never
+  //                         arrived -- the channel task is parked in a get()
+  //   sb_slave_*_pool       slave items drawn out of a fifo by the keyed
+  //                         matchers and never consumed
+  //   sb_outstanding_a?id   a request the manager issued and was never
+  //                         answered for (this is the seed-424242 escape)
+  //   sb_rx/sb_matched      items taken off the master fifos vs items that
+  //                         completed a comparison
+  //   analysis fifo used()  items a monitor published that no channel task ever
+  //                         dequeued -- invisible to every counter above
+  // A non-empty / non-zero value in any of them is a UVM_ERROR, not a log line.
+  //
+  // The gate runs ahead of BOTH mode guards in check_phase (all-slaves-PASSIVE
+  // and error_inject). Neither mode may skip accounting; they may only skip the
+  // master-vs-slave field-equality comparisons.
+  //-------------------------------------------------------
+  typedef enum int {SB_CH_AW = 0, SB_CH_W = 1, SB_CH_B = 2, SB_CH_AR = 3, SB_CH_R = 4} sb_chan_e;
+
+  typedef struct {
+    bit              active;    //a master item is parked waiting for a partner
+    int              src_index; //originating master port
+    longint unsigned id;        //AWID/ARID of the parked item
+    longint unsigned addr;      //AWADDR/ARADDR of the parked item
+    time             t_parked;  //when the channel task blocked
+  } sb_inflight_s;
+
+  //Number of resets observed. Reported by the completeness check so a clean
+  //result on a reset test cannot be mistaken for "no reset ever happened".
+  int sb_reset_count;
+
+  sb_inflight_s sb_inflight[5];
+  //Master items taken OFF the master analysis fifo, per channel.
+  int sb_rx_master_count[5];
+  //Master items that completed a comparison against a slave partner.
+  int sb_matched_count[5];
+
+  //Slave-side holding pools for the keyed B/R matchers -- see FINDING 5 below.
+  axi4_slave_tx sb_slave_bresp_pool[$];
+  axi4_slave_tx sb_slave_rdata_pool[$];
+
+  extern virtual function bit sb_wdata_equal_under_strobe(input axi4_master_tx m_tx, input axi4_slave_tx s_tx);
+  extern virtual task sb_match_slave_write_address(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  extern virtual task sb_match_slave_write_data   (input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  extern virtual task sb_match_slave_read_address (input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  extern virtual task sb_match_slave_write_response(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  extern virtual task sb_match_slave_read_data    (input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  extern virtual function string sb_chan_name(input sb_chan_e ch);
+  extern virtual function void sb_mark_inflight(input sb_chan_e ch, input int src_index,
+                                                input longint unsigned id, input longint unsigned addr);
+  extern virtual function void sb_clear_inflight(input sb_chan_e ch);
+  extern virtual function void sb_retire_outstanding_awid(input int src_index, input int id);
+  extern virtual function void sb_retire_outstanding_arid(input int src_index, input int id);
+  extern virtual function void sb_retest_pending_ids();
+  extern virtual function void sb_clear_on_reset();
+  extern virtual function void sb_end_of_test_completeness_check();
+  extern virtual function int  sb_fifo_residue(input string nm, input int n);
+  extern virtual function bit is_valid_write_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] awprot);
+  extern virtual function bit is_valid_read_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] arprot);
+  extern virtual function bresp_e get_expected_write_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] awprot);
   extern virtual function rresp_e get_expected_read_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] arprot);
-  extern virtual function bit is_expected_error_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit is_write);
+  extern virtual function bit is_expected_error_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit is_write, bit [2:0] axprot);
   extern virtual task validate_response_correctness(input axi4_master_tx master_tx, input axi4_slave_tx slave_tx, bit is_write);
   extern virtual function void report_phase(uvm_phase phase);
 
@@ -328,17 +443,100 @@ endfunction : start_of_simulation_phase
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::run_phase(uvm_phase phase);
 
+  uvm_event reset_e = uvm_event_pool::get_global("axi4_sb_reset_e");
+
   super.run_phase(phase);
 
-  fork
-    axi4_write_address();
-    axi4_write_data();
-    axi4_write_response();
-    axi4_read_address();
-    axi4_read_data();
-  join
+  // Each channel task blocks in a slave-side get() while holding a master item.
+  // A mid-test reset discards the subordinate's side of that transfer, so the
+  // partner never arrives and the task stays parked forever -- and worse, pairs
+  // that pre-reset master item against the first POST-reset slave item, which
+  // produces comparison errors for transfers that were never related.
+  //
+  // Clearing the bookkeeping alone would not fix that: the parked processes
+  // have to die. So the channel tasks are restarted around every reset.
+  forever begin
+    fork
+      begin : sb_channels
+        fork
+          axi4_write_address();
+          axi4_write_data();
+          axi4_write_response();
+          axi4_read_address();
+          axi4_read_data();
+        join
+      end
+      begin : sb_reset_watch
+        reset_e.wait_trigger();
+      end
+    join_any
+    disable fork;
+
+    // join_any also returns if the channel tasks somehow all finish; they are
+    // forever loops, so reaching here means a reset fired.
+    sb_clear_on_reset();
+  end
 
 endtask : run_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_clear_on_reset
+// Drops every in-flight expectation. AXI4 does not carry transactions across
+// reset, so anything still outstanding is legitimately gone and must not be
+// reported by sb_end_of_test_completeness_check() as a lost transfer.
+//
+// The verified/failed tallies are deliberately NOT cleared: they record checks
+// that already completed, and zeroing them would erase real findings.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_clear_on_reset();
+
+  sb_reset_count++;
+
+  // The channel tasks were just killed by `disable fork`. Each of them holds its
+  // channel key between get(1) at the top of the loop and put(1) at the bottom,
+  // so a task killed inside that window never returns its key and the restarted
+  // task blocks on get(1) forever -- silently, with no comparison ever running
+  // again on that channel. Observed as exactly this: the write-address task died
+  // mid-iteration at the power-on reset and all eight AW field checks then failed
+  // with verified_count == 0. Re-arm every key, since every task is restarting.
+  write_address_key  = new(1);
+  write_data_key     = new(1);
+  write_response_key = new(1);
+  read_address_key   = new(1);
+  read_data_key      = new(1);
+
+  foreach (sb_inflight[c]) begin
+    sb_inflight[c].active = 0;
+    sb_rx_master_count[c] = 0;
+    sb_matched_count[c]   = 0;
+  end
+
+  sb_outstanding_awid.delete();
+  sb_outstanding_arid.delete();
+  sb_pending_bid.delete();
+  sb_pending_rid.delete();
+
+  sb_slave_waddr_pool.delete();
+  sb_slave_wdata_pool.delete();
+  sb_slave_raddr_pool.delete();
+  sb_slave_bresp_pool.delete();
+  sb_slave_rdata_pool.delete();
+
+  // Items already published to the fifos before the reset are equally stale.
+  axi4_master_write_address_analysis_fifo.flush();
+  axi4_master_write_data_analysis_fifo.flush();
+  axi4_master_write_response_analysis_fifo.flush();
+  axi4_master_read_address_analysis_fifo.flush();
+  axi4_master_read_data_analysis_fifo.flush();
+  axi4_slave_write_address_analysis_fifo.flush();
+  axi4_slave_write_data_analysis_fifo.flush();
+  axi4_slave_write_response_analysis_fifo.flush();
+  axi4_slave_read_address_analysis_fifo.flush();
+  axi4_slave_read_data_analysis_fifo.flush();
+
+  `uvm_info(get_type_name(), $sformatf("Reset #%0d observed: in-flight scoreboard state discarded", sb_reset_count), UVM_LOW)
+
+endfunction : sb_clear_on_reset
 
 //--------------------------------------------------------------------------------------------
 // Task: axi4_write_address
@@ -349,19 +547,39 @@ task axi4_scoreboard::axi4_write_address();
   forever begin
     write_address_key.get(1);
     axi4_master_write_address_analysis_fifo.get(axi4_master_tx_h1);
+    //FINDING 1: from here until the comparison completes this item exists ONLY
+    //inside this task. Record it so check_phase can see it if the slave-side
+    //get() below never returns.
+    sb_rx_master_count[SB_CH_AW]++;
+    sb_mark_inflight(SB_CH_AW, axi4_master_tx_h1.sb_src_index,
+                     longint'(axi4_master_tx_h1.awid), longint'(axi4_master_tx_h1.awaddr));
+    // "This manager has an outstanding write of this id" is established by the
+    // manager issuing AW -- nothing downstream. Registering it after the
+    // blocking slave-side get() below made an undecoded address (no slave
+    // partner ever arrives, but the interconnect's default slave still returns
+    // a DECERR BID) surface as "bid returned to the WRONG manager".
+    sb_outstanding_awid[axi4_master_tx_h1.sb_src_index][int'(axi4_master_tx_h1.awid)]++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_address_channel \n%s",axi4_master_tx_h1.sprint()),UVM_HIGH)
-    axi4_slave_write_address_analysis_fifo.get(axi4_slave_tx_h1);
+    if(axi4_env_cfg_h.sb_keyed_pairing)
+      sb_match_slave_write_address(axi4_master_tx_h1, axi4_slave_tx_h1);
+    else
+      axi4_slave_write_address_analysis_fifo.get(axi4_slave_tx_h1);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_write_address_channel \n%s",axi4_slave_tx_h1.sprint()),UVM_HIGH)
     
     // Process all write address transactions including those to invalid addresses
     axi4_write_address_comparision(axi4_master_tx_h1,axi4_slave_tx_h1);
+    sb_clear_inflight(SB_CH_AW);
+    sb_matched_count[SB_CH_AW]++;
     axi4_master_tx_awaddr_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_address_channel count \n %0d",axi4_master_tx_awaddr_count),UVM_HIGH)
     axi4_slave_tx_awaddr_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_write_address_channel count \n %0d",axi4_slave_tx_awaddr_count),UVM_HIGH)
     
-    // Log invalid addresses for debugging
-    if(!is_valid_write_address(axi4_master_tx_h1.awaddr, axi4_master_tx_h1.awid)) begin
+    // Pass the SOURCE MASTER PORT, not AWID. is_valid_write_address() forwards
+    // this to the bus matrix as the master index for its permission/security
+    // lookup, so using AWID evaluated every access against whichever master
+    // happens to share that number.
+    if(!is_valid_write_address(axi4_master_tx_h1.awaddr, axi4_master_tx_h1.sb_src_index, axi4_master_tx_h1.awprot)) begin
       `uvm_info(get_type_name(),$sformatf("Write transaction to invalid address 0x%16h processed by scoreboard - expecting error response",axi4_master_tx_h1.awaddr),UVM_LOW)
     end
     
@@ -379,10 +597,18 @@ task axi4_scoreboard::axi4_write_data();
   forever begin
     write_data_key.get(1);
     axi4_master_write_data_analysis_fifo.get(axi4_master_tx_h2);
+    sb_rx_master_count[SB_CH_W]++;
+    sb_mark_inflight(SB_CH_W, axi4_master_tx_h2.sb_src_index,
+                     longint'(axi4_master_tx_h2.awid), longint'(axi4_master_tx_h2.awaddr));
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_data_channel \n%s",axi4_master_tx_h2.sprint()),UVM_HIGH)
-    axi4_slave_write_data_analysis_fifo.get(axi4_slave_tx_h2);
+    if(axi4_env_cfg_h.sb_keyed_pairing)
+      sb_match_slave_write_data(axi4_master_tx_h2, axi4_slave_tx_h2);
+    else
+      axi4_slave_write_data_analysis_fifo.get(axi4_slave_tx_h2);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_write_data_channel \n%s",axi4_slave_tx_h2.sprint()),UVM_HIGH)
     axi4_write_data_comparision(axi4_master_tx_h2,axi4_slave_tx_h2);
+    sb_clear_inflight(SB_CH_W);
+    sb_matched_count[SB_CH_W]++;
     axi4_master_tx_wdata_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_data_channel count \n %0d",axi4_master_tx_wdata_count),UVM_HIGH)
     axi4_slave_tx_wdata_count++;
@@ -401,12 +627,27 @@ task axi4_scoreboard::axi4_write_response();
   forever begin
     write_response_key.get(1);
     axi4_master_write_response_analysis_fifo.get(axi4_master_tx_h3);
+    sb_rx_master_count[SB_CH_B]++;
+    sb_mark_inflight(SB_CH_B, axi4_master_tx_h3.sb_src_index,
+                     longint'(axi4_master_tx_h3.bid), longint'(axi4_master_tx_h3.awaddr));
+    //AXI4: the write response must carry back an AWID the manager is still
+    //waiting on. Master-side-only property, retired HERE (before the slave
+    //pairing can block) so a lost slave response cannot masquerade as a
+    //never-returned BID.
+    sb_retire_outstanding_awid(axi4_master_tx_h3.sb_src_index, int'(axi4_master_tx_h3.bid));
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_response \n%s",axi4_master_tx_h3.sprint()),UVM_HIGH)
-    axi4_slave_write_response_analysis_fifo.get(axi4_slave_tx_h3);
+    //FINDING 5: B used to be paired by fifo head on both sides. See
+    //sb_match_slave_write_response() for the key and why it is the key.
+    if(axi4_env_cfg_h.sb_keyed_pairing)
+      sb_match_slave_write_response(axi4_master_tx_h3, axi4_slave_tx_h3);
+    else
+      axi4_slave_write_response_analysis_fifo.get(axi4_slave_tx_h3);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_write_response \n%s",axi4_slave_tx_h3.sprint()),UVM_HIGH)
-    
-    // Process all write responses including error responses  
+
+    // Process all write responses including error responses
     axi4_write_response_comparision(axi4_master_tx_h3,axi4_slave_tx_h3);
+    sb_clear_inflight(SB_CH_B);
+    sb_matched_count[SB_CH_B]++;
     axi4_master_tx_bresp_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_response_channel count \n %0d",axi4_master_tx_bresp_count),UVM_HIGH)
     axi4_slave_tx_bresp_count++;
@@ -431,19 +672,30 @@ task axi4_scoreboard::axi4_read_address();
   forever begin
     read_address_key.get(1);
     axi4_master_read_address_analysis_fifo.get(axi4_master_tx_h4);
+    sb_rx_master_count[SB_CH_AR]++;
+    sb_mark_inflight(SB_CH_AR, axi4_master_tx_h4.sb_src_index,
+                     longint'(axi4_master_tx_h4.arid), longint'(axi4_master_tx_h4.araddr));
+    // Registered on the manager's AR, not after pairing -- see the write-address
+    // channel above for why the pairing-time registration was wrong.
+    sb_outstanding_arid[axi4_master_tx_h4.sb_src_index][int'(axi4_master_tx_h4.arid)]++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_address_channel \n%s",axi4_master_tx_h4.sprint()),UVM_HIGH)
-    axi4_slave_read_address_analysis_fifo.get(axi4_slave_tx_h4);
+    if(axi4_env_cfg_h.sb_keyed_pairing)
+      sb_match_slave_read_address(axi4_master_tx_h4, axi4_slave_tx_h4);
+    else
+      axi4_slave_read_address_analysis_fifo.get(axi4_slave_tx_h4);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_read_address_channel \n%s",axi4_slave_tx_h4.sprint()),UVM_HIGH)
     
     // Process all read address transactions including those to invalid addresses
     axi4_read_address_comparision(axi4_master_tx_h4,axi4_slave_tx_h4);
+    sb_clear_inflight(SB_CH_AR);
+    sb_matched_count[SB_CH_AR]++;
     axi4_master_tx_araddr_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_address_channel count \n %0d",axi4_master_tx_araddr_count),UVM_HIGH)
     axi4_slave_tx_araddr_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_read_address_channel count \n %0d",axi4_slave_tx_araddr_count),UVM_HIGH)
     
-    // Log invalid addresses for debugging
-    if(!is_valid_read_address(axi4_master_tx_h4.araddr, axi4_master_tx_h4.arid)) begin
+    // Source master port, not ARID -- see the write-address channel above.
+    if(!is_valid_read_address(axi4_master_tx_h4.araddr, axi4_master_tx_h4.sb_src_index, axi4_master_tx_h4.arprot)) begin
       `uvm_info(get_type_name(),$sformatf("Read transaction to invalid address 0x%16h processed by scoreboard - expecting error response",axi4_master_tx_h4.araddr),UVM_LOW)
     end
     
@@ -461,12 +713,25 @@ task axi4_scoreboard::axi4_read_data();
   forever begin
     read_data_key.get(1);
     axi4_master_read_data_analysis_fifo.get(axi4_master_tx_h5);
+    sb_rx_master_count[SB_CH_R]++;
+    sb_mark_inflight(SB_CH_R, axi4_master_tx_h5.sb_src_index,
+                     longint'(axi4_master_tx_h5.rid), longint'(axi4_master_tx_h5.araddr));
+    //AXI4: the read data must carry back an ARID the manager is still waiting
+    //on. Master-side-only property -- retired before the slave pairing.
+    sb_retire_outstanding_arid(axi4_master_tx_h5.sb_src_index, int'(axi4_master_tx_h5.rid));
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_data_channel \n%s",axi4_master_tx_h5.sprint()),UVM_HIGH)
-    axi4_slave_read_data_analysis_fifo.get(axi4_slave_tx_h5);
+    //FINDING 5: R used to be paired by fifo head on both sides. See
+    //sb_match_slave_read_data() for the key and why it is the key.
+    if(axi4_env_cfg_h.sb_keyed_pairing)
+      sb_match_slave_read_data(axi4_master_tx_h5, axi4_slave_tx_h5);
+    else
+      axi4_slave_read_data_analysis_fifo.get(axi4_slave_tx_h5);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_read_data_channel \n%s",axi4_slave_tx_h5.sprint()),UVM_HIGH)
-    
+
     // Process all read responses including error responses
     axi4_read_data_comparision(axi4_master_tx_h5,axi4_slave_tx_h5);
+    sb_clear_inflight(SB_CH_R);
+    sb_matched_count[SB_CH_R]++;
     axi4_master_tx_rdata_count++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_data_channel count \n %0d",axi4_master_tx_rdata_count),UVM_HIGH)
     axi4_slave_tx_rdata_count++;
@@ -495,7 +760,7 @@ endtask : axi4_read_data
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_master_tx_h1,input axi4_slave_tx axi4_slave_tx_h1);
 
-  if(axi4_master_tx_h1.awid == axi4_slave_tx_h1.awid)begin
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h1.awid == axi4_slave_tx_h1.awid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_awid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_AWID_MATCHED", $sformatf("Master AWID = 'h%0x and Slave AWID = 'h%0x",axi4_master_tx_h1.awid,axi4_slave_tx_h1.awid), UVM_HIGH);             
     byte_data_cmp_verified_awid_count++;
@@ -594,7 +859,7 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
   end
 
   // AWUSER signal comparison - Enhancement for USER signal integrity
-  if(axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser)begin
+  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg || (axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser))begin
     `uvm_info(get_type_name(),$sformatf("axi4_awuser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_AWUSER_MATCHED", $sformatf("Master awuser = 'h%0x and Slave awuser = 'h%0x",axi4_master_tx_h1.awuser,axi4_slave_tx_h1.awuser), UVM_HIGH);
     byte_data_cmp_verified_awuser_count++;
@@ -618,14 +883,19 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
 
   axi4_write_address_comparision(axi4_master_tx_h2,axi4_slave_tx_h2);
 
-  if(axi4_master_tx_h2.wdata == axi4_slave_tx_h2.wdata)begin
+  if(sb_wdata_equal_under_strobe(axi4_master_tx_h2,axi4_slave_tx_h2))begin
     `uvm_info(get_type_name(),$sformatf("axi4_wdata from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_wdata_MATCHED", $sformatf("Master wdata = %0p and Slave wdata = %0p",axi4_master_tx_h2.wdata,axi4_slave_tx_h2.wdata), UVM_HIGH);             
     byte_data_cmp_verified_wdata_count++;
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_wdata from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_wdata_NOT_MATCHED", $sformatf("Master wdata = %0p and Slave wdata = %0p",axi4_master_tx_h2.wdata,axi4_slave_tx_h2.wdata), UVM_HIGH);             
+    `uvm_info("SB_wdata_NOT_MATCHED", $sformatf("Master wdata = %0p and Slave wdata = %0p",axi4_master_tx_h2.wdata,axi4_slave_tx_h2.wdata), UVM_HIGH);
+    // This counter was never incremented, so a write-payload mismatch left BOTH
+    // wdata counters at zero and check_phase read that as "no transactions
+    // processed" -- an unconditional silent pass on the one thing a write test
+    // exists to prove.
+    byte_data_cmp_failed_wdata_count++;
   end
 
   if(axi4_master_tx_h2.wstrb == axi4_slave_tx_h2.wstrb)begin
@@ -635,8 +905,9 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
   end
   else begin
     `uvm_info(get_type_name(),$sformatf("axi4_wstrb from master and slave is  not equal"),UVM_HIGH);
-    `uvm_info("SB_wstrb_NOT_MATCHED", $sformatf("Master wstrb = %0p and Slave wstrb = %0p",axi4_master_tx_h2.wstrb,axi4_slave_tx_h2.wstrb), UVM_HIGH);             
-
+    `uvm_info("SB_wstrb_NOT_MATCHED", $sformatf("Master wstrb = %0p and Slave wstrb = %0p",axi4_master_tx_h2.wstrb,axi4_slave_tx_h2.wstrb), UVM_HIGH);
+    // Same silent-pass hole as wdata above.
+    byte_data_cmp_failed_wstrb_count++;
   end
 
   foreach(axi4_master_tx_h2.wdata[i]) begin
@@ -686,7 +957,7 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
   // Write data comparisons are handled separately in the write data phase
   `uvm_info(get_type_name(),$sformatf("Write response comparison - bid/bresp/buser only"),UVM_HIGH);
 
-  if(axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid)begin
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_bid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_bid_MATCHED", $sformatf("Master bid = %0p and Slave bid = %0p",axi4_master_tx_h3.bid,axi4_slave_tx_h3.bid), UVM_HIGH);             
     byte_data_cmp_verified_bid_count++;
@@ -728,6 +999,15 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
       `uvm_info("SB_B_WAIT_STATES_NOT_MATCHED", $sformatf("Master=%0d Slave=%0d",axi4_master_tx_h3.b_wait_states,axi4_slave_tx_h3.b_wait_states), UVM_HIGH);
     end
   end
+  // The bid-returned-to-originating-manager retirement used to live here. It
+  // is a MASTER-SIDE-ONLY property -- "the manager got back an id it was still
+  // waiting on" -- and running it here made it depend on the slave-side
+  // partner turning up. When the slave response was lost the channel task
+  // parked before ever reaching this line, so the outstanding map kept an id
+  // the manager had in fact been given, and the resulting error blamed the
+  // wrong thing. It now runs in axi4_write_response() the moment the master
+  // packet is received. See sb_retire_outstanding_awid().
+
 endtask : axi4_write_response_comparision
 
 //--------------------------------------------------------------------------------------------
@@ -740,7 +1020,7 @@ endtask : axi4_write_response_comparision
 task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_master_tx_h4,input axi4_slave_tx axi4_slave_tx_h4);
 
   
-  if(axi4_master_tx_h4.arid == axi4_slave_tx_h4.arid)begin
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h4.arid == axi4_slave_tx_h4.arid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arID_MATCHED", $sformatf("Master arID = 'h%0x and Slave arID = 'h%0x",axi4_master_tx_h4.arid,axi4_slave_tx_h4.arid), UVM_HIGH);             
     byte_data_cmp_verified_arid_count++;
@@ -828,7 +1108,7 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     byte_data_cmp_failed_arprot_count++;
   end
 
-  if(axi4_master_tx_h4.arregion == axi4_slave_tx_h4.arregion)begin
+  if(!axi4_env_cfg_h.axregion_passthrough_chk_cfg || (axi4_master_tx_h4.arregion == axi4_slave_tx_h4.arregion))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arregion from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arregion_MATCHED", $sformatf("Master arregion = 'h%0x and Slave arregion = 'h%0x",axi4_master_tx_h4.arregion,axi4_slave_tx_h4.arregion), UVM_HIGH);             
     byte_data_cmp_verified_arregion_count++;
@@ -839,7 +1119,7 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     byte_data_cmp_failed_arregion_count++;
   end
 
-  if(axi4_master_tx_h4.arqos == axi4_slave_tx_h4.arqos)begin
+  if(!axi4_env_cfg_h.axqos_passthrough_chk_cfg || (axi4_master_tx_h4.arqos == axi4_slave_tx_h4.arqos))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arqos from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arqos_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);             
     byte_data_cmp_verified_arqos_count++;
@@ -861,7 +1141,7 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
   end
 
   // ARUSER signal comparison - Enhancement for USER signal integrity
-  if(axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser)begin
+  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg || (axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser))begin
     `uvm_info(get_type_name(),$sformatf("axi4_aruser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_ARUSER_MATCHED", $sformatf("Master aruser = 'h%0x and Slave aruser = 'h%0x",axi4_master_tx_h4.aruser,axi4_slave_tx_h4.aruser), UVM_HIGH);
     byte_data_cmp_verified_aruser_count++;
@@ -889,7 +1169,7 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
   validate_response_correctness(axi4_master_tx_h5, axi4_slave_tx_h5, 0); // 0 = read operation
   
   // Always validate RID regardless of error response
-  if(axi4_master_tx_h5.rid == axi4_slave_tx_h5.rid)begin
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h5.rid == axi4_slave_tx_h5.rid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_rid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_rid_MATCHED", $sformatf("Master rid = %0p and Slave rid = %0p",axi4_master_tx_h5.rid,axi4_slave_tx_h5.rid), UVM_HIGH);             
     byte_data_cmp_verified_rid_count++;
@@ -963,6 +1243,10 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     end
   end
 
+  // The rid-returned-to-originating-manager retirement moved to
+  // axi4_read_data(), for the same reason as the BID one above: it is a
+  // master-side property and must not be gated on the slave partner arriving.
+
 endtask : axi4_read_data_comparision
 
 //--------------------------------------------------------------------------------------------
@@ -986,35 +1270,87 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   
   // Check if end-of-test checks should be disabled (for sanity tests)
   void'(uvm_config_db#(int)::get(null, "*", "disable_end_of_test_checks", disable_end_of_test_checks));
-  
+
+  //--------------------------------------------------------------------------------------------
+  // THE ONLY remaining path that skips the completeness gate below.
+  //
+  // Unlike the passive / error_inject guards further down, this one is not
+  // derived from a MODE -- it is an explicit per-test opt-out, written into the
+  // test source (axi4_basic_sanity_test, axi4_master_base_test,
+  // axi4_reset_comprehensive_test, axi4_independent_reset_test) and greppable
+  // there. It is therefore treated as a declared waiver rather than a silent
+  // hole, and it is raised to a WARNING so that it is counted and printed in
+  // every log's report summary: a run whose scoreboard checked nothing must
+  // never look identical to a run whose scoreboard checked everything.
+  //
+  // Residual gap, stated deliberately: three of those four tests are reset /
+  // abort / X-injection tests, i.e. exactly the class where a transaction is
+  // most likely to be lost. Removing this opt-out is a separate change with a
+  // separate blast radius and needs its own fail-then-pass evidence.
+  //--------------------------------------------------------------------------------------------
   if (disable_end_of_test_checks) begin
-    `uvm_info(get_type_name(), "End-of-test checks disabled for sanity test", UVM_LOW)
+    `uvm_warning(get_type_name(), "disable_end_of_test_checks=1 : ALL scoreboard end-of-test checking is waived for this test, INCLUDING the completeness gate (in-flight / unmatched / holding-pool / outstanding-id / pipeline-balance / analysis-fifo residue). A PASS from this run says nothing about whether every transaction was accounted for.")
     return; // Skip all end-of-test checking
   end
-  
-  // Check for error_inject override from test first
-  has_override = uvm_config_db#(bit)::get(this, "", "scoreboard_error_inject_override", error_inject_override);
-  
-  // Skip count comparison checks if error_inject is enabled (either from override or env_config)
-  if ((has_override && error_inject_override) || (!has_override && axi4_env_cfg_h.error_inject)) begin
-    `uvm_info(get_type_name(), $sformatf("Scoreboard count comparison checks skipped due to error_inject enabled (override=%0d, env_cfg=%0d)", 
-                                          has_override ? error_inject_override : 0, axi4_env_cfg_h.error_inject), UVM_MEDIUM);
-    return;
-  end
-  
-  // Skip count comparison checks if all slaves are passive
+
+  // Establish the slave-agent mode. Used ONLY to gate the master-vs-slave FIELD
+  // EQUALITY comparisons further down; the completeness gate below runs
+  // regardless -- see the rationale there.
   foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
     if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) begin
       all_slaves_passive = 0;
       break;
     end
   end
-  
+
+  //--------------------------------------------------------------------------------------------
+  // SINGLE COMPLETENESS GATE -- ahead of every mode guard in this function.
+  //
+  // Two separate fail-open holes used to live here, and both are closed by
+  // moving ONE call in front of ALL the guards:
+  //
+  //   (a) all-slaves-PASSIVE returned before any accounting ran. Passive removes
+  //       the slave DRIVER, not the slave MONITOR: slave/axi4_slave_agent.sv
+  //       builds axi4_slave_mon_proxy_h unconditionally and env/axi4_env.sv
+  //       connects its five analysis ports to this scoreboard unconditionally.
+  //       So a passive-slave test (axi4_write_test, and any DUT/VIP integration
+  //       config where the DUT is the responder) still feeds this scoreboard on
+  //       both sides, still parks items in-flight, and still leaked every one of
+  //       them past a clean-looking PASS. What passive changes is only whether a
+  //       VIP subordinate exists to compare AGAINST -- that is handled INSIDE
+  //       the completeness function, which detects "no subordinate-side
+  //       transaction was ever observed" and reports it as one explicit error
+  //       instead of N identical ones. It never silently passes.
+  //
+  //   (b) error_inject returned before the raw analysis-fifo residue checks.
+  //       The C1-C5 accounting only sees items a channel task already get()-ed;
+  //       an item still sitting in an analysis fifo that no worker ever pulled
+  //       was invisible on all 23 error-injection test classes. The fifo residue
+  //       check is now C6 inside the same function, so it is covered by the same
+  //       single gate.
+  //
+  // The mode guards below now do exactly one thing: skip the master-vs-slave
+  // FIELD EQUALITY comparisons that genuinely do not apply in that mode
+  // (no VIP subordinate to compare against / errors deliberately injected so
+  // fields legitimately differ). Neither of them may skip accounting.
+  //--------------------------------------------------------------------------------------------
+  sb_end_of_test_completeness_check();
+
   if (all_slaves_passive) begin
-    `uvm_info(get_type_name(), "Scoreboard count comparison checks skipped - all slaves are PASSIVE", UVM_MEDIUM);
+    `uvm_info(get_type_name(), "Scoreboard master-vs-slave FIELD comparisons skipped - all slaves are PASSIVE. Completeness accounting (C1-C6) DID run above and is authoritative for this run.", UVM_MEDIUM);
     return;
-  end 
-  
+  end
+
+  // Check for error_inject override from test first
+  has_override = uvm_config_db#(bit)::get(this, "", "scoreboard_error_inject_override", error_inject_override);
+
+  // Skip count comparison checks if error_inject is enabled (either from override or env_config)
+  if ((has_override && error_inject_override) || (!has_override && axi4_env_cfg_h.error_inject)) begin
+    `uvm_info(get_type_name(), $sformatf("Scoreboard master-vs-slave FIELD comparisons skipped due to error_inject enabled (override=%0d, env_cfg=%0d). Completeness accounting (C1-C6) DID run above.",
+                                          has_override ? error_inject_override : 0, axi4_env_cfg_h.error_inject), UVM_MEDIUM);
+    return;
+  end
+
   //--------------------------------------------------------------------------------------------
   // 1.Check if the comparisions counter is NON-zero
   //   A non-zero value indicates that the comparisions never happened and throw error
@@ -1450,6 +1786,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("rid count comparisions are failed"));
     end
 
+    // The bid/rid-returned-to-originating-manager re-test used to live here,
+    // inside the READ-mode branch, so it never ran for a write-only test and
+    // the outstanding-id maps were left un-drained. It is now unconditional,
+    // in sb_end_of_test_completeness_check() below.
+
      if ((byte_data_cmp_verified_rdata_count == 0) && (byte_data_cmp_failed_rdata_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("rdata count comparisions - no transactions processed (likely all decode errors)"),UVM_LOW);
     end
@@ -1516,88 +1857,20 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   //--------------------------------------------------------------------------------------------
   
   //--------------------------------------------------------------------------------------------
-  // 3.Analysis fifos must be zero - This will indicate that all the packets have been compared
-  //   This is to make sure that we have taken all packets from both FIFOs and made the comparisions
+  // 3./4. Analysis-fifo residue and in-flight accounting used to be checked HERE,
+  //   at the very end of check_phase, which put them behind both the
+  //   all-slaves-PASSIVE return and the error_inject return. Both are now part of
+  //   the single completeness gate near the top of this function
+  //   (sb_end_of_test_completeness_check(), C1-C6), so they run in every mode.
+  //
+  //   The ten fifo checks that lived here were additionally VACUOUS: they tested
+  //   uvm_tlm_analysis_fifo::size(), which returns the fifo's CAPACITY, and an
+  //   analysis fifo is constructed unbounded (uvm_tlm_fifos.svh: super.new(name,
+  //   parent, 0) "analysis fifo must be unbounded"). size() therefore returned 0
+  //   unconditionally and the `is not empty` branch was unreachable in EVERY
+  //   mode, including the ones where the code was nominally reached. The C6
+  //   check uses used(), which is the occupancy.
   //--------------------------------------------------------------------------------------------
-  if (axi4_master_write_address_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 Master write address analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_master_write_address_analysis_fifo:%0d",axi4_master_write_address_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 Master write address analysis FIFO is not empty"));
-  end
-
-  if (axi4_master_write_data_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 Master write data analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_master_write_data_analysis_fifo:%0d",axi4_master_write_data_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 Master write data analysis FIFO is not empty"));
-  end
-
-  if (axi4_master_write_response_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 Master write response analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_master_write_response_analysis_fifo:%0d",axi4_master_write_response_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 Master write response analysis FIFO is not empty"));
-  end
- 
-  if (axi4_master_read_address_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 Master read address analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_master_read_address_analysis_fifo:%0d",axi4_master_read_address_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 Master read address analysis FIFO is not empty"));
-  end
-
-  if (axi4_master_read_data_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 Master read data analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_master_read_data_analysis_fifo:%0d",axi4_master_read_data_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 Master read data analysis FIFO is not empty"));
-  end
-
-  if (axi4_slave_write_address_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 slave write address analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_slave_write_address_analysis_fifo:%0d",axi4_slave_write_address_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 slave write address analysis FIFO is not empty"));
-  end
-
-  if (axi4_slave_write_data_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 slave write data analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_slave_write_data_analysis_fifo:%0d",axi4_slave_write_data_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 slave write data analysis FIFO is not empty"));
-  end
-
-  if (axi4_slave_write_response_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 slave write response analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_slave_write_response_analysis_fifo:%0d",axi4_slave_write_response_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 slave write response analysis FIFO is not empty"));
-  end
- 
-  if (axi4_slave_read_address_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 slave read address analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_slave_read_address_analysis_fifo:%0d",axi4_slave_read_address_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 slave read address analysis FIFO is not empty"));
-  end
-
-  if (axi4_slave_read_data_analysis_fifo.size() == 0) begin
-    `uvm_info (get_type_name(), $sformatf ("axi4 slave read data analysis FIFO is empty"),UVM_HIGH);
-  end
-  else begin
-    `uvm_info (get_type_name(), $sformatf ("axi4_slave_read_data_analysis_fifo:%0d",axi4_slave_read_data_analysis_fifo.size() ),UVM_HIGH);
-    `uvm_error (get_type_name(), $sformatf ("axi4 slave read data analysis FIFO is not empty"));
-  end
 
   `uvm_info(get_type_name(),$sformatf("--\n----------------------------------------------END OF SCOREBOARD CHECK PHASE---------------------------------------"),UVM_HIGH)
 
@@ -1958,7 +2231,7 @@ endfunction
 // Returns:
 //   1 if address is valid for write, 0 if invalid (should get DECERR)
 //--------------------------------------------------------------------------------------------
-function bit axi4_scoreboard::is_valid_write_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
+function bit axi4_scoreboard::is_valid_write_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] awprot);
   bresp_e expected_resp;
   
   // Special case: DDR memory addresses are valid for all masters (temporary fix for awid vs master_id issue)
@@ -1967,10 +2240,11 @@ function bit axi4_scoreboard::is_valid_write_address(bit [ADDRESS_WIDTH-1:0] add
     return 1;
   end
   
-  // Use bus matrix to get expected write response
-  // TODO: Get actual AxPROT from transaction - for now use default
+  // Use bus matrix to get expected write response. AWPROT now comes from the
+  // caller instead of the hard-coded 3'b000 the old TODO left behind, so the
+  // access matrix's security rules are actually exercised.
   if (axi4_bus_matrix_h != null) begin
-    expected_resp = axi4_bus_matrix_h.get_write_resp(master_id, addr, 3'b000);
+    expected_resp = axi4_bus_matrix_h.get_write_resp(master_id, addr, awprot);
   end else begin
     // If no bus matrix configured, default to OKAY (valid)
     expected_resp = WRITE_OKAY;
@@ -1997,7 +2271,7 @@ endfunction : is_valid_write_address
 // Returns:
 //   1 if address is valid for read, 0 if invalid (should get DECERR)
 //--------------------------------------------------------------------------------------------
-function bit axi4_scoreboard::is_valid_read_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
+function bit axi4_scoreboard::is_valid_read_address(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] arprot);
   rresp_e expected_resp;
   
   // Special case: DDR memory addresses are valid for all masters (temporary fix for awid vs master_id issue)
@@ -2006,10 +2280,9 @@ function bit axi4_scoreboard::is_valid_read_address(bit [ADDRESS_WIDTH-1:0] addr
     return 1;
   end
   
-  // Use bus matrix to get expected read response
-  // TODO: Get actual AxPROT from transaction - for now use default
+  // Use bus matrix to get expected read response; ARPROT from the caller.
   if (axi4_bus_matrix_h != null) begin
-    expected_resp = axi4_bus_matrix_h.get_read_resp(master_id, addr, 3'b000);
+    expected_resp = axi4_bus_matrix_h.get_read_resp(master_id, addr, arprot);
   end else begin
     // If no bus matrix configured, default to OKAY (valid)
     expected_resp = READ_OKAY;
@@ -2036,10 +2309,13 @@ endfunction : is_valid_read_address
 // Returns:
 //   Expected write response (WRITE_OKAY, WRITE_DECERR, WRITE_SLVERR)
 //--------------------------------------------------------------------------------------------
-function bresp_e axi4_scoreboard::get_expected_write_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id);
+function bresp_e axi4_scoreboard::get_expected_write_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit [2:0] awprot);
   // TODO: Get actual AxPROT from transaction - for now use default
   if (axi4_bus_matrix_h != null) begin
-    return axi4_bus_matrix_h.get_write_resp(master_id, addr, 3'b000);
+    // AWPROT was hard-coded to 3'b000 here, i.e. "privileged secure data", so the
+    // access matrix's security rules were never exercised on the write path at
+    // all: a non-secure write to a secure-only region scored as permitted.
+    return axi4_bus_matrix_h.get_write_resp(master_id, addr, awprot);
   end else begin
     // If no bus matrix configured, default to OKAY response
     return WRITE_OKAY;
@@ -2080,13 +2356,13 @@ endfunction : get_expected_read_response
 // Returns:
 //   1 if error response is expected, 0 if OKAY response is expected
 //--------------------------------------------------------------------------------------------
-function bit axi4_scoreboard::is_expected_error_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit is_write);
+function bit axi4_scoreboard::is_expected_error_response(bit [ADDRESS_WIDTH-1:0] addr, int master_id, bit is_write, bit [2:0] axprot);
   if (is_write) begin
-    bresp_e expected_resp = get_expected_write_response(addr, master_id);
+    bresp_e expected_resp = get_expected_write_response(addr, master_id, axprot);
     return (expected_resp != WRITE_OKAY);
   end else begin
     // For read, use default arprot since we don't have transaction context here
-    rresp_e expected_resp = get_expected_read_response(addr, master_id, 3'b000);
+    rresp_e expected_resp = get_expected_read_response(addr, master_id, axprot);
     return (expected_resp != READ_OKAY);
   end
 endfunction : is_expected_error_response
@@ -2104,19 +2380,25 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
   if (is_write) begin
     // In 1:1 connection, try to infer master ID from transaction
     // Extract numeric part from AWID (e.g., "AWID_7" -> 7)
-    int inferred_master_id = 0;
-    string awid_str = master_tx.awid.name();  // Convert enum to string
+    // The originating master port, taken from the monitor stamp. This used to be
+    // reverse-engineered from the AWID enum's NAME string ("AWID_7" -> 7 -> %
+    // no_of_masters), which is wrong twice over: AWID is stimulus, not identity,
+    // and behind an interconnect that widens AxID the enum has no name at all so
+    // the parse silently produced master 0 for every transaction.
+    int inferred_master_id = (master_tx.sb_src_index >= 0) ? master_tx.sb_src_index : 0;
+    string awid_str = master_tx.awid.name();  // kept for the debug prints below
     int awid_num;
     bresp_e expected_resp;
     bit response_valid;
     
     if (awid_str.len() >= 5 && awid_str.substr(0, 4) == "AWID_") begin
       awid_num = awid_str.substr(5, awid_str.len()-1).atoi();
+      // NOTE: awid_num is informational only now -- it no longer selects the
+      // master used for the bus-matrix permission lookup.
       // In some cases, ID might map to master number
-      inferred_master_id = awid_num % axi4_env_cfg_h.no_of_masters;
     end
     `uvm_info(get_type_name(), $sformatf("Write validation: AWID=%s, inferred_master_id=%0d, address=0x%16h", master_tx.awid, inferred_master_id, master_tx.awaddr), UVM_HIGH);
-    expected_resp = get_expected_write_response(master_tx.awaddr, inferred_master_id);
+    expected_resp = get_expected_write_response(master_tx.awaddr, inferred_master_id, master_tx.awprot);
     
     // Handle exclusive write access - EXOKAY is valid alternative to OKAY
     response_valid = (slave_tx.bresp == expected_resp);
@@ -2169,8 +2451,10 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
   end else begin
     // In 1:1 connection, try to infer master ID from transaction
     // Extract numeric part from ARID (e.g., "ARID_7" -> 7)
-    int inferred_master_id = 0;
-    string arid_str = master_tx.arid.name();  // Convert enum to string
+    // Originating master port from the monitor stamp -- see the write-side
+    // comment. The ARID name parse below is retained for debug output only.
+    int inferred_master_id = (master_tx.sb_src_index >= 0) ? master_tx.sb_src_index : 0;
+    string arid_str = master_tx.arid.name();
     int arid_num;
     rresp_e expected_resp;
     bit response_valid;
@@ -2184,17 +2468,6 @@ task axi4_scoreboard::validate_response_correctness(input axi4_master_tx master_
       
       // Use configuration-aware modulo mapping to match slave driver
       // This ensures consistent master ID mapping across all components
-      if (axi4_bus_matrix_h != null) begin
-        if (axi4_bus_matrix_h.bus_mode == axi4_bus_matrix_ref::BASE_BUS_MATRIX) begin
-          inferred_master_id = arid_num % 4; // 4x4 base matrix
-        end else begin
-          inferred_master_id = arid_num % 10; // 10x10 enhanced matrix
-        end
-      end else begin
-        // Fallback to modulo based on configured number of masters
-        inferred_master_id = arid_num % axi4_env_cfg_h.no_of_masters;
-      end
-      
       `uvm_info(get_type_name(), $sformatf("ARID parsing: arid_str=%s, arid_num=%0d, no_of_masters=%0d, inferred_master_id=%0d", 
                                            arid_str, arid_num, axi4_env_cfg_h.no_of_masters, inferred_master_id), UVM_MEDIUM);
     end
@@ -2303,6 +2576,613 @@ function bit axi4_scoreboard::backdoor_read_verify(bit [ADDRESS_WIDTH-1:0] addr,
     return 0;
   end
 endfunction : backdoor_read_verify
+
+
+//--------------------------------------------------------------------------------------------
+// Task: sb_match_slave_write_address
+// Returns the oldest pooled slave write-address transaction whose address key
+// matches m_tx, pulling more from the analysis fifo until one turns up.
+//--------------------------------------------------------------------------------------------
+task axi4_scoreboard::sb_match_slave_write_address(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  axi4_slave_tx cand;
+  int idx;
+  forever begin
+    foreach(sb_slave_waddr_pool[i]) begin
+      cand = sb_slave_waddr_pool[i];
+      if(cand.awaddr  == m_tx.awaddr  &&
+         cand.awlen   == m_tx.awlen   &&
+         cand.awsize  == m_tx.awsize  &&
+         cand.awburst == m_tx.awburst) begin
+        s_tx = cand;
+        sb_slave_waddr_pool.delete(i);
+        return;
+      end
+    end
+    axi4_slave_write_address_analysis_fifo.get(cand);
+    sb_slave_waddr_pool.push_back(cand);
+  end
+endtask : sb_match_slave_write_address
+
+//--------------------------------------------------------------------------------------------
+// Task: sb_match_slave_write_data
+// Write data carries the burst's address, so the same key works here.
+//--------------------------------------------------------------------------------------------
+task axi4_scoreboard::sb_match_slave_write_data(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  axi4_slave_tx cand;
+  forever begin
+    foreach(sb_slave_wdata_pool[i]) begin
+      cand = sb_slave_wdata_pool[i];
+      if(cand.awaddr == m_tx.awaddr) begin
+        s_tx = cand;
+        sb_slave_wdata_pool.delete(i);
+        return;
+      end
+    end
+    axi4_slave_write_data_analysis_fifo.get(cand);
+    sb_slave_wdata_pool.push_back(cand);
+  end
+endtask : sb_match_slave_write_data
+
+//--------------------------------------------------------------------------------------------
+// Task: sb_match_slave_read_address
+//--------------------------------------------------------------------------------------------
+task axi4_scoreboard::sb_match_slave_read_address(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  axi4_slave_tx cand;
+  forever begin
+    foreach(sb_slave_raddr_pool[i]) begin
+      cand = sb_slave_raddr_pool[i];
+      if(cand.araddr  == m_tx.araddr  &&
+         cand.arlen   == m_tx.arlen   &&
+         cand.arsize  == m_tx.arsize  &&
+         cand.arburst == m_tx.arburst) begin
+        s_tx = cand;
+        sb_slave_raddr_pool.delete(i);
+        return;
+      end
+    end
+    axi4_slave_read_address_analysis_fifo.get(cand);
+    sb_slave_raddr_pool.push_back(cand);
+  end
+endtask : sb_match_slave_read_address
+
+//--------------------------------------------------------------------------------------------
+// Task: sb_match_slave_write_response          (FINDING 5 -- B is no longer positional)
+//
+// THE KEY: (awaddr, awlen, awsize, awburst) -- the same key the AW channel
+// uses -- taken oldest-match-first.
+//
+// Why that key and not something more obvious:
+//  * NOT arrival order. Both fifos are fed by EVERY agent (env/axi4_env.sv
+//    connect_phase), and an interconnect may return B responses for different
+//    IDs or different subordinate ports in any order it likes. Pairing head to
+//    head then compares two responses that were never related, which shows up
+//    as a false BRESP/BUSER mismatch, or -- worse -- as a silent PASS when the
+//    two swapped responses happen to carry the same value, hiding a routing
+//    swap. That is exactly what the AW/W/AR channels were fixed for.
+//  * NOT BID == BID. The fabric REMAPS the id (NIC-400 appends the ingress
+//    port index to the egress AxID); that is why axid_passthrough_chk_cfg
+//    exists and is turned off with a DUT in the path. An identifier the DUT is
+//    allowed to rewrite cannot be a correlation key. The manager-side property
+//    that survives remapping -- "the BID I got back is one I am still waiting
+//    on" -- is checked separately against sb_outstanding_awid.
+//  * NOT sb_src_index. It is stamped by both monitors but means different
+//    things on the two sides: master port index vs slave port index. Two
+//    different namespaces cannot be compared for equality.
+//  * The ADDRESS survives. An AXI interconnect decodes on the address to route;
+//    it does not alter it. This is the one assumption the keyed AW/W/AR
+//    matchers already rest on, so B/R reuse it rather than introducing a
+//    second, separately-falsifiable assumption.
+//
+// This works because the master-side and slave-side B packets are both
+// COMBINED packets: the monitors join AW+W+B before publishing
+// (axi4_*_seq_item_converter::to_write_addr_data_resp_class copies awaddr/
+// awlen/awsize/awburst forward), so the address key is present on both sides
+// of the comparison even though B itself carries no address.
+//
+// Ambiguity policy: two in-flight writes from different managers to the SAME
+// address with the same shape are indistinguishable in every field this
+// scoreboard compares, so oldest-match-wins is both AXI's same-id ordering
+// rule and the only defensible choice. If the two are genuinely swapped the
+// comparison result is identical either way.
+//
+// Blocking policy: if no match ever arrives this task stays parked in the
+// get() below. That is deliberate -- the parked item is recorded in
+// sb_inflight[SB_CH_B] and check_phase turns it into a UVM_ERROR naming the
+// transaction, instead of the run ending green with a lost response.
+//--------------------------------------------------------------------------------------------
+task axi4_scoreboard::sb_match_slave_write_response(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  axi4_slave_tx cand;
+  forever begin
+    foreach(sb_slave_bresp_pool[i]) begin
+      cand = sb_slave_bresp_pool[i];
+      if(cand.awaddr  == m_tx.awaddr  &&
+         cand.awlen   == m_tx.awlen   &&
+         cand.awsize  == m_tx.awsize  &&
+         cand.awburst == m_tx.awburst) begin
+        s_tx = cand;
+        sb_slave_bresp_pool.delete(i);
+        return;
+      end
+    end
+    axi4_slave_write_response_analysis_fifo.get(cand);
+    sb_slave_bresp_pool.push_back(cand);
+  end
+endtask : sb_match_slave_write_response
+
+//--------------------------------------------------------------------------------------------
+// Task: sb_match_slave_read_data               (FINDING 5 -- R is no longer positional)
+//
+// THE KEY: (araddr, arlen, arsize, arburst), oldest match first -- the read
+// mirror of sb_match_slave_write_response above; the same reasoning applies
+// verbatim (RID is remapped, sb_src_index is two namespaces, the address is
+// invariant across the interconnect).
+//
+// Again both sides are COMBINED packets: to_read_addr_data_class copies
+// araddr/arlen/arsize/arburst onto the read-data packet on the master AND the
+// slave side, so the key is available even though the R channel carries no
+// address. arlen is part of the key deliberately: a returned burst of the
+// wrong length must not be silently matched to a request of another length --
+// it has to surface as a mismatch or as an unaccounted transaction, never as a
+// convenient partner.
+//--------------------------------------------------------------------------------------------
+task axi4_scoreboard::sb_match_slave_read_data(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
+  axi4_slave_tx cand;
+  forever begin
+    foreach(sb_slave_rdata_pool[i]) begin
+      cand = sb_slave_rdata_pool[i];
+      if(cand.araddr  == m_tx.araddr  &&
+         cand.arlen   == m_tx.arlen   &&
+         cand.arsize  == m_tx.arsize  &&
+         cand.arburst == m_tx.arburst) begin
+        s_tx = cand;
+        sb_slave_rdata_pool.delete(i);
+        return;
+      end
+    end
+    axi4_slave_read_data_analysis_fifo.get(cand);
+    sb_slave_rdata_pool.push_back(cand);
+  end
+endtask : sb_match_slave_read_data
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_chan_name
+// Grep-able channel names for the completeness messages.
+//--------------------------------------------------------------------------------------------
+function string axi4_scoreboard::sb_chan_name(input sb_chan_e ch);
+  case(ch)
+    SB_CH_AW : return "WRITE_ADDRESS";
+    SB_CH_W  : return "WRITE_DATA";
+    SB_CH_B  : return "WRITE_RESPONSE";
+    SB_CH_AR : return "READ_ADDRESS";
+    SB_CH_R  : return "READ_DATA";
+    default  : return "UNKNOWN";
+  endcase
+endfunction : sb_chan_name
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_mark_inflight / sb_clear_inflight                          (FINDING 1)
+// Records the master item a channel task is currently holding. Between the
+// mark and the clear the item exists only as a local handle inside a task;
+// nothing else in the scoreboard can see it, which is precisely how a
+// never-answered transaction used to disappear.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_mark_inflight(input sb_chan_e ch, input int src_index,
+                                                input longint unsigned id, input longint unsigned addr);
+  sb_inflight[ch].active    = 1;
+  sb_inflight[ch].src_index = src_index;
+  sb_inflight[ch].id        = id;
+  sb_inflight[ch].addr      = addr;
+  sb_inflight[ch].t_parked  = $time;
+endfunction : sb_mark_inflight
+
+function void axi4_scoreboard::sb_clear_inflight(input sb_chan_e ch);
+  sb_inflight[ch].active = 0;
+endfunction : sb_clear_inflight
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_retire_outstanding_awid / sb_retire_outstanding_arid
+// Retires one outstanding request id for a manager when its response is seen
+// at that manager's own port. A response whose id is not (yet) outstanding is
+// parked in sb_pending_* and re-tested at end of test by
+// sb_retest_pending_ids(), because the address and response channels are
+// consumed by independent forever loops and a response may legally reach the
+// scoreboard before the address packet that issued it.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_retire_outstanding_awid(input int src_index, input int id);
+  if(sb_outstanding_awid.exists(src_index) &&
+     sb_outstanding_awid[src_index].exists(id) &&
+     sb_outstanding_awid[src_index][id] > 0) begin
+    sb_outstanding_awid[src_index][id]--;
+    byte_data_cmp_verified_bid_to_master_count++;
+  end
+  else begin
+    sb_pending_bid.push_back('{src_index, id});
+  end
+endfunction : sb_retire_outstanding_awid
+
+function void axi4_scoreboard::sb_retire_outstanding_arid(input int src_index, input int id);
+  if(sb_outstanding_arid.exists(src_index) &&
+     sb_outstanding_arid[src_index].exists(id) &&
+     sb_outstanding_arid[src_index][id] > 0) begin
+    sb_outstanding_arid[src_index][id]--;
+    byte_data_cmp_verified_rid_to_master_count++;
+  end
+  else begin
+    sb_pending_rid.push_back('{src_index, id});
+  end
+endfunction : sb_retire_outstanding_arid
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_retest_pending_ids
+// Re-tests the B/R responses that reached the scoreboard before the address
+// packet that issued them (independent forever loops, so that ordering is
+// legal). By the time check_phase runs every address packet has been consumed,
+// so a still-unmatched id here is a real "response to a request this manager
+// never made".
+//
+// Moved out of the READ-mode branch of check_phase: it used to be skipped
+// entirely for write-only tests, which both lost the BID check and left
+// sb_outstanding_awid un-drained.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_retest_pending_ids();
+  foreach(sb_pending_bid[i]) begin
+    if(sb_outstanding_awid.exists(sb_pending_bid[i][0]) &&
+       sb_outstanding_awid[sb_pending_bid[i][0]].exists(sb_pending_bid[i][1]) &&
+       sb_outstanding_awid[sb_pending_bid[i][0]][sb_pending_bid[i][1]] > 0) begin
+      sb_outstanding_awid[sb_pending_bid[i][0]][sb_pending_bid[i][1]]--;
+      byte_data_cmp_verified_bid_to_master_count++;
+    end
+    else begin
+      `uvm_info("SB_BID_TO_MASTER_NOT_MATCHED", $sformatf("Master %0d received BID='h%0x with no outstanding write of that id",sb_pending_bid[i][0],sb_pending_bid[i][1]), UVM_LOW);
+      byte_data_cmp_failed_bid_to_master_count++;
+    end
+  end
+  sb_pending_bid.delete();
+
+  foreach(sb_pending_rid[i]) begin
+    if(sb_outstanding_arid.exists(sb_pending_rid[i][0]) &&
+       sb_outstanding_arid[sb_pending_rid[i][0]].exists(sb_pending_rid[i][1]) &&
+       sb_outstanding_arid[sb_pending_rid[i][0]][sb_pending_rid[i][1]] > 0) begin
+      sb_outstanding_arid[sb_pending_rid[i][0]][sb_pending_rid[i][1]]--;
+      byte_data_cmp_verified_rid_to_master_count++;
+    end
+    else begin
+      `uvm_info("SB_RID_TO_MASTER_NOT_MATCHED", $sformatf("Master %0d received RID='h%0x with no outstanding read of that id",sb_pending_rid[i][0],sb_pending_rid[i][1]), UVM_LOW);
+      byte_data_cmp_failed_rid_to_master_count++;
+    end
+  end
+  sb_pending_rid.delete();
+
+  if (byte_data_cmp_failed_bid_to_master_count == 0) begin
+    `uvm_info (get_type_name(), $sformatf ("bid returned to originating manager: %0d verified",byte_data_cmp_verified_bid_to_master_count),UVM_LOW);
+  end
+  else begin
+    `uvm_error (get_type_name(), $sformatf ("bid returned to the WRONG manager %0d time(s)",byte_data_cmp_failed_bid_to_master_count));
+  end
+
+  if (byte_data_cmp_failed_rid_to_master_count == 0) begin
+    `uvm_info (get_type_name(), $sformatf ("rid returned to originating manager: %0d verified",byte_data_cmp_verified_rid_to_master_count),UVM_LOW);
+  end
+  else begin
+    `uvm_error (get_type_name(), $sformatf ("rid returned to the WRONG manager %0d time(s)",byte_data_cmp_failed_rid_to_master_count));
+  end
+endfunction : sb_retest_pending_ids
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_fifo_residue
+// One analysis fifo's end-of-test occupancy. Reports and returns it.
+//
+// The caller must pass used(), NOT size(): uvm_tlm_fifo::size() returns the
+// fifo's CAPACITY, and uvm_tlm_analysis_fifo is always constructed unbounded
+// (capacity 0). Comparing size() to 0 is what made the previous ten fifo checks
+// unable to fire.
+//--------------------------------------------------------------------------------------------
+function int axi4_scoreboard::sb_fifo_residue(input string nm, input int n);
+  if(n != 0) begin
+    `uvm_error("SB_INCOMPLETE_FIFO",
+               $sformatf("axi4 %s analysis FIFO is not empty: %0d item(s) were published by a monitor and never taken off the fifo, so they were never compared. This is NOT a pass.", nm, n));
+  end
+  else begin
+    `uvm_info(get_type_name(), $sformatf("axi4 %s analysis FIFO is empty", nm), UVM_HIGH);
+  end
+  return n;
+endfunction : sb_fifo_residue
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_end_of_test_completeness_check                             (FINDING 1)
+//
+// The one function that decides whether every transaction this scoreboard saw
+// was actually ACCOUNTED FOR. Five independent ways a transaction can go
+// missing, five checks, each of which raises a UVM_ERROR naming the
+// transaction rather than a count:
+//
+//   C1 sb_inflight[]        a channel task is parked holding a master item
+//   C2 rx vs matched        items taken off a master fifo but never compared
+//   C3 holding pools        slave items pulled out of a fifo and never used
+//   C4 outstanding a?id     a request that was never answered  <-- the
+//                           seed-424242 escape (10 writes, 9 BIDs, PASS)
+//   C5 pipeline balance     AW/W/B (and AR/R) counts must agree; a write whose
+//                           B never arrived shows up here even if the B
+//                           channel itself looks internally consistent
+//   C6 analysis-fifo        an item published by a monitor that NO channel task
+//      residue              ever pulled off the fifo. C1-C5 can only see items a
+//                           worker already get()-ed, so this is the one place a
+//                           never-dequeued item is visible.
+//
+// C6 is evaluated FIRST and unconditionally: it is the only one of the six whose
+// meaning does not depend on whether a VIP subordinate exists.
+//
+// PASSIVE-MODE SEMANTICS (deliberate, not incidental):
+//   UVM_PASSIVE removes the slave DRIVER, not the slave MONITOR. The monitor is
+//   built and connected to this scoreboard either way, so a passive-slave run
+//   still delivers subordinate-side transactions whenever anything (the direct
+//   1:1 wiring, a DUT, the NIC-400 fabric) drives the subordinate interface, and
+//   the full accounting applies unchanged.
+//   The one case passive genuinely changes is when NOTHING drives the
+//   subordinate side at all: then no comparison was ever possible, and reporting
+//   it once ("nothing was checked") carries strictly more information than
+//   reporting the same fact once per transaction. That case is detected from
+//   OBSERVED traffic, never assumed from the mode, and it is still a UVM_ERROR -
+//   a scoreboard that checked nothing must not report a pass.
+//
+// NEGATIVE-CHECK HOOK: +SB_SELFTEST_COMPLETENESS=<mask> injects one synthetic
+// fault per bit so each check can be demonstrated FIRING on a passing test.
+// Injection is fail-only -- it can add errors, never remove them -- and prints
+// a banner so a self-test run can never be mistaken for a clean run.
+//   bit0 -> C1   bit1 -> C3   bit2 -> C4   bit3 -> C2   bit4 -> C5
+//   bit5 -> C6   bit6 -> the no-subordinate-observed check
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_end_of_test_completeness_check();
+  int unsigned selftest = 0;
+  int id_map[int];
+  int total_outstanding_aw = 0;
+  int total_outstanding_ar = 0;
+  sb_chan_e ch;
+  axi4_slave_tx sb_selftest_tx;
+  axi4_slave_tx sb_selftest_fifo_tx;
+  bit all_slaves_passive = 1;
+  bit master_side_seen   = 0;
+  bit slave_side_seen    = 0;
+  bit force_no_sub       = 0;
+  int fifo_residue       = 0;
+
+  // Stated explicitly: a reset discards in-flight expectations, so a clean
+  // result here on a reset test means "clean since the last reset", not
+  // "every transaction the test ever issued was accounted for".
+  if (sb_reset_count > 0) begin
+    `uvm_info(get_type_name(), $sformatf("Completeness accounting covers the window after reset #%0d (state was discarded at each reset)", sb_reset_count), UVM_LOW)
+  end
+
+  void'($value$plusargs("SB_SELFTEST_COMPLETENESS=%d", selftest));
+  if(selftest != 0) begin
+    `uvm_warning(get_type_name(), $sformatf("SB_SELFTEST_COMPLETENESS=%0d - INJECTING SYNTHETIC COMPLETENESS FAULTS. This run's verdict is NOT a functional result.", selftest));
+    if(selftest[0]) sb_mark_inflight(SB_CH_B, 99, 64'hDEAD, 64'hDEAD_BEEF);
+    if(selftest[1]) begin
+      sb_selftest_tx = axi4_slave_tx::type_id::create("sb_selftest_pool_residue");
+      sb_slave_bresp_pool.push_back(sb_selftest_tx);
+    end
+    if(selftest[2]) sb_outstanding_awid[99][8'hAB] = 1;
+    if(selftest[3]) sb_rx_master_count[SB_CH_AW]++;
+    if(selftest[4]) begin
+      sb_rx_master_count[SB_CH_AW]++;
+      sb_matched_count[SB_CH_AW]++;
+    end
+    if(selftest[5]) begin
+      // Push one item straight into an analysis fifo. The channel tasks are dead
+      // by check_phase, so nothing can drain it and C6 must report it. Note this
+      // also makes the subordinate side "seen", which is why bit6 has its own
+      // forcing path rather than relying on this one.
+      sb_selftest_fifo_tx = axi4_slave_tx::type_id::create("sb_selftest_fifo_residue");
+      axi4_slave_write_response_analysis_fifo.write(sb_selftest_fifo_tx);
+    end
+    if(selftest[6]) force_no_sub = 1;
+  end
+
+  //-------------------------------------------------------
+  // C6: items still queued in an analysis fifo, i.e. published by a monitor and
+  //     never taken by any channel task. Evaluated before everything else and in
+  //     every mode.
+  //
+  //     used() is the occupancy. The ten checks this replaces called size(),
+  //     which is the fifo's CAPACITY -- and uvm_tlm_analysis_fifo is constructed
+  //     unbounded (capacity 0), so those checks compared 0 to 0 and could never
+  //     fire in any mode. See the note in check_phase.
+  //-------------------------------------------------------
+  fifo_residue  = sb_fifo_residue("Master write address",  axi4_master_write_address_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("Master write data",     axi4_master_write_data_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("Master write response", axi4_master_write_response_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("Master read address",   axi4_master_read_address_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("Master read data",      axi4_master_read_data_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("slave write address",   axi4_slave_write_address_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("slave write data",      axi4_slave_write_data_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("slave write response",  axi4_slave_write_response_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("slave read address",    axi4_slave_read_address_analysis_fifo.used());
+  fifo_residue += sb_fifo_residue("slave read data",       axi4_slave_read_data_analysis_fifo.used());
+  `uvm_info("SB_COMPLETENESS", $sformatf("analysis-fifo residue at end of test: %0d item(s)", fifo_residue), UVM_LOW);
+
+  // Drain the early-arriving responses first: until this runs the outstanding
+  // maps still hold ids that WERE answered, and C4 would fire falsely.
+  // Deliberately ahead of the no-subordinate branch below: the BID/RID-returned-
+  // to-originating-manager property is master-side only and stays valid even
+  // when there is no subordinate-side observation at all.
+  sb_retest_pending_ids();
+
+  //-------------------------------------------------------
+  // Did this run actually have two sides to compare?
+  //
+  // Answered from OBSERVED traffic only, never from the configured mode. A
+  // subordinate-side transaction leaves exactly one of three traces: it was
+  // compared (matched_count), it is parked in a keyed holding pool, or it is
+  // still queued in a slave analysis fifo.
+  //-------------------------------------------------------
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i])
+    if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) all_slaves_passive = 0;
+
+  for(int c = 0; c < 5; c++) begin
+    if(sb_rx_master_count[c] > 0) master_side_seen = 1;
+    if(sb_matched_count[c]   > 0) slave_side_seen  = 1;
+  end
+  if(sb_slave_waddr_pool.size() || sb_slave_wdata_pool.size() || sb_slave_bresp_pool.size() ||
+     sb_slave_raddr_pool.size() || sb_slave_rdata_pool.size()) slave_side_seen = 1;
+  if(axi4_slave_write_address_analysis_fifo.used()  || axi4_slave_write_data_analysis_fifo.used() ||
+     axi4_slave_write_response_analysis_fifo.used() || axi4_slave_read_address_analysis_fifo.used() ||
+     axi4_slave_read_data_analysis_fifo.used()) slave_side_seen = 1;
+
+  if(force_no_sub) begin
+    all_slaves_passive = 1;
+    master_side_seen   = 1;
+    slave_side_seen    = 0;
+  end
+
+  if(all_slaves_passive && master_side_seen && !slave_side_seen) begin
+    // One error, not N. Every C1/C2/C4/C5 row would restate this single fact
+    // (there was no partner for anything), and a wall of them buries it. C3 and
+    // C6 are unaffected: C6 already ran above, and a non-empty holding pool is
+    // impossible here by construction (a pooled item IS subordinate traffic).
+    `uvm_error("SB_INCOMPLETE_NO_SUBORDINATE",
+               $sformatf("All slave agents are PASSIVE and NO subordinate-side transaction was observed for the whole run, yet the manager side delivered AW=%0d W=%0d B=%0d AR=%0d R=%0d transaction(s). ZERO comparisons were performed - this scoreboard checked NOTHING, and a PASS from this run is vacuous. Either a responder (active slave agent / DUT / fabric) is missing, or the slave monitor is not connected. Per-transaction accounting is suppressed because every row would restate this one fact.",
+                         sb_rx_master_count[SB_CH_AW], sb_rx_master_count[SB_CH_W],
+                         sb_rx_master_count[SB_CH_B],  sb_rx_master_count[SB_CH_AR],
+                         sb_rx_master_count[SB_CH_R]));
+    return;
+  end
+
+  if(all_slaves_passive && !master_side_seen && !slave_side_seen) begin
+    // No traffic at all reached this scoreboard. Not an error on its own (a
+    // reset-only or connectivity-only test legitimately drives nothing), but it
+    // must be visible, because every check below is trivially satisfied.
+    `uvm_warning(get_type_name(), "Scoreboard observed NO transactions at all on either side (all slaves PASSIVE). Completeness checks C1-C6 are trivially satisfied and prove nothing about this run.");
+    return;
+  end
+
+  //-------------------------------------------------------
+  // C1: a channel task is still holding a master item
+  //-------------------------------------------------------
+  for(int c = 0; c < 5; c++) begin
+    ch = sb_chan_e'(c);
+    if(sb_inflight[c].active) begin
+      `uvm_error("SB_INCOMPLETE_INFLIGHT",
+                 $sformatf("%s channel ended with a master transaction still awaiting its slave partner: master_port=%0d id='h%0x addr='h%0x parked_at=%0t. The comparison never happened - this is NOT a pass.",
+                           sb_chan_name(ch), sb_inflight[c].src_index, sb_inflight[c].id,
+                           sb_inflight[c].addr, sb_inflight[c].t_parked));
+    end
+  end
+
+  //-------------------------------------------------------
+  // C2: taken off a master fifo but never compared
+  //-------------------------------------------------------
+  for(int c = 0; c < 5; c++) begin
+    ch = sb_chan_e'(c);
+    if(sb_rx_master_count[c] != sb_matched_count[c]) begin
+      `uvm_error("SB_INCOMPLETE_UNMATCHED",
+                 $sformatf("%s channel: %0d master transactions were taken off the analysis fifo but only %0d completed a comparison (%0d unaccounted).",
+                           sb_chan_name(ch), sb_rx_master_count[c], sb_matched_count[c],
+                           sb_rx_master_count[c] - sb_matched_count[c]));
+    end
+    else begin
+      `uvm_info("SB_COMPLETENESS", $sformatf("%s channel: %0d received, %0d matched",
+                                             sb_chan_name(ch), sb_rx_master_count[c], sb_matched_count[c]), UVM_LOW);
+    end
+  end
+
+  //-------------------------------------------------------
+  // C3: slave items pulled into a keyed holding pool and never consumed.
+  //     These are OUT of the analysis fifos, so the fifo-size checks above
+  //     report them as empty.
+  //-------------------------------------------------------
+  if(sb_slave_waddr_pool.size() != 0)
+    `uvm_error("SB_INCOMPLETE_POOL", $sformatf("slave write-address holding pool still holds %0d unmatched transaction(s); first addr='h%0x", sb_slave_waddr_pool.size(), sb_slave_waddr_pool[0].awaddr));
+  if(sb_slave_wdata_pool.size() != 0)
+    `uvm_error("SB_INCOMPLETE_POOL", $sformatf("slave write-data holding pool still holds %0d unmatched transaction(s); first addr='h%0x", sb_slave_wdata_pool.size(), sb_slave_wdata_pool[0].awaddr));
+  if(sb_slave_bresp_pool.size() != 0)
+    `uvm_error("SB_INCOMPLETE_POOL", $sformatf("slave write-response holding pool still holds %0d unmatched transaction(s); first addr='h%0x", sb_slave_bresp_pool.size(), sb_slave_bresp_pool[0].awaddr));
+  if(sb_slave_raddr_pool.size() != 0)
+    `uvm_error("SB_INCOMPLETE_POOL", $sformatf("slave read-address holding pool still holds %0d unmatched transaction(s); first addr='h%0x", sb_slave_raddr_pool.size(), sb_slave_raddr_pool[0].araddr));
+  if(sb_slave_rdata_pool.size() != 0)
+    `uvm_error("SB_INCOMPLETE_POOL", $sformatf("slave read-data holding pool still holds %0d unmatched transaction(s); first addr='h%0x", sb_slave_rdata_pool.size(), sb_slave_rdata_pool[0].araddr));
+
+  //-------------------------------------------------------
+  // C4: a request that was issued and never answered.
+  //     THIS is the check that catches the reported escape: the manager issued
+  //     10 writes, 9 BIDs came back, the 10th AWID stays in the map.
+  //-------------------------------------------------------
+  foreach(sb_outstanding_awid[m]) begin
+    id_map = sb_outstanding_awid[m];
+    foreach(id_map[id]) begin
+      if(id_map[id] > 0) begin
+        total_outstanding_aw += id_map[id];
+        `uvm_error("SB_INCOMPLETE_OUTSTANDING_AWID",
+                   $sformatf("master_port=%0d issued %0d write(s) with AWID='h%0x that never received a BID. The write was NOT verified.",
+                             m, id_map[id], id));
+      end
+    end
+  end
+  foreach(sb_outstanding_arid[m]) begin
+    id_map = sb_outstanding_arid[m];
+    foreach(id_map[id]) begin
+      if(id_map[id] > 0) begin
+        total_outstanding_ar += id_map[id];
+        `uvm_error("SB_INCOMPLETE_OUTSTANDING_ARID",
+                   $sformatf("master_port=%0d issued %0d read(s) with ARID='h%0x that never received an RID. The read was NOT verified.",
+                             m, id_map[id], id));
+      end
+    end
+  end
+  `uvm_info("SB_COMPLETENESS", $sformatf("outstanding at end of test: writes=%0d reads=%0d", total_outstanding_aw, total_outstanding_ar), UVM_LOW);
+
+  //-------------------------------------------------------
+  // C5: pipeline balance. Every write that was address-checked must also have
+  //     been data-checked and response-checked; every read address-checked
+  //     must also have been data-checked. Independent of C4 because it catches
+  //     a transaction lost between two SCOREBOARD channels, not on the bus.
+  //-------------------------------------------------------
+  if(sb_matched_count[SB_CH_AW] != sb_matched_count[SB_CH_W])
+    `uvm_error("SB_INCOMPLETE_PIPELINE",
+               $sformatf("write pipeline unbalanced: %0d AW compared but %0d W compared",
+                         sb_matched_count[SB_CH_AW], sb_matched_count[SB_CH_W]));
+  if(sb_matched_count[SB_CH_AW] != sb_matched_count[SB_CH_B])
+    `uvm_error("SB_INCOMPLETE_PIPELINE",
+               $sformatf("write pipeline unbalanced: %0d AW compared but %0d B compared - %0d write(s) were never response-checked",
+                         sb_matched_count[SB_CH_AW], sb_matched_count[SB_CH_B],
+                         sb_matched_count[SB_CH_AW] - sb_matched_count[SB_CH_B]));
+  if(sb_matched_count[SB_CH_AR] != sb_matched_count[SB_CH_R])
+    `uvm_error("SB_INCOMPLETE_PIPELINE",
+               $sformatf("read pipeline unbalanced: %0d AR compared but %0d R compared - %0d read(s) were never data-checked",
+                         sb_matched_count[SB_CH_AR], sb_matched_count[SB_CH_R],
+                         sb_matched_count[SB_CH_AR] - sb_matched_count[SB_CH_R]));
+endfunction : sb_end_of_test_completeness_check
+
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_wdata_equal_under_strobe
+// Compares the write payload on the byte lanes WSTRB actually selects.
+//
+// AXI4 only defines the contents of strobed byte lanes; the value of an
+// unstrobed lane is explicitly not architecturally meaningful, and an
+// interconnect is free to drop it. Comparing whole WDATA words therefore
+// cannot pass behind a real DUT: with the Track-B fabric and a narrow AxSIZE
+// the master-side monitor sees the full randomized 256-bit word while the
+// slave side sees only the two strobed bytes ('h5bfa in the measured case).
+// It also under-checks in the 1:1 case, where two payloads differing only in
+// unstrobed lanes would have to be reported as a mismatch.
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_wdata_equal_under_strobe(input axi4_master_tx m_tx, input axi4_slave_tx s_tx);
+  int beats;
+  if(m_tx.wdata.size() != s_tx.wdata.size()) return 0;
+  beats = m_tx.wdata.size();
+  for(int b = 0; b < beats; b++) begin
+    bit [(DATA_WIDTH/8)-1:0] strb;
+    // Only lanes both sides agree are active can carry defined data. A strobe
+    // mismatch is reported separately by the wstrb comparison.
+    strb = m_tx.wstrb[b] & s_tx.wstrb[b];
+    for(int by = 0; by < DATA_WIDTH/8; by++) begin
+      if(strb[by]) begin
+        if(m_tx.wdata[b][8*by +: 8] !== s_tx.wdata[b][8*by +: 8]) return 0;
+      end
+    end
+  end
+  return 1;
+endfunction : sb_wdata_equal_under_strobe
 
 `endif
 

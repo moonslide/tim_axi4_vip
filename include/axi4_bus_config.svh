@@ -73,6 +73,86 @@
   `define AXI_QOS_WIDTH 4
 `endif
 
+// Transaction ID Width Configuration (AWID/ARID/BID/RID)
+// Default 4 bits preserves the historical axi4_if declaration.
+// Track-B builds against the NIC-400 fabric override this to 8, because the
+// fabric's egress AxID is VIDWidth(4) + ceil(log2(10 ingress ports)) = 8 bits
+// and the VIP slave agents must be able to echo the full ID back for the
+// interconnect to route responses home.
+`ifndef AXI_ID_WIDTH
+  `define AXI_ID_WIDTH 4
+`endif
+
+// Highest legal transaction-ID value, as a LITERAL. It must always equal
+// (2**AXI_ID_WIDTH)-1; hdl_top checks that at time 0 and $fatal()s if a build
+// sets one without the other. It exists separately because VCS rejects a
+// computed expression in an enum name range (Error-[ETRNC]), and the AxID
+// enums in axi4_globals_pkg.sv have to span the full ID space -- the seq-item
+// converters assign those fields with $cast, which is runtime-checked against
+// the member list, so an ID outside it fails the cast silently and leaves the
+// previous ID in place.
+//   AXI_ID_WIDTH=4 -> 15 (default)   AXI_ID_WIDTH=8 -> 255 (Track-B / NIC-400)
+`ifndef AXI_ID_LAST
+  `define AXI_ID_LAST 15
+`endif
+
+// Track-B master-identity tag carried in AxUSER.
+//
+// Behind the fabric the subordinate cannot infer which manager issued a
+// transaction. The egress AxID is NOT a usable substitute: it was measured to be
+// a per-sub-block REVERSED permutation of the ingress port index on the 10x10
+// build ({0,1} {2..5} {6..9}, each reversed), so `AxID & port_mask` scored 960/960
+// reads against the wrong row of the access matrix. Fitting that permutation
+// would hard-code one fabric configuration.
+//
+// Instead the Track-B sequences make the identity EXPLICIT on the wire:
+//   AxUSER = {AXI4_MID_TAG, 4'(master_index)}
+// The tag lets the subordinate tell "this carries an identity" from "this is
+// ordinary USER data", so sequences that do not opt in keep the old behaviour
+// instead of silently being attributed to master 0. AWUSER/ARUSER are enabled in
+// both generated fabrics and are forwarded end to end.
+`ifndef AXI4_MID_TAG
+  `define AXI4_MID_TAG 28'h5A5_A100
+`endif
+`ifndef AXI4_MID_TAG_MASK
+  `define AXI4_MID_TAG_MASK 32'hFFFF_FFF0
+`endif
+
+// Per-ingress external AxID width the NIC-400 was generated with (VIDWidth in
+// scripts/build_vip_fabric_*.rb). The fabric's EGRESS AxID is
+// {original AxID, ingress-port index} -- the port index sits in the LOW bits and
+// is AXI_ID_WIDTH-AXI_VID_WIDTH wide. Established from measured probe data, not
+// from the datasheet: on the 4x4 build egress bid 0x15/0x1c/0x0a/0x13 came back
+// to the managers as 0x5/0x7/0x2/0x4, which only the {vid,port} split explains.
+`ifndef AXI_VID_WIDTH
+  `define AXI_VID_WIDTH 4
+`endif
+
+// Track-B fabric selection.
+//
+// BUS_MATRIX_NIC400      -> ext/nic400_vip4x4q ... 4x4, QoS, VIP BASE map
+//                           when NIC400_4X4 is also defined,
+//                           ext/nic400_vipv3b  ... 10x10, QoS, VIP ENHANCED map
+//                           otherwise.
+// NIC400_PORTS           -> how many of the VIP's agents attach to the fabric.
+// NIC400_EGRESS_ID_WIDTH -> the fabric's egress AxID width, which is
+//                           GlobalIDWidth = VIDWidth(4) + ceil(log2(ports)).
+`ifdef NIC400_4X4
+  `ifndef NIC400_PORTS
+    `define NIC400_PORTS 4
+  `endif
+  `ifndef NIC400_EGRESS_ID_WIDTH
+    `define NIC400_EGRESS_ID_WIDTH 6
+  `endif
+`else
+  `ifndef NIC400_PORTS
+    `define NIC400_PORTS 10
+  `endif
+  `ifndef NIC400_EGRESS_ID_WIDTH
+    `define NIC400_EGRESS_ID_WIDTH 8
+  `endif
+`endif
+
 // USER Signal Width Configuration
 `ifndef AXI_AWUSER_WIDTH
   `define AXI_AWUSER_WIDTH 32
@@ -92,6 +172,19 @@
 
 `ifndef AXI_RUSER_WIDTH
   `define AXI_RUSER_WIDTH 16
+`endif
+
+// End-of-test drain, in ns. See axi4_env::run_phase for why this exists: a
+// NON_BLOCKING sequence completes at the ADDRESS handshake, so without a drain
+// the run phase ends with W/B/R still in flight and those tests verify only the
+// address channels.
+//
+// Sizing: the BLOCKING variant of the same traffic completes at 14350 ps
+// (measured, axi4_blocking_8b_write_read_test), so 5 us is ~350x the time the
+// same transactions need. It is simulation time, so it costs wall clock only
+// while events are pending. Override per-run with +END_OF_TEST_DRAIN_NS=<n>.
+`ifndef AXI4_END_OF_TEST_DRAIN_NS
+  `define AXI4_END_OF_TEST_DRAIN_NS 5000
 `endif
 
 `endif // AXI4_BUS_CONFIG_SVH

@@ -70,32 +70,37 @@ class axi4_master_qos_user_coverage extends uvm_subscriber#(axi4_master_tx);
     AWUSER_CP: coverpoint packet.awuser {
       bins user_zero = {0};
       bins user_one = {1};
-      bins user_values[] = {[0:$]};
+      bins user_allones = {'1};
+      bins user_range[16] = {[2:$]};
     }
     
     // Write data user coverage  
     WUSER_CP: coverpoint packet.wuser {
       bins user_zero = {0};
-      bins user_values[] = {[0:$]};
+      bins user_allones = {'1};
+      bins user_range[16] = {[2:$]};
     }
     
     // Write response user coverage
     BUSER_CP: coverpoint packet.buser {
       bins user_zero = {0};
-      bins user_values[] = {[0:$]};
+      bins user_allones = {'1};
+      bins user_range[16] = {[2:$]};
     }
     
     // Read address user coverage
     ARUSER_CP: coverpoint packet.aruser {
       bins user_zero = {0};
       bins user_one = {1};
-      bins user_values[] = {[0:$]};
+      bins user_allones = {'1};
+      bins user_range[16] = {[2:$]};
     }
     
     // Read data user coverage
     RUSER_CP: coverpoint packet.ruser {
       bins user_zero = {0};
-      bins user_values[] = {[0:$]};
+      bins user_allones = {'1};
+      bins user_range[16] = {[2:$]};
     }
     
     // Transaction type for USER coverage

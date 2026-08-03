@@ -31,6 +31,11 @@ class axi4_slave_agent extends uvm_agent;
   // Variable: axi4_slave_coverage
   // Decalring a handle for axi4_slave_coverage
   axi4_slave_coverage axi4_slave_cov_h;
+
+  // Variable: axi4_slave_qos_user_cov_h
+  // Same gap as the master side: axi4_slave_qos_cg / axi4_slave_user_cg /
+  // axi4_slave_qos_user_combination_cg were in axi4_slave_pkg but never created.
+  axi4_slave_qos_user_coverage axi4_slave_qos_user_cov_h;
   
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -73,6 +78,7 @@ function void axi4_slave_agent::build_phase(uvm_phase phase);
 
    if(axi4_slave_agent_cfg_h.has_coverage) begin
     axi4_slave_cov_h = axi4_slave_coverage::type_id::create("axi4_slave_cov_h",this);
+    axi4_slave_qos_user_cov_h = axi4_slave_qos_user_coverage::type_id::create("axi4_slave_qos_user_cov_h",this);
    end
 endfunction : build_phase
 
@@ -101,13 +107,27 @@ function void axi4_slave_agent::connect_phase(uvm_phase phase);
   end
 
   if(axi4_slave_agent_cfg_h.has_coverage) begin
-    axi4_slave_cov_h.axi4_slave_agent_cfg_h = axi4_slave_agent_cfg_h; 
-    // Connecting monitor_proxy port to coverage export
-    axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_slave_cov_h.analysis_export);
-    axi4_slave_mon_proxy_h.axi4_slave_read_data_analysis_port.connect(axi4_slave_cov_h.analysis_export);
-    axi4_slave_mon_proxy_h.axi4_slave_write_address_analysis_port.connect(axi4_slave_cov_h.analysis_export);
-    axi4_slave_mon_proxy_h.axi4_slave_write_data_analysis_port.connect(axi4_slave_cov_h.analysis_export);
-    axi4_slave_mon_proxy_h.axi4_slave_write_response_analysis_port.connect(axi4_slave_cov_h.analysis_export);
+    axi4_slave_cov_h.axi4_slave_agent_cfg_h = axi4_slave_agent_cfg_h;
+
+    // Connecting monitor_proxy ports to the PER-CHANNEL coverage exports.
+    //
+    // All five channel ports used to land on the single uvm_subscriber
+    // analysis_export of axi4_slave_cov_h, which then sampled one monolithic
+    // covergroup on every packet. Because every published packet is a freshly
+    // new()'d 2-state axi4_slave_tx, the fields that channel did not observe
+    // were legal zeros (BRESP/RRESP=OKAY, AxBURST=FIXED, AxSIZE=1 byte,
+    // AxID=0), so write-only traffic scored first-time hits on read-side bins
+    // and vice versa. axi4_slave_coverage now exposes one imp per channel and
+    // samples only the covergroup whose fields that packet actually carries.
+    axi4_slave_mon_proxy_h.axi4_slave_write_address_analysis_port.connect(axi4_slave_cov_h.write_addr_export);
+    axi4_slave_mon_proxy_h.axi4_slave_write_data_analysis_port.connect(axi4_slave_cov_h.write_data_export);
+    axi4_slave_mon_proxy_h.axi4_slave_write_response_analysis_port.connect(axi4_slave_cov_h.write_resp_export);
+    axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_slave_cov_h.read_addr_export);
+    axi4_slave_mon_proxy_h.axi4_slave_read_data_analysis_port.connect(axi4_slave_cov_h.read_data_export);
+
+    // QoS/USER coverage is a separate subscriber and keeps its own wiring.
+    axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_slave_qos_user_cov_h.analysis_export);
+    axi4_slave_mon_proxy_h.axi4_slave_write_address_analysis_port.connect(axi4_slave_qos_user_cov_h.analysis_export);
   end
 
   axi4_slave_mon_proxy_h.axi4_slave_agent_cfg_h = axi4_slave_agent_cfg_h;

@@ -11,6 +11,15 @@ class axi4_slave_tx extends uvm_sequence_item;
   `uvm_object_utils(axi4_slave_tx)
   
   //-------------------------------------------------------
+
+  //Variable: sb_src_index
+  //Index of the agent that OBSERVED this transaction (master port on the master
+  //side, slave port on the slave side). Stamped by the monitor proxy purely so
+  //the scoreboard can pair transactions by source instead of by arrival order.
+  //Deliberately non-rand and deliberately excluded from do_compare/do_print --
+  //it is scoreboard bookkeeping, not part of the transaction.
+  int sb_src_index = -1;
+
   // WRITE ADDRESS CHANNEL SIGNALS
   //-------------------------------------------------------
   //Variable : awaddr
@@ -128,7 +137,14 @@ class axi4_slave_tx extends uvm_sequence_item;
 
   //Variable : arregion
   //Used to accept the address region
-  bit arregion;
+  //
+  //ARREGION is 4 bits on the wire (AXI4 A8.2), on axi4_if, on the slave driver
+  //BFM port and in axi4_read_transfer_char_s. Declaring it as a single bit here
+  //silently truncated every region value to its LSB the moment anything copied
+  //it into this class -- so REGION 0x2 and REGION 0x0 became the same
+  //transaction, and do_compare below could never tell them apart. Widened to
+  //match every other declaration of the same signal.
+  bit [3:0] arregion;
   
   //Variable : arqos
   //Used to send the read address quality of service
@@ -281,9 +297,11 @@ function void axi4_slave_tx::do_copy (uvm_object rhs);
   awcache = axi_slave_tx_copy_obj.awcache;
   awqos   = axi_slave_tx_copy_obj.awqos;
   awprot  = axi_slave_tx_copy_obj.awprot;
+  awuser  = axi_slave_tx_copy_obj.awuser;
   //WRITE DATA CHANNEL
   wdata   = axi_slave_tx_copy_obj.wdata;
   wstrb   = axi_slave_tx_copy_obj.wstrb;
+  wuser   = axi_slave_tx_copy_obj.wuser;
   //WRITE RESPONSE CHANNEL
   bid     = axi_slave_tx_copy_obj.bid;
   bresp   = axi_slave_tx_copy_obj.bresp;
@@ -291,6 +309,7 @@ function void axi4_slave_tx::do_copy (uvm_object rhs);
   //READ ADDRESS CHANNEL
   araddr  = axi_slave_tx_copy_obj.araddr;
   arid    = axi_slave_tx_copy_obj.arid;
+  aruser  = axi_slave_tx_copy_obj.aruser;
   arlen   = axi_slave_tx_copy_obj.arlen;
   arsize  = axi_slave_tx_copy_obj.arsize;
   arburst = axi_slave_tx_copy_obj.arburst;
@@ -301,6 +320,7 @@ function void axi4_slave_tx::do_copy (uvm_object rhs);
   arprot  = axi_slave_tx_copy_obj.arprot;
   //READ DATA CHANNEL
   rid   = axi_slave_tx_copy_obj.rid;
+  ruser = axi_slave_tx_copy_obj.ruser;
   rdata = axi_slave_tx_copy_obj.rdata;
   rresp = axi_slave_tx_copy_obj.rresp;
   //OTHERS

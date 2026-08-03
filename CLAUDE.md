@@ -45,6 +45,18 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 - Timeout defines are doubly defined (`include/` 10s vs `test/` 10ms) —
   include-order decides; see landmines.
 
+### Coverage scope (decided 2026-08-02)
+- Code coverage is measured **to the fabric interface only**. The ARM NIC-400
+  internals are licensed third-party IP, delivered pre-verified, and golden
+  here (iron rule 1) - they are not a VIP verification target and ~300 .v files
+  of them in the denominator only deflate LINE/TOGGLE.
+- Enforced at instrumentation time, not in the report:
+  `vcs ... -cm_hier ../../sim/coverage_scope.cm_hier`
+  which keeps `hdl_top` and `u_nic400_fabric` (our wrapper) and drops
+  `u_nic400_fabric.u_fabric` (the generated NIC-400).
+- Functional coverage has no such carve-out: the covergroups live in the VIP
+  and all of them count.
+
 ### Key documents
 - `claude.md` — 10x10 access matrix + address map (authoritative spec)
 - `VIP_future.md` — improvement plan (rev 3, post adversarial review)

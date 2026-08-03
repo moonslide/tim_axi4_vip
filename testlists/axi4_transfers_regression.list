@@ -110,6 +110,16 @@ axi4_non_blocking_only_write_response_out_of_order_test run_cnt=2
 axi4_non_blocking_write_read_response_out_of_order_test run_cnt=2
 
 #------------------------------------------------------------------------------------
+# Cross-ID Response Reorder Tests (codex_review.md Finding 5)
+# Directed: N outstanding transactions with distinct IDs, addresses and PAYLOADS,
+# answered in a shuffled order by the slave. Run more than twice on purpose -- the
+# slave picks the permutation at random, so extra seeds raise the odds that the
+# reorder window is genuinely exercised.
+#------------------------------------------------------------------------------------
+axi4_cross_id_write_reorder_test run_cnt=3
+axi4_cross_id_read_reorder_test run_cnt=3
+
+#------------------------------------------------------------------------------------
 # Slave Memory Mode Tests (Non-Blocking)
 #------------------------------------------------------------------------------------
 axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test run_cnt=2

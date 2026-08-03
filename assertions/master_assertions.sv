@@ -12,10 +12,15 @@ import uvm_pkg::*;
 // Interface : master_assertions
 // Used to write the assertion checks required for the master checks
 //--------------------------------------------------------------------------------------------
+// NOTE on the ID ports below: they MUST follow `AXI_ID_WIDTH, exactly like
+// axi4_if does. Hard-coded [3:0] against an `AXI_ID_WIDTH-wide interface meant
+// that on the Track-B/NIC-400 build (AXI_ID_WIDTH=8) the upper ID bits never
+// reached the checkers: the $stable() properties could not see an ID change
+// confined to them and the $isunknown() properties could not see X on them.
 interface master_assertions (input                     aclk,
                              input                     aresetn,
                              //Write Address Channel Signals
-                             input               [3:0] awid,
+                             input [`AXI_ID_WIDTH-1:0] awid,
                              input [ADDRESS_WIDTH-1:0] awaddr,
                              input               [7:0] awlen,
                              input               [2:0] awsize,
@@ -36,13 +41,13 @@ interface master_assertions (input                     aclk,
                              input                      wvalid,
                              input                      wready,
                              //Write Response Channel
-                             input [3:0] bid,
+                             input [`AXI_ID_WIDTH-1:0] bid,
                              input [1:0] bresp,
                              input [`AXI_BUSER_WIDTH-1:0] buser,
                              input       bvalid,
                              input       bready,
                              //Read Address Channel Signals
-                             input               [3:0] arid,     
+                             input [`AXI_ID_WIDTH-1:0] arid,
                              input [ADDRESS_WIDTH-1:0] araddr,  
                              input               [7:0] arlen,      
                              input               [2:0] arsize,     
@@ -56,7 +61,7 @@ interface master_assertions (input                     aclk,
                              input                     arvalid,
                              input	                   arready,
                              //Read Data Channel Signals
-                             input            [3:0] rid,
+                             input [`AXI_ID_WIDTH-1:0] rid,
                              input [DATA_WIDTH-1:0] rdata,
                              input            [1:0] rresp,
                              input                  rlast,
@@ -115,12 +120,25 @@ interface master_assertions (input                     aclk,
 
   //Assertion:   AXI_WA_VALID_STABLE_CHECK
   //Description: When AWVALID is asserted, then it must remain asserted until AWREADY is HIGH
-  //Assertion stays asserted from the time awvalid becomes high and till awready becomes high using s_until_with keyword
-///  property axi_write_address_channel_valid_stable_check;
-///    @(posedge aclk) disable iff (!aresetn)
-///    $rose(awvalid) |-> awvalid s_until_with awready;
-///  endproperty : axi_write_address_channel_valid_stable_check
-///  AXI_WA_VALID_STABLE_CHECK : assert property (axi_write_address_channel_valid_stable_check);
+  //Assertion stays asserted from the time awvalid becomes high and till awready becomes high using until_with keyword
+  //
+  //These five VALID_STABLE properties were commented out in this file (at four
+  //different comment depths, so they were disabled one at a time) while their
+  ////Description: headers were left live -- the file read as though A3.2.1 was
+  //being checked when nothing was. The reason they were disabled is visible the
+  //moment they are re-enabled: VCS rejects the original `s_until_with` with
+  //Error-[SVA-SONS] "Strong operator not supported in this context".
+  //
+  //The weak `until_with` is the correct operator regardless. The safety property
+  //wanted here is "VALID must not be withdrawn before READY". The strong form
+  //additionally demands that READY eventually arrive, which is liveness and is
+  //already owned by the *_READY_WITHIN_LIMIT properties below; folding the two
+  //together only makes a failure ambiguous about which rule was broken.
+  property axi_write_address_channel_valid_stable_check;
+    @(posedge aclk) disable iff (!aresetn)
+    $rose(awvalid) |-> awvalid until_with awready;
+  endproperty : axi_write_address_channel_valid_stable_check
+  AXI_WA_VALID_STABLE_CHECK : assert property (axi_write_address_channel_valid_stable_check);
 
 
   //--------------------------------------------------------------------------------------------
@@ -153,12 +171,12 @@ interface master_assertions (input                     aclk,
 
   //Assertion:   AXI_WD_VALID_STABLE_CHECK
   //Description: When WVALID is asserted, then it must remain asserted until WREADY is HIGH
-  //Assertion stays asserted from the time wvalid becomes high and till wready becomes high using s_until_with keyword
-//  property axi_write_data_channel_valid_stable_check;
-//    @(posedge aclk) disable iff (!aresetn)
-//    $rose(wvalid) |-> wvalid s_until_with wready;
-//  endproperty : axi_write_data_channel_valid_stable_check
-//  AXI_WD_VALID_STABLE_CHECK : assert property (axi_write_data_channel_valid_stable_check);
+  //Assertion stays asserted from the time wvalid becomes high and till wready becomes high using until_with keyword
+  property axi_write_data_channel_valid_stable_check;
+    @(posedge aclk) disable iff (!aresetn)
+    $rose(wvalid) |-> wvalid until_with wready;
+  endproperty : axi_write_data_channel_valid_stable_check
+  AXI_WD_VALID_STABLE_CHECK : assert property (axi_write_data_channel_valid_stable_check);
   
   
   //--------------------------------------------------------------------------------------------
@@ -191,12 +209,12 @@ interface master_assertions (input                     aclk,
 
   //Assertion:   AXI_WR_VALID_STABLE_CHECK
   //Description: When BVALID is asserted, then it must remain asserted until BREADY is HIGH
-  //Assertion stays asserted from the time bvalid becomes high and till bready becomes high using s_until_with keyword
-///  property axi_write_response_channel_valid_stable_check;
-///    @(posedge aclk) disable iff(!aresetn)
-///    $rose(bvalid) |-> bvalid s_until_with bready;
-///  endproperty : axi_write_response_channel_valid_stable_check
-///  AXI_WR_VALID_STABLE_CHECK : assert property (axi_write_response_channel_valid_stable_check);
+  //Assertion stays asserted from the time bvalid becomes high and till bready becomes high using until_with keyword
+  property axi_write_response_channel_valid_stable_check;
+    @(posedge aclk) disable iff(!aresetn)
+    $rose(bvalid) |-> bvalid until_with bready;
+  endproperty : axi_write_response_channel_valid_stable_check
+  AXI_WR_VALID_STABLE_CHECK : assert property (axi_write_response_channel_valid_stable_check);
  
 
   //--------------------------------------------------------------------------------------------
@@ -231,13 +249,12 @@ interface master_assertions (input                     aclk,
 
   //Assertion:   AXI_RA_VALID_STABLE_CHECK
   //Description: When ARVALID is asserted, then it must remain asserted until ARREADY is HIGH
-  //Assertion stays asserted from the time arvalid becomes high and till arready becomes high using s_until_with keyword
-////  property axi_read_address_channel_valid_stable_check;
-////    @(posedge aclk) disable iff (!aresetn)
-////    $rose(arvalid) |-> arvalid s_until_with arready;
-////  endproperty : axi_read_address_channel_valid_stable_check
-////  AXI_RA_VALID_STABLE_CHECK : assert property (axi_read_address_channel_valid_stable_check);
-////
+  //Assertion stays asserted from the time arvalid becomes high and till arready becomes high using until_with keyword
+  property axi_read_address_channel_valid_stable_check;
+    @(posedge aclk) disable iff (!aresetn)
+    $rose(arvalid) |-> arvalid until_with arready;
+  endproperty : axi_read_address_channel_valid_stable_check
+  AXI_RA_VALID_STABLE_CHECK : assert property (axi_read_address_channel_valid_stable_check);
 
   //--------------------------------------------------------------------------------------------
   // Assertion properties written for various checks in read data channel
@@ -270,12 +287,12 @@ interface master_assertions (input                     aclk,
 
   //Assertion:   AXI_RD_VALID_STABLE_CHECK
   //Description: When RVALID is asserted, then it must remain asserted until RREADY is HIGH
-  //Assertion stays asserted from the time rvalid becomes high and till rready becomes high using s_until_with keyword
-//  property axi_read_data_channel_valid_stable_check;
-//    @(posedge aclk) disable iff (!aresetn)
-//    $rose(rvalid) |-> rvalid s_until_with rready;
-//  endproperty : axi_read_data_channel_valid_stable_check
-//  AXI_RD_VALID_STABLE_CHECK : assert property (axi_read_data_channel_valid_stable_check);
+  //Assertion stays asserted from the time rvalid becomes high and till rready becomes high using until_with keyword
+  property axi_read_data_channel_valid_stable_check;
+    @(posedge aclk) disable iff (!aresetn)
+    $rose(rvalid) |-> rvalid until_with rready;
+  endproperty : axi_read_data_channel_valid_stable_check
+  AXI_RD_VALID_STABLE_CHECK : assert property (axi_read_data_channel_valid_stable_check);
 
   //--------------------------------------------------------------------------------------------
   // X Injection Detection Assertions 

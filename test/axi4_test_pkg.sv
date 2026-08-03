@@ -194,6 +194,9 @@ package axi4_test_pkg;
 
   // Basic and sanity tests
   `include "axi4_basic_sanity_test.sv"
+  `include "axi4_trackb_smoke_test.sv"
+  `include "axi4_trackb_4x4_smoke_test.sv"
+  `include "axi4_trackb_cov_sweep_test.sv"
   `include "axi4_master_base_test.sv"
   `include "axi4_basic_reset_test.sv"
   `include "axi4_independent_reset_test.sv"
@@ -231,6 +234,10 @@ package axi4_test_pkg;
   `include "axi4_slave_inject_bvalid_x_test.sv"
   `include "axi4_slave_inject_rdata_x_test.sv"
   `include "axi4_slave_inject_rvalid_x_test.sv"
+
+  // codex_review.md Finding 5: directed cross-ID response reorder tests
+  `include "axi4_cross_id_write_reorder_test.sv"
+  `include "axi4_cross_id_read_reorder_test.sv"
 
 endpackage : axi4_test_pkg
 

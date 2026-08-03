@@ -36,6 +36,14 @@ class axi4_env extends uvm_env;
   //Variable : axi4_protocol_coverage_h
   //Handle for protocol compliance coverage
   axi4_protocol_coverage axi4_protocol_coverage_h;
+
+  //Variable : axi4_error_injection_coverage_h
+  //Handle for error-injection / exception coverage. The build_phase used to carry
+  //a "Create error injection coverage component" comment with NO create call under
+  //it, and the class was not even `include`d in axi4_env_pkg.sv, so all four of its
+  //covergroups (error_injection_cg, exception_handling_cg, bus_matrix_error_cg,
+  //error_recovery_cg) were dead code and never appeared in any coverage report.
+  axi4_error_injection_coverage axi4_error_injection_coverage_h;
   
   //Variable : axi4_performance_metrics_h
   //Handle for performance KPI measurements
@@ -65,6 +73,7 @@ class axi4_env extends uvm_env;
   extern function new(string name = "axi4_env", uvm_component parent = null);
   extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void connect_phase(uvm_phase phase);
+  extern virtual task run_phase(uvm_phase phase);
   extern virtual function void start_of_simulation_phase(uvm_phase phase);
 
 endclass : axi4_env
@@ -94,7 +103,28 @@ function void axi4_env::build_phase(uvm_phase phase);
   if(!uvm_config_db #(axi4_env_config)::get(this,"","axi4_env_config",axi4_env_cfg_h)) begin
     `uvm_fatal("FATAL_ENV_AGENT_CONFIG", $sformatf("Couldn't get the env_agent_config from config_db"))
   end
-  
+
+  //-------------------------------------------------------
+  // Command-line override for the scoreboard's pairing policy.
+  //
+  // sb_keyed_pairing is normally set by the test (Track-B turns it on because
+  // a real interconnect reorders). Without this override the keyed path can
+  // only be exercised by rebuilding against the NIC-400 fabric, which makes
+  // the B/R correlation fix (codex_review.md finding 5) unverifiable on the
+  // 1:1 direct-wired build. The plusarg is absent by default, so nothing
+  // changes unless it is explicitly passed.
+  //   +SB_KEYED_PAIRING=1  pair master/slave items by (address,len,size,burst)
+  //   +SB_KEYED_PAIRING=0  pair by fifo arrival order (today's default)
+  //-------------------------------------------------------
+  begin
+    int sb_keyed_pairing_override;
+    if($value$plusargs("SB_KEYED_PAIRING=%d", sb_keyed_pairing_override)) begin
+      `uvm_info(get_type_name(), $sformatf("+SB_KEYED_PAIRING=%0d overrides axi4_env_config::sb_keyed_pairing (was %0d)",
+                                           sb_keyed_pairing_override, axi4_env_cfg_h.sb_keyed_pairing), UVM_LOW)
+      axi4_env_cfg_h.sb_keyed_pairing = (sb_keyed_pairing_override != 0);
+    end
+  end
+
   axi4_master_agent_cfg_h = new[axi4_env_cfg_h.no_of_masters];
   foreach(axi4_master_agent_cfg_h[i]) begin
     if(!uvm_config_db#(axi4_master_agent_config)::get(this,"",
@@ -146,6 +176,8 @@ function void axi4_env::build_phase(uvm_phase phase);
   axi4_performance_metrics_h = axi4_performance_metrics::type_id::create("axi4_performance_metrics_h", this);
   
   // Create error injection coverage component
+  axi4_error_injection_coverage_h = axi4_error_injection_coverage::type_id::create("axi4_error_injection_coverage_h", this);
+
 
   axi4_bus_matrix_h = axi4_bus_matrix_ref::type_id::create("axi4_bus_matrix_h", this);
   
@@ -185,6 +217,12 @@ function void axi4_env::build_phase(uvm_phase phase);
     uvm_config_db#(write_read_data_mode_e)::set(this, 
                         $sformatf("axi4_master_agent_h[%0d].axi4_master_drv_proxy_h*", i),
                         "write_read_mode", axi4_env_cfg_h.write_read_mode_h);
+    // The bus-matrix reference model was published to the slave agents only, so
+    // no master-side sequence could reach it and any sequence needing the
+    // address map had to hard-code one. Publish it to the master agents too.
+    uvm_config_db#(axi4_bus_matrix_ref)::set(this,
+                        $sformatf("*axi4_master_agent_h[%0d]*", i),
+                        "axi4_bus_matrix_gm", axi4_bus_matrix_h);
   end
   
   foreach(axi4_slave_agent_h[i]) begin
@@ -258,6 +296,8 @@ function void axi4_env::connect_phase(uvm_phase phase);
     
     // Connect protocol coverage to master agent transaction analysis ports
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_error_injection_coverage_h.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_error_injection_coverage_h.analysis_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
     
     // Connect performance metrics to master agent transaction analysis ports
@@ -278,6 +318,15 @@ function void axi4_env::connect_phase(uvm_phase phase);
       axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_address_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_address_analysis_fifo.analysis_export);
       axi4_slave_agent_h[i].axi4_slave_mon_proxy_h.axi4_slave_read_data_analysis_port.connect(axi4_scoreboard_h.axi4_slave_read_data_analysis_fifo.analysis_export);
     end
+
+    // NOT connected to axi4_error_injection_coverage_h: feeding it slave
+    // responses makes its response coverpoints sample a master AW/AR against
+    // whatever unrelated response happened to arrive last (its write() is driven
+    // by the master ADDRESS ports, so the matching B/R does not exist yet), and
+    // slave/axi4_slave_seq_item_converter.sv:559 leaves bresp at 0 on read-data
+    // items -- a write that got SLVERR would land in the "access granted" bin.
+    // Those coverpoints stay honestly at 0% until the component samples a keyed
+    // master/response pair.
     // Only set driver proxy configuration if agent is active
     if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].is_active == UVM_ACTIVE) begin
       axi4_slave_agent_h[i].axi4_slave_drv_proxy_h.write_read_mode_h = axi4_env_cfg_h.write_read_mode_h;
@@ -329,6 +378,47 @@ function void axi4_env::start_of_simulation_phase(uvm_phase phase);
     axi4_scoreboard_h.set_slave_memory_handles(slave_mem_handles);
   end
 endfunction : start_of_simulation_phase
+
+//--------------------------------------------------------------------------------------------
+// Task: run_phase
+//
+// Sets an end-of-test drain time. This is the ONLY reason this task exists.
+//
+// A NON_BLOCKING sequence returns as soon as its address handshake completes --
+// axi4_master_driver_proxy calls item_done() at the AW/AR handshake, not at the
+// response. Every non-blocking test then does exactly:
+//     phase.raise_objection(this); seq.start(...); phase.drop_objection(this);
+// so the run phase ends with W, B and R still in flight. Measured on
+// axi4_non_blocking_8b_write_read_test: the whole test ends at 210 ps (about ten
+// clock edges), while the BLOCKING variant of the same traffic runs to 14350 ps.
+// The FSDB shows WVALID rising at 0.05 ns and the simulation stopping before
+// WLAST is ever driven.
+//
+// The consequence was a silent one: wdata, bresp and rdata comparison counts
+// were all 0 and the test still reported PASS, i.e. those tests only ever
+// verified the address channels. This is pre-existing -- the same run on the
+// pre-change tree ends at 210 ps too, it simply had no check able to say so.
+//
+// The drain lives here, in the env, because every affected test OVERRIDES
+// run_phase without calling super, so nothing put in axi4_base_test::run_phase
+// would execute for them. The env's run_phase always runs.
+//--------------------------------------------------------------------------------------------
+task axi4_env::run_phase(uvm_phase phase);
+  int drain_ns = `AXI4_END_OF_TEST_DRAIN_NS;
+
+  void'($value$plusargs("END_OF_TEST_DRAIN_NS=%d", drain_ns));
+
+  // NOT set_drain_time(this, ...): uvm_objection::m_forked_drain consults
+  // m_drain_time[obj] for the object whose objection count reached zero, and the
+  // run phase ends on uvm_root's count. The env never raises an objection, so a
+  // drain registered against it is never looked up -- measured: the test still
+  // ended at 210 ps. Passing null makes set_drain_time substitute m_top, which
+  // is the object that actually gates the phase.
+  phase.phase_done.set_drain_time(null, drain_ns * 1ns);
+  `uvm_info(get_type_name(),
+            $sformatf("End-of-test drain set to %0d ns (override with +END_OF_TEST_DRAIN_NS=<n>)", drain_ns),
+            UVM_LOW)
+endtask : run_phase
 
 `endif
 

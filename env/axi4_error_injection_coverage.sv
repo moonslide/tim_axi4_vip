@@ -8,6 +8,13 @@
 class axi4_error_injection_coverage extends uvm_subscriber#(axi4_master_tx);
   `uvm_component_utils(axi4_error_injection_coverage)
 
+  // KNOWN GAP: slave_tx_h below is never assigned, so every coverpoint guarded by
+  // `iff (s_tx != null)` never samples and reports 0%. Feeding it the most recent
+  // slave response was tried and reverted: write() is driven by the master
+  // ADDRESS ports, so at sample time the response to THIS transaction does not
+  // exist yet and the pairing is causally impossible. Closing this needs keyed
+  // master/response pairing, not another analysis port.
+
   // Configuration handle
   axi4_env_config axi4_env_cfg_h;
   
@@ -114,14 +121,14 @@ class axi4_error_injection_coverage extends uvm_subscriber#(axi4_master_tx);
     }
     
     // Protected access behavior
-    protected_access_cp: coverpoint s_tx.bresp iff (s_tx != null && m_tx.awaddr == 64'h1A00) {
+    protected_access_cp: coverpoint ((s_tx == null) ? 2'b00 : s_tx.bresp) iff (s_tx != null && m_tx.awaddr == 64'h1A00) {
       option.comment = "Protected address access response";
       bins access_denied = {2};  // SLVERR
       bins access_granted_after_unlock = {0};  // OKAY after unlock
     }
     
     // ECC error response
-    ecc_error_response_cp: coverpoint s_tx.rresp iff (s_tx != null && m_tx.araddr == 64'h1B00) {
+    ecc_error_response_cp: coverpoint ((s_tx == null) ? 2'b00 : s_tx.rresp) iff (s_tx != null && m_tx.araddr == 64'h1B00) {
       option.comment = "ECC error detection response";
       bins ecc_error_detected = {2};  // SLVERR
       bins ecc_corrected = {0};  // OKAY if correctable
@@ -136,8 +143,22 @@ class axi4_error_injection_coverage extends uvm_subscriber#(axi4_master_tx);
       bins status_register = {8'h03};
     }
     
+    // A cross operand must be a coverpoint, not a raw expression. Written as
+    // `cross exception_type_cp, s_tx.bresp` VCS builds an implicit coverpoint
+    // that dereferences s_tx while constructing the cross, before the iff can
+    // guard it: Error-[NOA] "Null object access ... s_tx.bresp" at time 0, which
+    // aborted every test the moment this covergroup was finally instantiated.
+    // The ternary guards the dereference; the iff still stops the sampling.
+    exception_bresp_cp: coverpoint ((s_tx == null) ? 2'b00 : s_tx.bresp) iff (s_tx != null) {
+      option.comment = "Write response observed during an exception scenario";
+      bins okay   = {2'b00};
+      bins exokay = {2'b01};
+      bins slverr = {2'b10};
+      bins decerr = {2'b11};
+    }
+
     // Cross coverage: Exception type x Response
-    exception_response_cross: cross exception_type_cp, s_tx.bresp iff (s_tx != null) {
+    exception_response_cross: cross exception_type_cp, exception_bresp_cp {
       option.comment = "Exception scenarios vs response types";
     }
   endgroup : exception_handling_cg

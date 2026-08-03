@@ -26,6 +26,7 @@ package axi4_env_pkg;
   `include "axi4_freq_checker.sv"
   `include "axi4_performance_metrics.sv"
   `include "axi4_protocol_coverage.sv"
+  `include "axi4_error_injection_coverage.sv"
   `include "axi4_env.sv"
 
 endpackage : axi4_env_pkg

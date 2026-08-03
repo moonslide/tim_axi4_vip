@@ -81,18 +81,11 @@ function void axi4_master_seq_item_converter::from_write_class( input axi4_maste
   output_conv_h.awqos = input_conv_h.awqos;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting awqos =  %0h",output_conv_h.awqos),UVM_HIGH);
 
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wdata[i] = input_conv_h.wdata[i];
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata =  %0p",output_conv_h.wdata),UVM_HIGH);
-    end
-  end
-
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wstrb[i] = input_conv_h.wstrb[i];
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wstrb = %0p",output_conv_h.wstrb[i]),UVM_HIGH);
-    end
+  // class -> struct: copy exactly AWLEN+1 beats. The old `!= 0` filter dropped
+  // legitimately-zero beats, so a burst containing zeros was converted short.
+  for(int i = 0; i < input_conv_h.wdata.size(); i++) begin
+    output_conv_h.wdata[i] = input_conv_h.wdata[i];
+    output_conv_h.wstrb[i] = input_conv_h.wstrb[i];
   end
 
   output_conv_h.wlast = input_conv_h.wlast;
@@ -165,11 +158,9 @@ function void axi4_master_seq_item_converter::from_read_class( input axi4_master
   $cast(output_conv_h.rid,input_conv_h.rid);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rid =  %b",output_conv_h.rid),UVM_HIGH);
 
+  // No `!= 0` filter: a zero beat is data, not padding.
   foreach(input_conv_h.rdata[i]) begin
-    if(input_conv_h.rdata[i] != 0)begin
-      output_conv_h.rdata[i] = input_conv_h.rdata[i];
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rdata = %0p",output_conv_h.rdata[i]),UVM_HIGH);
-    end
+    output_conv_h.rdata[i] = input_conv_h.rdata[i];
   end
 
   output_conv_h.ruser = input_conv_h.ruser;
@@ -234,18 +225,21 @@ function void axi4_master_seq_item_converter::to_write_class( input axi4_write_t
   output_conv_h.wait_count_write_address_channel = input_conv_h.wait_count_write_address_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_write_address_channel =  %0h",output_conv_h.wait_count_write_address_channel),UVM_HIGH);
 
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wdata.push_front(input_conv_h.wdata[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata[%0d] =  %0h",i,output_conv_h.wdata[i]),UVM_HIGH);
-    end
-  end
-
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wstrb.push_front(input_conv_h.wstrb[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wstrb[%0d] =  %0d",i,output_conv_h.wstrb[i]),UVM_HIGH);
-    end
+  // Copy exactly the beats this burst has, in order.
+  //
+  // This used to walk all 2**LENGTH struct entries, skip any whose data was 0,
+  // and push_front the rest. Three separate defects: push_front REVERSED the
+  // beat order, the `!= 0` filter silently DROPPED every legitimately-zero
+  // beat, and the beat count came from "how many happened to be non-zero"
+  // rather than from AWLEN. The scoreboard's wdata/wstrb comparison could
+  // therefore never pass -- and did not, silently, because the mismatch branch
+  // was not incrementing its failure counter either.
+  output_conv_h.wdata = {};
+  output_conv_h.wstrb = {};
+  for(int i = 0; i <= int'(input_conv_h.awlen); i++) begin
+    output_conv_h.wdata.push_back(input_conv_h.wdata[i]);
+    output_conv_h.wstrb.push_back(input_conv_h.wstrb[i]);
+    `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata[%0d] = %0h wstrb[%0d] = %0h",i,input_conv_h.wdata[i],i,input_conv_h.wstrb[i]),UVM_HIGH);
   end
 
   output_conv_h.wlast = input_conv_h.wlast;
@@ -262,6 +256,12 @@ function void axi4_master_seq_item_converter::to_write_class( input axi4_write_t
 
   $cast(output_conv_h.bresp,input_conv_h.bresp);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting bresp =  %b",output_conv_h.bresp),UVM_HIGH);
+
+  // BUSER travels with BID/BRESP. It was missing from every struct -> class
+  // B-channel conversion on the master side, so even once the BFM samples it
+  // the value would still be discarded here. Mirrors the slave converter.
+  output_conv_h.buser = input_conv_h.buser;
+  `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting buser =  %0h",output_conv_h.buser),UVM_HIGH);
 
   output_conv_h.wait_count_write_response_channel = input_conv_h.wait_count_write_response_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_write_response_channel = %0h",output_conv_h.wait_count_write_response_channel),UVM_HIGH);
@@ -291,6 +291,10 @@ function void axi4_master_seq_item_converter::to_read_class( input axi4_read_tra
 
   output_conv_h.arqos = input_conv_h.arqos;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting arqos =  %0h",output_conv_h.arqos),UVM_HIGH);
+  // ARREGION was copied only in from_read_class (the DRIVE direction). The two
+  // monitor-direction converters dropped it, so the master packet the scoreboard
+  // compares always read 0 while the subordinate reported the real pin value.
+  output_conv_h.arregion = input_conv_h.arregion;
 
   $cast(output_conv_h.arsize,input_conv_h.arsize);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting arsize =  %b",output_conv_h.arsize),UVM_HIGH);
@@ -316,13 +320,20 @@ function void axi4_master_seq_item_converter::to_read_class( input axi4_read_tra
   $cast(output_conv_h.rid,input_conv_h.rid);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rid =  %b",output_conv_h.rid),UVM_HIGH);
 
-  foreach(input_conv_h.rdata[i]) begin
-    if(input_conv_h.rdata[i] != 'h0)begin
-      output_conv_h.rdata.push_front(input_conv_h.rdata[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rdata =  %0h",output_conv_h.rdata[i]),UVM_HIGH);
-    end
+  // Same defect class as the write path: push_front reversed the burst and the
+  // `!= 0` filter dropped legitimately-zero beats. Copy ARLEN+1 beats in order.
+  output_conv_h.rdata = {};
+  for(int b = 0; b <= int'(input_conv_h.arlen); b++) begin
+    output_conv_h.rdata.push_back(input_conv_h.rdata[b]);
+    `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rdata[%0d] = %0h",b,input_conv_h.rdata[b]),UVM_HIGH);
   end
 
+
+  // ARUSER/RUSER were never carried struct -> class here, the exact mirror of the
+  // slave-side gap: the scoreboard's AxUSER comparison therefore ran against a
+  // hard-coded zero on this side too and could not fail.
+  output_conv_h.aruser = input_conv_h.aruser;
+  output_conv_h.ruser  = input_conv_h.ruser[0];
   output_conv_h.wait_count_read_data_channel = input_conv_h.wait_count_read_data_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_read_data_channel =  %0h",output_conv_h.wait_count_read_data_channel),UVM_HIGH);
 
@@ -355,18 +366,21 @@ function void axi4_master_seq_item_converter::to_write_addr_data_class(input axi
   output_conv_h.awqos = waddr_packet.awqos;
   output_conv_h.awuser = waddr_packet.awuser;
 
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wdata.push_front(input_conv_h.wdata[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata[%0d] =  %0h",i,output_conv_h.wdata[i]),UVM_HIGH);
-    end
-  end
-
-  foreach(input_conv_h.wdata[i]) begin
-    if(input_conv_h.wdata[i] != 0)begin
-      output_conv_h.wstrb.push_front(input_conv_h.wstrb[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wstrb[%0d] =  %0d",i,output_conv_h.wstrb[i]),UVM_HIGH);
-    end
+  // Copy exactly the beats this burst has, in order.
+  //
+  // This used to walk all 2**LENGTH struct entries, skip any whose data was 0,
+  // and push_front the rest. Three separate defects: push_front REVERSED the
+  // beat order, the `!= 0` filter silently DROPPED every legitimately-zero
+  // beat, and the beat count came from "how many happened to be non-zero"
+  // rather than from AWLEN. The scoreboard's wdata/wstrb comparison could
+  // therefore never pass -- and did not, silently, because the mismatch branch
+  // was not incrementing its failure counter either.
+  output_conv_h.wdata = {};
+  output_conv_h.wstrb = {};
+  for(int i = 0; i <= int'(waddr_packet.awlen); i++) begin
+    output_conv_h.wdata.push_back(input_conv_h.wdata[i]);
+    output_conv_h.wstrb.push_back(input_conv_h.wstrb[i]);
+    `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata[%0d] = %0h wstrb[%0d] = %0h",i,input_conv_h.wdata[i],i,input_conv_h.wstrb[i]),UVM_HIGH);
   end
 
   output_conv_h.wlast = input_conv_h.wlast;
@@ -403,24 +417,21 @@ function void axi4_master_seq_item_converter::to_write_addr_data_resp_class(inpu
   output_conv_h.awqos = waddr_data_packet.awqos;
   output_conv_h.awuser = waddr_data_packet.awuser;
 
-  foreach(waddr_data_packet.wdata[i]) begin
-    if(waddr_data_packet.wdata[i] != 0)begin
-      output_conv_h.wdata.push_back(waddr_data_packet.wdata[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wdata[%0d] =  %0h",i,output_conv_h.wdata[i]),UVM_HIGH);
-    end
-  end
-
-  foreach(waddr_data_packet.wdata[i]) begin
-    if(waddr_data_packet.wdata[i] != 0)begin
-      output_conv_h.wstrb.push_back(waddr_data_packet.wstrb[i]);
-      `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wstrb[%0d] =  %0d",i,output_conv_h.wstrb[i]),UVM_HIGH);
-    end
-  end
+  // Carry the beats already reconstructed on the address+data packet through
+  // to the response packet verbatim. The `!= 0` filter here silently dropped
+  // zero beats a second time.
+  output_conv_h.wdata = waddr_data_packet.wdata;
+  output_conv_h.wstrb = waddr_data_packet.wstrb;
 
   output_conv_h.wlast = waddr_data_packet.wlast;
   output_conv_h.wuser = waddr_data_packet.wuser;
   $cast(output_conv_h.bid,input_conv_h.bid);
   $cast(output_conv_h.bresp,input_conv_h.bresp);
+  // BUSER comes from the RESPONSE struct (this is the B-channel packet), not
+  // from the carried-forward address+data packet -- which has no B fields.
+  // This allocates a fresh object, so anything not copied here is lost; BUSER
+  // was not copied, which is the second half of the always-zero master BUSER.
+  output_conv_h.buser = input_conv_h.buser;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting =  %s",output_conv_h.sprint()),UVM_HIGH);
 
 endfunction : to_write_addr_data_resp_class
@@ -445,6 +456,7 @@ function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4
   $cast(output_conv_h.arprot,raddr_packet.arprot);
   output_conv_h.araddr = raddr_packet.araddr;
   output_conv_h.arqos = raddr_packet.arqos;
+  output_conv_h.arregion = raddr_packet.arregion;   // was dropped -- see to_read_class
   $cast(output_conv_h.rid,input_conv_h.rid);
 
   for(int i=0;i<raddr_packet.arlen+1;i++)begin
@@ -456,6 +468,10 @@ function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4
   
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting read_addr_data_packet =  %s",output_conv_h.sprint()),UVM_HIGH);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_HIGH);
+
+  // Same gap as to_read_class above: carry ARUSER/RUSER onto the combined packet.
+  output_conv_h.aruser = raddr_packet.aruser;
+  output_conv_h.ruser  = input_conv_h.ruser[0];
 
 endfunction : to_read_addr_data_class
 

@@ -29,6 +29,42 @@ class axi4_test_config extends uvm_object;
   extern function void apply_category_config();
   extern function string get_config_summary();
 
+  //------------------------------------------------------------------------
+  // Self-binding API (codex_review.md Finding 2)
+  //
+  // configure_for_test() above classifies by TEST NAME. That is a heuristic:
+  // a name it does not recognise lands in DEFAULT_TESTS => NONE / 4x4, with
+  // no error, and the only thing that can rescue it is a +BUS_MATRIX_MODE
+  // plusarg on the command line. For a test whose topology is fixed by the
+  // DUT it was COMPILED against -- the Track-B NIC-400 fabrics burn their
+  // port count and their address decode into RTL -- the name heuristic must
+  // not be the source of truth, and a missing plusarg must not silently
+  // change the map.
+  //
+  // Such a test instead:
+  //   1. calls set_fixed_topology() and publishes the object to config_db
+  //      BEFORE axi4_base_test::setup_test_configuration() runs (that
+  //      function only derives a config when config_db has none), and
+  //   2. calls check_bus_matrix_plusarg(), which turns a +BUS_MATRIX_MODE
+  //      that disagrees with the compiled DUT into a UVM_FATAL instead of a
+  //      silent re-map.
+  //
+  // Deliberately NOT done here: adding a ".*trackb.*" rule to
+  // configure_for_test(). Both Track-B fabrics share that name stem
+  // (axi4_trackb_smoke_test is 10x10, axi4_trackb_4x4_smoke_test is 4x4), so
+  // a name regex could only ever be right for one of them. The compiled
+  // fabric decides, and the test class states it.
+  //------------------------------------------------------------------------
+  extern function void set_fixed_topology(axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+                                          int    masters,
+                                          int    slaves,
+                                          string owner);
+  extern function bit decode_bus_matrix_plusarg(input  string mode_str,
+                                                output axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+                                                output int    masters,
+                                                output int    slaves);
+  extern function void check_bus_matrix_plusarg(string owner);
+
 endclass : axi4_test_config
 
 //--------------------------------------------------------------------------------------------
@@ -129,9 +165,112 @@ endfunction : apply_category_config
 //--------------------------------------------------------------------------------------------
 function string axi4_test_config::get_config_summary();
   string summary;
-  summary = $sformatf("Test Configuration: Category=%s, Bus_Matrix=%s, Masters=%0d, Slaves=%0d", 
+  summary = $sformatf("Test Configuration: Category=%s, Bus_Matrix=%s, Masters=%0d, Slaves=%0d",
                      test_category.name(), bus_matrix_mode.name(), num_masters, num_slaves);
   return summary;
 endfunction : get_config_summary
+
+//--------------------------------------------------------------------------------------------
+// Function: set_fixed_topology
+// Bind a topology that comes from the compiled DUT rather than from the test name.
+// test_category is intentionally left alone: it is a label for the name-based
+// classifier only (apply_category_config() is NOT called from here), and no category
+// spells "BASE_BUS_MATRIX with 4 agents", so setting one would only make
+// get_config_summary() lie.
+//--------------------------------------------------------------------------------------------
+function void axi4_test_config::set_fixed_topology(axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+                                                   int    masters,
+                                                   int    slaves,
+                                                   string owner);
+  bus_matrix_mode = mode;
+  num_masters     = masters;
+  num_slaves      = slaves;
+  `uvm_info("TEST_CONFIG",
+            $sformatf("%s bound a FIXED topology (not derived from the test name): %s",
+                      owner, get_config_summary()), UVM_LOW)
+endfunction : set_fixed_topology
+
+//--------------------------------------------------------------------------------------------
+// Function: decode_bus_matrix_plusarg
+// Decode one +BUS_MATRIX_MODE=<str> spelling into (mode, masters, slaves).
+// Returns 0 for an unrecognised spelling. The accepted spellings mirror the legacy
+// override case in axi4_base_test::setup_test_configuration() -- that path still owns
+// APPLYING the plusarg for tests that derive their config from their name; this
+// function exists so a self-binding test can CHECK the plusarg against what it bound.
+//--------------------------------------------------------------------------------------------
+function bit axi4_test_config::decode_bus_matrix_plusarg(
+    input  string mode_str,
+    output axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+    output int    masters,
+    output int    slaves);
+
+  case (mode_str)
+    "NONE", "1x1": begin
+      mode = axi4_bus_matrix_ref::NONE;                masters = 1;  slaves = 1;
+    end
+    "SIMPLE", "2x2": begin
+      mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;     masters = 2;  slaves = 2;
+    end
+    "BASE", "4x4": begin
+      mode = axi4_bus_matrix_ref::BASE_BUS_MATRIX;     masters = 4;  slaves = 4;
+    end
+    "ENHANCED", "10x10": begin
+      mode = axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX; masters = 10; slaves = 10;
+    end
+    default: begin
+      mode = bus_matrix_mode;  masters = num_masters;  slaves = num_slaves;
+      return 0;
+    end
+  endcase
+  return 1;
+endfunction : decode_bus_matrix_plusarg
+
+//--------------------------------------------------------------------------------------------
+// Function: check_bus_matrix_plusarg
+// Fail fast when the command line asks for a topology this test cannot honour.
+// A self-binding test ignores +BUS_MATRIX_MODE by construction (axi4_base_test only
+// applies the plusarg when IT creates the config). Silently ignoring it is how a run
+// ends up measuring a topology nobody selected, so a contradiction -- or a spelling
+// this project does not recognise -- is fatal here, at time 0, before any traffic.
+//--------------------------------------------------------------------------------------------
+function void axi4_test_config::check_bus_matrix_plusarg(string owner);
+  string bus_mode_str;
+  axi4_bus_matrix_ref::bus_matrix_mode_e want_mode;
+  int    want_masters;
+  int    want_slaves;
+
+  if (!$value$plusargs("BUS_MATRIX_MODE=%s", bus_mode_str)) begin
+    `uvm_info("TEST_CONFIG",
+              $sformatf("%s: no +BUS_MATRIX_MODE on the command line; using the bound topology %s",
+                        owner, get_config_summary()), UVM_LOW)
+    return;
+  end
+
+  if (!decode_bus_matrix_plusarg(bus_mode_str, want_mode, want_masters, want_slaves)) begin
+    `uvm_fatal("TEST_CONFIG",
+      $sformatf({"+BUS_MATRIX_MODE=%s is not a spelling this project recognises (accepted: ",
+                 "NONE|1x1, SIMPLE|2x2, BASE|4x4, ENHANCED|10x10). %s binds its own topology ",
+                 "(%s), so an unrecognised value would have been ignored without a word -- ",
+                 "which is exactly how a run ends up measuring a topology nobody chose."},
+                bus_mode_str, owner, get_config_summary()))
+  end
+  else if ((want_mode    != bus_matrix_mode) ||
+           (want_masters != num_masters)     ||
+           (want_slaves  != num_slaves)) begin
+    `uvm_fatal("TEST_CONFIG",
+      $sformatf({"+BUS_MATRIX_MODE=%s asks for Bus_Matrix=%s, Masters=%0d, Slaves=%0d, but %s is ",
+                 "bound to Bus_Matrix=%s, Masters=%0d, Slaves=%0d by the DUT it was compiled ",
+                 "against. The bound topology wins and the plusarg would have been ignored; ",
+                 "failing here instead of running against a reference model that does not match ",
+                 "the fabric. Drop the plusarg, or run the test class that matches it."},
+                bus_mode_str, want_mode.name(), want_masters, want_slaves,
+                owner, bus_matrix_mode.name(), num_masters, num_slaves))
+  end
+  else begin
+    `uvm_info("TEST_CONFIG",
+              $sformatf("%s: +BUS_MATRIX_MODE=%s agrees with the bound topology %s",
+                        owner, bus_mode_str, get_config_summary()), UVM_LOW)
+  end
+endfunction : check_bus_matrix_plusarg
 
 `endif
