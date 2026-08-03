@@ -30,6 +30,7 @@ import argparse
 import queue
 import shutil
 import random
+import shlex
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -194,7 +195,30 @@ class RegressionRunner:
             
             # Parse and expand tests with parameters
             for test_entry in tests:
-                parts = test_entry.split()
+                # shlex, not str.split(): a command_add value may legitimately contain
+                # spaces and is written QUOTED, both in the hand-maintained test lists
+                # and in the no_pass_list this runner generates, e.g.
+                #     ... command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+                # A whitespace split is quote-blind, so it produced
+                #     command_add = '"+BUS_MATRIX_MODE=NONE'      <- opening quote kept
+                # and silently dropped '+define+DISABLE_X_ASSERTIONS"' (it matches no
+                # known prefix). The kept value was then pasted into the generated job
+                # script, emitting an unbalanced quote:
+                #     ... +plusarg_ignore "+BUS_MATRIX_MODE=NONE -l <test>.log
+                # bash swallowed the rest of the line into the open string, vcs never
+                # ran, the job exited non-zero and produced NO log, and the runner
+                # reported the generic "LSF job exited with error".
+                # Measured 2026-08-03 (run 20260803_130501): 58 of 62 non-passes were
+                # this - 20 reset/exception/qos tests that never simulated at all, an
+                # 8% hole in a regression that otherwise reported 691/753 passing.
+                try:
+                    parts = shlex.split(test_entry)
+                except ValueError as e:
+                    # Genuinely malformed quoting in the list itself: warn loudly and
+                    # fall back rather than dropping the entry on the floor.
+                    print(f"⚠️  Warning: unbalanced quotes in '{test_entry}': {e}")
+                    print(f"    Falling back to whitespace split; command_add may be truncated.")
+                    parts = test_entry.split()
                 if not parts:
                     print(f"⚠️  Warning: Empty test entry, skipping")
                     continue
@@ -333,7 +357,15 @@ class RegressionRunner:
                     if actual_seed is not None:
                         params.append(f"seed={actual_seed}")
                     if command_add is not None:
-                        params.append(f"command_add={command_add}")
+                        # shlex.quote: command_add may contain spaces (e.g.
+                    #   "+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS").
+                    # These list files are re-parsed by _load_test_list, so an
+                    # unquoted value round-trips as a truncated one. The pre-fix
+                    # runner emitted the ALREADY-corrupted value here, baking the
+                    # damage into the artifact: rerunning a no_pass_list reproduced
+                    # the same "LSF job exited with error" even after the parser was
+                    # fixed, because the file itself carried an unbalanced quote.
+                        params.append(f"command_add={shlex.quote(command_add)}")
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
@@ -409,7 +441,7 @@ class RegressionRunner:
                     if result.seed is not None:
                         params.append(f"seed={result.seed}")
                     if result.command_add is not None:
-                        params.append(f"command_add={result.command_add}")
+                        params.append(f"command_add={shlex.quote(result.command_add)}")  # see _generate_running_list
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
@@ -447,7 +479,7 @@ class RegressionRunner:
                     if result.seed is not None:
                         params.append(f"seed={result.seed}")
                     if result.command_add is not None:
-                        params.append(f"command_add={result.command_add}")
+                        params.append(f"command_add={shlex.quote(result.command_add)}")  # see _generate_running_list
                     
                     if params:
                         f.write(f"{base_name} {' '.join(params)}\n")
