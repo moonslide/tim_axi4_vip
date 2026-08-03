@@ -1392,7 +1392,11 @@ class RegressionRunner:
                 # Commented out: causes false positives with near_timeout tests
                 # r'TIME_OUT.*enhanced',
                 # Commented out: causes false positives
-                r'simulation stuck at time'
+                # NOTE: the comma after 'simulation stuck at time' was missing, so
+                # Python concatenated it with the next literal into the single
+                # unmatchable pattern 'simulation stuck at timesimulation.*timeout.*exceeded'
+                # - silently disabling BOTH rules.
+                r'simulation stuck at time',
                 # More specific timeout patterns to avoid false positives
                 r'simulation.*timeout.*exceeded',
                 r'timeout waiting for.*response',
@@ -1423,8 +1427,30 @@ class RegressionRunner:
                 r'Test execution completed'      # TC_050 specific
             ]
             
-            # Check for timeout/hang patterns first - these indicate stuck simulations
-            for pattern in timeout_patterns:
+            # Check for timeout/hang patterns first - these indicate stuck simulations.
+            #
+            # Only meaningful when the simulation did NOT reach the end of the run.
+            # A log that carries UVM's end-of-test report demonstrably did not hang:
+            # report_summarize() runs in the final phase, so its presence is proof the
+            # run completed. Scanning a COMPLETED log for hang wording matches ordinary
+            # in-run diagnostics instead - most of these patterns say "timeout", and a
+            # timeout that the testbench itself detected, reported and recovered from is
+            # exactly the kind of line a healthy self-checking test prints.
+            #
+            # Measured 2026-08-03 (runs 20260803_130501 and 20260803_155224): four runs
+            # of axi4_4k_boundary_cross_test / axi4_upper_boundary_write_test were
+            # reported TIMEOUT purely because their logs contain the manager BFM's
+            #   UVM_WARNING ... timeout waiting for a write response with bid=0xf
+            #     - write response abandoned, nothing sampled
+            # while their own summaries read UVM_ERROR : 0 and TEST RESULT: PASS. The
+            # project's pass criteria are those two lines; a warning must not override
+            # them. The misreport was deterministic across both runs.
+            #
+            # This branch had never actually executed before the return-arity fix in
+            # the previous commit - the first log to match aborted the whole run - so
+            # its first real exercise was also the first sighting of this false positive.
+            simulation_completed_report = bool(re.search(r'UVM_ERROR\s*:\s*\d+', full_output))
+            for pattern in (timeout_patterns if not simulation_completed_report else []):
                 matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
                 if matches:
                     # Must return the same 4-tuple as every other exit of this

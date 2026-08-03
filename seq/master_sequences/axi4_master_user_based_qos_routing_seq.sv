@@ -201,7 +201,39 @@ task axi4_master_user_based_qos_routing_seq::generate_routing_transaction(int te
   bit [31:0] routing_user_signal;
   bit [3:0] routing_qos;
   int burst_len;
-  
+  bit [2:0] prot_value;
+
+  // AxPROT must match what the target region demands, otherwise the access is a
+  // legitimate protection violation and the subordinate answers DECERR/SLVERR -
+  // which axi4_performance_metrics counts as a "Protocol Issue" and fails the test.
+  //
+  // This sequence left AxPROT unconstrained, so it was randomized. In ENHANCED
+  // mode slave_id defaults to 0, whose region is the Secure Kernel, and
+  // axi4_bus_matrix_ref::check_security_access() admits it only when
+  //   master_is_secure[master] || ~awprot[1]
+  // with master_is_secure = '{1,0,1,0,0,1,0,0,0,0} (M0, M2, M5 only). A run in
+  // which a non-secure manager drew awprot[1]=1 therefore failed, and one in which
+  // it drew 0 passed - measured 2026-08-03 as
+  //   [BUS_MATRIX_WRITE_RESP] Master 1 security violation writing slave 0 - DECERR
+  // in axi4_user_based_qos_routing_test_1 (ENHANCED, seed 1732288194), while the
+  // sibling run and both other bus modes passed. Seed-dependent, and not a QoS
+  // routing defect at all.
+  //
+  // Same mapping as seq/master_sequences/axi4_master_qos_priority_write_seq.sv:176.
+  // The prot bits here follow this project's convention, documented there:
+  // AxPROT[2] 0=Data, AxPROT[1] 0=Secure, AxPROT[0] 0=Privileged.
+  if (is_enhanced_mode) begin
+    case (slave_id)
+      0, 4, 7: prot_value = 3'b000;  // Secure Kernel / XOM / Secure-Only: secure access
+      6:       prot_value = 3'b000;  // Privileged-Only: privileged access
+      default: prot_value = 3'b010;  // Non-secure, normal, data
+    endcase
+  end
+  else begin
+    prot_value = 3'b010;             // NONE and 4x4 apply no security/privilege rules
+  end
+
+
   routing_user_signal = encode_routing_user_signal(current_test);
   routing_qos = calculate_routing_qos(current_test);
   
@@ -223,6 +255,7 @@ task axi4_master_user_based_qos_routing_seq::generate_routing_transaction(int te
       req.awsize == WRITE_8_BYTES;
       req.awburst == WRITE_INCR;
       req.awqos == routing_qos; // QoS based on routing decision
+      req.awprot == local::prot_value;
       req.awuser == routing_user_signal;
       req.wuser == {16'h0000, current_test.priority_hint, current_test.resource_mask}; // Routing hints in WUSER
     })
@@ -243,6 +276,7 @@ task axi4_master_user_based_qos_routing_seq::generate_routing_transaction(int te
       req.arsize == READ_8_BYTES;
       req.arburst == READ_INCR;
       req.arqos == routing_qos; // QoS based on routing decision
+      req.arprot == local::prot_value;
       req.aruser == routing_user_signal;
     })
     
