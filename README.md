@@ -5,10 +5,10 @@ multi-master / multi-slave bus matrix reference model. It runs in two modes:
 
 * **VIP-vs-VIP** — masters wired 1:1 to slaves, no interconnect. This is the default
   build and what the regression uses.
-* **Track-B** — the same VIP driving a real **ARM CoreLink NIC-400** interconnect as DUT,
+* **Track-B** — the same VIP driving a **commercial fabric IP** interconnect as DUT,
   in either a 4×4 or a 10×10 topology.
 
-> **Licensed IP notice.** The NIC-400 RTL under `ext/` is licensed third-party IP and is
+> **Licensed IP notice.** The commercial fabric IP RTL under `ext/` is licensed third-party IP and is
 > **local-only**. It must never be committed, pushed, archived, or pasted into any external
 > service, and neither may simulator artefacts built from it (`csrc*/`, `simv*`, `*.daidir/`).
 > `.gitignore` enforces this and is part of the policy. See `CLAUDE.md`.
@@ -69,7 +69,7 @@ tim_axi4_vip/
 ├── virtual_seq/                cross-agent scenario sequences (~137 files)
 ├── virtual_seqr/               axi4_virtual_sequencer.sv
 ├── test/                       187 test classes + axi4_test_pkg.sv
-├── top/                        hdl_top.sv, hvl_top.sv, NIC-400 wrappers, fabric smoke TB
+├── top/                        hdl_top.sv, hvl_top.sv, fabric IP wrappers, fabric smoke TB
 ├── sim/
 │   ├── axi4_compile.f              baseline (no interconnect)
 │   ├── axi4_compile_nic400.f       Track-B 10×10
@@ -80,7 +80,7 @@ tim_axi4_vip/
 │   └── synopsys_sim/               build/run area, axi4_regression.py
 ├── testlists/                  regression test lists
 ├── doc/                        documents and figures (doc/img/*.svg)
-└── ext/                        NIC-400 deliverable — LOCAL ONLY, never uploaded
+└── ext/                        commercial fabric IP deliverable — LOCAL ONLY, never uploaded
 ```
 
 Authoritative specs: **`claude.md`** (lowercase) is the 10×10 access matrix and address map.
@@ -168,7 +168,7 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 ./simv +UVM_TESTNAME=axi4_blocking_write_read_test +UVM_VERBOSITY=UVM_LOW
 ```
 
-### 2. Track-B — NIC-400 10×10
+### 2. Track-B — commercial fabric IP, 10×10
 
 ```bash
 vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
@@ -184,7 +184,7 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 rejects an enum range built from a computed expression (`Error-[ETRNC]`); `hdl_top` asserts
 the two agree at time 0.
 
-### 3. Track-B — NIC-400 4×4
+### 3. Track-B — commercial fabric IP, 4×4
 
 ```bash
 vcs ... +define+BUS_MATRIX_NIC400 +define+NIC400_4X4 \
@@ -217,7 +217,7 @@ Gates on **log content**, not on exit status — a VCS run that ends in `$fatal`
 | `AXI_VID_WIDTH` | 4 | ingress-port tag width inside the fabric |
 | `AXI_{AW,W,B,AR,R}USER_WIDTH` | 16 | per-channel USER widths |
 | `AXI4_END_OF_TEST_DRAIN_NS` | 5000 | end-of-test drain, in ns (see below) |
-| `BUS_MATRIX_NIC400` | off | build against the NIC-400 fabric |
+| `BUS_MATRIX_NIC400` | off | build against the commercial fabric IP |
 | `NIC400_4X4` | off | select the 4×4 fabric instead of 10×10 |
 | `NIC400_DEBUG_PROBE` | off | fabric-boundary tracing |
 | `DUMP_FSDB` | off | enable FSDB waveform dumping |
@@ -311,7 +311,7 @@ urg -dir cov.vdb -format text -report cov_rpt
 
 **Code coverage is scoped to the fabric interface only.** `coverage_scope.cm_hier` keeps
 `hdl_top` and the project-authored `u_nic400_fabric` wrapper and drops
-`u_nic400_fabric.u_fabric` — the generated NIC-400 internals are licensed, pre-verified
+`u_nic400_fabric.u_fabric` — the generated fabric IP internals are licensed, pre-verified
 third-party IP and are not a VIP verification target; ~300 vendor `.v` files in the
 denominator only deflate LINE and TOGGLE. Functional coverage has no such carve-out.
 
@@ -361,7 +361,7 @@ description comment above it.
 |---|---|
 | `claude.md` | 10×10 access matrix + address map — authoritative spec |
 | `CLAUDE.md` | build recipes, publish policy, iron rules |
-| `TRACKB_DEBUG_NOTES.md` | NIC-400 integration evidence chain and open items |
+| `TRACKB_DEBUG_NOTES.md` | fabric IP integration evidence chain and open items |
 | `VIP_future.md` | improvement plan |
 | `.claude/docs/known-landmines.md` | traps earned in this repo, with reproduction |
 | `AXI-Case-list.csv`, `doc/testcase_matrix.csv` | case status — verify before trusting |

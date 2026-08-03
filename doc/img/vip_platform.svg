@@ -122,8 +122,8 @@
   <text class="sub" x="586" y="480" text-anchor="middle">no interconnect — VIP vs VIP</text>
 
   <rect class="dut" x="486" y="494" width="200" height="58" rx="4"/>
-  <text class="ttl" x="586" y="514" text-anchor="middle">ARM NIC-400 fabric</text>
-  <text class="sub" x="586" y="532" text-anchor="middle">axi4_nic400_fabric_wrapper[_4x4]</text>
+  <text class="ttl" x="586" y="514" text-anchor="middle">commercial fabric IP</text>
+  <text class="sub" x="586" y="532" text-anchor="middle">project-authored fabric wrapper</text>
   <text class="sub" x="586" y="546" text-anchor="middle">licensed RTL under ext/ — local only</text>
 
   <rect class="box" x="710" y="430" width="192" height="122" rx="4"/>
