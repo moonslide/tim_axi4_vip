@@ -154,6 +154,46 @@ degrading.
 
 ---
 
+## AXI4 protocol coverage
+
+This is a full **AMBA AXI4** (not AXI3, not AXI4-Lite) VIP. What that means concretely,
+checked against the interface (`intf/axi4_interface/axi4_if.sv`), the transaction classes
+(`master/axi4_master_tx.sv`, `pkg/axi4_globals_pkg.sv`), and the reference bus matrix
+(`bm/axi4_bus_matrix_ref.sv`):
+
+### Implemented
+
+| Feature | Notes |
+|---|---|
+| All 5 channels, AXI4 pin set | No `WID` — write bursts are identified solely by `AWID`, matching AXI4's removal of per-beat write IDs (AXI3 had `WID`; AXI4 does not). |
+| 8-bit `AxLEN` | Up to 256-beat `INCR` bursts, the AXI4 extension over AXI3's 4-bit/16-beat limit. |
+| Burst types | `FIXED`, `INCR`, `WRAP`, with length-legality constraints (`FIXED`/`WRAP` ≤ 16 beats, `WRAP` length a power of 2) — `master/axi4_master_tx.sv`. |
+| All 4 responses | `OKAY`, `EXOKAY`, `SLVERR`, `DECERR` on both write (`BRESP`) and read (`RRESP`). |
+| Exclusive access | `AxLOCK` + `EXOKAY`, with exclusive-monitor tracking on the slave side. |
+| Outstanding / multi-ID transactions | Configurable per-slave response ordering: in-order, read-only out-of-order, write-only out-of-order, or both (`RESP_IN_ORDER` / `*_OUT_OF_ORDER` in `pkg/axi4_globals_pkg.sv`), plus dedicated cross-ID and same-ID reorder tests. |
+| No write-data interleaving | Enforced and tested as an AXI4 rule (spec section A5.4) — AXI4 removed interleaving; a manager's write beats for different AWIDs are never interleaved on the W channel. |
+| `AxPROT` (security / privilege / instruction) | Enforced by the reference bus matrix in `ENHANCED` mode — see [Bus matrix modes](#bus-matrix-modes) above. Not modelled in `NONE`/`BASE`. |
+| `AxQOS`, `AxCACHE`, `AxREGION` | Driven, randomized, and functionally covered (dedicated QoS-priority/QoS-routing sequences, an arbitration-fairness metric). **Not** consumed as scheduling or memory-behaviour input by the reference model — see caveats below. |
+| `AxUSER`/`WUSER`/`BUSER`/`ARUSER`/`RUSER` | All 5 channels, independently configurable widths (`include/axi4_bus_config.svh`), with a dedicated USER-signal test suite (passthrough, corruption, width-mismatch, protocol-violation). |
+| Narrow / unaligned / sparse-strobe transfers | Including non-contiguous `WSTRB` per beat (AXI4 A3.4.3 byte-lane rules) and 4 KiB boundary-crossing checks. |
+| Reset behaviour | Independent, mid-burst, and multi-reset scenarios across a dedicated reset test family. |
+| Protocol-level SVA | X-propagation, VALID-stability-until-handshake, and per-channel handshake legality — `assertions/master_assertions.sv`, `assertions/slave_assertions.sv`. |
+| Directed protocol-violation / error injection | X-injection on every channel control/data signal, AWID/illegal-WSTRB mismatches, and randomized multi-signal error injection. |
+
+### Not implemented / out of scope
+
+| Feature | Status |
+|---|---|
+| AXI4-Lite | Not supported — this VIP is full AXI4 only, no register-style single-beat-only mode. |
+| AXI4-Stream | Not applicable — unrelated protocol. |
+| Low-power interface (`CACTIVE`/`CSYSREQ`/`CSYSACK`) | Not modelled — absent from the interface and both BFMs. |
+| QoS-driven arbitration as DUT behaviour | The reference bus matrix does **not** use `AxQOS` to schedule or prioritize; `AxQOS` is stimulus/coverage only in VIP-vs-VIP mode. Real QoS arbitration is exercised only when Track-B's commercial fabric IP is the DUT — the fabric arbitrates, the VIP does not. |
+| `AxCACHE`-driven memory behaviour | Cache attributes are protocol-legal and covered but do not change the abstract slave memory model (no write-through/write-back/allocate distinction). |
+| `AxREGION`-driven decode | Covered as a field; not used to select a distinct memory region in the reference model. |
+| AXI5 extensions (atomics, MTE, poison, etc.) | Out of scope — this is an AXI4, not AXI5, VIP. |
+
+---
+
 ## Build and run
 
 All commands run from `sim/synopsys_sim/`. Toolchain: **VCS W-2024.09-SP1**.
