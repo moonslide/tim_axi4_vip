@@ -59,38 +59,13 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   int wr_addr_cnt;
   int wr_resp_cnt;
 
-  // ---------------------------------------------------------------------------
-  // Out-of-order response bookkeeping: PER-ID FIFOs + a random arbiter
-  // (AXI_ooo.md F2, Phase 2, design decision D1 Option B).
-  //
-  // What this replaces: one flat `response_id_queue` / `rd_response_id_queue`
-  // that was `shuffle()`d before every pop, plus a "continuation" queue fed by a
-  // same-ID check that only compared the incoming AxID against the queue TAIL
-  // (`awid == response_id_queue[$]` / `arid == rd_response_id_queue[$].arid`).
-  // The tail compare only sees ADJACENT same-ID pairs, so a non-adjacent
-  // sequence (A,B,A) left both A entries in the shuffled queue together and
-  // `shuffle()` could return the later A first -- a VIP-generated AXI4
-  // violation (A5.3: responses for the same ID must be returned in the order
-  // the transactions were issued). The continuation queue was a second
-  // reordering source of its own, because it drained with PRIORITY over the
-  // shuffle queue and could overtake an older same-ID entry still stuck there.
-  //
-  // The replacement removes the heuristic instead of guarding it. One FIFO per
-  // ARID holds that ID's outstanding reads in acceptance order; the arbiter
-  // (`ooo_arbitrate_id`) randomises only WHICH ID answers next and always pops
-  // that ID's head. Same-ID order is then correct by construction and cross-ID
-  // reordering -- the entire point of the out-of-order modes -- is preserved:
-  // when every outstanding transaction carries a distinct ID (what the cross-ID
-  // reorder tests drive) every per-ID FIFO holds exactly one entry and a
-  // uniform pick over IDs is exactly the old uniform pick over entries.
-  // The empty-pop class of bug (F1) also disappears: the arbiter is only ever
-  // offered IDs whose FIFO is non-empty, and the caller gates on the total.
-  //
-  // This machinery is READ-SIDE ONLY. See WRITE_RESPONSE_CHANNEL for why the
-  // write side deliberately has no arbiter at all, and what has to be built
-  // there before write-side OOO can exist (AXI_ooo.md F7 / P4.5).
-  axi4_read_transfer_char_s rd_pending_by_id[bit[`AXI_ID_WIDTH-1:0]][$];
-  int                       rd_pending_total;
+  // Variables used for out of order support
+  bit[`AXI_ID_WIDTH-1:0] response_id_queue[$];
+  bit[`AXI_ID_WIDTH-1:0] response_id_cont_queue[$];
+  bit      drive_id_cont;
+  bit      drive_rd_id_cont;
+  axi4_read_transfer_char_s rd_response_id_queue[$];
+  axi4_read_transfer_char_s rd_response_id_cont_queue[$];
 
   bit      completed_initial_txn = 0;
   int      crossed_read_addr=0;
@@ -127,15 +102,7 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   extern virtual task axi4_read_task();
   extern virtual task task_memory_write(input axi4_slave_tx struct_write_packet);
   extern virtual task task_memory_read(input axi4_slave_tx read_pkt,ref axi4_read_transfer_char_s struct_read_packet);
-  // `ref`, not `output`: the Gate-1 timeout path returns WITHOUT selecting a
-  // read, and the caller must keep the packet it already built. An `output`
-  // formal is copied back to the actual unconditionally on return, so the
-  // early return silently overwrote the caller's struct with the formal's
-  // default (all-zero, every field of axi4_read_transfer_char_s being 2-state)
-  // -- i.e. exactly the zeroed struct that path exists to avoid. `ref` writes
-  // through only where the task actually assigns.
-  extern virtual task out_of_order_for_reads(ref axi4_read_transfer_char_s oor_read_data_struct_read_packet);
-  extern virtual function bit[`AXI_ID_WIDTH-1:0] ooo_arbitrate_id(input bit[`AXI_ID_WIDTH-1:0] candidate_ids[$]);
+  extern virtual task out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
   extern virtual function bresp_e mid_safe_write_resp(int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] awprot);
   extern virtual function rresp_e mid_safe_read_resp (int mid, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] arprot);
   extern virtual function void setup_exclusive_monitor(bit [ADDRESS_WIDTH-1:0] addr, bit [15:0] master_id, bit [7:0] size, bit [7:0] len);
@@ -283,7 +250,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
       axi4_slave_tx              local_slave_addr_tx;
       axi4_write_transfer_char_s struct_write_packet;
       axi4_transfer_cfg_s        struct_cfg;
-
+      bit[`AXI_ID_WIDTH-1:0]     local_awid;
+    
       //returns status of address thread
       addr_tx=process::self();
       
@@ -299,9 +267,23 @@ task axi4_slave_driver_proxy::axi4_write_task();
      //write address_task - BFM will wait for and sample real signals, updating struct with real data
      axi4_slave_drv_bfm_h.axi4_write_address_phase(struct_write_packet);
 
-     // No out-of-order write bookkeeping is kept here. The B channel's BID is
-     // taken directly from the transaction the response is computed for, in
-     // WRITE_RESPONSE_CHANNEL -- see the block comment there (AXI_ooo.md F7).
+     if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_WRITE_RESP_OUT_OF_ORDER) begin
+       if(response_id_queue.size() == 0) begin
+         response_id_queue.push_back(struct_write_packet.awid);
+       end
+       else begin
+         // condition to check if the same id's are coming back to back
+         if(struct_write_packet.awid == response_id_queue[$]) begin
+           drive_id_cont = 1'b1;
+           local_awid = response_id_queue.pop_back();
+           response_id_cont_queue.push_back(local_awid);
+           response_id_cont_queue.push_back(struct_write_packet.awid);
+         end
+         else begin
+           response_id_queue.push_back(struct_write_packet.awid);
+         end
+       end
+     end
 
      //Converting struct into transaction data type
      axi4_slave_seq_item_converter::to_write_class(struct_write_packet,local_slave_addr_tx);
@@ -381,7 +363,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
       int                        end_sid;
       int                        wait_cycles;
       bit [1:0]                  original_bresp;
-
+      
       //returns status of response thread
       response_tx=process::self();
 
@@ -437,55 +419,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
       //check for fifo empty if not get the data 
       if((axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
         local_slave_addr_tx = local_slave_response_tx;
-
-        // ---------------------------------------------------------------------
-        // BID assignment in QoS mode (AXI_ooo.md F1).
-        //
-        // This used to be an unguarded `awid_queue_for_qos.pop_front()`.
-        // `awid_queue_for_qos` is declared at PACKAGE scope
-        // (pkg/axi4_globals_pkg.sv:309), so it is ONE queue shared by every
-        // master driver proxy (which pushes at
-        // master/axi4_master_driver_proxy.sv:450,455,460,470) and every slave
-        // driver proxy (which popped it here). Nothing tied an entry to the
-        // master-slave pair that pushed it, so the popped value was only the
-        // right BID while every pair happened to complete in exactly the order
-        // it pushed. Measured: with three QoS masters writing concurrently and
-        // master 0 on a longer burst, slave 1 popped AWID 0 and slave 2 popped
-        // AWID 1, and the managers dropped those responses
-        // ("write response bid=0x0 answers no write outstanding at this manager
-        // port", axi4_master_driver_bfm.sv:312) -- 15 writes never retired.
-        // An empty queue was equally unguarded and silently drove BID=0.
-        //
-        // BID is now taken from the AWID this subordinate actually sampled on
-        // its OWN AW channel for the transaction it is answering (AXI4 A3.3:
-        // BID must match the AWID of the write being responded to).
-        // `struct_write_packet` was converted above from
-        // `local_slave_response_tx`, i.e. the QoS-selected entry of THIS
-        // agent's `qos_queue`, which WRITE_ADDRESS_CHANNEL filled from the BFM
-        // at :292 -- so it is a real sampled AWID, not a cross-agent guess.
-        //
-        // The shared queue is still drained here, and still by `pop_front()`,
-        // exactly as before: its popped VALUE is now unused, so removing a
-        // specific matching entry would buy nothing -- while
-        // master/axi4_master_driver_proxy.sv:436 reads this same shared
-        // queue's TAIL (`awid_queue_for_qos[$]`) to order its QoS
-        // back-to-back / queue_index decision. `pop_front()` takes from the
-        // front and so leaves that tail alone (except when the queue holds a
-        // single entry); a delete-by-value could remove the tail itself and
-        // perturb master-side arbitration for no correctness gain. Keep the
-        // drain positional; only the empty-queue guard is new.
-        // ---------------------------------------------------------------------
-        if(awid_queue_for_qos.size() == 0) begin
-          `uvm_error(get_type_name(),$sformatf("WRITE_RESP_THREAD::QOS BID assignment: shared awid_queue_for_qos is EMPTY (slave_id=%0d, sampled awid='h%0h) - the master-side QoS push and this pop are out of step; driving BID from the sampled AWID",
-                     axi4_slave_agent_cfg_h.slave_id, struct_write_packet.awid))
-        end
-        else begin
-          void'(awid_queue_for_qos.pop_front());
-        end
-        struct_write_packet.bid = struct_write_packet.awid;
-        `uvm_info("slave_driver_proxy",$sformatf("QOS BID = 'h%0h (from sampled AWID), shared queue size now %0d",
-                  struct_write_packet.bid, awid_queue_for_qos.size()),UVM_HIGH)
-
+        struct_write_packet.bid = awid_queue_for_qos.pop_front();
+        
         // In SLAVE_MEM_MODE with QoS, we need to get the actual address from the write_addr_fifo
         // The QoS queue transaction may have dummy/randomized addresses
         if(axi4_slave_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin
@@ -520,14 +455,8 @@ task axi4_slave_driver_proxy::axi4_write_task();
           while(axi4_slave_write_addr_fifo_h.is_empty) begin
             @(posedge axi4_slave_drv_bfm_h.aclk);
             if(wait_cycles++ > 50000) begin
-              // AXI_ooo.md F11. This used to `break` and fall through. Nothing
-              // below assigns `local_slave_addr_tx`, so the very next statement
-              // (`local_slave_addr_tx.awburst == WRITE_FIXED`) dereferenced a
-              // null handle and the run died on a UVM_FATAL whose message named
-              // the null object, never the real cause. Report the real cause
-              // here instead, before control can reach that dereference.
-              `uvm_fatal(get_type_name(),$sformatf("WRITE_RESP_THREAD::No AW received for this W within %0d cycles (slave_id=%0d) - possible AW/W desynchronisation; check for a missing write address handshake (e.g. AW/W pairing lost across a reset boundary)",
-                         wait_cycles, axi4_slave_agent_cfg_h.slave_id))
+              `uvm_error(get_type_name(),"WRITE_RESP_THREAD::Timeout waiting for write addr data - FIFO remained empty");
+              break;
             end
           end
         end
@@ -681,53 +610,17 @@ task axi4_slave_driver_proxy::axi4_write_task();
           end
         end
           `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_write_data_out_fifo_h.used()),UVM_HIGH)
-          // ---------------------------------------------------------------
-          // Out-of-order BID: taken from the SAME transaction the BRESP above
-          // was computed for. No arbiter (AXI_ooo.md F2 Phase 2 / F7).
-          //
-          // WHY THERE IS NO ARBITER HERE. The read side reorders by picking an
-          // ID and popping that ID's oldest read, and the WHOLE response --
-          // RID, RRESP, RDATA -- comes out of that one popped entry, so the
-          // selection and the response can never disagree. The write side has
-          // no such entry: BRESP is derived from `local_slave_addr_tx`, which
-          // is `axi4_slave_write_addr_fifo_h.get()` above -- strict acceptance
-          // order, not negotiable. A separate random pick for BID would be a
-          // SECOND, independent selection over the same outstanding set, and
-          // nothing rebinds the two. Concretely, with AW order
-          // (ID=A -> legal -> OKAY), (ID=B -> illegal -> DECERR), an arbiter
-          // that answered B first would drive {BID=B, BRESP=OKAY} and then
-          // {BID=A, BRESP=DECERR}: both responses land on the wrong
-          // transaction. Binding BID to the same strict-ordered packet as
-          // BRESP makes that divergence unrepresentable.
-          //
-          // The BFM agrees with this by construction: in the non-OOO branch it
-          // drives `this_awid` from `aw_resp_id_q`, its own AWVALID&&AWREADY-
-          // bound FIFO (agent/slave_agent_bfm/axi4_slave_driver_bfm.sv:611).
-          // Both sides are now the same strict acceptance order, so the OOO
-          // and in-order branches cannot disagree about which write is being
-          // answered.
-          //
-          // WHAT THIS COSTS TODAY: nothing. The `join` at the bottom of this
-          // fork (AXI_ooo.md F7) forces the address phase and this response
-          // into the same loop iteration, so exactly one write is ever
-          // outstanding at this point -- measured: every `OOO_ARB WR
-          // ARBITRATE` line of the previous per-ID implementation reported
-          // `candidates=1`, in every test, in every run. An arbiter over one
-          // candidate is the identity function, so this is the code the per-ID
-          // version already collapsed to, minus the latent divergence.
-          //
-          // PREREQUISITE FOR P4.5 (do not skip): the moment that join is
-          // relaxed and more than one write can be outstanding here, write-side
-          // OOO needs a properly PAIRED design -- a per-ID FIFO of the actual
-          // pending write TRANSACTIONS (address/prot/lock, enough to compute
-          // BRESP), arbitrated once, with BID and BRESP both taken from the
-          // popped entry. A per-ID COUNT is not sufficient: a count can only
-          // answer "which ID", and the response still has to come from
-          // somewhere, which is exactly how the two selections came apart.
-          // ---------------------------------------------------------------
-          bid_local = local_slave_addr_tx.awid;
-          `uvm_info("OOO_ARB",$sformatf("WR RESPOND bid='h%0h bresp=%0d (bound to the strict-order AW this BRESP was computed for)",
-                    bid_local, struct_write_packet.bresp),UVM_HIGH)
+          if(drive_id_cont == 1) begin
+            bid_local = response_id_cont_queue.pop_front(); 
+            `uvm_info("slave_driver_proxy",$sformatf("bid_local = %0d",bid_local),UVM_HIGH)
+            `uvm_info("slave_driver_proxy",$sformatf("drive_id_cont = %0d",drive_id_cont),UVM_HIGH)
+            if(response_id_cont_queue.size()==0) drive_id_cont = 1'b0;
+          end
+          else begin
+            response_id_queue.shuffle();
+            bid_local = response_id_queue.pop_front(); 
+            `uvm_info("slave_driver_proxy",$sformatf("bid_local = %0d",bid_local),UVM_HIGH)
+          end
           slave_err = (struct_write_packet.bresp != WRITE_OKAY);
           // write response_task
           axi4_slave_drv_bfm_h.axi4_write_response_phase(struct_write_packet,struct_cfg,bid_local);
@@ -886,6 +779,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
       
       axi4_slave_tx              local_slave_tx;
       axi4_read_transfer_char_s struct_read_packet;
+      axi4_read_transfer_char_s oor_struct_read_packet;
       axi4_transfer_cfg_s       struct_cfg;
       
       //returns status of address thread
@@ -902,22 +796,24 @@ task axi4_slave_driver_proxy::axi4_read_task();
       //read address_task - BFM will wait for and sample real signals, updating struct with real data
       axi4_slave_drv_bfm_h.axi4_read_address_phase(struct_read_packet,struct_cfg);
 
-     // Storing data for enabling out_of_order feature.
-     // Per-ID FIFO, appended in ACCEPTANCE order -- the arbiter in
-     // out_of_order_for_reads() may pick any ID but always takes that ID's
-     // head, which is what keeps same-ID R responses in order. No adjacency
-     // test: the old tail-compare missed non-adjacent same-ID sequences and
-     // let shuffle() invert them (AXI_ooo.md F2). See rd_pending_by_id.
+     // Storing data for enabling out_of_order feature
      if(axi4_slave_agent_cfg_h.slave_response_mode == WRITE_READ_RESP_OUT_OF_ORDER || axi4_slave_agent_cfg_h.slave_response_mode == ONLY_READ_RESP_OUT_OF_ORDER) begin
-       if(!rd_pending_by_id.exists(struct_read_packet.arid)) begin
-         rd_pending_by_id[struct_read_packet.arid] = {};
+       if(rd_response_id_queue.size() == 0) begin
+         rd_response_id_queue.push_back(struct_read_packet);
        end
-       rd_pending_by_id[struct_read_packet.arid].push_back(struct_read_packet);
-       rd_pending_total++;
-       `uvm_info("OOO_ARB",$sformatf("RD ENQUEUE arid='h%0h araddr='h%0h -> pending_for_id=%0d total=%0d ids=%0d",
-                 struct_read_packet.arid, struct_read_packet.araddr,
-                 rd_pending_by_id[struct_read_packet.arid].size(),
-                 rd_pending_total, rd_pending_by_id.num()),UVM_HIGH)
+       else begin
+         // condition to check if the same id's are coming back to back
+         oor_struct_read_packet = rd_response_id_queue[$];
+         if(struct_read_packet.arid == oor_struct_read_packet.arid) begin
+           drive_rd_id_cont = 1'b1;
+           oor_struct_read_packet = rd_response_id_queue.pop_back();
+           rd_response_id_cont_queue.push_back(oor_struct_read_packet);
+           rd_response_id_cont_queue.push_back(struct_read_packet);
+         end
+         else begin
+           rd_response_id_queue.push_back(struct_read_packet);
+         end
+       end
      end
       
      //Converting struct into transaction data type
@@ -1835,49 +1731,13 @@ task axi4_slave_driver_proxy::task_memory_read(input axi4_slave_tx read_pkt,ref 
 endtask : task_memory_read
 
 
-//--------------------------------------------------------------------------------------------
-// Function: ooo_arbitrate_id
-// The random arbiter of the out-of-order READ response model (AXI_ooo.md F2 /
-// Phase 2, Option B). Sole caller: out_of_order_for_reads(). The write side
-// deliberately has no arbiter -- see WRITE_RESPONSE_CHANNEL. Kept as its own
-// function rather than inlined because the empty-candidate guard below is the
-// diagnosable alternative to returning a fabricated AxID 0, and that is worth
-// stating once in a named place.
-//
-// It answers exactly one question -- WHICH ID responds next -- and is offered
-// only IDs whose per-ID FIFO is non-empty. It deliberately does NOT choose an
-// entry: the caller always takes the selected ID's head. That split is the
-// whole fix: cross-ID reordering stays uniformly random (an AXI4-legal freedom
-// the out-of-order modes exist to exercise) while same-ID order is not a
-// property that has to be detected and protected any more, it is a property the
-// data structure cannot violate.
-//
-// With every outstanding transaction carrying a distinct ID -- what the
-// cross-ID reorder tests drive -- each FIFO holds one entry and picking
-// uniformly over IDs is identical to the old `shuffle(); pop_front()` over
-// entries, so reorder strength is preserved, not reduced.
-//--------------------------------------------------------------------------------------------
-function bit[`AXI_ID_WIDTH-1:0] axi4_slave_driver_proxy::ooo_arbitrate_id(input bit[`AXI_ID_WIDTH-1:0] candidate_ids[$]);
-  if(candidate_ids.size() == 0) begin
-    // Callers gate on their pending TOTAL before getting here, so an empty
-    // candidate list means the total and the per-ID bookkeeping disagree.
-    // Report it rather than returning a fabricated ID that would look like a
-    // legitimate AxID 0 on the bus.
-    `uvm_error("slave_driver_proxy","OOO arbiter called with no candidate IDs - per-ID FIFO bookkeeping is inconsistent with the pending total")
-    return '0;
-  end
-  return candidate_ids[$urandom_range(candidate_ids.size()-1, 0)];
-endfunction : ooo_arbitrate_id
-
-task axi4_slave_driver_proxy::out_of_order_for_reads(ref axi4_read_transfer_char_s oor_read_data_struct_read_packet);
+task axi4_slave_driver_proxy::out_of_order_for_reads(output axi4_read_transfer_char_s oor_read_data_struct_read_packet);
  int read_wait;
  int min_backlog;
- bit[`AXI_ID_WIDTH-1:0] cand_ids[$];
- bit[`AXI_ID_WIDTH-1:0] sel_id;
  read_wait   = 0;
  min_backlog = axi4_slave_agent_cfg_h.get_minimum_transactions;
 
- // Gate 1 - CORRECTNESS. Never pop from an empty FIFO: `pop_front()` on an
+ // Gate 1 - CORRECTNESS. Never pop from an empty queue: `pop_front()` on an
  // empty SystemVerilog queue returns a default-constructed struct, and the
  // caller drives that straight onto the R channel as an all-zero response for a
  // read nobody answered. This must hold whatever minimum_transactions is.
@@ -1894,60 +1754,37 @@ task axi4_slave_driver_proxy::out_of_order_for_reads(ref axi4_read_transfer_char
  // never actually prevented - and the `minimum_transactions == 0` early-out
  // skipped the wait entirely, which is the configuration the sibling
  // out-of-order tests all select.
- //
- // Now that the pending reads live in per-ID FIFOs, one total covers both the
- // old queues; the old form also had to ask which of the two queues the
- // continuation flag pointed at, and that flag is gone with the heuristic.
- while(rd_pending_total == 0) begin
+ while((drive_rd_id_cont == 1) ? (rd_response_id_cont_queue.size() == 0)
+                               : (rd_response_id_queue.size()      == 0)) begin
    @(posedge axi4_slave_drv_bfm_h.aclk);
    if(read_wait++ > 1000) begin
      `uvm_error("slave_driver_proxy","read response wait timeout: no read pending to respond to")
      break;
    end
  end
- if(rd_pending_total == 0) begin
-   // Gate 1 timed out and already raised the error. Return without a pop so the
-   // caller keeps its own packet rather than being handed a zeroed struct.
-   // This only holds because the formal is `ref` (see the extern declaration):
-   // as an `output` it was copied back on return and zeroed the caller's packet
-   // anyway, so the comment described an intent the signature did not deliver.
-   return;
- end
 
  // Gate 2 - REORDER QUALITY, best effort, never an error. Let a backlog of more
- // than minimum_transactions accumulate so the arbiter below has more than one
- // ID to choose between. Bounded, because a manager that simply has no more
- // reads in flight must not stall the R channel: responding in order is a
- // weaker stimulus, not a failure.
+ // than minimum_transactions accumulate so the shuffle below has something to
+ // reorder. Bounded, because a manager that simply has no more reads in flight
+ // must not stall the R channel: responding in order is a weaker stimulus, not
+ // a failure.
  read_wait = 0;
- while(rd_pending_total <= min_backlog && read_wait < 50) begin
+ while(drive_rd_id_cont == 0 && rd_response_id_queue.size() <= min_backlog && read_wait < 50) begin
    @(posedge axi4_slave_drv_bfm_h.aclk);
    read_wait++;
  end
  `uvm_info("slave_driver_proxy",$sformatf("fifo_size = %0d",axi4_slave_read_addr_fifo_h.used()),UVM_HIGH)
-
- // Arbitrate over IDs, then take that ID's OLDEST outstanding read. Same-ID R
- // order is correct by construction here -- there is no path that can return an
- // ID's second read before its first.
- foreach(rd_pending_by_id[cand_id]) begin
-   if(rd_pending_by_id[cand_id].size() > 0) cand_ids.push_back(cand_id);
+ if(drive_rd_id_cont == 1 && rd_response_id_cont_queue.size() > 0) begin
+   oor_read_data_struct_read_packet = rd_response_id_cont_queue.pop_front();
+   if(rd_response_id_cont_queue.size()==0) drive_rd_id_cont = 1'b0;
  end
- sel_id = ooo_arbitrate_id(cand_ids);
- // `exists` first: indexing a missing associative-array key would CREATE an
- // empty FIFO under it, silently repopulating the array the arbiter reads.
- if(rd_pending_by_id.exists(sel_id) && rd_pending_by_id[sel_id].size() > 0) begin
-   oor_read_data_struct_read_packet = rd_pending_by_id[sel_id].pop_front();
-   rd_pending_total--;
-   // Keep the associative array bounded: an ID that has gone quiet must not
-   // keep an empty FIFO alive for the rest of the simulation, and an empty
-   // FIFO must never be offered to the arbiter.
-   if(rd_pending_by_id[sel_id].size() == 0) rd_pending_by_id.delete(sel_id);
-   `uvm_info("OOO_ARB",$sformatf("RD ARBITRATE candidates=%0d total_pending_before=%0d -> arid='h%0h araddr='h%0h (remaining_for_id=%0d)",
-             cand_ids.size(), rd_pending_total+1, oor_read_data_struct_read_packet.arid,
-             oor_read_data_struct_read_packet.araddr,
-             rd_pending_by_id.exists(sel_id) ? rd_pending_by_id[sel_id].size() : 0),UVM_HIGH)
+ else if(rd_response_id_queue.size() > 0) begin
+   rd_response_id_queue.shuffle();
+   oor_read_data_struct_read_packet = rd_response_id_queue.pop_front();
  end
- // else: ooo_arbitrate_id already reported the bookkeeping inconsistency.
+ // else: gate 1 timed out and already raised the error. Falling through without
+ // a pop leaves the caller's packet as the output default rather than silently
+ // consuming an unrelated entry from the other queue.
 endtask : out_of_order_for_reads
 
 //--------------------------------------------------------------------------------------------

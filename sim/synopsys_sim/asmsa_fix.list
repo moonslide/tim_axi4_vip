@@ -1,0 +1,39 @@
+# Verification list for the axi4_all_master_slave_access_test address-constraint fix.
+#
+# Run: python3 axi4_regression.py --lsf --test-list asmsa_fix.list -p 20 -t 1200
+#
+# NOTE: axi4_regression.py wipes the SHARED sim/run_folder_00..11 pool at startup.
+# Check `ps aux | grep axi4_regression.py` and wait for any active run before launching.
+#
+# --- fail-then-pass: the exact two seeds that failed in
+#     regression_result_20260805_111607 / _102002 (both "Protocol Issues: 4") ---
+axi4_all_master_slave_access_test seed=2144360181 command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_all_master_slave_access_test seed=764272444 command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_all_master_slave_access_test seed=1010101 command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_all_master_slave_access_test seed=2020202 command_add="+BUS_MATRIX_MODE=ENHANCED"
+
+# --- the other two bus matrix modes this test can be launched in ---
+axi4_all_master_slave_access_test seed=2144360181 command_add="+BUS_MATRIX_MODE=4x4"
+axi4_all_master_slave_access_test seed=764272444 command_add="+BUS_MATRIX_MODE=4x4"
+# default mode for this test is NONE (axi4_test_config -> BOUNDARY_ACCESS_TESTS)
+axi4_all_master_slave_access_test run_cnt=2
+
+# --- neighbours: everything else that drives axi4_master_bk_write_seq /
+#     axi4_master_bk_read_seq, i.e. the same unconstrained-address pattern ---
+axi4_blocking_write_read_test
+axi4_blocking_write_read_rand_test
+axi4_read_test
+axi4_write_read_test
+axi4_blocking_okay_response_write_read_test
+axi4_blocking_incr_burst_read_test
+axi4_exhaustive_random_reads_test
+axi4_enhanced_bus_matrix_test
+axi4_concurrent_error_stress_test
+
+# --- boundary / DECERR family: proves the fix did not disturb the tests that
+#     legitimately expect error responses ---
+axi4_upper_boundary_write_test
+axi4_lower_boundary_write_test
+axi4_4k_boundary_cross_test
+axi4_blocking_slave_error_write_read_test
+axi4_non_blocking_slave_error_write_read_test

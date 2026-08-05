@@ -40,7 +40,7 @@ axi4_wide_transfer_test,Boundary,Wide transfer boundary test,NONE,4,4,8ms,No,No,
 axi4_mixed_size_test,Boundary,Mixed size boundary test,NONE,4,4,8ms,No,No,PASS
 axi4_back_to_back_write_test,Boundary,Back-to-back boundary test,NONE,4,4,8ms,No,No,PASS
 axi4_interleaved_write_test,Boundary,Interleaved boundary test,NONE,4,4,8ms,No,No,PASS
-axi4_max_outstanding_test,Boundary,Maximum outstanding boundary test,NONE,4,4,8ms,No,No,PASS
+# STRUCK 2026-08-05 (AXI_ooo.md F6): axi4_max_outstanding_test has no file in test/ and never had one - duplicate of the struck Outstanding-category row below. No test covers a max-outstanding boundary sweep today.
 axi4_all_master_slave_access_test,Matrix,All master-slave combinations,BASE_BUS_MATRIX,4,4,20ms,No,No,PASS
 axi4_base_matrix_test,Matrix,Base bus matrix functionality,BASE_BUS_MATRIX,4,4,10ms,No,No,PASS
 axi4_blocking_8b_write_data_test,Data Width,8-bit write data test,NONE,4,4,5ms,No,No,PASS
@@ -83,12 +83,12 @@ axi4_w_ready_delay_test,Handshake,W channel ready delay test,NONE,4,4,5ms,No,No,
 axi4_b_ready_delay_test,Handshake,B channel ready delay test,NONE,4,4,5ms,No,No,PASS
 axi4_r_ready_delay_test,Handshake,R channel ready delay test,NONE,4,4,5ms,No,No,PASS
 axi4_aw_w_channel_separation_test,Handshake,AW-W channel separation test,NONE,4,4,5ms,No,No,PASS
-axi4_out_of_order_read_test,Ordering,Out-of-order read completion,NONE,4,4,10ms,No,No,PASS
-axi4_out_of_order_write_test,Ordering,Out-of-order write completion,NONE,4,4,10ms,No,No,PASS
+axi4_non_blocking_only_read_response_out_of_order_test,Ordering,Out-of-order read completion (retargeted 2026-08-05 from the non-existent axi4_out_of_order_read_test - AXI_ooo.md F6),ALL,4,4,10ms,No,No,PASS
+axi4_non_blocking_only_write_response_out_of_order_test,Ordering,Out-of-order write completion (retargeted 2026-08-05 from the non-existent axi4_out_of_order_write_test),ALL,4,4,10ms,No,No,PASS-BUT-VACUOUS (AXI_ooo.md F7: the write fork's join pins response-queue depth to 1 so nothing is reordered - real coverage waits on P4.5)
 axi4_interleaved_write_test,Ordering,Interleaved write data,NONE,4,4,10ms,No,No,PASS
-axi4_outstanding_read_test,Outstanding,Multiple outstanding reads,NONE,4,4,10ms,No,No,PASS
-axi4_outstanding_write_test,Outstanding,Multiple outstanding writes,NONE,4,4,10ms,No,No,PASS
-axi4_max_outstanding_test,Outstanding,Maximum outstanding transactions,NONE,4,4,15ms,No,No,PASS
+axi4_outstanding_depth_test,Outstanding,Multiple outstanding reads AND writes - asks for depth 4 and asserts the depth actually ACHIEVED (retargeted 2026-08-05 from the non-existent axi4_outstanding_read_test/axi4_outstanding_write_test - AXI_ooo.md Phase 4/P4.1),NONE,4,4,10ms,No,No,PASS
+# STRUCK 2026-08-05: axi4_outstanding_write_test has no file in test/. Its intent (multiple outstanding writes) is covered by the axi4_outstanding_depth_test row above which measures both directions.
+# STRUCK 2026-08-05: axi4_max_outstanding_test has no file in test/. axi4_master_max_outstanding_seq was revived in Phase 4/P4.2 and is now started by axi4_outstanding_depth_test but no test sweeps the FIFO-depth boundary - VIP_future.md ST-A1 still open.
 axi4_awlen_out_of_spec_test,Error,AWLEN out of spec error test,NONE,4,4,5ms,No,No,PASS
 axi4_arlen_out_of_spec_test,Error,ARLEN out of spec error test,NONE,4,4,5ms,No,No,PASS
 axi4_wlast_too_early_test,Error,WLAST asserted too early,NONE,4,4,5ms,No,No,PASS
@@ -109,7 +109,7 @@ axi4_random_size_test,Random,Random size generation,NONE,4,4,15ms,No,No,PASS
 axi4_random_delay_test,Random,Random delay insertion,NONE,4,4,15ms,No,No,PASS
 axi4_stress_test,Stress,High stress conditions,BASE_BUS_MATRIX,4,4,30ms,No,No,PASS
 axi4_stress_burst_test,Stress,Burst under stress,BASE_BUS_MATRIX,4,4,25ms,No,No,PASS
-axi4_stress_outstanding_test,Stress,Outstanding under stress,BASE_BUS_MATRIX,4,4,25ms,No,No,PASS
+# STRUCK 2026-08-05: axi4_stress_outstanding_test has no file in test/ and NOTHING covers multi-outstanding under stress. Phase 4/P4.3 measured the QoS saturation/starvation family still achieving depth 1 because their own sequences never keep more than one request pending - do not re-add a row here until a stress test asserts an achieved depth > 1.
 axi4_write_read_test,Basic,Basic write-read operation,NONE,4,4,5ms,No,No,PASS
 axi4_write_only_test,Basic,Write-only operation,NONE,4,4,5ms,No,No,PASS
 axi4_read_only_test,Basic,Read-only operation,NONE,4,4,5ms,No,No,PASS
@@ -191,3 +191,10 @@ axi4_freq_test,Clock,Frequency test scenarios,ALL,VAR,VAR,5ms,No,No,PASS
 axi4_multi_intf_clk_freq_test,Clock,Multi-interface clock frequency,ALL,VAR,VAR,10ms,No,No,PASS
 axi4_multi_intf_clk_test,Clock,Multi-interface clock verification,ALL,VAR,VAR,10ms,No,No,PASS
 test_clock_freq,Clock,Clock frequency test utility,ALL,VAR,VAR,5ms,No,No,PASS
+# Outstanding / Out-of-Order / same-ID work - tests added 2026-08-04..05 (AXI_ooo.md Phases 0-4, AXI_data_integrity.md)
+axi4_cross_id_read_reorder_test,Ordering,Cross-ID read response reorder - monitor RID-keyed join (codex_review.md Finding 5),NONE,4,4,10ms,No,No,PASS-BUT-VACUOUS (AXI_data_integrity.md F9: its base address is outside slave 0's NONE-mode decode range so the reads never reach memory)
+axi4_cross_id_write_reorder_test,Ordering,Cross-ID write response reorder - monitor BID-keyed join (codex_review.md Finding 5),NONE,4,4,10ms,No,No,PASS-BUT-VACUOUS (AXI_ooo.md F7: measured BIDs came back in exact issue order - the write fork join leaves nothing to reorder)
+axi4_same_id_nonadjacent_reorder_test,Ordering,Non-adjacent same-ID read reorder - the only detector for AXI_ooo.md F2 and the only test that exercises the scoreboard same-ID order checker,NONE,4,4,10ms,No,No,PASS (registered in testlists/ list only)
+axi4_write_resp_ooo_empty_queue_test,Ordering,Write-response OOO with every AWID non-zero so a BID of 0 can only come from an empty-queue pop (AXI_ooo.md F1/P0.1),NONE,4,4,10ms,No,No,PASS (the targeted empty-queue path is confirmed unreachable today; NOT registered in either regression list - see AXI_ooo.md status summary open items)
+axi4_qos_bid_queue_race_test,QoS,Detector for the shared package-scope awid_queue_for_qos BID race (AXI_ooo.md F1 - landmine 30),BUS_ENHANCED_MATRIX,4,4,10ms,Yes,No,PASS
+axi4_refused_write_shadow_test,Data Integrity,Directed probe that a write the subordinate refuses is not readable and does not convict an innocent same-ID sibling (AXI_ooo.md Phase 3 pass 3),BUS_ENHANCED_MATRIX,VAR,VAR,5ms,No,No,PASS

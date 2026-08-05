@@ -1,0 +1,11 @@
+# AXI_ooo.md Phase 3, THIRD fix pass -- fail-then-pass pair for scoreboard FIX 1
+# (write-shadow commit gate). Run through LSF:
+#   python3 axi4_regression.py --lsf --test-list p3t3_fix1.list -p 4 -t 1200
+#
+# axi4_refused_write_shadow_test  : must NOT convict (false-positive probe).
+#   RED  (round-2 predicted W-channel gate) -> violations=1..2, UVM_ERROR > 0
+#   GREEN(gate mirroring store_write())     -> violations=0 unattributed=0, UVM_ERROR : 0
+# axi4_same_id_nonadjacent_reorder_test : must still be clean on the fixed tree
+#   (its teeth are proved separately against sim/synopsys_sim/prephase2/).
+axi4_refused_write_shadow_test
+axi4_same_id_nonadjacent_reorder_test

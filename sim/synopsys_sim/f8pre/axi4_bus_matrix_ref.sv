@@ -14,22 +14,8 @@ class axi4_bus_matrix_ref extends uvm_component;
   // Current bus matrix mode
   bus_matrix_mode_e bus_mode = BUS_ENHANCED_MATRIX;
 
-  // Simple BYTE-ADDRESSABLE memory for each slave, indexed by byte address.
-  //
-  // AXI_data_integrity.md F8: this used to be `bit [DATA_WIDTH-1:0]` keyed by
-  // the DATA_WIDTH-aligned address, i.e. ONE 128-byte entry per 128-byte
-  // window at the default DATA_WIDTH=1024. Every caller of store_write()/
-  // load_read() in the write/read datapath (slave/axi4_slave_driver_proxy.sv
-  // task_memory_write / task_memory_read) works ONE BYTE AT A TIME -- it hands
-  // in a zero-extended byte in data[7:0] and consumes data[7:0] on the way
-  // back. Against word-granular storage every byte of a burst therefore
-  // overwrote the whole aligned window with a zero-extended copy of itself,
-  // only the last byte survived, and the read side handed that one byte back
-  // for every address in the window: a 0xDEADBEEF write read back as
-  // 0xDEDEDEDE. Storing bytes at their own addresses is what those callers
-  // already assume, so the model now matches them instead of the other way
-  // round (the driver files are settled and were not touched).
-  bit [7:0] slave_mem[NO_OF_SLAVES][bit [ADDRESS_WIDTH-1:0]];
+  // simple memory for each slave indexed by address
+  bit [DATA_WIDTH-1:0] slave_mem[NO_OF_SLAVES][bit [ADDRESS_WIDTH-1:0]];
 
   typedef struct {
     bit [ADDRESS_WIDTH-1:0] start_addr;
@@ -54,15 +40,18 @@ class axi4_bus_matrix_ref extends uvm_component;
   extern virtual function int decode(bit [ADDRESS_WIDTH-1:0] addr);
   extern virtual function bresp_e get_write_resp(int master, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] awprot);
   extern virtual function rresp_e get_read_resp(int master, bit [ADDRESS_WIDTH-1:0] addr, bit [2:0] arprot);
-  // store_write/load_read are BYTE granular: store_write commits data[7:0] at
-  // `addr`, load_read returns the byte held at `addr` in data[7:0] (zero
-  // elsewhere). That is exactly how the slave driver proxy has always called
-  // them. store_write_bytes()/load_read_bytes() are the multi-byte forms for
-  // the few callers that really do mean a whole word.
   extern virtual function void store_write(bit [ADDRESS_WIDTH-1:0] addr,
                                            bit [DATA_WIDTH-1:0] data);
   extern virtual function void load_read(bit [ADDRESS_WIDTH-1:0] addr,
                                          output bit [DATA_WIDTH-1:0] data);
+  extern virtual function bit check_security_access(int master, int slave, bit is_secure_req);
+  extern virtual function bit check_privilege_access(int master, int slave, bit is_privileged_req);
+  extern virtual function bit check_instruction_access(int slave, bit is_instruction);
+  extern virtual function bit [DATA_WIDTH-1:0] backdoor_read(bit [ADDRESS_WIDTH-1:0] addr, int slave_id);
+  // RED-BUILD SHIM ONLY. The fixed tree added these two multi-byte entry points
+  // and a couple of callers use them. Implemented here in the OLD word-granular
+  // way so that this build differs from the fixed tree in exactly ONE thing:
+  // the byte-vs-word granularity of the memory model. Nothing else.
   extern virtual function void store_write_bytes(bit [ADDRESS_WIDTH-1:0] addr,
                                                  bit [DATA_WIDTH-1:0] data,
                                                  bit [STROBE_WIDTH-1:0] strobe,
@@ -70,10 +59,6 @@ class axi4_bus_matrix_ref extends uvm_component;
   extern virtual function void load_read_bytes(bit [ADDRESS_WIDTH-1:0] addr,
                                                output bit [DATA_WIDTH-1:0] data,
                                                input int num_bytes = STROBE_WIDTH);
-  extern virtual function bit check_security_access(int master, int slave, bit is_secure_req);
-  extern virtual function bit check_privilege_access(int master, int slave, bit is_privileged_req);
-  extern virtual function bit check_instruction_access(int slave, bit is_instruction);
-  extern virtual function bit [DATA_WIDTH-1:0] backdoor_read(bit [ADDRESS_WIDTH-1:0] addr, int slave_id);
 endclass : axi4_bus_matrix_ref
 
 function axi4_bus_matrix_ref::new(string name = "axi4_bus_matrix_ref", uvm_component parent = null);
@@ -370,64 +355,44 @@ function rresp_e axi4_bus_matrix_ref::get_read_resp(int master, bit [ADDRESS_WID
   return READ_OKAY;
 endfunction : get_read_resp
 
-// Byte granular: commit data[7:0] at `addr`. No alignment, no neighbouring
-// byte touched -- see the slave_mem declaration for why (F8).
 function void axi4_bus_matrix_ref::store_write(bit [ADDRESS_WIDTH-1:0] addr,
                                                bit [DATA_WIDTH-1:0] data);
   int sid = decode(addr);
-
+  bit [ADDRESS_WIDTH-1:0] aligned_addr;
+  
+  // For wide data bus, align address to DATA_WIDTH boundary
+  // With DATA_WIDTH=1024 bits (128 bytes), align to 128-byte boundary
+  aligned_addr = addr & ~((DATA_WIDTH/8) - 1);
+  
   if(sid >= 0) begin
-    slave_mem[sid][addr] = data[7:0];
-    `uvm_info(get_type_name(),
-      $sformatf("store_write: sid=%0d, addr=0x%16h, byte=0x%02h",
-      sid, addr, data[7:0]), UVM_HIGH);
+    slave_mem[sid][aligned_addr] = data;
+    `uvm_info(get_type_name(), 
+      $sformatf("store_write: sid=%0d, addr=0x%16h, aligned_addr=0x%16h, data[31:0]=0x%08h", 
+      sid, addr, aligned_addr, data[31:0]), UVM_HIGH);
   end
 endfunction : store_write
 
-// Byte granular: return the byte held at `addr` in data[7:0], zero elsewhere.
 function void axi4_bus_matrix_ref::load_read(bit [ADDRESS_WIDTH-1:0] addr,
                                              output bit [DATA_WIDTH-1:0] data);
   int sid = decode(addr);
-
-  data = '0;
-  if(sid >= 0 && slave_mem[sid].exists(addr)) begin
-    data[7:0] = slave_mem[sid][addr];
-    `uvm_info(get_type_name(),
-      $sformatf("load_read: sid=%0d, addr=0x%16h, byte=0x%02h",
-      sid, addr, data[7:0]), UVM_HIGH);
+  bit [ADDRESS_WIDTH-1:0] aligned_addr;
+  
+  // For wide data bus, align address to DATA_WIDTH boundary
+  // With DATA_WIDTH=1024 bits (128 bytes), align to 128-byte boundary
+  aligned_addr = addr & ~((DATA_WIDTH/8) - 1);
+  
+  if(sid >= 0 && slave_mem[sid].exists(aligned_addr)) begin
+    data = slave_mem[sid][aligned_addr];
+    `uvm_info(get_type_name(), 
+      $sformatf("load_read: sid=%0d, addr=0x%16h, aligned_addr=0x%16h, data[31:0]=0x%08h", 
+      sid, addr, aligned_addr, data[31:0]), UVM_HIGH);
   end else begin
-    `uvm_info(get_type_name(),
-      $sformatf("load_read: sid=%0d, addr=0x%16h not found, returning 0",
-      sid, addr), UVM_HIGH);
+    data = '0;
+    `uvm_info(get_type_name(), 
+      $sformatf("load_read: sid=%0d, addr=0x%16h, aligned_addr=0x%16h not found, returning 0", 
+      sid, addr, aligned_addr), UVM_HIGH);
   end
 endfunction : load_read
-
-// Multi-byte form: commit num_bytes consecutive bytes starting at `addr`,
-// lane b of `data` going to addr+b, gated by strobe[b]. For callers that
-// really do mean a word (backdoor preloads, checker-side commits).
-function void axi4_bus_matrix_ref::store_write_bytes(bit [ADDRESS_WIDTH-1:0] addr,
-                                                     bit [DATA_WIDTH-1:0] data,
-                                                     bit [STROBE_WIDTH-1:0] strobe,
-                                                     int num_bytes = STROBE_WIDTH);
-  int sid = decode(addr);
-  if(sid < 0) return;
-  for(int b = 0; b < num_bytes && b < STROBE_WIDTH; b++) begin
-    if(strobe[b]) slave_mem[sid][addr + b] = data[8*b +: 8];
-  end
-endfunction : store_write_bytes
-
-// Multi-byte form of load_read: assemble num_bytes consecutive bytes starting
-// at `addr` into lanes 0..num_bytes-1. Bytes never written read back as 0.
-function void axi4_bus_matrix_ref::load_read_bytes(bit [ADDRESS_WIDTH-1:0] addr,
-                                                   output bit [DATA_WIDTH-1:0] data,
-                                                   input int num_bytes = STROBE_WIDTH);
-  int sid = decode(addr);
-  data = '0;
-  if(sid < 0) return;
-  for(int b = 0; b < num_bytes && b < STROBE_WIDTH; b++) begin
-    if(slave_mem[sid].exists(addr + b)) data[8*b +: 8] = slave_mem[sid][addr + b];
-  end
-endfunction : load_read_bytes
 
 function void axi4_bus_matrix_ref::set_bus_mode(bus_matrix_mode_e mode);
   bus_mode = mode;
@@ -479,18 +444,25 @@ endfunction : check_instruction_access
 
 function bit [DATA_WIDTH-1:0] axi4_bus_matrix_ref::backdoor_read(bit [ADDRESS_WIDTH-1:0] addr, int slave_id);
   bit [DATA_WIDTH-1:0] data;
-
-  // Perform backdoor read directly from slave memory without protocol checks.
-  // Byte granular now (F8): lane b comes from addr+b, so a backdoor read at
-  // the same address a backdoor write used returns what that write put there.
+  bit [ADDRESS_WIDTH-1:0] aligned_addr;
+  
+  // For wide data bus, align address to DATA_WIDTH boundary
+  aligned_addr = addr & ~((DATA_WIDTH/8) - 1);
+  
+  // Perform backdoor read directly from slave memory without protocol checks
+  // This is used for verification purposes to confirm writes to write-only regions
   if(slave_id >= 0 && slave_id < num_configured_slaves) begin
-    data = '0;
-    for(int b = 0; b < STROBE_WIDTH; b++) begin
-      if(slave_mem[slave_id].exists(addr + b)) data[8*b +: 8] = slave_mem[slave_id][addr + b];
+    if(slave_mem[slave_id].exists(aligned_addr)) begin
+      data = slave_mem[slave_id][aligned_addr];
+      `uvm_info(get_type_name(), 
+        $sformatf("Backdoor read from S%0d: addr=0x%16h, aligned_addr=0x%16h, data[31:0]=0x%08h", 
+        slave_id, addr, aligned_addr, data[31:0]), UVM_HIGH);
+    end else begin
+      data = '0;
+      `uvm_info(get_type_name(), 
+        $sformatf("Backdoor read from S%0d: addr=0x%16h, aligned_addr=0x%16h not found, returning 0", 
+        slave_id, addr, aligned_addr), UVM_HIGH);
     end
-    `uvm_info(get_type_name(),
-      $sformatf("Backdoor read from S%0d: addr=0x%16h, data[31:0]=0x%08h",
-      slave_id, addr, data[31:0]), UVM_HIGH);
   end else begin
     data = '0;
     `uvm_warning(get_type_name(), 
@@ -499,5 +471,18 @@ function bit [DATA_WIDTH-1:0] axi4_bus_matrix_ref::backdoor_read(bit [ADDRESS_WI
   
   return data;
 endfunction : backdoor_read
+
+function void axi4_bus_matrix_ref::store_write_bytes(bit [ADDRESS_WIDTH-1:0] addr,
+                                                     bit [DATA_WIDTH-1:0] data,
+                                                     bit [STROBE_WIDTH-1:0] strobe,
+                                                     int num_bytes = STROBE_WIDTH);
+  store_write(addr, data);
+endfunction : store_write_bytes
+
+function void axi4_bus_matrix_ref::load_read_bytes(bit [ADDRESS_WIDTH-1:0] addr,
+                                                   output bit [DATA_WIDTH-1:0] data,
+                                                   input int num_bytes = STROBE_WIDTH);
+  load_read(addr, data);
+endfunction : load_read_bytes
 
 `endif

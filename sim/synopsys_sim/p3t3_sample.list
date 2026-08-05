@@ -1,0 +1,73 @@
+# AXI_ooo.md Phase 3, THIRD fix pass -- the expanded validation sample.
+#
+# This is p3r_sample.list (the second-round sample) PLUS the two tests the
+# second-round adversarial review found it had excluded -- the only two in the
+# suite that exercise this checker's CONTENT and owed mechanisms at all:
+#   axi4_same_id_nonadjacent_reorder_test  -> content_adjudicated > 0
+#   axi4_outstanding_depth_test            -> the window/survivability gates and
+#                                             the sb_sameid_ar_owed skip path
+# Without them the round-2 sample reported content_adjudicated=0 and skipped=0
+# everywhere, i.e. it regression-tested neither of that round's two fixes.
+#
+# Run: python3 axi4_regression.py --lsf --test-list p3t3_sample.list -p 20 -t 1200
+
+axi4_arlen_out_of_spec_test
+axi4_basic_reset_test
+axi4_blocking_cross_write_read_test
+axi4_blocking_outstanding_transfer_write_read_test
+axi4_blocking_slave_error_write_read_test
+axi4_blocking_unaligned_addr_write_read_test
+axi4_blocking_write_read_test
+axi4_error_inject_arvalid_x_test
+axi4_error_inject_awvalid_x_test
+axi4_error_inject_x_drive_test
+axi4_id_multiple_writes_different_awid_test
+axi4_independent_reset_test
+axi4_non_blocking_slave_error_write_read_test
+axi4_non_blocking_write_read_test
+axi4_non_blocking_write_read_response_out_of_order_test
+axi4_non_blocking_qos_write_read_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_basic_priority_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_equal_priority_fairness_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_saturation_stress_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_starvation_prevention_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_with_user_priority_boost_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_saturation_midburst_reset_qos_boundary_test
+axi4_slave_inject_rvalid_x_test
+axi4_stress_reset_test command_add="+BUS_MATRIX_MODE=NONE"
+axi4_write_heavy_midburst_reset_rw_contention_test
+
+# --- OOO / reorder / outstanding family --------------------------------------
+axi4_cross_id_read_reorder_test
+axi4_cross_id_write_reorder_test
+axi4_non_blocking_only_read_response_out_of_order_test
+axi4_non_blocking_only_write_response_out_of_order_test
+# (duplicate removed) axi4_blocking_outstanding_transfer_write_read_test
+axi4_non_blocking_outstanding_transfer_write_read_test
+axi4_id_multiple_reads_different_arid_test
+axi4_id_multiple_writes_same_awid_test
+axi4_write_resp_ooo_empty_queue_test
+axi4_qos_bid_queue_race_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+
+# --- cross-master-same-address + stress/saturation (the new coverage) --------
+axi4_stability_burnin_longtail_backpressure_error_recovery_test
+axi4_concurrent_error_stress_test
+axi4_hotspot_fairness_boundary_error_reset_backpressure_test
+axi4_throughput_ordering_longtail_throttled_write_test
+axi4_exhaustive_random_reads_test
+axi4_qos_equal_priority_fairness_test command_add="+BUS_MATRIX_MODE=4x4"
+axi4_write_heavy_midburst_reset_rw_contention_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_concurrent_writes_raw_test
+axi4_all_master_slave_access_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_enhanced_bus_matrix_test
+axi4_concurrent_reads_test
+axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test
+axi4_non_blocking_slave_mem_mode_incr_burst_write_read_test
+axi4_non_blocking_slave_mem_mode_wrap_burst_write_read_test
+axi4_wstrb_random_burst_test
+
+# --- the two tests round 2 excluded (THIS pass's addition) -------------------
+axi4_same_id_nonadjacent_reorder_test
+axi4_outstanding_depth_test
+# plus this pass's own directed false-positive probe for the write-shadow commit gate
+axi4_refused_write_shadow_test

@@ -173,6 +173,8 @@ axi4_qos_starvation_prevention_test run_cnt=2
 axi4_qos_with_user_priority_boost_test run_cnt=2
 axi4_non_blocking_qos_write_read_test run_cnt=2
 axi4_user_based_qos_routing_test run_cnt=2
+axi4_qos_bid_queue_race_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_outstanding_depth_test run_cnt=2
 
 #------------------------------------------------------------------------------------
 # USER Signal Tests
@@ -290,3 +292,4 @@ axi4_stability_burnin_longtail_backpressure_error_recovery_test run_cnt=5 comman
 # - Performance KPI tests run 5 iterations each for statistical accuracy
 # - All tests include comprehensive performance metrics collection via axi4_performance_metrics.sv
 # - Results automatically sorted into pass/fail categories with detailed KPI reports
+axi4_refused_write_shadow_test

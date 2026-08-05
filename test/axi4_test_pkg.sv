@@ -239,6 +239,20 @@ package axi4_test_pkg;
   `include "axi4_cross_id_write_reorder_test.sv"
   `include "axi4_cross_id_read_reorder_test.sv"
 
+  // AXI_ooo.md F1 (Phase 0 / P0.1): write-path out-of-order empty-queue pop repro.
+  `include "axi4_write_resp_ooo_empty_queue_test.sv"
+
+  // AXI_ooo.md F2 (Phase 0 / P0.2): NON-ADJACENT same-ID read reorder repro.
+  `include "axi4_same_id_nonadjacent_reorder_test.sv"
+  `include "axi4_refused_write_shadow_test.sv"
+
+  // AXI_ooo.md F1 (Phase 1): QoS shared-BID-queue race repro.
+  // NOTE: must follow axi4_qos_equal_priority_fairness_test -- it extends it.
+  `include "axi4_qos_bid_queue_race_test.sv"
+
+  // AXI_ooo.md F3/F4 (Phase 4 / P4.1): outstanding-depth knob made live.
+  `include "axi4_outstanding_depth_test.sv"
+
 endpackage : axi4_test_pkg
 
 `endif

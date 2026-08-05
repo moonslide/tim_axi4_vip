@@ -14,9 +14,21 @@ class axi4_virtual_illegal_wstrb_seq extends axi4_virtual_base_seq;
     super.new(name);
   endfunction
 
+  // Per-master slot address -- same rationale as axi4_virtual_wstrb_seq::slot_addr().
+  // AXI_data_integrity.md F9: the unconditional "DDR base" below is outside every
+  // slave's configured memory range in the default NONE topology.
+  function bit [ADDRESS_WIDTH-1:0] slot_addr(int i);
+    bit [ADDRESS_WIDTH-1:0] base = addr;
+    if(env_cfg_h != null && i < env_cfg_h.axi4_slave_agent_cfg_h.size())
+      base = env_cfg_h.axi4_slave_agent_cfg_h[i].min_address + 64'h0000_0000_0000_1000;
+    return base + i*'h10;
+  endfunction
+
   task body();
     axi4_master_illegal_wstrb_seq illegal_seq[];
     axi4_slave_bk_write_seq       sseq_w[];
+
+    super.body();   // populates env_cfg_h, which slot_addr() needs
 
     illegal_seq = new[p_sequencer.axi4_master_write_seqr_h_all.size()];
     sseq_w      = new[p_sequencer.axi4_slave_write_seqr_h_all.size()];
@@ -32,7 +44,7 @@ class axi4_virtual_illegal_wstrb_seq extends axi4_virtual_base_seq;
       illegal_seq[i] = axi4_master_illegal_wstrb_seq::type_id::create($sformatf("illegal_seq[%0d]", i));
       foreach(pattern[j]) illegal_seq[i].wstrb_q.push_back(pattern[j]);
       foreach(data_words[j]) illegal_seq[i].data_q.push_back(data_words[j]);
-      illegal_seq[i].addr = addr + i*'h10;
+      illegal_seq[i].addr = slot_addr(i);
       illegal_seq[i].test_size = test_size;
     end
 

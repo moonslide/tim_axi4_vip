@@ -145,6 +145,8 @@ package axi4_virtual_seq_pkg;
   // QoS and USER Signal Virtual Sequences  
   `include "axi4_virtual_qos_basic_priority_seq.sv"
   `include "axi4_virtual_qos_equal_priority_fairness_seq.sv"
+  // AXI_ooo.md F1 (Phase 1): QoS shared-BID-queue race repro.
+  `include "axi4_virtual_qos_bid_queue_race_seq.sv"
   `include "axi4_virtual_qos_saturation_stress_seq.sv"
   `include "axi4_virtual_qos_starvation_prevention_seq.sv"
   `include "axi4_virtual_user_signal_passthrough_seq.sv"

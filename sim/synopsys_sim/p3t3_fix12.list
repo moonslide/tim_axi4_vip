@@ -1,0 +1,33 @@
+# AXI_ooo.md Phase 3, THIRD fix pass -- targeted fail-then-pass list for
+# scoreboard fixes 1 and 2. Run through LSF, never ad hoc:
+#   python3 axi4_regression.py --lsf --test-list p3t3_fix12.list -p 16 -t 1200
+#
+# --- FIX 1: refused-write shadow-commit gate -----------------------------------
+# Writes whose real BRESP is NOT WRITE_OKAY while the old start-address-only
+# prediction said OKAY: burst-end DECERR (boundary), EXOKAY (exclusive), and the
+# error-injection / SLVERR families.
+axi4_upper_boundary_write_test
+axi4_lower_boundary_write_test
+axi4_4k_boundary_cross_test
+axi4_exclusive_write_success_test
+axi4_exclusive_write_fail_test
+axi4_blocking_slave_error_write_read_test
+axi4_non_blocking_slave_error_write_read_test
+axi4_blocking_unaligned_addr_write_read_test
+# axi4_all_master_slave_access_test REMOVED 2026-08-05: its unconstrained random
+# addresses used to wander into unmapped space and produce DECERR; a sibling fix to
+# virtual_seq/axi4_virtual_all_master_slave_access_seq.sv constrained them to legal
+# per-slave ranges, so it no longer provides a refused-write vehicle. The directed
+# axi4_refused_write_shadow_test below replaces it and is deterministic.
+axi4_refused_write_shadow_test
+
+# --- FIX 2: reset-during-flight owed/queue desync ------------------------------
+# Every reset-class test in the suite: these are the only ones that can drive an
+# AR/R pair across sb_clear_on_reset().
+axi4_basic_reset_test
+axi4_independent_reset_test
+axi4_stress_reset_test command_add="+BUS_MATRIX_MODE=NONE"
+axi4_saturation_midburst_reset_qos_boundary_test
+axi4_write_heavy_midburst_reset_rw_contention_test
+axi4_stability_burnin_longtail_backpressure_error_recovery_test
+axi4_hotspot_fairness_boundary_error_reset_backpressure_test

@@ -1483,40 +1483,71 @@ class RegressionRunner:
                     if count > 20:
                         return 'TIMEOUT', f"Excessive repetition detected - simulation likely stuck", 0, 0
             
-            # Look for success indicators 
-            for pattern in success_patterns:
-                matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
-                if matches:
-                    return 'PASS', None, 0, 0
-            
-            # Double-check feature: Analyze UVM report summary for more accurate pass/fail detection
+            # Analyze the UVM report summary FIRST - it is the authoritative verdict.
+            #
+            # The end-of-run summary carries the simulation's own UVM_ERROR/UVM_FATAL
+            # tallies, so whenever it is present nothing else may overrule it. This
+            # block used to run AFTER the success_patterns scan below, and the scan
+            # short-circuits with 'PASS' on the FIRST regex hit ANYWHERE in the log -
+            # so a single unrelated line was enough to bury a failing summary.
+            #
+            # Measured 2026-08-05 over all 1761 archived regression logs: 16 logs
+            # whose own summary reported UVM_ERROR > 0 were filed under pass_logs.
+            # All 16 were beaten by env/axi4_performance_metrics.sv:495
+            #   UVM_INFO ... [ERROR_INJECT] Error injection test PASSED - Errors handled correctly
+            # which matches 'UVM_INFO.*TEST PASSED' / 'UVM_INFO.*PASSED' case-
+            # insensitively. That line reports one narrow internal sub-check, not the
+            # health of the test: e.g. regression_result_20260805_121616's
+            # axi4_refused_write_shadow_test passed with UVM_ERROR : 2 (two
+            # SB_SAMEID_ORDER_VIOLATION scoreboard errors), and
+            # regression_result_20260803_004843 filed 15 more the same way.
+            #
+            # The success_patterns heuristic is NOT deleted - it still serves runs that
+            # never reached report_phase (crash / kill / incomplete), which have no
+            # summary to consult. The same 1761-log sweep found ZERO logs that have a
+            # summary with clean counts, no confirmed completion, AND a success
+            # pattern, so demoting the heuristic below the summary changes no
+            # legitimate PASS.
             uvm_summary_found = False
             uvm_errors = 0
             uvm_fatals = 0
-            
+
             if 'UVM Report Summary' in full_output or 'Report counts by severity' in full_output:
                 uvm_summary_found = True
                 # Look for UVM error/fatal counts in summary
                 error_match = re.search(r'UVM_ERROR\s*:\s*(\d+)', full_output)
                 fatal_match = re.search(r'UVM_FATAL\s*:\s*(\d+)', full_output)
-                
+
                 if error_match:
                     uvm_errors = int(error_match.group(1))
                 if fatal_match:
                     uvm_fatals = int(fatal_match.group(1))
-                
+
                 # Also check for successful completion patterns
                 simulation_completed = bool(re.search(r'\$finish called', full_output))
                 test_done = bool(re.search(r'TEST_DONE.*run.*phase.*ready', full_output))
-                
-                # If UVM summary exists and shows 0 errors/fatals, and simulation completed, it's a pass
-                if uvm_errors == 0 and uvm_fatals == 0 and (simulation_completed or test_done):
-                    return 'PASS', None, uvm_errors, uvm_fatals
-                elif uvm_errors > 0 or uvm_fatals > 0:
-                    # Found UVM errors or fatals
+
+                # Non-zero counts are decided here and nowhere else - checked before
+                # the clean-and-completed case so no later heuristic can reach a
+                # failing run.
+                if uvm_errors > 0 or uvm_fatals > 0:
                     error_msg = f"UVM_ERROR Count: {uvm_errors}, UVM_FATAL Count: {uvm_fatals}"
                     return 'FAIL', error_msg, uvm_errors, uvm_fatals
-            
+
+                # Clean summary AND a confirmed end of run is a pass.
+                if simulation_completed or test_done:
+                    return 'PASS', None, uvm_errors, uvm_fatals
+
+                # Clean summary but completion unconfirmed: fall through to the
+                # heuristics below rather than deciding on partial evidence.
+
+            # Look for success indicators - fallback heuristic, only reached when the
+            # UVM summary is absent (or present, clean, but completion unconfirmed).
+            for pattern in success_patterns:
+                matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)
+                if matches:
+                    return 'PASS', None, uvm_errors, uvm_fatals
+
             # Look for failure indicators
             for pattern in failure_patterns:
                 matches = re.findall(pattern, full_output, re.IGNORECASE | re.MULTILINE)

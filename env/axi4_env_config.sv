@@ -44,6 +44,44 @@ class axi4_env_config extends uvm_object;
   // Enable scoreboard memory model for WSTRB tests
   bit wstrb_compare_enable = 0;
 
+  // Variable: sb_sameid_order_check_enable
+  // Enable the scoreboard's same-ID response-order checker (AXI_ooo.md F2 /
+  // Phase 3). AXI4 requires responses that carry the same AxID to come back in
+  // issue order; nothing in this VIP checked that before.
+  //
+  // It was DEFAULT OFF between 2026-08-05 and the Phase 3 rework later the same
+  // day, because adversarial review found its CONTENT mechanism looked a read
+  // beat's address up in a write-data shadow keyed by ADDRESS ALONE -- no
+  // master-port dimension and no time dimension -- so any of
+  //   * two masters writing the same address sharing one shadow entry,
+  //   * a write landing after a read was issued, retro-actively changing what
+  //     that read is expected to have returned,
+  //   * a low-entropy payload comparing equal to an unrelated sibling's entry,
+  // could name an innocent same-ID sibling and raise a FALSE
+  // SB_SAMEID_ORDER_VIOLATION.
+  //
+  // BACK ON BY DEFAULT after the rework closed all three structurally (not by
+  // tuning) -- see the "WHAT MAKES THE CONTENT SHADOW TRUSTWORTHY" block in
+  // env/axi4_scoreboard.sv: every shadow entry now carries the OWNING master
+  // port and is only ever read back by that port, any address a second port
+  // writes is permanently CONTESTED and never adjudicated by anyone, content is
+  // only trusted when its last write landed strictly before the request was
+  // issued, and the compared lanes must survive this bench's memory model
+  // (single non-zero byte value, in an unaliased DATA_WIDTH window) -- so a
+  // zero-filled truncated burst convicts nobody.
+  //
+  // READ THE SUMMARY LINE, NOT THIS FLAG. Those gates are strict enough that
+  // CONTENT currently refuses to decide almost everywhere: measured across a
+  // 50-test LSF sample, `content_adjudicated=0` in 45 of 45 runs that reported,
+  // with zero violations and zero unattributed warnings. That is correct
+  // behaviour, not a bug -- the subordinate's memory model cannot represent
+  // what the shadow records (AXI_data_integrity.md F8: every access aligned to
+  // DATA_WIDTH/8 and the whole word overwritten from one byte) -- but it means
+  // "the checker is on" is NOT "the traffic was checked". The end-of-test
+  // `same-ID response order` line prints `content_adjudicated=` for exactly
+  // that reason. Fixing F8 is what makes this checker earn its keep suite-wide.
+  bit sb_sameid_order_check_enable = 1;
+
   // Variable: ready_delay_cycles
   // Maximum cycles allowed between VALID and READY handshake
   int ready_delay_cycles = 100;
@@ -164,6 +202,7 @@ function void axi4_env_config::do_print(uvm_printer printer);
   printer.print_string ("transfer_type",   write_read_mode_h.name());
   printer.print_field ("check_wait_states",check_wait_states,1, UVM_DEC);
   printer.print_field ("wstrb_compare_enable",wstrb_compare_enable,1, UVM_DEC);
+  printer.print_field ("sb_sameid_order_check_enable",sb_sameid_order_check_enable,1, UVM_DEC);
   printer.print_field ("ready_delay_cycles",ready_delay_cycles,32, UVM_DEC);
   printer.print_field ("error_inject",error_inject,1, UVM_DEC);
   printer.print_field ("axprot_chk_cfg",axprot_chk_cfg,1, UVM_DEC);

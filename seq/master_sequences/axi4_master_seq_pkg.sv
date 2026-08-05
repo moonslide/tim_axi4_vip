@@ -219,6 +219,20 @@ package axi4_master_seq_pkg;
   `include "axi4_master_cross_id_write_reorder_seq.sv"
   `include "axi4_master_cross_id_read_reorder_seq.sv"
 
+  // AXI_ooo.md F1 (Phase 0 / P0.1): write-path out-of-order empty-queue pop repro.
+  `include "axi4_master_write_resp_ooo_empty_queue_seq.sv"
+
+  // AXI_ooo.md F1 (Phase 1): QoS shared-BID-queue race repro.
+  `include "axi4_master_qos_bid_race_write_seq.sv"
+
+  // AXI_ooo.md F2 (Phase 0 / P0.2): NON-ADJACENT same-ID read reorder repro.
+  // Order matters -- the read sequence calls the preload sequence's static
+  // slot->(id, address, payload) map so both sides agree on what was written where.
+  `include "axi4_master_same_id_nonadjacent_preload_seq.sv"
+  `include "axi4_master_same_id_nonadjacent_read_seq.sv"
+  `include "axi4_master_refused_write_shadow_seq.sv"
+  `include "axi4_master_refused_write_shadow_read_seq.sv"
+
   // Track-B sequences: addresses constrained to the fabric IP memory map
   `include "axi4_master_trackb_base_seq.sv"
   `include "axi4_master_trackb_write_seq.sv"

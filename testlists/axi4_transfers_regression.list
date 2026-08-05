@@ -120,6 +120,18 @@ axi4_cross_id_write_reorder_test run_cnt=3
 axi4_cross_id_read_reorder_test run_cnt=3
 
 #------------------------------------------------------------------------------------
+# Same-ID Non-Adjacent Reorder Test (AXI_ooo.md F2)
+# The only detector for F2: a same-ID read sequence whose repeats are NON-adjacent
+# (A,B,A,C,A,D), which the old tail-only same-ID compare could not see. It planted a
+# distinct payload per occurrence and caught the subordinate returning an ID's later
+# read before its earlier one -- 12-20 violations out of 24 checks on 5/5 seeds before
+# the per-ID FIFO redesign. run_cnt=3 for the same reason as the cross-ID pair above:
+# the reorder permutation is chosen at random, so extra seeds widen the window.
+#------------------------------------------------------------------------------------
+axi4_same_id_nonadjacent_reorder_test run_cnt=3
+axi4_refused_write_shadow_test
+
+#------------------------------------------------------------------------------------
 # Slave Memory Mode Tests (Non-Blocking)
 #------------------------------------------------------------------------------------
 axi4_non_blocking_slave_mem_mode_fixed_burst_write_read_test run_cnt=2
@@ -205,6 +217,8 @@ axi4_qos_with_user_priority_boost_test run_cnt=2 command_add=+BUS_MATRIX_MODE=EN
 axi4_non_blocking_qos_write_read_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_user_based_qos_routing_test run_cnt=2 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
 axi4_qos_region_routing_reset_backpressure_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_bid_queue_race_test run_cnt=2 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_outstanding_depth_test run_cnt=2
 
 #------------------------------------------------------------------------------------
 # USER Signal Tests with 3 Bus Matrix Modes

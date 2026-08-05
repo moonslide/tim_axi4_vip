@@ -377,8 +377,26 @@ interface axi4_master_driver_bfm(input bit                      aclk,
   // is ordinary AXI back-pressure and not a silent drop. RVALID is never dropped
   // by this side (the manager drives no VALID here) and RREADY is only ever
   // deasserted between handshakes, so landmines #5 and #11 both hold.
+  //
+  // Landmine #37 mitigation (2026-08-05): with outstanding_read_credits at its
+  // default of 1, only ONE axi4_read_data_channel_task claim thread is ever
+  // active, and it waits for one SPECIFIC RID while AR issuance itself is not
+  // credit-gated (see axi4_master_driver_proxy.sv's READ_DATA_CHANNEL fork
+  // branch). A legally-reordering subordinate can therefore complete enough
+  // OTHER-RID bursts to fill this collector before the awaited RID arrives;
+  // once full, RREADY deasserts and the awaited burst can never be
+  // transmitted, guaranteeing the fixed 50000-cycle escape and a dropped
+  // transaction (measured: axi4_same_id_nonadjacent_reorder_test,
+  // seed 1413795560, `rid=0x0` abandoned at the collector, then dropped on
+  // arrival as "answers no read outstanding"). Raised 8->64 per the 20-seed
+  // A/B that measured this depth eliminates the timeout on every probed seed
+  // (fail-then-pass: same seed, same test, UVM_ERROR:1 -> UVM_ERROR:0).
+  // Structural fix (crediting AR issuance itself, not just claiming) remains
+  // tracked as VIP_future.md FW-6 / landmine #37 - this is the proven,
+  // low-risk mitigation, not a claim that reordering can no longer overflow
+  // ANY finite depth.
   //-------------------------------------------------------
-  localparam int R_ACCEPT_DEPTH = 8;
+  localparam int R_ACCEPT_DEPTH = 64;
 
   typedef struct {
     bit [`AXI_ID_WIDTH-1:0]                 rid;

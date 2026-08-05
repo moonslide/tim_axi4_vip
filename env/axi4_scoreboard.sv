@@ -22,9 +22,19 @@ class axi4_scoreboard extends uvm_scoreboard;
   axi4_slave_tx axi4_slave_tx_h5;
 
 
-  // Byte-level scoreboard memory updated on writes
+  // Byte-level scoreboard memory updated on writes.
+  // Written by store_write() (via sb_commit_expected_write() on the B channel,
+  // so a refused write never enters it) and read by verify_read().
   bit [7:0] expected_mem [longint];
-  bit [DATA_WIDTH-1:0] exp_val = '0;
+
+  // verify_read() visibility. AXI_data_integrity.md F10: the read-data check
+  // was dead code for a year, and the thing that hid it was that nothing said
+  // out loud how many comparisons it was performing. These two counters go on
+  // the end-of-test report so "it passed" and "it never looked" are
+  // distinguishable without reading the source.
+  int verify_read_beats_compared;
+  int verify_read_beats_skipped;   // no recorded expectation for any lane
+  int verify_read_mismatch_count;
 
   // Bus matrix reference for response validation
   axi4_bus_matrix_ref axi4_bus_matrix_h;
@@ -248,6 +258,270 @@ class axi4_scoreboard extends uvm_scoreboard;
   int sb_pending_bid[$][2];
   int sb_pending_rid[$][2];
 
+  //-------------------------------------------------------
+  // SAME-ID RESPONSE ORDER  (AXI_ooo.md F2 / Phase 3)
+  //
+  // WHAT AXI4 REQUIRES
+  //   Responses that carry the same AxID must come back in the order the
+  //   requests were issued. Cross-ID reordering is legal; same-ID is not.
+  //
+  // WHY THE EXISTING BOOKKEEPING CANNOT SEE A VIOLATION
+  //   sb_outstanding_awid/arid above are MULTISETS (a count per id). They
+  //   answer "was this BID/RID one I was still waiting on", never "did the two
+  //   RID=A responses come back in issue order". The keyed pairing pools pair
+  //   by ADDRESS, and the master-side and slave-side monitors mis-attribute a
+  //   reordered same-ID response IDENTICALLY (both pop the front of their own
+  //   per-ID pool -- master/axi4_master_monitor_proxy.sv:363,
+  //   slave/axi4_slave_monitor_proxy.sv), so their comparison still comes out
+  //   equal. An F2 violation therefore used to pass completely silently.
+  //
+  // WHY A PURE ORDER COMPARISON IS NOT ENOUGH, AND WHAT IS USED INSTEAD
+  //   Two same-ID responses are indistinguishable ON THE WIRE: RID, RRESP,
+  //   RLAST and the beat count are all that identify them, so "the Nth response
+  //   for id A belongs to the Nth request for id A" is by definition how any
+  //   observer must attribute them. Measured on the F2 repro
+  //   (sim/synopsys_sim/f2_seed1.log): the ARADDRs the monitor attributed to the
+  //   RID_0 completions came out in perfect issue order 0x1000,0x3000,0x5000,...
+  //   even though the slave had answered them in the order 2,6,0,4. Order
+  //   bookkeeping ALONE can never fire.
+  //   What DOES fire is order bookkeeping plus an independent way of naming
+  //   which request a response really answers. Exactly ONE such naming
+  //   mechanism exists in this VIP's normal transaction flow:
+  //     CONTENT. The scoreboard sees every write, so it knows what the
+  //     addressed beat holds. If an R burst attributed to the OLDEST
+  //     outstanding request of its id carries data that is not that address's
+  //     content but IS exactly the content of a LATER still-outstanding request
+  //     of the SAME id, the subordinate answered the later request first. That
+  //     is a same-ID ordering inversion, and it names both slots.
+  //   It is one-sided: it only ever raises an error when a LATER same-ID
+  //   sibling is positively identified. A plain data mismatch with no such
+  //   sibling is NOT reported as an ordering error -- that is a data-integrity
+  //   question (AXI_data_integrity.md F10), not an ordering one; it is counted
+  //   and warned about instead (see sb_sameid_r_unattributed).
+  //
+  // A SECOND MECHANISM ("SHAPE", beat count vs AxLEN+1) WAS TRIED AND REMOVED
+  //   2026-08-05. It compared m_tx.rdata.size() against head.len+1. That can
+  //   never differ: master/axi4_master_seq_item_converter.sv:462-464 sizes the
+  //   published rdata from the AxLEN of the request the master monitor popped
+  //   per-ID (master/axi4_master_monitor_proxy.sv:311), i.e. from the SAME
+  //   oldest-first attribution the head record here comes from. The beat count
+  //   is therefore a restatement of head.len, not an independent observation,
+  //   and it had zero test coverage in 4 years of this suite. Worse, the one
+  //   way it COULD have differed -- the monitor's per-ID queue running empty and
+  //   handing up a default arlen=0 packet -- is a monitor-starvation artifact,
+  //   so its only reachable behaviour was a FALSE conviction. Deleted rather
+  //   than left disabled; see AXI_ooo.md Phase 3.
+  //
+  // WHAT MAKES THE CONTENT SHADOW TRUSTWORTHY (2026-08-05 redesign)
+  //   The first implementation keyed the write shadow by ADDRESS ALONE. That
+  //   made three unrelated situations look like a head mismatch, any of which
+  //   could then coincidentally name an innocent sibling. All three are closed
+  //   structurally, not by tuning:
+  //     * CROSS-MASTER. The shadow is now keyed [master port][beat address],
+  //       the same [port][id]-style keying sb_outstanding_awid/arid already use,
+  //       AND a global per-address owner map marks any address written by more
+  //       than one port CONTESTED. A contested address is never adjudicated by
+  //       anyone again -- one port's view of it is not the memory's view.
+  //     * TIME. Each shadow beat records WHEN it was last written. Content is
+  //       only trusted for a request if the last write to that beat landed
+  //       strictly BEFORE that request was issued, so a write that races (or
+  //       follows) a read can never retro-actively make the read look wrong.
+  //     * COMMIT. A beat is shadowed only when it actually lands in the memory
+  //       the subordinate answers reads out of. That decision is now made in ONE
+  //       place -- sb_sameid_note_write_burst(), on the B channel -- by mirroring
+  //       store_write()'s own branch, instead of re-deriving a second, weaker
+  //       version of it from the burst's START ADDRESS
+  //       (get_expected_write_response()), which is what the two previous
+  //       versions did and which adversarial review correctly called unsound.
+  //       Read that function's header: the measurement behind it (store_write()
+  //       commits every manager write into the subordinate's own memory model
+  //       regardless of BRESP) is the most surprising thing this pass found.
+  //     * ZERO / TRUNCATED PAYLOAD. An abandoned or truncated burst zero-fills
+  //       unsampled beats, so "the returned beat is all zero" is not evidence of
+  //       anything. A sibling is only ever accused when its shadow content is
+  //       NON-ZERO on the compared lanes, on top of the pre-existing clean-RRESP
+  //       gate. A zero payload can no longer convict.
+  //   The shadow is additionally only maintained at all when every subordinate
+  //   answers reads out of memory (sb_sameid_content_active, evaluated ONCE at
+  //   start_of_simulation), and is bounded at SB_SAMEID_SHADOW_MAX beats so a
+  //   long random test cannot grow it without limit.
+  //
+  //   KNOWN RESIDUAL, stated rather than hidden: the shadow is fed from the
+  //   MASTER-side write transaction, so any path that changes subordinate memory
+  //   WITHOUT a master write is invisible to it. Two exist --
+  //   slave/axi4_slave_driver_proxy.sv's ROM boot preload, and
+  //   virtual_seq/axi4_enhanced_bus_matrix_virtual_seq.sv::perform_backdoor_write.
+  //   The preload is harmless (it only ever creates addresses the shadow does not
+  //   know, and an unknown address is skipped). A backdoor write to an address a
+  //   master ALSO wrote leaves a stale entry, which can produce a head mismatch;
+  //   to become a false CONVICTION it would additionally have to match another
+  //   in-flight same-ID sibling's non-zero content on identical lanes. Measured
+  //   clean on axi4_enhanced_bus_matrix_test, the only test using that path.
+  //
+  // WHY THE ISSUE QUEUES CANNOT BE MIS-ORDERED BY THE SCOREBOARD ITSELF
+  //   Issue records are pushed from the AW/AR channel tasks, which consume
+  //   their master analysis fifo strictly in order and push BEFORE they block
+  //   on the slave-side pairing. A completion can therefore overtake its own
+  //   issue record (the same race sb_pending_bid/rid exists for), but only ever
+  //   at the TAIL: entries are never skipped, so the head of a per-(port,id)
+  //   queue is always the true oldest outstanding request. An overtaking
+  //   completion finds an empty queue and is COUNTED AND SKIPPED, never
+  //   misattributed.
+  //
+  // WHY IT ALSO GUARDS codex_review.md FINDING 5
+  //   get_write_data_packet_by_id() / get_read_addr_packet_by_id() retrieve
+  //   with a bare pop_front() per id. That is correct only while same-ID
+  //   completions arrive in push order -- exactly the invariant checked here.
+  //   Without this checker an F2 violation does not merely break the wire-level
+  //   rule, it silently attributes a B/R response to the WRONG same-ID
+  //   transaction inside the monitor.
+  //
+  // THE WRITE (B) SIDE IS NOT CHECKED HERE, AND THAT IS A DECISION, NOT A LAW
+  //   An earlier version of this header claimed a same-ID B reorder is "not
+  //   observable by ANY passive monitor". That was an OVERCLAIM and adversarial
+  //   review struck it down (AXI_ooo.md Phase 3). BRESP IS observable and this
+  //   scoreboard already predicts the expected response per address
+  //   (get_expected_write_response() -> axi4_bus_matrix_ref::get_write_resp(),
+  //   a pure function of addr/port/awprot), so the analogous check is fully
+  //   SPECIFIABLE and is written down here so nobody has to re-derive it:
+  //     record the predicted BRESP in the AW issue record; when a B arrives, if
+  //     its BRESP is not the prediction for the oldest outstanding same-ID
+  //     write's address but IS the prediction for a LATER still-outstanding
+  //     same-ID write whose prediction DIFFERS, the subordinate answered the
+  //     later write first.
+  //   It is not implemented, and the write-side issue queues that only existed
+  //   to hold it were DELETED rather than left in as disabled scaffolding, for
+  //   three measured reasons:
+  //     (a) it cannot be given fail-then-pass evidence. The write-response
+  //         backlog is structurally collapsed to depth 1 by the `join` at the
+  //         bottom of slave/axi4_slave_driver_proxy.sv's write fork (AXI_ooo.md
+  //         F7 / P4.5) -- BID is taken from the same strict-order AW packet
+  //         BRESP was computed from -- so NO test in this repo can produce a
+  //         same-ID B reorder to convict. Landing an unconvictable mechanism is
+  //         exactly the mistake SHAPE was; it is not repeated.
+  //     (b) BRESP is low entropy (4 values, in practice 2), so the "positively
+  //         names a sibling" bar the read side clears is far weaker: it only
+  //         discriminates when two same-ID writes in flight target addresses
+  //         with DIFFERENT predicted responses. No test does that. The nearest,
+  //         axi4_master_lower_boundary_write_seq (4 same-AWID non-blocking
+  //         writes, 2 valid + 2 unmapped), is neutered because *boundary* tests
+  //         run bus_matrix_mode = NONE (test/axi4_test_config.sv), where
+  //         get_write_resp() returns OKAY for every address -- and NONE is the
+  //         default for the bulk of the regression, so there the prediction is a
+  //         constant and the check a tautology.
+  //     (c) the prediction is pure, but the ACTUAL BRESP is not: exclusive-access
+  //         EXOKAY (history-dependent on the exclusive monitor), the
+  //         subordinate's own burst-end decode DECERR (from awburst/awlen/awsize,
+  //         which the prediction does not model), BENCH_ONLY_MODE and
+  //         error_inject SLVERR acceptance, BRESP X injection, and the fabric-IP
+  //         master-id fallback all legitimately diverge. Each needs an explicit
+  //         exclusion, and every exclusion is a place a real reorder could hide.
+  //   Write-side same-ID ordering is therefore UNCHECKED today. Nothing in the
+  //   VIP can currently violate it either (see (a)) -- but that is a property of
+  //   the subordinate model, not of the checker, so the moment P4.5 relaxes that
+  //   join this must be revisited. Recorded in AXI_ooo.md Phase 3 as well.
+  //-------------------------------------------------------
+  typedef struct {
+    int              seq;      //issue index within this (port,id) stream
+    longint unsigned addr;     //ARADDR as issued
+    time             t_issued;
+  } sb_sameid_issue_s;
+
+  //Per master port, per id, in issue order. Head == oldest outstanding.
+  //seq is carried purely so a violation message can say WHICH read of that id
+  //("issue #3 was answered by issue #5") -- that sentence is the checker's
+  //product, and an absolute timestamp reads far worse in it.
+  sb_sameid_issue_s sb_sameid_ar_q[int][int][$];
+  int               sb_sameid_ar_seq[int][int];
+
+  //Write shadow used by the CONTENT mechanism. One entry per WRITTEN BEAT
+  //(not per byte, unlike expected_mem) with a per-byte known mask, so an
+  //unstrobed lane is never compared, and the time of the last write to that
+  //beat so a racing write cannot retro-actively indict a read.
+  //Beat addresses are keyed exactly the way store_write() keys expected_mem --
+  //awaddr + beat*STROBE_WIDTH -- so a read of the same address hits and a read
+  //of anything else simply misses and is skipped.
+  //The MASTER PORT is part of the entry, not a second lookup: an address has
+  //exactly one owner, because the second port to write it makes it CONTESTED
+  //(owner = -1, mask cleared) and it is then excluded from adjudication for
+  //good. That is what stops two masters writing one address from sharing --
+  //and corrupting -- a single view of it, which was the concrete false-positive
+  //route adversarial review found.
+  static const int SB_SAMEID_CONTESTED = -1;
+  typedef struct {
+    bit [DATA_WIDTH-1:0]   data;
+    bit [STROBE_WIDTH-1:0] mask;
+    time                   t_written;  //when the owning port last wrote this beat
+    int                    owner;      //src_index, or SB_SAMEID_CONTESTED
+  } sb_beat_shadow_s;
+  sb_beat_shadow_s sb_sameid_wr_shadow[longint unsigned];
+
+  //Aliasing guard for the BENCH'S OWN memory model, which is coarser than the
+  //shadow. axi4_bus_matrix_ref::store_write/load_read align every access to
+  //DATA_WIDTH/8 bytes (bm/axi4_bus_matrix_ref.sv:347-375), so two beat
+  //addresses inside one such window are the SAME memory location down there
+  //even though the shadow keeps them apart. Measured: in
+  //axi4_outstanding_depth_test (addresses 0x40 apart, STROBE_WIDTH = 128) that
+  //aliasing made 9 of 9 content adjudications mismatch for reasons with nothing
+  //to do with ordering. This map remembers the ONE beat address tracked per
+  //window; a second distinct address poisons the window with
+  //SB_SAMEID_WIN_ALIASED and nothing in it is ever adjudicated again. One
+  //lookup in sb_sameid_beat_known covers "window unknown" and "window aliased"
+  //at once, because the sentinel can never equal a real address.
+  static const longint unsigned SB_SAMEID_WIN_ALIASED = {(64){1'b1}};
+  longint unsigned sb_sameid_win_first[longint unsigned];
+
+  //Completions that arrived before their own issue record. Without this the
+  //record that turns up afterwards is never consumed and the per-(port,id)
+  //queue stays permanently one entry ahead: every later completion would then
+  //be adjudicated against the WRONG head, which is a systematic false-violation
+  //generator rather than a one-off miss. The owed count re-syncs the stream by
+  //dropping that many records as they arrive.
+  int sb_sameid_ar_owed[int][int];
+
+  //Hard memory bound on the above. Not a config knob: nothing in this suite
+  //comes within three orders of magnitude of it, and the neighbouring
+  //bus-matrix memory on the same call path has no bound at all -- this exists
+  //only so a future long random test degrades (checker goes quiet on new
+  //addresses) instead of growing without limit.
+  localparam int SB_SAMEID_SHADOW_MAX = 200000;
+
+  //Evaluated ONCE in start_of_simulation_phase: the checker's content mechanism
+  //is only meaningful when every subordinate answers reads out of memory, and
+  //re-deriving that per write beat was pure waste. Also the memory gate: when
+  //this is 0 not a single shadow entry is created.
+  bit sb_sameid_content_active;
+  //One-shot latch so the shadow-cap warning is not printed per beat.
+  bit sb_sameid_shadow_capped;
+  //One-shot latch for the queue-alignment (reset-boundary) warning.
+  bit sb_sameid_desync_warned;
+
+  int sb_sameid_r_checked;       //R completions adjudicated against a head issue record
+  int sb_sameid_r_content_adj;   //of those, the ones the CONTENT mechanism could actually decide
+  int sb_sameid_r_skipped;       //R completions whose issue record was not (yet) seen
+  int sb_sameid_r_violations;    //same-ID ordering inversions proven on the read side
+  int sb_sameid_r_unattributed;  //head content mismatch not attributable to a sibling
+
+  //-------------------------------------------------------
+  // VISIBILITY COUNTERS (third-pass review finding (c): "unbounded silent
+  // effectiveness decay"). CONTESTED ownership and window poisoning are
+  // PERMANENT and are deliberately not cleared at reset, so a long run can lose
+  // all of its adjudication capability with nothing in the log saying so. Every
+  // one of them is printed on the end-of-test SB_SAMEID_ORDER summary line.
+  //
+  // The four gate counters say WHICH gate in sb_sameid_beat_known() is doing the
+  // rejecting, i.e. which gates are load-bearing and which have never fired in
+  // this suite. They are diagnostics only; nothing branches on them.
+  //-------------------------------------------------------
+  int sb_sameid_g_unknown;   //gate 0: this port never wrote that beat address at all
+  int sb_sameid_g_owner;     //gate 1: another port owns it, or it is CONTESTED
+  int sb_sameid_g_time;      //gate 2: last write did not strictly pre-date the request
+  int sb_sameid_g_window;    //gate 3: DATA_WIDTH window unknown or aliased (F8)
+  int sb_sameid_g_surv;      //gate 4: payload cannot survive the memory model round trip
+  int sb_sameid_wr_refused;  //write bursts NOT shadowed: they never reach the memory reads come from
+  int sb_sameid_wr_not_okay; //write bursts whose OBSERVED BRESP was not WRITE_OKAY (shadowed or not)
+  int sb_sameid_r_desync;    //R completions whose monitor-attributed ARADDR did not match the queue head
+
   //Counters for the id-returned-to-originating-manager checks. These replace
   //the master-vs-slave AxID equality comparisons when an interconnect remaps
   //IDs: the remapped value is the DUT's business, but AXI4 still requires the
@@ -322,6 +596,21 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern virtual function void sb_retire_outstanding_awid(input int src_index, input int id);
   extern virtual function void sb_retire_outstanding_arid(input int src_index, input int id);
   extern virtual function void sb_retest_pending_ids();
+  extern virtual function void sb_sameid_record_issue(input int src_index, input int id,
+                                                      input longint unsigned addr);
+  extern virtual function void sb_sameid_note_write(input int src_index,
+                                                    input longint unsigned addr,
+                                                    input bit [DATA_WIDTH-1:0] data,
+                                                    input bit [STROBE_WIDTH-1:0] strobe);
+  extern virtual function void sb_sameid_note_write_burst(input axi4_master_tx m_tx,
+                                                          input axi4_slave_tx  s_tx);
+  extern virtual function bit  sb_sameid_beat_known(input int src_index,
+                                                    input longint unsigned addr,
+                                                    input time t_issued,
+                                                    output bit [DATA_WIDTH-1:0] data,
+                                                    output bit [STROBE_WIDTH-1:0] mask);
+  extern virtual function bit  sb_sameid_mem_mode_all();
+  extern virtual function void sb_sameid_check_read_completion(input axi4_master_tx m_tx);
   extern virtual function void sb_clear_on_reset();
   extern virtual function void sb_end_of_test_completeness_check();
   extern virtual function int  sb_fifo_residue(input string nm, input int n);
@@ -338,6 +627,10 @@ class axi4_scoreboard extends uvm_scoreboard;
   extern function void store_write(bit [ADDRESS_WIDTH-1:0] addr,
                                    bit [DATA_WIDTH-1:0] data,
                                    bit [STROBE_WIDTH-1:0] strobe);
+  extern function bit  sb_write_lands_in_read_memory(input axi4_master_tx m_tx,
+                                                     input axi4_slave_tx  s_tx);
+  extern function void sb_commit_expected_write(input axi4_master_tx m_tx,
+                                                input axi4_slave_tx  s_tx);
   extern function bit backdoor_read_verify(bit [ADDRESS_WIDTH-1:0] addr,
                                           bit [DATA_WIDTH-1:0] expected_data,
                                           int slave_id);
@@ -433,6 +726,26 @@ endfunction  : end_of_elaboration_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::start_of_simulation_phase(uvm_phase phase);
   super.start_of_simulation_phase(phase);
+
+  //Same-ID CONTENT mechanism: decide ONCE whether it can mean anything at all
+  //in this run, instead of re-scanning every slave agent config on every written
+  //beat. Evaluated here because the slave agent configs are final after
+  //build/connect, and every test that tunes read_data_mode does so in
+  //build_phase (setup_axi4_slave_agent_cfg()).
+  //
+  //When this is 0 the write shadow is never populated -- that is the memory
+  //bound, and it is why a run that could never use the shadow does not pay for
+  //one assoc entry per written beat.
+  sb_sameid_content_active = axi4_env_cfg_h.sb_sameid_order_check_enable &&
+                             sb_sameid_mem_mode_all();
+  if(axi4_env_cfg_h.sb_sameid_order_check_enable) begin
+    //Via a string variable, not a ternary of two literals: SV pads the shorter
+    //string literal of a conditional expression out to the longer one's width.
+    string content_state = sb_sameid_content_active ? "ENABLED" : "disabled (order/accounting only)";
+    `uvm_info("SB_SAMEID_ORDER",
+              $sformatf("same-ID response-order checker ON; content adjudication %s (every subordinate in SLAVE_MEM_MODE: %0b)",
+                        content_state, sb_sameid_mem_mode_all()), UVM_LOW)
+  end
 endfunction : start_of_simulation_phase
 
 //--------------------------------------------------------------------------------------------
@@ -515,6 +828,23 @@ function void axi4_scoreboard::sb_clear_on_reset();
   sb_outstanding_arid.delete();
   sb_pending_bid.delete();
   sb_pending_rid.delete();
+
+  // Same-ID issue records describe requests that no longer exist. The write
+  // SHADOW is deliberately NOT cleared: reset discards transactions, not memory
+  // contents, and a post-reset read of a pre-reset address must still be
+  // attributable. Its time stamps stay valid because $time does not restart at
+  // reset, so the "written strictly before the request was issued" gate keeps
+  // meaning the same thing across a reset.
+  // Note the fifo flush further down does NOT close this completely: the master
+  // monitor's own per-ID pools (axi4_master_read_addr_pool) are not reset-aware,
+  // so an AR/R pair can still straddle this boundary and arrive with the queue
+  // in the other state. That residue is caught, counted and neutralised by the
+  // queue-alignment guard in sb_sameid_check_read_completion() -- see the block
+  // comment there. Clearing here and detecting there is the pair; neither alone
+  // is enough.
+  sb_sameid_ar_q.delete();
+  sb_sameid_ar_seq.delete();
+  sb_sameid_ar_owed.delete();
 
   sb_slave_waddr_pool.delete();
   sb_slave_wdata_pool.delete();
@@ -678,6 +1008,10 @@ task axi4_scoreboard::axi4_read_address();
     // Registered on the manager's AR, not after pairing -- see the write-address
     // channel above for why the pairing-time registration was wrong.
     sb_outstanding_arid[axi4_master_tx_h4.sb_src_index][int'(axi4_master_tx_h4.arid)]++;
+    // Same-ID order: record the issue BEFORE the blocking slave-side pairing
+    // below, so the per-(port,id) queue is in true AR order.
+    sb_sameid_record_issue(axi4_master_tx_h4.sb_src_index, int'(axi4_master_tx_h4.arid),
+                           longint'(axi4_master_tx_h4.araddr));
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_address_channel \n%s",axi4_master_tx_h4.sprint()),UVM_HIGH)
     if(axi4_env_cfg_h.sb_keyed_pairing)
       sb_match_slave_read_address(axi4_master_tx_h4, axi4_slave_tx_h4);
@@ -719,6 +1053,9 @@ task axi4_scoreboard::axi4_read_data();
     //AXI4: the read data must carry back an ARID the manager is still waiting
     //on. Master-side-only property -- retired before the slave pairing.
     sb_retire_outstanding_arid(axi4_master_tx_h5.sb_src_index, int'(axi4_master_tx_h5.rid));
+    //AXI4: same-ID responses must come back in issue order. Adjudicated here,
+    //before the slave pairing can block, for the same reason.
+    sb_sameid_check_read_completion(axi4_master_tx_h5);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_data_channel \n%s",axi4_master_tx_h5.sprint()),UVM_HIGH)
     //FINDING 5: R used to be paired by fifo head on both sides. See
     //sb_match_slave_read_data() for the key and why it is the key.
@@ -910,11 +1247,17 @@ task axi4_scoreboard::axi4_write_data_comparision(input axi4_master_tx axi4_mast
     byte_data_cmp_failed_wstrb_count++;
   end
 
-  foreach(axi4_master_tx_h2.wdata[i]) begin
-    store_write(axi4_master_tx_h2.awaddr + i*STROBE_WIDTH,
-                axi4_master_tx_h2.wdata[i],
-                axi4_master_tx_h2.wstrb[i]);
-  end
+  //NOTE: the expectation-memory commit used to be an unconditional store_write()
+  //loop HERE, on the W channel, where BRESP does not exist yet -- so a refused
+  //write was recorded as if it had landed, and (until this change) was pushed
+  //into the subordinate's own memory model as well. It now lives in
+  //axi4_write_response_comparision() as sb_commit_expected_write(), gated on
+  //the observed BRESP. See store_write()'s header.
+  //NOTE: the same-ID order checker's write SHADOW used to be fed from this loop,
+  //gated on get_expected_write_response(awaddr,...) == WRITE_OKAY. That gate was
+  //unsound -- it is a START-ADDRESS-only prediction and the subordinate's real
+  //commit decision is not. It now lives in axi4_write_response_comparision(),
+  //driven by the OBSERVED BRESP. See sb_sameid_note_write_burst().
 
 
 
@@ -1007,6 +1350,15 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
   // the manager had in fact been given, and the resulting error blamed the
   // wrong thing. It now runs in axi4_write_response() the moment the master
   // packet is received. See sb_retire_outstanding_awid().
+
+  //Same-ID order checker's write shadow. Fed HERE, on the B channel, and not in
+  //axi4_write_data_comparision, because only here is the subordinate's ACTUAL
+  //commit decision observable. See sb_sameid_note_write_burst().
+  sb_sameid_note_write_burst(axi4_master_tx_h3, axi4_slave_tx_h3);
+
+  //verify_read()'s expectation memory. Same reason, same gate - both go
+  //through sb_write_lands_in_read_memory().
+  sb_commit_expected_write(axi4_master_tx_h3, axi4_slave_tx_h3);
 
 endtask : axi4_write_response_comparision
 
@@ -1207,12 +1559,18 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
     if(axi4_master_tx_h5.rdata == axi4_slave_tx_h5.rdata)begin
       `uvm_info(get_type_name(),$sformatf("axi4_rdata from master and slave is equal"),UVM_HIGH);
       `uvm_info("SB_rdata_MATCHED", $sformatf("Master rdata = %0p and Slave rdata = %0p",axi4_master_tx_h5.rdata,axi4_slave_tx_h5.rdata), UVM_HIGH);
-// will fixed later    
        byte_data_cmp_verified_rdata_count++;
-//      for(int i=0;i<axi4_master_tx_h5.rdata.size();i++) begin
-//        verify_read(axi4_master_tx_h5.araddr + i*STROBE_WIDTH,
-//                    axi4_master_tx_h5.rdata[i]);
-//      end
+      //CONTENT check. The comparison above only proves the two monitors agree,
+      //and in the 1:1 build they are watching the same wire, so it proves
+      //nothing about the DATA. This one compares the returned beat against what
+      //was actually written to the same beat address. Commented out since
+      //f6f93b6 (a "make it compile" sweep, not a functional disable) -- see
+      //verify_read()'s header and AXI_data_integrity.md F10. Opt-in per test via
+      //axi4_env_cfg_h.wstrb_compare_enable.
+      for(int i=0;i<axi4_master_tx_h5.rdata.size();i++) begin
+        verify_read(axi4_master_tx_h5.araddr + i*STROBE_WIDTH,
+                    axi4_master_tx_h5.rdata[i]);
+      end
     end
     else begin
       `uvm_info(get_type_name(),$sformatf("axi4_rdata from master and slave is  not equal"),UVM_HIGH);
@@ -1885,7 +2243,15 @@ endfunction : check_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::report_phase(uvm_phase phase);
   super.report_phase(phase);
-  
+
+  //Memory bound, second half. Freed HERE rather than in
+  //sb_end_of_test_completeness_check(), because that function returns early
+  //when disable_end_of_test_checks is set -- exactly the four tests where it
+  //would otherwise never be released.
+  sb_sameid_wr_shadow.delete();
+  sb_sameid_win_first.delete();
+  sb_sameid_ar_owed.delete();
+
   $display(" ");
   $display("-------------------------------------------- ");
   $display("SCOREBOARD REPORT PHASE");
@@ -2115,8 +2481,19 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise rdata comparisions:%0d",byte_data_cmp_verified_rdata_count+byte_data_cmp_failed_rdata_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise rdata failed comparisions:%0d",byte_data_cmp_failed_rdata_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise rdata verified comparisions:%0d",byte_data_cmp_verified_rdata_count ),UVM_HIGH);
-  
-  
+
+  //verify_read() -- the read-data CONTENT check (AXI_data_integrity.md F10).
+  //Printed at UVM_LOW and unconditionally, because the whole point of this
+  //finding was that a dead checker is indistinguishable from a passing one.
+  //compared=0 means NOTHING was content-checked in this run.
+  if(axi4_env_cfg_h.wstrb_compare_enable) begin
+    `uvm_info("SB_VERIFY_READ",
+      $sformatf("verify_read: beats_compared=%0d beats_skipped_no_expectation=%0d mismatches=%0d",
+                verify_read_beats_compared, verify_read_beats_skipped,
+                verify_read_mismatch_count), UVM_LOW);
+  end
+
+
   //Number of rresp comparisoins done
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise rresp comparisions:%0d",byte_data_cmp_verified_rresp_count+byte_data_cmp_failed_rresp_count ),UVM_HIGH);
   `uvm_info (get_type_name(),$sformatf("Total no. of byte wise rresp failed comparisions:%0d",byte_data_cmp_failed_rresp_count ),UVM_HIGH);
@@ -2183,36 +2560,96 @@ function void axi4_scoreboard::report_phase(uvm_phase phase);
 
 endfunction : report_phase
 
+//--------------------------------------------------------------------------------------------
+// Function: verify_read
+// Compares one read beat against what this scoreboard recorded being written
+// to the same beat address. THE ONLY read-data check in this bench that is not
+// a self-comparison: axi4_read_data_comparision() compares the master monitor's
+// RDATA against the slave monitor's RDATA, and in the 1:1 build those are the
+// same physical wire (top/hdl_top.sv), so that check cannot see wrong data --
+// only wrong wiring. See AXI_data_integrity.md F10.
+//
+// Two defects fixed here versus the version that was commented out in f6f93b6:
+//   (a) exp_val was a CLASS member, so bytes with no recorded expectation kept
+//       whatever the previous call had left there -- adjacent calls were shown
+//       comparing against the prior beat's high bytes.
+//   (b) it compared the FULL DATA_WIDTH (128 bytes at the default 1024-bit bus)
+//       and treated every byte with no recorded write as "expected zero". Any
+//       write narrower than the whole bus was therefore guaranteed to mismatch:
+//       a false-positive engine, which is why re-enabling it naively is not an
+//       option. known_mask now restricts the comparison to lanes this
+//       scoreboard actually has an expectation for.
+//--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::verify_read(bit [ADDRESS_WIDTH-1:0] addr,
                                            bit [DATA_WIDTH-1:0] data);
+  bit [DATA_WIDTH-1:0]   exp_val;      // LOCAL - see (a) above
+  bit [STROBE_WIDTH-1:0] known_mask;   // lanes with a recorded expectation
+
   if (!axi4_env_cfg_h.wstrb_compare_enable)
     return;
+
+  exp_val    = '0;
+  known_mask = '0;
   for(int b=0; b<STROBE_WIDTH; b++) begin
-    if(expected_mem.exists(addr + b))
+    if(expected_mem.exists(addr + b)) begin
       exp_val[8*b +: 8] = expected_mem[addr + b];
+      known_mask[b]     = 1'b1;
+    end
   end
-  if (exp_val !== data) begin
-    `uvm_error(get_type_name(),
-               $sformatf("Read data mismatch at 0x%0h exp=%0h act=%0h",
-                          addr, exp_val, data));
+
+  // Nothing was ever written to this beat by anyone the scoreboard saw. That
+  // is not a failure - it is the absence of an expectation - but it IS the
+  // difference between "checked and correct" and "not checked", so it is
+  // counted separately rather than silently returning.
+  if(known_mask == '0) begin
+    verify_read_beats_skipped++;
+    return;
+  end
+
+  verify_read_beats_compared++;
+  for(int b=0; b<STROBE_WIDTH; b++) begin
+    if(!known_mask[b]) continue;
+    if(exp_val[8*b +: 8] !== data[8*b +: 8]) begin
+      verify_read_mismatch_count++;
+      `uvm_error(get_type_name(),
+                 $sformatf("Read data mismatch at 0x%0h byte %0d: exp=0x%02h act=0x%02h (beat exp=0x%0h act=0x%0h mask=0x%0h)",
+                            addr, b, exp_val[8*b +: 8], data[8*b +: 8],
+                            exp_val, data, known_mask));
+      return;   // one report per beat is enough to fail the test
+    end
   end
 endfunction
 
+//--------------------------------------------------------------------------------------------
+// Function: store_write
+// Records ONE write beat in the scoreboard's own expectation memory.
+//
+// This used to ALSO write the manager's W data straight into axi4_bus_matrix_h
+// -- the very axi4_bus_matrix_ref instance the subordinate answers
+// SLAVE_MEM_MODE reads out of -- unconditionally, with no reference to BRESP.
+// Three things were wrong with that and all three are fixed by deleting it:
+//   1. a checker must not mutate the model it checks against;
+//   2. it was UNCONDITIONAL, so a write the subordinate REFUSED (DECERR on a
+//      boundary crossing, SLVERR on a protection violation) was still what the
+//      next read of that address returned, because the scoreboard put it
+//      there. Measured before this change: a DECERR'd 0xBB read back as 0xBB.
+//   3. it keyed beats as awaddr + i*STROBE_WIDTH, which is only the real beat
+//      address for full-bus-width bursts; for any narrower awsize it wrote
+//      over addresses the burst never touched.
+// The subordinate driver already commits every accepted write into the same
+// model, byte by byte, at the right addresses and with the right burst
+// arithmetic (slave/axi4_slave_driver_proxy.sv::task_memory_write). That is
+// now the single writer of memory. See AXI_ooo.md Phase 3's open item and
+// AXI_data_integrity.md F8.
+//
+// expected_mem keeps the awaddr + i*STROBE_WIDTH keying deliberately: it is a
+// private, self-consistent key space shared only with verify_read(), which
+// reads it back with the identical formula off araddr. It is a
+// "beat i of the burst that started here" tag, not a memory address.
+//--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::store_write(bit [ADDRESS_WIDTH-1:0] addr,
                                            bit [DATA_WIDTH-1:0] data,
                                            bit [STROBE_WIDTH-1:0] strobe);
-  // Store in bus matrix reference model (for all writes including write-only slaves)
-  if (axi4_bus_matrix_h != null) begin
-    // Debug message for S9 writes
-    if (addr >= 64'h0900_0000_0000 && addr <= 64'h0900_0000_FFFF) begin
-      int byte_offset = addr[6:0]; // Byte offset within 128-byte data
-      `uvm_info(get_type_name(), 
-        $sformatf("Storing to S9: addr=0x%16h, byte_offset=%0d, data[31:0]=0x%08h, strobe=0x%032h", 
-        addr, byte_offset, data[31:0], strobe), UVM_MEDIUM);
-    end
-    axi4_bus_matrix_h.store_write(addr, data);
-  end
-  
   // Store in scoreboard memory if wstrb comparison is enabled
   if (!axi4_env_cfg_h.wstrb_compare_enable)
     return;
@@ -2221,6 +2658,49 @@ function void axi4_scoreboard::store_write(bit [ADDRESS_WIDTH-1:0] addr,
       expected_mem[addr + b] = data[8*b +: 8];
   end
 endfunction
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_write_lands_in_read_memory
+// THE single answer to "will a later read of this burst's addresses see this
+// write?", shared by every consumer in this scoreboard so there is exactly one
+// derivation of it. Two consumers today: sb_commit_expected_write() (the
+// verify_read expectation memory) and sb_sameid_note_write_burst() (the
+// same-ID order checker's write shadow).
+//
+// History worth keeping: while store_write() still had its unconditional
+// backdoor into axi4_bus_matrix_h, this could NOT be the observed BRESP --
+// refused writes were readable anyway, and a shadow that gated on BRESP
+// convicted innocent transactions (measured, AXI_ooo.md Phase 3 third fix
+// pass). With that backdoor gone the subordinate driver is the only writer of
+// memory, and it commits only ~slave_err beats, so the observed BRESP is now
+// both correct and sufficient. Both sides' BRESP must agree (they are the same
+// wire in the 1:1 build but not behind a fabric; disagreement means the
+// scoreboard does not know what happened), and `!==` so an injected X refuses
+// rather than matching by accident. WRITE_EXOKAY deliberately refuses: the
+// driver recomputes slave_err = (bresp != WRITE_OKAY) before its memory write,
+// so an EXOKAY write is not committed on this simulator either.
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_write_lands_in_read_memory(input axi4_master_tx m_tx,
+                                                            input axi4_slave_tx  s_tx);
+  if(m_tx == null || s_tx == null) return 0;
+  return (m_tx.bresp === WRITE_OKAY) && (s_tx.bresp === WRITE_OKAY);
+endfunction : sb_write_lands_in_read_memory
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_commit_expected_write
+// B-channel side of store_write(). Called from axi4_write_response_comparision()
+// rather than from the W-channel data comparison, because that is the first
+// place the OBSERVED BRESP exists -- and it is also strictly more accurate: the
+// subordinate calls task_memory_write() AFTER driving the response.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_commit_expected_write(input axi4_master_tx m_tx,
+                                                        input axi4_slave_tx  s_tx);
+  if(!axi4_env_cfg_h.wstrb_compare_enable) return;
+  if(!sb_write_lands_in_read_memory(m_tx, s_tx)) return;
+  foreach(m_tx.wdata[i]) begin
+    store_write(m_tx.awaddr + i*STROBE_WIDTH, m_tx.wdata[i], m_tx.wstrb[i]);
+  end
+endfunction : sb_commit_expected_write
 
 //--------------------------------------------------------------------------------------------
 // Function: is_valid_write_address
@@ -2869,6 +3349,501 @@ function void axi4_scoreboard::sb_retest_pending_ids();
 endfunction : sb_retest_pending_ids
 
 //--------------------------------------------------------------------------------------------
+// Function: sb_sameid_record_issue
+// Appends one request to its (master port, id) issue queue. Called from the
+// AW/AR channel tasks the instant the master item leaves its analysis fifo and
+// BEFORE those tasks block on the slave-side pairing, so the queue order is the
+// order the manager issued in.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_sameid_record_issue(input int src_index, input int id,
+                                                      input longint unsigned addr);
+  sb_sameid_issue_s rec;
+
+  if(!axi4_env_cfg_h.sb_sameid_order_check_enable) return;
+
+  //This request's completion was already seen and counted as skipped, so its
+  //record has no consumer left. Dropping it here is what keeps the queue head
+  //aligned with the response stream -- see sb_sameid_ar_owed.
+  if(sb_sameid_ar_owed.exists(src_index) && sb_sameid_ar_owed[src_index].exists(id) &&
+     sb_sameid_ar_owed[src_index][id] > 0) begin
+    sb_sameid_ar_owed[src_index][id]--;
+    return;
+  end
+
+  rec.addr     = addr;
+  rec.t_issued = $time;
+
+  if(!sb_sameid_ar_seq.exists(src_index) || !sb_sameid_ar_seq[src_index].exists(id))
+    sb_sameid_ar_seq[src_index][id] = 0;
+  rec.seq = sb_sameid_ar_seq[src_index][id];
+  sb_sameid_ar_seq[src_index][id] = rec.seq + 1;
+  sb_sameid_ar_q[src_index][id].push_back(rec);
+endfunction : sb_sameid_record_issue
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_sameid_note_write
+// Records what a written beat holds, per byte lane and per ORIGINATING MASTER
+// PORT, merging with whatever that port already knew about that beat, and
+// stamping the write time. This is the checker's independent way of naming
+// which request an R burst really answers; see the declaration header.
+//
+// Three guards, in order, and each of them matters:
+//   * sb_sameid_content_active -- nothing is stored at all unless the checker
+//     is on AND every subordinate answers reads out of memory. This is the
+//     memory bound: for the large majority of tests this function costs one
+//     bit test per beat and allocates nothing.
+//   * ownership -- the first port to write a beat address owns it. A DIFFERENT
+//     port writing the same address makes it CONTESTED, and a contested address
+//     is never adjudicated again by anyone. Cross-master writes to one address
+//     were the concrete false-positive route found by adversarial review.
+//   * bound -- SB_SAMEID_SHADOW_MAX beats. Past it, EXISTING entries still
+//     update (so the checker keeps working on the working set) but no new
+//     address is admitted.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_sameid_note_write(input int src_index,
+                                                    input longint unsigned addr,
+                                                    input bit [DATA_WIDTH-1:0] data,
+                                                    input bit [STROBE_WIDTH-1:0] strobe);
+  sb_beat_shadow_s e;
+  longint unsigned win;
+
+  if(!sb_sameid_content_active) return;
+  if(strobe == 0) return;
+
+  //Memory-model aliasing, checked before anything else: if another beat address
+  //in the same DATA_WIDTH-aligned window is already tracked, neither is
+  //distinguishable in the subordinate's memory and the window is poisoned.
+  win = addr & ~longint'(STROBE_WIDTH - 1);
+  if(!sb_sameid_win_first.exists(win))          sb_sameid_win_first[win] = addr;
+  else if(sb_sameid_win_first[win] != addr)     sb_sameid_win_first[win] = SB_SAMEID_WIN_ALIASED;
+
+  if(!sb_sameid_wr_shadow.exists(addr)) begin
+    //A brand-new address. The bound is enforced HERE, before the map grows.
+    if(sb_sameid_wr_shadow.num() >= SB_SAMEID_SHADOW_MAX) begin
+      if(!sb_sameid_shadow_capped) begin
+        sb_sameid_shadow_capped = 1;
+        `uvm_info("SB_SAMEID_ORDER",
+                  $sformatf("same-ID content shadow reached its bound of %0d beats; no further addresses are admitted (the checker stays live on the addresses already tracked)",
+                            SB_SAMEID_SHADOW_MAX), UVM_LOW)
+      end
+      return;
+    end
+    e.owner = src_index;
+  end
+  else begin
+    e = sb_sameid_wr_shadow[addr];
+    if(e.owner != src_index) begin
+      //A second master port writing an address another one owns. Neither port's
+      //private view is the memory's view from here on, so the entry is emptied
+      //and marked contested for good.
+      if(e.owner != SB_SAMEID_CONTESTED) begin
+        e.owner = SB_SAMEID_CONTESTED;
+        e.data  = '0;
+        e.mask  = '0;
+        sb_sameid_wr_shadow[addr] = e;
+        `uvm_info("SB_SAMEID_ORDER",
+                  $sformatf("beat address 'h%0x is written by master port %0d as well as its owner; it is permanently excluded from same-ID content adjudication",
+                            addr, src_index), UVM_HIGH)
+      end
+      return;
+    end
+  end
+
+  for(int b = 0; b < STROBE_WIDTH; b++) begin
+    if(strobe[b]) begin
+      e.data[8*b +: 8] = data[8*b +: 8];
+      e.mask[b]        = 1'b1;
+    end
+  end
+  e.t_written = $time;
+
+  sb_sameid_wr_shadow[addr] = e;
+endfunction : sb_sameid_note_write
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_sameid_note_write_burst
+// Feeds one COMPLETED write burst into the CONTENT shadow -- but only if the
+// subordinate actually committed it to memory.
+//
+// WHY THIS IS ON THE B CHANNEL AND NOT ON W (third fix pass, 2026-08-05)
+//   The previous version ran on the W channel and asked
+//       get_expected_write_response(awaddr, port, awprot) == WRITE_OKAY
+//   i.e. it re-derived a SECOND prediction of the subordinate's commit decision
+//   from the burst's START ADDRESS. The subordinate's REAL decision is not that
+//   function, and adversarial review was right that the two can diverge:
+//     * BURST-END DECODE. slave/axi4_slave_driver_proxy.sv computes
+//       end_wrap_addr from awburst/awlen/awsize and forces WRITE_DECERR when
+//       decode(awaddr) != decode(end_wrap_addr) (:550-577). The prediction only
+//       ever decodes awaddr, so a burst that STARTS in a mapped region and ENDS
+//       outside it predicted OKAY, was shadowed, and was never written -- and
+//       the shadow then guaranteed a head mismatch on any later read of it.
+//     * EXCLUSIVE WRITES. A successful exclusive write answers WRITE_EXOKAY
+//       (:575). The driver's own commit gate is inconsistent about that: it
+//       first computes slave_err = (bresp != OKAY && bresp != EXOKAY) at :668,
+//       then UNCONDITIONALLY recomputes slave_err = (bresp != WRITE_OKAY) in
+//       both response branches (:731 OOO, :738 in-order) before the memory
+//       write at :757. The later assignment wins, so on this simulator an
+//       EXOKAY write is NOT committed to memory -- while the start-address
+//       prediction said OKAY. (That inconsistency is a driver-side finding; it
+//       is NOT fixed here, Phase 2 owns that file. What matters for THIS
+//       checker is that the shadow must not out-guess it.)
+//     * error_inject / BENCH_ONLY acceptance, BRESP X injection, and the
+//       fabric-IP master-id fallback all diverge from the prediction too.
+//
+//   Rather than model any of that a second time, the gate is delegated to ONE
+//   shared function, sb_write_lands_in_read_memory(), which is also what
+//   sb_commit_expected_write() uses. Read its header for the rule and the
+//   history.
+//
+//   HISTORY (matters, because the rule changed once and the reason is subtle).
+//   Until the F8/F10 data-integrity pass, store_write() ALSO wrote the manager's
+//   W data straight into axi4_bus_matrix_h -- the same axi4_bus_matrix_ref the
+//   subordinate answers SLAVE_MEM_MODE reads out of -- unconditionally, with no
+//   reference to BRESP. So a write the subordinate REFUSED was still what the
+//   next read returned, because the scoreboard put it there (measured: a DECERR'd
+//   0xBB read back as 0xBB). While that was true, gating this shadow on the
+//   observed BRESP made the shadow DISAGREE with memory for every refused write,
+//   which manufactures the head mismatch that is the precondition of every
+//   conviction -- axi4_refused_write_shadow_test convicted two innocent
+//   transactions under exactly that gate. The gate therefore had to mirror
+//   store_write()'s unconditional branch instead.
+//   That backdoor is now DELETED (see store_write()'s header): the subordinate
+//   driver is the only writer of memory, and it commits only ~slave_err beats.
+//   The rule has collapsed to the single clean "both sides' observed BRESP say
+//   WRITE_OKAY" in every mode, which is what sb_write_lands_in_read_memory()
+//   implements. axi4_refused_write_shadow_test is the regression that holds it.
+//
+//   Timing: t_written is now stamped when the B is processed rather than when W
+//   was, which is also STRICTLY more accurate -- the subordinate calls
+//   task_memory_write() AFTER driving the response (:757), so the memory does
+//   not hold the new value until then. It is monotone in the conservative
+//   direction: a later t_written can only make sb_sameid_beat_known()'s
+//   "written strictly before the request was issued" gate reject more, never
+//   accept more.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_sameid_note_write_burst(input axi4_master_tx m_tx,
+                                                          input axi4_slave_tx  s_tx);
+  bit lands_in_read_memory;
+
+  if(!sb_sameid_content_active) return;
+  if(m_tx == null || s_tx == null) return;
+
+  //ONE derivation, shared with sb_commit_expected_write(). It used to be
+  //store_write()'s "bus matrix present -> shadow unconditionally" branch,
+  //restated here; store_write()'s backdoor into axi4_bus_matrix_h is gone
+  //(see its header), so this collapses to the observed BRESP in every mode.
+  lands_in_read_memory = sb_write_lands_in_read_memory(m_tx, s_tx);
+
+  if(!lands_in_read_memory) begin
+    sb_sameid_wr_refused++;
+    return;
+  end
+  //Counted even when it is still shadowed, because "how many write bursts in
+  //this run were answered something other than OKAY" is the number a reader
+  //needs to interpret the rest of the line.
+  if((m_tx.bresp !== WRITE_OKAY) || (s_tx.bresp !== WRITE_OKAY))
+    sb_sameid_wr_not_okay++;
+
+  //Keyed exactly the way store_write() keys expected_mem: awaddr + beat*STROBE_WIDTH.
+  //Deliberately independent of wstrb_compare_enable, which is a WSTRB-test knob
+  //that is off for almost every test.
+  foreach(m_tx.wdata[i])
+    sb_sameid_note_write(m_tx.sb_src_index,
+                         longint'(m_tx.awaddr + i*STROBE_WIDTH),
+                         m_tx.wdata[i],
+                         m_tx.wstrb[i]);
+endfunction : sb_sameid_note_write_burst
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_sameid_beat_known
+// Returns 1 (with data+mask) when THIS master port's view of this beat address
+// is trustworthy for a request issued at t_issued, i.e.:
+//   * the checker's content mechanism is live,
+//   * the address is not contested by another port,
+//   * this port has written it and something is known on at least one lane,
+//   * and the LAST write to it landed strictly before the request was issued,
+//     so no write raced or followed the request it is about to adjudicate.
+// The time gate is the second half of the adversarial-review fix: an
+// address-and-port-correct but STALE shadow entry was still able to make a
+// perfectly legal read look like a head mismatch.
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_sameid_beat_known(input int src_index,
+                                                   input longint unsigned addr,
+                                                   input time t_issued,
+                                                   output bit [DATA_WIDTH-1:0] data,
+                                                   output bit [STROBE_WIDTH-1:0] mask);
+  bit [7:0] b0;
+  bit       seen;
+
+  data = '0;
+  mask = '0;
+  //Each `return 0` below bumps the counter for the gate that rejected, so the
+  //summary line can say which of these four are load-bearing in this suite and
+  //which have never fired. Diagnostics only -- no behaviour depends on them.
+  if(!sb_sameid_content_active) return 0;
+  if(!sb_sameid_wr_shadow.exists(addr)) begin sb_sameid_g_unknown++; return 0; end
+  if(sb_sameid_wr_shadow[addr].owner != src_index) begin sb_sameid_g_owner++; return 0; end   //also covers CONTESTED (-1)
+  if(sb_sameid_wr_shadow[addr].t_written >= t_issued) begin sb_sameid_g_time++; return 0; end
+  //Memory-model aliasing: another beat address shares this address's
+  //DATA_WIDTH-aligned window, so the subordinate cannot tell them apart.
+  if(!sb_sameid_win_first.exists(addr & ~longint'(STROBE_WIDTH - 1))) begin sb_sameid_g_window++; return 0; end
+  if(sb_sameid_win_first[addr & ~longint'(STROBE_WIDTH - 1)] != addr) begin sb_sameid_g_window++; return 0; end
+
+  data = sb_sameid_wr_shadow[addr].data;
+  mask = sb_sameid_wr_shadow[addr].mask;
+  if(mask == 0) begin sb_sameid_g_surv++; return 0; end
+
+  //SURVIVABILITY. Historically this bench's memory model kept ONE byte per
+  //DATA_WIDTH word (AXI_data_integrity.md F8), so only a payload that was the
+  //SAME non-zero byte on every compared lane survived the round trip and
+  //adjudicating on anything else is how the first implementation reached its
+  //45%-unattributed rate. F8 is now FIXED -- axi4_bus_matrix_ref is byte
+  //granular -- so the "same byte on every lane" half of this gate is, in
+  //principle, relaxable to "non-zero" alone. It is deliberately NOT relaxed in
+  //the same change that fixed F8: relaxing it INCREASES what this checker is
+  //willing to convict on, and that needs its own fail-then-pass evidence
+  //(teeth re-measured, false-positive sweep) rather than riding along. Doing so
+  //is the way to make CONTENT adjudication non-inert suite-wide, and is the
+  //remaining half of AXI_ooo.md open item #5.
+  //A zero byte stays excluded regardless, because an abandoned or truncated
+  //burst zero-fills the beats it never sampled.
+  seen = 0;
+  for(int b = 0; b < STROBE_WIDTH; b++) begin
+    if(!mask[b]) continue;
+    if(!seen) begin
+      b0   = data[8*b +: 8];
+      seen = 1;
+      if(b0 == 8'h00) begin sb_sameid_g_surv++; return 0; end
+    end
+    else if(data[8*b +: 8] != b0) begin sb_sameid_g_surv++; return 0; end
+  end
+  if(!seen) sb_sameid_g_surv++;
+  return seen;
+endfunction : sb_sameid_beat_known
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_sameid_mem_mode_all
+// The CONTENT mechanism only means anything when the subordinates answer reads
+// out of memory. In RANDOM_DATA_MODE / USER_DATA_MODE / SLAVE_ERR_RESP_MODE the
+// returned data is generated, so "it does not equal what was written" carries no
+// ordering information at all. One dissenting agent disables content
+// adjudication for the whole run -- a checker that is silent is recoverable,
+// one that invents errors is not.
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_sameid_mem_mode_all();
+  if(axi4_env_cfg_h == null) return 0;
+  if(axi4_env_cfg_h.axi4_slave_agent_cfg_h.size() == 0) return 0;
+  foreach(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin
+    if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i] == null) return 0;
+    if(axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode != SLAVE_MEM_MODE) return 0;
+  end
+  return 1;
+endfunction : sb_sameid_mem_mode_all
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_sameid_check_read_completion
+// Adjudicates one completed R burst against the oldest outstanding read of the
+// same RID on the same manager port.
+//
+// The error is raised ONLY when a LATER still-outstanding same-ID request is
+// positively identified as the one this burst really answers, by CONTENT.
+// Everything else (no issue record yet, nothing trustworthy known about that
+// address, a mismatch that names no sibling) is counted and passed over,
+// because none of those is evidence of a REORDER.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_sameid_check_read_completion(input axi4_master_tx m_tx);
+  int                    src;
+  int                    id;
+  sb_sameid_issue_s      head;
+  //Local COPY of the still-outstanding same-ID siblings. It is a copy on
+  //purpose: `foreach(sb_sameid_ar_q[src][id][i])` would not do what it reads
+  //like -- foreach index positions must be loop-variable identifiers, so src
+  //and id would be re-declared as loop variables shadowing the locals above
+  //and the scan would walk EVERY port and EVERY id.
+  sb_sameid_issue_s      sib[$];
+  bit [DATA_WIDTH-1:0]   head_data;
+  bit [STROBE_WIDTH-1:0] head_mask;
+  bit [DATA_WIDTH-1:0]   cand_data;
+  bit [STROBE_WIDTH-1:0] cand_mask;
+  bit                    head_known;
+  bit                    head_mismatch;
+  bit                    resp_clean;
+  int                    beats;
+  int                    hit_index;
+  int                    align;
+
+  if(!axi4_env_cfg_h.sb_sameid_order_check_enable) return;
+
+  src = m_tx.sb_src_index;
+  id  = int'(m_tx.rid);
+
+  if(!sb_sameid_ar_q.exists(src) || !sb_sameid_ar_q[src].exists(id) ||
+     sb_sameid_ar_q[src][id].size() == 0) begin
+    //The AR channel task has not consumed this request's address packet yet
+    //(it may be parked in the slave-side pairing), so there is nothing to
+    //adjudicate against. Skipping is only HALF the answer: the record will
+    //still arrive later with its completion already gone, and if it were
+    //queued the head would be one entry stale from then on. Owe it instead,
+    //and drop it on arrival.
+    sb_sameid_r_skipped++;
+    if(!sb_sameid_ar_owed.exists(src) || !sb_sameid_ar_owed[src].exists(id))
+      sb_sameid_ar_owed[src][id] = 0;
+    sb_sameid_ar_owed[src][id]++;
+    return;
+  end
+
+  //--------------------------------------------------------------
+  // QUEUE-ALIGNMENT GUARD (third fix pass, 2026-08-05 -- review finding (b),
+  // the reset-boundary leak in the owed mechanism).
+  //
+  // THE LEAK. sb_clear_on_reset() empties sb_sameid_ar_q / _ar_seq / _ar_owed
+  // and flushes the analysis fifos, but the master monitor keeps publishing
+  // across that boundary: its per-ID pools (axi4_master_read_addr_pool) are NOT
+  // reset-aware, so an R burst whose AR was recorded and then cleared, or an AR
+  // published after the flush that belongs to a pre-reset request, arrives with
+  // the queue in the other state. Either direction desynchronises the head by
+  // one entry from then on -- and a stale head is precisely the shape that
+  // convicts, so this recreates the exact false-violation class sb_sameid_ar_owed
+  // was built to prevent, relocated to the reset boundary.
+  //
+  // THE GUARD, and why it is not a second prediction. The R packet already
+  // carries the ARADDR the MONITOR attributed to this completion
+  // (master/axi4_master_seq_item_converter.sv::to_read_addr_data_class copies
+  // araddr from the per-ID-popped request). The monitor pops oldest-first per
+  // ID; this queue is built oldest-first per (port,id) from the same AR stream.
+  // In a healthy stream they therefore name the SAME request, and they do so
+  // even under a real F2 reorder -- measured on the repro
+  // (sim/synopsys_sim/f2_seed1.log): the monitor attributed ARADDRs
+  // 0x1000,0x3000,0x5000,... in perfect issue order while the subordinate had
+  // answered 2,6,0,4. So this is a pure DESYNC detector: it cannot mask a
+  // reorder, because a reorder does not move the monitor's attribution.
+  //
+  //   * found at index 0  -> aligned, the normal path, zero cost beyond one compare.
+  //   * found at index k>0 -> the queue holds k orphaned records ahead of the
+  //                          true head (records whose completions were lost
+  //                          across the reset). Drop them; that is a repair.
+  //   * not found          -> this completion's own record is missing from the
+  //                          queue. Adjudicating would use somebody else's
+  //                          request, so do not adjudicate and do not pop --
+  //                          leave the queue for the completions that do own it.
+  //
+  // Two same-ID reads to the SAME address make k=0 trivially true; that is
+  // harmless, because then the head and the "true" record hold identical
+  // content and the adjudication is the same either way.
+  //--------------------------------------------------------------
+  align = -1;
+  for(int k = 0; (k < sb_sameid_ar_q[src][id].size()) && (align < 0); k++)
+    if(sb_sameid_ar_q[src][id][k].addr == longint'(m_tx.araddr)) align = k;
+
+  if(align != 0) begin
+    if(align < 0) sb_sameid_r_desync++;
+    else          sb_sameid_r_desync += align;
+    if(!sb_sameid_desync_warned) begin
+      sb_sameid_desync_warned = 1;
+      `uvm_warning("SB_SAMEID_QUEUE_DESYNC",
+                   $sformatf({"master_port=%0d RID='h%0x: the R burst the monitor attributed to ARADDR='h%0x is %s. ",
+                              "The scoreboard's issue queue and the monitor's per-ID attribution have diverged -- almost always an ",
+                              "AR/R pair straddling a reset (sb_clear_on_reset drops the queue but the monitor's per-ID pools are ",
+                              "not reset-aware). No ordering verdict is taken from a desynchronised head. Only the FIRST occurrence ",
+                              "is printed; the run total is on the end-of-test same-ID summary line."},
+                             src, id, m_tx.araddr,
+                             (align < 0) ? "not in that (port,id) queue at all" : "not at its head"))
+    end
+    //Not found: keep the queue intact and take no verdict.
+    if(align < 0) return;
+    //Found deeper: the entries ahead of it are orphans. Drop them and continue.
+    repeat(align) void'(sb_sameid_ar_q[src][id].pop_front());
+  end
+
+  head = sb_sameid_ar_q[src][id].pop_front();
+  sb_sameid_r_checked++;
+  sib  = sb_sameid_ar_q[src][id];
+
+  //With no other same-ID request in flight there is nothing that could have
+  //overtaken this one, so no ordering question exists.
+  if(sib.size() == 0) return;
+
+  beats      = m_tx.rdata.size();
+  resp_clean = (m_tx.rresp == READ_OKAY) || (m_tx.rresp == READ_EXOKAY);
+
+  //--------------------------------------------------------------
+  // CONTENT. Only meaningful if the subordinates read out of memory
+  // (sb_sameid_content_active, latched once at start_of_simulation), the burst
+  // completed cleanly, and THIS master port's uncontested, pre-dating view of
+  // the head's address says what it should have held.
+  //--------------------------------------------------------------
+  head_known    = 0;
+  head_mismatch = 0;
+  if(beats > 0 && resp_clean)
+    head_known = sb_sameid_beat_known(src, head.addr, head.t_issued, head_data, head_mask);
+
+  if(head_known) begin
+    //This one is the "is the checker actually doing anything" counter: a run
+    //with checked>0 but content_adj==0 has only done order/accounting and
+    //cannot have convicted anything.
+    sb_sameid_r_content_adj++;
+    for(int b = 0; b < STROBE_WIDTH; b++) begin
+      if(head_mask[b] && (m_tx.rdata[0][8*b +: 8] !== head_data[8*b +: 8]))
+        head_mismatch = 1;
+    end
+  end
+
+  if(head_mismatch) begin
+    hit_index = -1;
+    for(int i = 0; (i < sib.size()) && (hit_index < 0); i++) begin
+      bit cand_match;
+      //Same port, same uncontested-ownership and same pre-dating rule as the
+      //head, but referenced to the SIBLING's own issue time -- that is the
+      //instant the subordinate would have had to serve it for this burst to be
+      //its answer.
+      if(!sb_sameid_beat_known(src, sib[i].addr, sib[i].t_issued, cand_data, cand_mask)) continue;
+      //Compare on the SAME lanes the head was compared on, so a sibling that
+      //merely happens to know more (or fewer) bytes cannot be accused.
+      if(cand_mask != head_mask) continue;
+      cand_match = 1;
+      for(int b = 0; b < STROBE_WIDTH; b++) begin
+        if(head_mask[b] && (m_tx.rdata[0][8*b +: 8] !== cand_data[8*b +: 8]))
+          cand_match = 0;
+      end
+      //Non-zero is already guaranteed by sb_sameid_beat_known's survivability
+      //gate, so a zero-filled truncated burst still cannot convict anybody.
+      if(cand_match) hit_index = i;
+    end
+
+    if(hit_index >= 0) begin
+      sb_sameid_r_violations++;
+      `uvm_error("SB_SAMEID_ORDER_VIOLATION",
+                 $sformatf({"AXI4 same-ID response ordering violated on the READ channel (AXI_ooo.md F2). ",
+                            "master_port=%0d RID='h%0x: this R burst was joined to the OLDEST outstanding read of that id ",
+                            "(issue #%0d, ARADDR='h%0x) but its data is the content of a LATER still-outstanding read of the SAME id ",
+                            "(issue #%0d, ARADDR='h%0x). The subordinate answered the later request first, which AXI4 forbids ",
+                            "and which also mis-attributes the response inside the monitors' per-ID join."},
+                           src, id, head.seq, head.addr,
+                           sib[hit_index].seq, sib[hit_index].addr));
+    end
+    else begin
+      //Data did not match and names no sibling: NOT an ordering finding, but
+      //not nothing either. AXI_data_integrity.md F10 shows verify_read() is
+      //dead code for most tests, so this is frequently the only live
+      //memory-content comparison in the run -- it was previously logged at
+      //UVM_MEDIUM, i.e. below this project's UVM_LOW run verbosity, and was
+      //therefore being discarded unread. Raised to a WARNING -- but printed
+      //once per run, because a systematically-mismatching test would otherwise
+      //bury the log with the same finding and the run total is on the
+      //end-of-test summary line anyway.
+      sb_sameid_r_unattributed++;
+      if(sb_sameid_r_unattributed == 1)
+        `uvm_warning("SB_SAMEID_CONTENT_UNATTRIBUTED",
+                     $sformatf({"master_port=%0d RID='h%0x issue #%0d ARADDR='h%0x returned data that matches neither its own address's ",
+                                "written content nor any outstanding same-ID sibling's. This is NOT a same-ID ordering finding -- it is a ",
+                                "read-data integrity question (AXI_data_integrity.md F10). Only the FIRST occurrence is printed; the run total ",
+                                "is on the end-of-test same-ID summary line."},
+                               src, id, head.seq, head.addr))
+    end
+  end
+endfunction : sb_sameid_check_read_completion
+
+//--------------------------------------------------------------------------------------------
 // Function: sb_fifo_residue
 // One analysis fifo's end-of-test occupancy. Reports and returns it.
 //
@@ -3150,6 +4125,46 @@ function void axi4_scoreboard::sb_end_of_test_completeness_check();
                $sformatf("read pipeline unbalanced: %0d AR compared but %0d R compared - %0d read(s) were never data-checked",
                          sb_matched_count[SB_CH_AR], sb_matched_count[SB_CH_R],
                          sb_matched_count[SB_CH_AR] - sb_matched_count[SB_CH_R]));
+
+  //-------------------------------------------------------
+  // C6: same-ID response order (AXI_ooo.md F2 / Phase 3).
+  //     Summary only -- every violation was already reported as it happened.
+  //     "skipped" is not a failure: it counts completions that overtook their
+  //     own issue record, which is a legal scoreboard race, and unanswered
+  //     requests are C4's business, not this checker's.
+  //-------------------------------------------------------
+  if(axi4_env_cfg_h.sb_sameid_order_check_enable) begin
+    int    contested      = 0;
+    int    poisoned_wins  = 0;
+    string content_state  = sb_sameid_content_active ? "on" : "off";
+    foreach(sb_sameid_wr_shadow[a])
+      if(sb_sameid_wr_shadow[a].owner == SB_SAMEID_CONTESTED) contested++;
+    //CONTESTED ownership and window poisoning are both PERMANENT and are not
+    //cleared at reset. Without these two numbers on the line a long run can lose
+    //every bit of its adjudication capability and still look identical to a run
+    //that simply had nothing to adjudicate.
+    foreach(sb_sameid_win_first[w])
+      if(sb_sameid_win_first[w] == SB_SAMEID_WIN_ALIASED) poisoned_wins++;
+    `uvm_info("SB_SAMEID_ORDER",
+              $sformatf({"same-ID response order (READ channel; the write side is not adjudicated -- see the ",
+                         "axi4_scoreboard.sv same-ID header): checked=%0d content_adjudicated=%0d violations=%0d ",
+                         "unattributed=%0d skipped=%0d desync=%0d | content=%s shadow_beats=%0d contested_addrs=%0d ",
+                         "poisoned_windows=%0d/%0d wr_refused=%0d wr_not_okay=%0d capped=%0b"},
+                        sb_sameid_r_checked, sb_sameid_r_content_adj, sb_sameid_r_violations,
+                        sb_sameid_r_unattributed, sb_sameid_r_skipped, sb_sameid_r_desync,
+                        content_state, sb_sameid_wr_shadow.num(), contested,
+                        poisoned_wins, sb_sameid_win_first.num(), sb_sameid_wr_refused, sb_sameid_wr_not_okay,
+                        sb_sameid_shadow_capped), UVM_LOW);
+    //Which gate in sb_sameid_beat_known() actually rejects. A gate at 0 in every
+    //run of a regression is a gate carrying no weight; a gate that dominates is
+    //the one to attack (today that is expected to be window/survivability, i.e.
+    //AXI_data_integrity.md F8).
+    `uvm_info("SB_SAMEID_ORDER",
+              $sformatf({"same-ID content gate rejections: unknown_addr=%0d owner_or_contested=%0d ",
+                         "write_not_before_issue=%0d window_aliased=%0d survivability=%0d"},
+                        sb_sameid_g_unknown, sb_sameid_g_owner, sb_sameid_g_time,
+                        sb_sameid_g_window, sb_sameid_g_surv), UVM_LOW);
+  end
 endfunction : sb_end_of_test_completeness_check
 
 

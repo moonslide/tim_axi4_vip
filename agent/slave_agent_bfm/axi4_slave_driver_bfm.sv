@@ -450,6 +450,18 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
         if(wlast === 1'b1)begin
           // This burst is complete. Hand one completion to the response phase so
           // it can bind a B to THIS transaction (see aw_resp_id_q / w_done_q).
+          // Record the OBSERVED beat count as this struct's AWLEN. The struct
+          // handed in here comes from the subordinate's own (dummy) write-data
+          // transaction and carries AWLEN=0 -- and
+          // axi4_slave_seq_item_converter::to_write_class() uses AWLEN as the
+          // bound of its beat-copy loop, so every beat after beat 0 was dropped
+          // on the way back to the proxy and never reached task_memory_write():
+          // in SLAVE_MEM_MODE only the FIRST beat of a multi-beat write was ever
+          // committed to memory. The data itself was always sampled correctly
+          // (both beats are present in this struct); only the count was missing.
+          // Found by the re-enabled verify_read() checker,
+          // AXI_data_integrity.md F10/F11.
+          data_write_packet.awlen = i - 1;
           w_done_q.push_back(i);
           i=0;
           break;
@@ -491,6 +503,9 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
            // burst finished" signal is the w_done_q entry pushed here.
            mem_wlast[a]            = 1'b1;
            data_write_packet.wlast = 1'b1;
+           // Observed beat count -> AWLEN. See the identical assignment in the
+           // QoS branch above for why (dropped beats after beat 0).
+           data_write_packet.awlen = s;
            w_done_q.push_back(s+1);
            `uvm_info("slave_wlast",$sformatf("sampled_slave_wlast at beat %0d ,a=%0d",s,a),UVM_HIGH);
            break;

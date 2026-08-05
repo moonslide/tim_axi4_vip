@@ -1,0 +1,69 @@
+#------------------------------------------------------------------------------------
+# AXI_ooo.md Phase 4 / P4.1-P4.3 verification list (LSF)
+#
+# Run with:
+#   python3 axi4_regression.py --lsf --test-list ../../testlists/axi4_p4_outstanding.list -p 12 -t 1800
+#
+# Contents, and what each block is evidence FOR:
+#   1. axi4_outstanding_depth_test - the P4.1 credit counter itself. Green here means
+#      the configured depth (4) was actually ACHIEVED, checked in check_phase against
+#      the driver's own high-water marks. The matching RED half of the fail-then-pass
+#      pair lives in axi4_p4_outstanding_legacy.list (same test, +AXI4_OUTSTANDING_LEGACY).
+#   2. P4.3 - the nine tests that set outstanding_write_tx / outstanding_read_tx. Their
+#      driver depth changes from the silent 1 they always ran at to 4 or 8, so they are
+#      the population most exposed to the change. All three bus-matrix modes.
+#   3. A baseline slice of tests that do NOT set the knob, i.e. the "unchanged
+#      behaviour" claim: they resolve to depth 1 exactly as before.
+#------------------------------------------------------------------------------------
+
+# --- 1. the credit counter under test ------------------------------------------------
+axi4_outstanding_depth_test run_cnt=2
+
+# --- 2. P4.3: the outstanding-knob family, all three bus-matrix modes -----------------
+axi4_qos_saturation_stress_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_saturation_stress_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_saturation_stress_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_starvation_prevention_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_starvation_prevention_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_starvation_prevention_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_qos_with_user_priority_boost_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_with_user_priority_boost_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_with_user_priority_boost_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_based_qos_routing_test run_cnt=1 command_add="+BUS_MATRIX_MODE=NONE +define+DISABLE_X_ASSERTIONS"
+axi4_user_based_qos_routing_test run_cnt=1 command_add="+BUS_MATRIX_MODE=4x4 +define+DISABLE_X_ASSERTIONS"
+axi4_user_based_qos_routing_test run_cnt=1 command_add="+BUS_MATRIX_MODE=ENHANCED +define+DISABLE_X_ASSERTIONS"
+axi4_user_parity_protection_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_parity_protection_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_parity_protection_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_passthrough_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_passthrough_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_passthrough_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_security_tagging_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_security_tagging_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_security_tagging_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_protocol_violation_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_protocol_violation_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_protocol_violation_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_user_signal_width_mismatch_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_user_signal_width_mismatch_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_user_signal_width_mismatch_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+# --- 3. baseline slice: tests that never touch the knob (must be unaffected) ----------
+axi4_blocking_write_read_test run_cnt=1
+axi4_non_blocking_write_read_test run_cnt=1
+axi4_blocking_cross_write_read_test run_cnt=1
+axi4_blocking_outstanding_transfer_write_read_test run_cnt=1
+axi4_non_blocking_outstanding_transfer_write_read_test run_cnt=1
+axi4_cross_id_write_reorder_test run_cnt=1
+axi4_cross_id_read_reorder_test run_cnt=1
+axi4_non_blocking_only_write_response_out_of_order_test run_cnt=1
+axi4_non_blocking_only_read_response_out_of_order_test run_cnt=1
+axi4_non_blocking_write_read_response_out_of_order_test run_cnt=1
+axi4_id_multiple_writes_different_awid_test run_cnt=1
+axi4_id_multiple_reads_different_arid_test run_cnt=1
+axi4_basic_reset_test run_cnt=1
+axi4_independent_reset_test run_cnt=1
+axi4_stress_reset_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_write_resp_ooo_empty_queue_test run_cnt=1
+axi4_same_id_nonadjacent_reorder_test run_cnt=1
+axi4_qos_bid_queue_race_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED

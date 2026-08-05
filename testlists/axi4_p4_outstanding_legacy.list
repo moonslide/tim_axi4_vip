@@ -1,0 +1,15 @@
+#------------------------------------------------------------------------------------
+# AXI_ooo.md Phase 4 / P4.1 - the RED half of the fail-then-pass pair.
+#
+#   python3 axi4_regression.py --lsf --test-list ../../testlists/axi4_p4_outstanding_legacy.list -p 2 -t 1800
+#
+# +AXI4_OUTSTANDING_LEGACY forces axi4_master_driver_proxy's three channel credit
+# semaphores back to depth 1/1, i.e. exactly the hardcoded new(1) behaviour that
+# AXI_ooo.md F4 describes, from the SAME binary. axi4_outstanding_depth_test then
+# measures an achieved depth of 1 where it asked for 4 and reports UVM_ERROR.
+#
+# THIS LIST IS EXPECTED TO FAIL. A PASS here would mean the plusarg control stopped
+# working and the fail-then-pass evidence is no longer single-variable. Do NOT add it
+# to any regression list.
+#------------------------------------------------------------------------------------
+axi4_outstanding_depth_test run_cnt=1 command_add=+AXI4_OUTSTANDING_LEGACY

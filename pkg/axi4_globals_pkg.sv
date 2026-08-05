@@ -69,7 +69,14 @@ package axi4_globals_pkg;
   parameter int LENGTH = 8;
 
   //Variable: OUTSTANDING_FIFO_DEPTH
-  //Indicates the fifo depth of outstanding transaction
+  //Upper bound on the outstanding depth a manager agent may be configured for.
+  //Read by axi4_master_driver_proxy::configure_outstanding_credits(), which sizes
+  //the three per-channel credit semaphores from
+  //axi4_master_agent_config::outstanding_write_tx / outstanding_read_tx and clamps
+  //them here with a warning.
+  //(Until AXI_ooo.md Phase 4 / P4.1 this parameter had zero readers repo-wide -
+  //it was the dead half of the equally dead outstanding-depth knob, AXI_ooo.md
+  //F4. Revived rather than deleted, per VIP_future.md ST-A2.)
   parameter int OUTSTANDING_FIFO_DEPTH = 16;
   
   //-------------------------------------------------------

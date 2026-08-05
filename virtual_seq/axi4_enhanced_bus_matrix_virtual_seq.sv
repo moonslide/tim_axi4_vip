@@ -319,7 +319,8 @@ task axi4_enhanced_bus_matrix_virtual_seq::perform_write_operation(int master_id
     // Store data in bus matrix reference model
     full_data = '0;
     full_data[63:0] = data; // Place our 64-bit data in lower bits
-    axi4_bus_matrix_h.store_write(addr, full_data);
+    // Byte granular store (F8): 8 bytes at addr..addr+7.
+    axi4_bus_matrix_h.store_write_bytes(addr, full_data, {STROBE_WIDTH{1'b1}}, 8);
   end else if (expected_resp_str != "OKAY") begin
     // Expected failure - this is correct behavior
     success = 0;
@@ -396,7 +397,9 @@ task axi4_enhanced_bus_matrix_virtual_seq::perform_read_operation(int master_id,
     success = 1;
     // For successful reads, get data from bus matrix reference model
     // This ensures consistency with what was written
-    axi4_bus_matrix_h.load_read(addr, full_data);
+    // 8 bytes at addr..addr+7. load_read() is byte granular now (F8), so a
+    // caller that wants a 64-bit word has to say so explicitly.
+    axi4_bus_matrix_h.load_read_bytes(addr, full_data, 8);
     data = full_data[63:0]; // Extract lower 64 bits
   end else if (expected_resp_str != "OKAY") begin
     // Expected failure - this is correct behavior
@@ -415,7 +418,9 @@ task axi4_enhanced_bus_matrix_virtual_seq::perform_backdoor_write(int slave_id, 
   bit [1023:0] full_data; // Assuming DATA_WIDTH = 1024
   full_data = '0;
   full_data[63:0] = data;
-  axi4_bus_matrix_h.store_write(addr, full_data);
+  // 8 bytes at addr..addr+7. store_write() is byte granular now (F8), so a
+  // whole-word backdoor preload has to say so explicitly.
+  axi4_bus_matrix_h.store_write_bytes(addr, full_data, {STROBE_WIDTH{1'b1}}, 8);
   
   // Also write to scoreboard slave memory if available
   if (axi4_scoreboard_h.axi4_slave_mem_h[slave_id] != null) begin

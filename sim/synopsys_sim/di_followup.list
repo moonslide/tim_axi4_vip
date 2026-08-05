@@ -1,0 +1,18 @@
+# Follow-up scoped list for the F8/F10 data-integrity pass.
+#  * axi4_enhanced_bus_matrix_test / axi4_all_master_slave_access_test exercise
+#    virtual_seq/axi4_enhanced_bus_matrix_virtual_seq.sv's backdoor load path,
+#    which was moved to the explicit multi-byte bus-matrix API AFTER
+#    di_sample.list's binary had already been compiled.
+#  * the three multi-beat wstrb tests and the refused-write probe re-confirmed
+#    through the regression runner rather than a bare simv.
+#  * axi4_outstanding_depth_test TIMEOUT'd at 1200s in di_sample.list under heavy
+#    machine contention; re-run with a longer timeout to separate infra from bug.
+axi4_enhanced_bus_matrix_test
+axi4_all_master_slave_access_test command_add="+BUS_MATRIX_MODE=ENHANCED"
+axi4_wstrb_alternating_test
+axi4_wstrb_random_burst_test
+axi4_wstrb_single_bit_test
+axi4_wstrb_all_ones_test
+axi4_refused_write_shadow_test
+axi4_same_id_nonadjacent_reorder_test
+axi4_outstanding_depth_test
