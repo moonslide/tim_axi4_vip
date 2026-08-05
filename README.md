@@ -400,8 +400,4 @@ description comment above it.
 | File | Contents |
 |---|---|
 | `claude.md` | 10×10 access matrix + address map — authoritative spec |
-| `CLAUDE.md` | build recipes, publish policy, iron rules |
-| `TRACKB_DEBUG_NOTES.md` | fabric IP integration evidence chain and open items |
-| `VIP_future.md` | improvement plan |
-| `.claude/docs/known-landmines.md` | traps earned in this repo, with reproduction |
 | `AXI-Case-list.csv`, `doc/testcase_matrix.csv` | case status — verify before trusting |

@@ -16,3 +16,12 @@ sim/synopsys_sim/vc_hdrs.h
 *.vpd
 *.fsdb
 *.vdb
+
+# ---------------------------------------------------------------------------
+# Claude/Codex agent tooling — kept locally for continued AI-assisted work,
+# not published to GitHub.
+# ---------------------------------------------------------------------------
+.claude/
+CLAUDE.md
+AGENTS.md
+.mcp.json

@@ -32,7 +32,11 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 #   run with +BUS_MATRIX_MODE=ENHANCED
 #   optional +define+FABRIC_IP_DEBUG_PROBE for fabric-boundary tracing
 
-# fabric-only sanity (no UVM): bash ../run_fabric_smoke.sh   # expect 3/3 PASS
+# fabric-only sanity (no UVM), ALSO run from sim/synopsys_sim/ (the script's own
+# header says so; it resolves its file lists relative to that cwd):
+#   bash ../run_fabric_smoke.sh          # expect 3/3 PASS
+# Note it compiles the 10x10 wrapper only (fabric_ip_rtl.f) — a PASS says nothing
+# about the 4x4 drop.
 ```
 
 ### Test mechanics
@@ -40,8 +44,20 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
 - Pass criteria: `UVM_ERROR : 0` summary AND perf-metrics
   `TEST RESULT: PASS` (report_phase consumes deadlock/livelock flags for
   EVERY test — `env/axi4_performance_metrics.sv:483-509`).
-- Regression lists: `sim/axi4_transfers_regression.list` AND
-  `testlists/axi4_transfers_regression.list` (two copies — keep in sync).
+  Both halves are load-bearing and neither implies the other: `TEST RESULT: PASS`
+  never consults the UVM error count (landmine 39), and a run that dies at time 0
+  reports `UVM_ERROR : 0` (landmine 15). Read the run's own UVM summary first.
+- Regression lists — TWO DIFFERENT LISTS, not synced copies (corrected 2026-08-05):
+  * `testlists/axi4_transfers_regression.list` is the **authoritative default**:
+    `sim/synopsys_sim/axi4_transfers_regression.list` is a SYMLINK to it, so this
+    is what `axi4_regression.py` runs when no `--test-list` is given.
+    301 entries / 180 distinct tests.
+  * `sim/axi4_transfers_regression.list` is a smaller, separate set
+    (151 entries / 139 distinct tests) used when passed explicitly.
+  * Content relationship, measured: testlists ⊃ sim except for exactly one test
+    (`axi4_write_test`). So a test registered ONLY in `sim/...` will never run by
+    default — register new tests in `testlists/...` first, and in both when the
+    test is meant for the smaller sample too.
 - Timeout defines are doubly defined (`include/` 10s vs `test/` 10ms) —
   include-order decides; see landmines.
 

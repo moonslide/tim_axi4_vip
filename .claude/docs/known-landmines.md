@@ -390,3 +390,316 @@ Format: Symptom → Cause → Fix → **Trap**. Landmines are EARNED in this rep
 - **Trap**: when an attribute is genuinely unknowable at a boundary, model it as
   unknown. Substituting a guess turns a missing check into a wrong one, and a
   wrong check fails on legal traffic.
+
+## 28. A memory model whose STORAGE granularity differs from its CALLERS' access granularity silently returns a repeated constant (verified 2026-08-05)
+- `bm/axi4_bus_matrix_ref.sv` stored one `DATA_WIDTH`-wide entry per
+  `DATA_WIDTH`-ALIGNED address (128 bytes at the default 1024-bit bus), while
+  every datapath caller -- `slave/axi4_slave_driver_proxy.sv::task_memory_write`
+  and `::task_memory_read` -- has always worked ONE BYTE AT A TIME, handing in a
+  zero-extended byte in `data[7:0]` and consuming `data[7:0]` on the way back.
+- Each byte of a burst therefore overwrote the WHOLE aligned window with a
+  zero-extended copy of itself, only the last byte survived, and every read
+  address inside that window returned it. Measured: `0xCAFEBABE` written,
+  `0xCACACACA...CA` read back; `0xDEADBEEF` -> `0xDEDEDEDE`.
+- It was invisible for a year because the only live read-data check compared the
+  master monitor's RDATA against the slave monitor's RDATA, and in the 1:1 build
+  (`top/hdl_top.sv`) those are the SAME physical wire. Both sides see the same
+  wrong value and the comparison passes.
+- Fix: `slave_mem` is `bit [7:0]` keyed by BYTE address;
+  `store_write()`/`load_read()` are byte granular; explicit
+  `store_write_bytes()`/`load_read_bytes()` exist for the few callers that
+  really mean a word.
+- **Trap**: when a model and its callers disagree about granularity, the model
+  does not error -- it returns plausible-looking data. Before trusting any
+  memory model, write two DIFFERENT bytes into one alignment window and read
+  both back. If they come back equal, the model is word-granular and every
+  narrow-access test on it is vacuous.
+
+## 29. A per-beat loop bounded by a field the struct never carried drops every beat but the first (verified 2026-08-05)
+- `axi4_slave_seq_item_converter::to_write_class()` copies write beats with
+  `for(b = 0; b <= input_conv_h.awlen; b++)`. On the slave DRIVER path the
+  struct it is given comes from the subordinate's own dummy write-data
+  transaction, whose `awlen` is 0 -- the write-data channel has no AWLEN of its
+  own. The BFM (`agent/slave_agent_bfm/axi4_slave_driver_bfm.sv::
+  axi4_write_data_phase`) sampled every beat correctly but never recorded HOW
+  MANY, so the loop copied exactly one.
+- Consequence: in `SLAVE_MEM_MODE` only beat 0 of any multi-beat write was ever
+  committed to memory. Measured on `axi4_wstrb_alternating_test`: 24
+  `INCR: Stored byte` lines where 32 were due, with the BFM's own struct dump
+  showing `awlen:'h0` beside a `wstrb` value that plainly contains both beats.
+- It was undetectable until `verify_read()` was re-enabled (AXI_data_integrity.md
+  F10) -- the same-wire RDATA self-comparison cannot see missing memory content.
+- Fix: `data_write_packet.awlen = <observed beats - 1>` at WLAST, in BOTH
+  branches of `axi4_write_data_phase` (QoS and non-QoS). The monitor path was
+  already correct -- it takes the beat count from the ADDRESS packet.
+- **Trap**: a copy loop bounded by a field that arrives on a DIFFERENT channel
+  than the data it bounds will silently truncate. Bound it by something the
+  producer actually observed (here, WLAST), or assert that the field is present.
+
+## 30. A package-scope queue shared by every agent instance (QoS BID) (FIXED 2026-08-05)
+- Symptom: `axi4_qos_*` tests dropping B responses;
+  `SB_INCOMPLETE_OUTSTANDING_AWID` / `SB_INCOMPLETE_PIPELINE` scoreboard errors
+  (measured `UVM_ERROR : 4`, 6 dropped B responses, 3 seeds).
+- Cause: the subordinate's QoS branch built BID from
+  `awid_queue_for_qos.pop_front()`. `awid_queue_for_qos` is declared at PACKAGE
+  scope (`pkg/axi4_globals_pkg.sv:316`), so ONE queue is shared by all 10x10
+  master/slave pairs; every master pushes into it
+  (`master/axi4_master_driver_proxy.sv:634-654`) with no cross-agent
+  synchronisation. One manager's AWID could therefore be consumed as another
+  pair's BID, and the pop had no `size()` guard — an empty pop silently drives
+  BID = 0.
+- Fix: the subordinate sources BID from the AWID **it sampled on its own AW
+  channel** (`slave/axi4_slave_driver_proxy.sv:485`,
+  `struct_write_packet.bid = struct_write_packet.awid`). The shared queue is
+  still drained (guarded `pop_front()`, `:478-483`) purely because
+  `master/axi4_master_driver_proxy.sv:620` reads its TAIL for back-to-back QoS
+  arbitration — draining with `delete()` instead would have broken that.
+- Evidence: 3 seeds red → 3 seeds green with a single-variable no-skew control;
+  28-test baseline 28/28; fabric smoke 3/3. `test/axi4_qos_bid_queue_race_test.sv`
+  is the durable detector, registered in both regression lists.
+  Full chain: `AXI_ooo.md` F1.
+- **Trap**: a `[$]` queue declared in a package is ONE object for the whole
+  simulation, not one per agent. Before using any package-scope variable as
+  per-transaction state, ask how many agents write it. And when you change how a
+  queue is drained, grep for every OTHER reader of that queue first — this fix's
+  first attempt used `find_first_index`+`delete()` and silently changed the tail
+  the manager's arbitration depends on.
+
+## 31. A `join` added to fix a race pinned a queue's depth to 1 and made a whole feature vacuous (OPEN — F7)
+- Symptom: none. `axi4_cross_id_write_reorder_test`,
+  `axi4_non_blocking_only_write_response_out_of_order_test` and
+  `axi4_non_blocking_write_read_response_out_of_order_test` all report
+  `UVM_ERROR : 0` / `TEST RESULT: PASS` while returning BIDs in exact issue order
+  (measured 0,1,2,…,7 — the exact condition the first test's own header defines
+  as "proved nothing").
+- Cause: `slave/axi4_slave_driver_proxy.sv`'s write fork (branches
+  WRITE_ADDRESS / WRITE_DATA / WRITE_RESPONSE) is closed by `join` — ALL
+  branches — introduced by `238ffbc` (2026-08-03) to fix a BVALID-not-driven
+  race, replacing a `join_any`. Side effect: the response-ID queue's push and
+  pop are forced into the same loop iteration, so its depth at pop time is
+  structurally 1. `shuffle()` on a 1-element queue reorders nothing, the same-ID
+  continuation branch is dead code, and `ONLY_WRITE_RESP_OUT_OF_ORDER` is a
+  no-op. The read side kept `join_any` plus an explicit backlog-accumulation
+  gate — that asymmetry is why read-OOO works and write-OOO does not.
+- Status: OPEN by design. Relaxing the join is `AXI_ooo.md` P4.5 and must be its
+  own design pass — the file's own comments record two prior attempts/reverts
+  here (see also landmine 13, the crash the earlier `join_any`→`join` change
+  exposed). Two things become live the moment it is relaxed: the F1 hardening
+  guards, and the BID/BRESP pairing rule in landmine 32.
+- **Trap**: a structural constant is not a passing test. If a mode's whole point
+  is a non-trivial queue depth, a test for it must ASSERT the depth it achieved
+  (or the reorder it observed), never just exit clean — otherwise a synchronisation
+  fix elsewhere can silently delete the feature and every test stays green.
+  Reclassify such tests PASS-BUT-VACUOUS, do not count them as coverage.
+
+## 32. Two fields of ONE response chosen by two independent orderings (FIXED 2026-08-05)
+- Cause: the first Phase-2 write-side redesign gave pending same-ID entries a
+  per-ID COUNT plus a random arbiter to pick BID, while BRESP kept coming from
+  the strict-FIFO write-address order. The two selections were never rebound to
+  each other. Counterexample: AW order (ID=A→legal→OKAY), (ID=B→illegal→DECERR)
+  can emit `BID=B,BRESP=OKAY` then `BID=A,BRESP=DECERR` — each response now
+  belongs to the other transaction.
+- It was unreachable at the time only because landmine 31's `join` caps the
+  write backlog at 1 (`OOO_ARB` instrumentation: `candidates=1` on every write
+  arbitration in every run). A latent bug masked by an unrelated structural
+  accident is still a bug.
+- Fix: `bid_local = local_slave_addr_tx.awid`
+  (`slave/axi4_slave_driver_proxy.sv:728`) — BID now comes from the same
+  transaction BRESP is computed from, so divergence is impossible by
+  construction; ~60 lines of arbiter machinery deleted rather than guarded.
+  Verified empirically: 44/44 driven `bid_local` values match the BFM's
+  independently protocol-bound `this_awid`, and the BID completion histogram is
+  byte-identical before/after. `AXI_ooo.md` Phase 2 execution update.
+- **Trap**: when one bus response carries several fields, ONE selection must
+  choose the transaction and every field must be read out of it. Any design
+  where two fields of the same beat are picked by two orderings is a
+  mis-attribution waiting for enough backlog to show up.
+
+## 33. A timeout that `break`s past an assignment leaves a null handle (FIXED 2026-08-05)
+- `slave/axi4_slave_driver_proxy.sv`: a W beat with no corresponding AW (or an
+  AW more than 50000 cycles late) `break`s out of the wait without ever
+  assigning `local_slave_addr_tx`; the next line dereferences it → UVM_FATAL
+  whose message names the dereference, not the missing AW. Most likely trigger
+  is a mid-burst reset or a fabric-IP scenario, where the subordinate BFM's
+  reset clears `aw_capture_q`/`aw_resp_id_q`/`w_done_q` and can desynchronise
+  AW/W pairing across the boundary.
+- Fix: an explicit `uvm_fatal` naming the real cause ("no AW for this W") on the
+  timeout path, before any dereference (`:511`). `AXI_ooo.md` F11.
+- **Trap**: this is landmine 11's Trap in its quiet form — the timeout path here
+  does not fabricate a transaction, it falls into code that assumes the wait
+  SUCCEEDED. After adding any bounded wait, read every line between the `break`
+  and the end of the block and ask which of them the timeout just invalidated.
+
+## 34. A checker's own fail-then-pass evidence says nothing about its false positives (verified 2026-08-05)
+- The Phase-3 same-ID order checker passed its red/green gate on the first try
+  (5/5 seeds caught F2, control clean, 28-test baseline green) and was still
+  refuted by review, twice, over three fix passes. Real defects found AFTER the
+  green evidence: one of its two mechanisms (SHAPE) was structurally dead code
+  and could only ever have produced a FALSE conviction; its content shadow was
+  keyed by address alone, so cross-master writes or a legal read/write race
+  could indict an innocent sibling (45% of checks in one PASSING test already
+  reached the sibling-search stage); its skip path left the per-(port,id) head
+  permanently one entry stale, i.e. a systematic false-violation generator; and
+  it shadowed writes the subordinate never committed. Each of the last three was
+  demonstrated on a directed probe (`test/axi4_refused_write_shadow_test.sv`
+  convicts an innocent sibling TWICE under the previous gate, with
+  `RESP_IN_ORDER` and nothing reordered anywhere).
+- **Trap**: red-then-green proves a checker has TEETH. It does not prove the
+  teeth only bite the guilty. A checker needs a second, opposite body of
+  evidence: run it across a broad sample of tests that should be silent and
+  require zero output, and build a directed probe for each false-positive route
+  you can name. Also count what the checker actually ADJUDICATED — a summary
+  line saying `checked=24 content_adjudicated=0` means the run did accounting
+  only, and "checker enabled" must never be read as "traffic checked".
+
+## 35. `axi4_regression.py` reported PASS before it read the UVM summary (FIXED 2026-08-05)
+- Symptom: a test with `UVM_ERROR : 2` in its own log filed under `pass_logs`
+  (measured: `axi4_refused_write_shadow_test` in
+  `regression_result_20260805_121616`, two `SB_SAMEID_ORDER_VIOLATION` lines).
+- Cause: the verdict function scanned `success_patterns` FIRST and returned
+  `'PASS', None, 0, 0` on the first regex hit ANYWHERE in the log. That list
+  contains `UVM_INFO.*PASSED` matched case-insensitively, and
+  `env/axi4_performance_metrics.sv:495` prints
+  `[ERROR_INJECT] Error injection test PASSED` — one narrow internal sub-check —
+  so it buried the UVM_ERROR summary check that ran afterwards.
+- Scope, measured rather than estimated: a sweep of all 1761 archived regression
+  logs found **16** logs whose own summary reported `UVM_ERROR > 0` filed as
+  PASS; and ZERO logs that would change verdict from reordering the checks.
+- Fix: the UVM report summary is consulted first and decides; `success_patterns`
+  survives only as the fallback for runs that never reached `report_phase`.
+  Applied to all THREE copies of this function — `axi4_regression.py`,
+  `axi4_regression_makefile.py`, `axi4_regression_makefile_runfolder.py`.
+- **Trap**: any pass/fail counted from a regression summary produced BEFORE
+  2026-08-05 must be re-derived from the logs' own `UVM_ERROR :` lines. And when
+  a repo has three near-copies of its runner, a fix to one is a fix to none —
+  grep for the function body, not the filename.
+
+## 36. Concurrent `axi4_regression.py` runs destroy each other's results (OPEN)
+- `axi4_regression.py` stages every job into a SHARED `sim/run_folder_00..11`
+  pool and cleans that pool at startup, so two runs — even from the same user on
+  the same machine — silently overwrite each other's logs. It happened twice in
+  one session on 2026-08-05: once self-inflicted (three drivers launched from a
+  single shell command), once when another session started a list while a
+  control run was mid-flight, which is why that control has only a local-run log.
+- Related, same class: a regression launched detached (`setsid`) with an
+  uncommitted working tree does `rm -rf` + recompile PER JOB over hours, so any
+  source edit during that window mixes code versions into one result set with no
+  way to tell afterwards. One such run was deliberately killed for this reason.
+- Until a per-run workspace exists: `ps aux | grep axi4_regression.py` before
+  launching, do not detach a run from the agent that must interpret it, and do
+  not edit VIP source while one is in flight.
+- **Trap**: a regression result directory carries a timestamp, which reads like
+  isolation. It is not — the WORK directory is shared and unversioned.
+
+## 37. Manager BFM: credit-1 claiming + RID-specific wait + bounded collector = silent read-data loss (MITIGATED 2026-08-05)
+- Symptom: `AXI4_MASTER_DRIVER_BFM ... timeout waiting for a read burst with
+  rid=0x0 - read data phase abandoned` after 50000 cycles, on a legal reorder;
+  the run then COMPLETES and reports `TEST RESULT: PASS` (see landmine 39).
+  Hit live in tonight's final full regression: `axi4_same_id_nonadjacent_reorder_test_1`,
+  seed 1413795560, `UVM_ERROR:1`.
+- Mechanism, fully quantified 2026-08-05: the manager claims read data one
+  transaction at a time in issue order (`outstanding_read_credits` default 1),
+  and each claim task waits on ONE specific RID. Bursts for other RIDs pile into
+  the bounded collector (`R_ACCEPT_DEPTH`,
+  `agent/master_agent_bfm/axi4_master_driver_bfm.sv:381`), RREADY deasserts, the
+  R channel wedges head-of-line until the FIXED 50000-cycle escape; the stale
+  outstanding entry is then deleted, so when the real burst finally arrives it is
+  discarded as "answers no read outstanding". Net: silent data loss, not a hang.
+- Proven pre-existing and NOT caused by the same-ID/OOO rework: a 20-seed A/B
+  fired the SAME timeout on 8/20 seeds with the PRE-Phase-2 subordinate versus
+  3/20 after it; an arbiter trace shows the subordinate dispatched the awaited
+  ARID 2 clocks AFTER each manager timeout (`candidates=1` — it was never
+  starved). Causality runs manager → subordinate.
+- Why it matters beyond the VIP: a real DUT is ALLOWED to reorder this way, so a
+  legal interconnect can trigger it. `AXI_ooo.md` F2's P0.2 follow-up.
+- **Mitigation landed (2026-08-05)**: `R_ACCEPT_DEPTH` raised 8 → 64
+  (`agent/master_agent_bfm/axi4_master_driver_bfm.sv:381`) — a single-variable
+  change, no credit/semaphore semantics touched. Fail-then-pass: same seed
+  (1413795560), same test, `UVM_ERROR:1` (rid=0x0 timeout) → `UVM_ERROR:0`
+  (`TEST RESULT: PASS`), `SB_SAMEID_ORDER checked=24 violations=0` unchanged
+  before/after (confirms the fix touches only the manager-side claim deadlock,
+  not the F2 checking logic). Verified with a 27-run LSF sample covering all 3
+  modes of the failing test plus cross-ID reorder, OOO, QoS BID race,
+  outstanding-depth, id-multiple-different-id and outstanding-transfer tests:
+  27/27 PASS, no regressions. `run_fabric_smoke.sh`: 3/3 PASS.
+  `sim/synopsys_sim/r37_red_seed1413795560.log` /
+  `r37_green_seed1413795560.log`, `regression_result_20260805_205709/`.
+- **Still not a structural guarantee**: raising the depth does not make the
+  collector unbounded — an adversarial DUT could in principle still queue more
+  distinct-RID bursts than the new depth before delivering the awaited one.
+  The real fix (crediting AR issuance itself so at most `outstanding_read_credits`
+  reads are ever truly in flight, matching claim-task concurrency to what the
+  wire can produce) remains tracked as `VIP_future.md` FW-6 / this landmine —
+  now a lower-priority hardening item rather than an open failure mode, since
+  the practical trigger window this bench can produce is now well clear of the
+  new depth.
+- **Trap**: a bounded response collector, a per-ID wait and a credit of 1 are
+  each defensible alone; together they are a deadlock the protocol permits any
+  DUT to provoke. When reviewing a manager BFM, check what happens to a response
+  that arrives while the only claim task is watching a different ID.
+
+## 38. Unconstrained random addresses are harmless in NONE mode and DECERR everywhere else (FIXED for one test; pattern is repo-wide)
+- Symptom: `axi4_all_master_slave_access_test +BUS_MATRIX_MODE=ENHANCED` fails
+  seed-dependently on `axi4_performance_metrics.sv:507` "Acceptance criteria not
+  met" / "Protocol Issues: 4", while the same test in its default NONE mode
+  passes.
+- Cause: it drove `axi4_master_bk_write_seq`/`_read_seq`, which randomise
+  AxADDR across the whole `ADDRESS_WIDTH` space with only a size-alignment soft
+  constraint. In NONE mode `axi4_bus_matrix_ref::decode()` maps EVERY address to
+  slave 0 and answers OKAY unconditionally, so the defect is invisible; under
+  BASE/ENHANCED the same addresses land in unmapped space and the matrix
+  correctly answers DECERR.
+- Fix: dedicated sequences in
+  `virtual_seq/axi4_virtual_all_master_slave_access_seq.sv` constrain AxADDR to
+  the window the ACTIVE bus-matrix mode mapped to the target slave, read from
+  `master_min/max_addr_range_array` (the same source the mem-mode sequences
+  use), with 4 KiB of headroom for the longest burst. Verified by
+  `sim/synopsys_sim/asmsa_fix.list` (the two exact failing seeds + all three bus
+  modes + the neighbour tests that share the unconstrained pattern + the
+  boundary/DECERR family that must stay red).
+- Scope, not yet cleaned up: repo-wide only **28 of 172** master sequences bind
+  `araddr` to a determined value at all (~16%), and 12 of those 28 sit in the
+  address window `AXI_data_integrity.md` F9 shows is outside every active
+  slave's decode range — so at most ~9% of master sequences could support a
+  read-after-write check even in principle.
+- **Trap**: NONE mode is not a weaker version of the others, it is a DIFFERENT
+  decode that cannot fail. A sequence proven in NONE mode has proven nothing
+  about its addresses. Run any address-sensitive test in ENHANCED at least once
+  before believing it.
+
+## 39. `TEST RESULT: PASS` does not mean `UVM_ERROR : 0` (verified repeatedly 2026-08-05)
+- `env/axi4_performance_metrics.sv`'s `report_phase` prints its own
+  `TEST RESULT: PASS/FAIL` from the deadlock/livelock flags and its acceptance
+  criteria. It does NOT consult the UVM error count. Measured on 45 consecutive
+  runs of the F2 repro that were each silently dropping read bursts (landmine
+  37): every one printed `TEST RESULT: PASS`.
+- The converse trap is landmine 15: a run that dies at time 0 prints
+  `UVM_ERROR : 0`. So neither half is sufficient alone.
+- **Trap**: the project pass criterion is BOTH parts, in this order — read
+  `UVM_ERROR :` and `UVM_FATAL :` from the run's own UVM summary first, then
+  require `TEST RESULT: PASS`. This is stated in CLAUDE.md as an AND and was
+  still misread several times in one session, because the perf-metrics line is
+  the loudest thing near the end of the log.
+
+## 40. A checker commented out with "// will fixed later" stayed dead for a year (FIXED 2026-08-05)
+- `env/axi4_scoreboard.sv::verify_read()` — the only reader of `expected_mem`,
+  and the only content check of read data against what was written — had its
+  call site commented out by `f6f93b6` (2025-06-27), the day AFTER it was added.
+  Git archaeology shows why: that commit moved a variable out of a
+  declaration-after-statement position to fix a COMPILE error, and disabled the
+  call in the same hunk. Not a functional decision, a make-it-compile sweep.
+- Consequence: `wstrb_compare_enable` — the knob 8 tests opt into believing they
+  get data checking — was a complete no-op, and the only live read-data check
+  compared the master monitor's RDATA against the slave monitor's RDATA, which
+  in the 1:1 build (`top/hdl_top.sv`) are the SAME physical wire via a
+  continuous assign. Not "blind to shared corruption": a tautology. It is what
+  hid landmines 28 and 29 for a year.
+- Re-enabling it needed two of its own bugs fixed first (a class-scope
+  `exp_val` leaking state across calls; a full-`DATA_WIDTH` compare treating
+  never-written bytes as expected-zero, i.e. a false-positive engine) — see
+  `AXI_data_integrity.md` F10.
+- **Trap**: audit what a bench CHECKS by grepping for live call sites of its
+  checkers, never by the presence of the checker function (compare landmine 25,
+  the same shape for assertions). And treat "// will fix later" in a commit that
+  fixes a COMPILE error as a defect report: nobody was measuring whether the
+  check still ran.
