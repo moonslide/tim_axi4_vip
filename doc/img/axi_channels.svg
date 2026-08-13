@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">AXI4 five-channel model</title>
+  <desc id="desc">Write address and data travel from manager to subordinate, write response returns, read address travels to subordinate, and read data returns. Each side has five monitor streams.</desc>
+  <defs>
+    <marker id="right" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#2563eb"/></marker>
+    <marker id="left" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7c3aed"/></marker>
+    <marker id="green" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#059669"/></marker>
+    <style>
+      text{font-family:Inter,"DejaVu Sans",Arial,sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:15px;font-weight:700}.t{font-size:12px}.s{font-size:10px;fill:#536173}.endpoint{fill:#f8fafc;stroke:#475569;stroke-width:1.7}.aw{fill:#e8f1ff;stroke:#2563eb}.w{fill:#e0f2fe;stroke:#0284c7}.b{fill:#f2eafe;stroke:#7c3aed}.ar{fill:#e8f1ff;stroke:#2563eb}.r{fill:#f2eafe;stroke:#7c3aed}.channel{stroke-width:1.4}.fw{fill:none;stroke:#2563eb;stroke-width:3;marker-end:url(#right)}.rv{fill:none;stroke:#7c3aed;stroke-width:3;marker-end:url(#left)}.mon{fill:none;stroke:#059669;stroke-width:1.8;marker-end:url(#green)}.monitor{fill:#e9fbf4;stroke:#059669;stroke-width:1.3}
+    </style>
+  </defs>
+  <rect width="1200" height="650" fill="#fff"/>
+  <text class="title" x="40" y="42">AXI4 five independent channels</text>
+  <text class="s" x="40" y="62">Payload and VALID travel from the producer; READY travels in the opposite direction. A transfer occurs only on VALID &amp;&amp; READY.</text>
+
+  <rect class="endpoint" x="40" y="96" width="205" height="416" rx="12"/>
+  <text class="h" x="142" y="126" text-anchor="middle">Manager / initiator</text>
+  <text class="t" x="142" y="151" text-anchor="middle">AW, W, AR producer</text>
+  <text class="t" x="142" y="172" text-anchor="middle">B, R consumer</text>
+  <text class="s" x="142" y="202" text-anchor="middle">separate read/write sequencers</text>
+  <text class="s" x="142" y="220" text-anchor="middle">outstanding-credit control</text>
+
+  <rect class="endpoint" x="955" y="96" width="205" height="416" rx="12"/>
+  <text class="h" x="1057" y="126" text-anchor="middle">Subordinate / target</text>
+  <text class="t" x="1057" y="151" text-anchor="middle">AW, W, AR consumer</text>
+  <text class="t" x="1057" y="172" text-anchor="middle">B, R producer</text>
+  <text class="s" x="1057" y="202" text-anchor="middle">reactive memory default</text>
+  <text class="s" x="1057" y="220" text-anchor="middle">or sequence-driven response</text>
+
+  <rect class="channel aw" x="330" y="94" width="540" height="72" rx="8"/>
+  <text class="h" x="350" y="118">AW — write address</text>
+  <text class="t" x="350" y="140">ID · ADDR · LEN · SIZE · BURST · LOCK · CACHE · PROT · QOS · REGION · USER</text>
+  <text class="s" x="850" y="157" text-anchor="end">AWVALID → · AWREADY ←</text>
+  <path class="fw" d="M245 130H330"/><path class="fw" d="M870 130H955"/>
+
+  <rect class="channel w" x="330" y="182" width="540" height="72" rx="8"/>
+  <text class="h" x="350" y="206">W — write data</text>
+  <text class="t" x="350" y="228">DATA · STRB · LAST · USER</text>
+  <text class="s" x="850" y="245" text-anchor="end">WVALID → · WREADY ← · no WID in AXI4</text>
+  <path class="fw" d="M245 218H330"/><path class="fw" d="M870 218H955"/>
+
+  <rect class="channel b" x="330" y="270" width="540" height="72" rx="8"/>
+  <text class="h" x="350" y="294">B — write response</text>
+  <text class="t" x="350" y="316">ID · RESP · USER</text>
+  <text class="s" x="850" y="333" text-anchor="end">BVALID ← · BREADY →</text>
+  <path class="rv" d="M330 306H245"/><path class="rv" d="M955 306H870"/>
+
+  <rect class="channel ar" x="330" y="358" width="540" height="72" rx="8"/>
+  <text class="h" x="350" y="382">AR — read address</text>
+  <text class="t" x="350" y="404">ID · ADDR · LEN · SIZE · BURST · LOCK · CACHE · PROT · QOS · REGION · USER</text>
+  <text class="s" x="850" y="421" text-anchor="end">ARVALID → · ARREADY ←</text>
+  <path class="fw" d="M245 394H330"/><path class="fw" d="M870 394H955"/>
+
+  <rect class="channel r" x="330" y="446" width="540" height="72" rx="8"/>
+  <text class="h" x="350" y="470">R — read data</text>
+  <text class="t" x="350" y="492">ID · DATA · RESP · LAST · USER</text>
+  <text class="s" x="850" y="509" text-anchor="end">RVALID ← · RREADY →</text>
+  <path class="rv" d="M330 482H245"/><path class="rv" d="M955 482H870"/>
+
+  <rect class="monitor" x="40" y="548" width="410" height="70" rx="8"/>
+  <text class="h" x="245" y="574" text-anchor="middle">Manager monitor proxy</text>
+  <text class="t" x="245" y="597" text-anchor="middle">AW · W · B · AR · R analysis ports</text>
+  <rect class="monitor" x="750" y="548" width="410" height="70" rx="8"/>
+  <text class="h" x="955" y="574" text-anchor="middle">Subordinate monitor proxy</text>
+  <text class="t" x="955" y="597" text-anchor="middle">AW · W · B · AR · R analysis ports</text>
+  <path class="mon" d="M142 512V548"/><path class="mon" d="M1057 512V548"/>
+  <text class="s" x="600" y="574" text-anchor="middle">AW→W FIFO association</text>
+  <text class="s" x="600" y="594" text-anchor="middle">B/R joined through per-ID pools</text>
+</svg>

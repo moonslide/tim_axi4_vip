@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">AXI4 VIP build and run paths</title>
+  <desc id="desc">Baseline, Track-B 4 by 4, Track-B 10 by 10 and fabric-only inputs enter separate VCS builds, produce logs and optional FSDB or coverage, and are evaluated by common gates plus scenario-specific evidence.</desc>
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9Z" fill="#2563eb"/></marker>
+    <style>
+      text{font-family:Inter,"DejaVu Sans",Arial,sans-serif;fill:#172033}.title{font-size:24px;font-weight:700}.h{font-size:14px;font-weight:700}.t{font-size:11px}.s{font-size:10px;fill:#536173}.base{fill:#eff6ff;stroke:#2563eb;stroke-width:1.4}.track{fill:#fff1f2;stroke:#dc2626;stroke-width:1.4}.smoke{fill:#fff7ed;stroke:#ea580c;stroke-width:1.4}.step{fill:#f8fafc;stroke:#64748b;stroke-width:1.4}.artifact{fill:#e9fbf4;stroke:#059669;stroke-width:1.4}.warn{fill:#fff8e1;stroke:#ca8a04;stroke-width:1.3}.flow{fill:none;stroke:#2563eb;stroke-width:2;marker-end:url(#a)}.dash{fill:none;stroke:#64748b;stroke-width:1.6;stroke-dasharray:5 4;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect width="1200" height="650" fill="#fff"/>
+  <text class="title" x="40" y="42">Build → run → evidence</text>
+  <text class="s" x="40" y="62">Choose the file list first. Compile-time DUT selection cannot be repaired with a runtime plusarg.</text>
+
+  <rect class="base" x="40" y="100" width="230" height="98" rx="9"/>
+  <text class="h" x="155" y="127" text-anchor="middle">Baseline VIP vs VIP</text>
+  <text class="t" x="155" y="152" text-anchor="middle">sim/axi4_compile.f</text>
+  <text class="s" x="155" y="176" text-anchor="middle">direct manager[i] ↔ subordinate[i]</text>
+
+  <rect class="track" x="40" y="224" width="230" height="110" rx="9"/>
+  <text class="h" x="155" y="251" text-anchor="middle">Track-B 4×4</text>
+  <text class="t" x="155" y="276" text-anchor="middle">axi4_compile_fabric_ip_4x4.f</text>
+  <text class="s" x="155" y="300" text-anchor="middle">DATA=256 · ID=6 · ID_LAST=63</text>
+  <text class="s" x="155" y="318" text-anchor="middle">licensed fabric + project wrapper</text>
+
+  <rect class="track" x="40" y="360" width="230" height="110" rx="9"/>
+  <text class="h" x="155" y="387" text-anchor="middle">Track-B 10×10</text>
+  <text class="t" x="155" y="412" text-anchor="middle">axi4_compile_fabric_ip.f</text>
+  <text class="s" x="155" y="436" text-anchor="middle">DATA=256 · ID=8 · ID_LAST=255</text>
+  <text class="s" x="155" y="454" text-anchor="middle">licensed fabric + project wrapper</text>
+
+  <rect class="smoke" x="40" y="496" width="230" height="98" rx="9"/>
+  <text class="h" x="155" y="523" text-anchor="middle">Fabric-only sanity</text>
+  <text class="t" x="155" y="548" text-anchor="middle">sim/run_fabric_smoke.sh</text>
+  <text class="s" x="155" y="572" text-anchor="middle">no UVM; 10×10 wrapper/pins only</text>
+
+  <rect class="step" x="354" y="154" width="210" height="326" rx="11"/>
+  <text class="h" x="459" y="184" text-anchor="middle">Compile / elaborate</text>
+  <text class="t" x="459" y="214" text-anchor="middle">VCS full64 + UVM 1.2</text>
+  <text class="t" x="459" y="238" text-anchor="middle">selected file list</text>
+  <text class="t" x="459" y="262" text-anchor="middle">width + topology defines</text>
+  <line x1="380" y1="284" x2="538" y2="284" stroke="#cbd5e1"/>
+  <text class="h" x="459" y="317" text-anchor="middle">Run</text>
+  <text class="t" x="459" y="347" text-anchor="middle">+UVM_TESTNAME</text>
+  <text class="t" x="459" y="371" text-anchor="middle">+ntb_random_seed</text>
+  <text class="t" x="459" y="395" text-anchor="middle">runtime plusargs</text>
+  <text class="s" x="459" y="430" text-anchor="middle">Make: compile + -R in one command</text>
+  <text class="s" x="459" y="450" text-anchor="middle">Direct VCS: separate build/run</text>
+
+  <path class="flow" d="M270 149H354"/><path class="flow" d="M270 279H354"/><path class="flow" d="M270 415H354"/><path class="dash" d="M270 545C321 545 322 458 354 445"/>
+
+  <rect class="artifact" x="650" y="100" width="220" height="128" rx="9"/>
+  <text class="h" x="760" y="127" text-anchor="middle">Always preserve</text>
+  <text class="t" x="760" y="153" text-anchor="middle">build log</text>
+  <text class="t" x="760" y="176" text-anchor="middle">complete run log</text>
+  <text class="t" x="760" y="199" text-anchor="middle">test + seed + defines</text>
+
+  <rect class="artifact" x="650" y="258" width="220" height="128" rx="9"/>
+  <text class="h" x="760" y="285" text-anchor="middle">Optional artifacts</text>
+  <text class="t" x="760" y="311" text-anchor="middle">FSDB + KDB</text>
+  <text class="t" x="760" y="334" text-anchor="middle">per-test VDB</text>
+  <text class="t" x="760" y="357" text-anchor="middle">URG merged report</text>
+
+  <rect class="warn" x="650" y="416" width="220" height="128" rx="9"/>
+  <text class="h" x="760" y="443" text-anchor="middle">Do not use alone</text>
+  <text class="t" x="760" y="469" text-anchor="middle">shell exit code</text>
+  <text class="t" x="760" y="492" text-anchor="middle">runner PASS label</text>
+  <text class="t" x="760" y="515" text-anchor="middle">one success substring</text>
+
+  <path class="flow" d="M564 245C610 245 609 164 650 164"/><path class="flow" d="M564 317H650"/><path class="flow" d="M564 390C610 390 612 480 650 480"/>
+
+  <rect class="base" x="952" y="154" width="210" height="326" rx="11"/>
+  <text class="h" x="1057" y="184" text-anchor="middle">Common gates</text>
+  <rect x="977" y="216" width="160" height="54" rx="6" fill="#fff" stroke="#2563eb"/>
+  <text class="t" x="1057" y="239" text-anchor="middle">TEST RESULT:</text><text class="h" x="1057" y="259" text-anchor="middle">PASS</text>
+  <text class="h" x="1057" y="302" text-anchor="middle">AND</text>
+  <rect x="977" y="325" width="160" height="66" rx="6" fill="#fff" stroke="#2563eb"/>
+  <text class="t" x="1057" y="350" text-anchor="middle">UVM_ERROR : 0</text><text class="t" x="1057" y="375" text-anchor="middle">UVM_FATAL : 0</text>
+  <text class="h" x="1057" y="423" text-anchor="middle">AND</text>
+  <text class="t" x="1057" y="451" text-anchor="middle">confirmed completion</text>
+
+  <path class="flow" d="M870 164H952"/><path class="flow" d="M870 322C911 322 911 315 952 315"/><path class="dash" d="M870 480C915 480 913 451 952 451"/>
+  <text class="s" x="600" y="615" text-anchor="middle">These are necessary, not sufficient: prove each scenario's expected observation/type/count.</text>
+  <text class="s" x="600" y="633" text-anchor="middle">The Python runner uses the baseline file list and a weaker PASS classifier; inspect a fresh, complete log.</text>
+</svg>

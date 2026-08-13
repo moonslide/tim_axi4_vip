@@ -1,425 +1,959 @@
 # tim_axi4_vip — AXI4 UVM Verification IP
 
-SystemVerilog/UVM verification IP for ARM® AMBA® AXI4, built around a configurable
-multi-master / multi-slave bus matrix reference model. It runs in two modes:
+Native SystemVerilog/UVM 1.2 verification IP for exercising, monitoring, and
+checking AMBA AXI4 traffic with configurable manager/subordinate agents, a
+reference address map, scoreboarding, assertions, functional coverage, and an
+optional commercial-fabric DUT path.
 
-* **VIP-vs-VIP** — masters wired 1:1 to slaves, no interconnect. This is the default
-  build and what the regression uses.
-* **Track-B** — the same VIP driving a **commercial fabric IP** interconnect as DUT,
-  in either a 4×4 or a 10×10 topology.
+<img src="doc/img/vip_platform.svg" alt="AXI4 VIP platform architecture, including the UVM and HDL layers" width="100%">
 
-> **Licensed IP notice.** The commercial fabric IP RTL under `ext/` is licensed third-party IP and is
-> **local-only**. It must never be committed, pushed, archived, or pasted into any external
-> service, and neither may simulator artefacts built from it (`csrc*/`, `simv*`, `*.daidir/`).
-> `.gitignore` enforces this and is part of the policy. See `CLAUDE.md`.
+> [!IMPORTANT]
+> **Evidence scope.** This document describes the current working tree as
+> inspected on **2026-08-13**. Source paths are repository-relative. A listed
+> component or registered test is not, by itself, a claim that every scenario
+> has passed a current regression or that this VIP is a certified AXI4
+> compliance product.
 
----
+> [!CAUTION]
+> **Licensed-IP boundary.** Commercial fabric RTL under `ext/` is local-only.
+> Never commit, push, archive, paste, or upload it—or simulator products derived
+> from it (`csrc*`, `simv*`, `*.daidir`)—to any external service. Project-authored
+> wrappers and file lists may reference `ext/`; the licensed contents may not
+> leave this machine. See `CLAUDE.md` and `.gitignore`.
 
-## Platform structure
+## Contents
 
-<img src="doc/img/vip_platform.svg" alt="AXI4 VIP platform structure" width="100%">
+- [What this VIP is](#what-this-vip-is)
+- [Architecture](#architecture)
+- [AXI4 channel model](#axi4-channel-model)
+- [Transaction lifecycle](#transaction-lifecycle)
+- [Checking and coverage](#checking-and-coverage)
+- [Bus-matrix reference modes](#bus-matrix-reference-modes)
+- [Feature status](#feature-status)
+- [Configuration](#configuration)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Track-B: commercial fabric as DUT](#track-b-commercial-fabric-as-dut)
+- [Regression](#regression)
+- [Waveforms and coverage](#waveforms-and-coverage)
+- [Adding a sequence and test](#adding-a-sequence-and-test)
+- [Repository map](#repository-map)
+- [Known limitations](#known-limitations)
+- [Troubleshooting](#troubleshooting)
+- [Evidence index](#evidence-index)
+- [Document authority](#document-authority)
 
-The split is the usual HVL/HDL one:
+## What this VIP is
 
-| Layer | Lives in | Responsibility |
-|---|---|---|
-| **HVL** (`hvl_top`) | classes, `uvm_pkg` | test, env, agents' proxies, scoreboard, coverage, reference model |
-| **HDL** (`hdl_top`) | modules/interfaces | `axi4_if` instances, driver/monitor BFMs, clock & reset generation, the DUT |
+The repository has two deliberately different verification paths:
 
-Proxies talk to their BFM through a virtual interface; transactions cross the boundary as
-plain structs via `axi4_*_seq_item_converter`. Which DUT sits between the master and slave
-interfaces is a **compile-time** choice (the file list), not a runtime one.
-
-### Component map
-
-```
-axi4_env
-├── axi4_master_agent[0..N-1]     sequencer → driver_proxy → driver_bfm
-│                                  monitor_bfm → monitor_proxy → analysis ports
-├── axi4_slave_agent[0..N-1]      driver_proxy + axi4_slave_memory (SLAVE_MEM_MODE)
-├── axi4_bus_matrix_ref           address decode + per-master access matrix (the oracle)
-├── axi4_scoreboard               keyed master↔slave pairing, C1–C6 completeness checks
-├── axi4_performance_metrics      throughput / latency / fairness → "TEST RESULT: PASS|FAIL"
-├── coverage                      master, slave, qos_user, protocol, error-injection
-└── axi4_reset_checker / axi4_freq_checker
-```
-
-Both `axi4_master_agent` and `axi4_slave_agent` publish **five** analysis ports (AW, W, B,
-AR, R). Each coverage component takes one analysis imp per channel, so a packet is only
-sampled by the covergroup whose fields it actually carries.
-
----
-
-## Repository layout
-
-```
-tim_axi4_vip/
-├── agent/
-│   ├── master_agent_bfm/       axi4_master_{agent,driver,monitor}_bfm.sv
-│   └── slave_agent_bfm/        axi4_slave_{agent,driver,monitor}_bfm.sv
-├── assertions/                 master_assertions.sv, slave_assertions.sv (+ tb_* harness stubs)
-├── bm/                         axi4_bus_matrix_ref.sv — the reference model / oracle
-├── env/                        env, config, scoreboard, coverage, perf metrics, checkers
-├── include/                    axi4_bus_config.svh — widths, IDs, tags, drain time
-├── intf/axi4_interface/        axi4_if.sv — the AXI4 interface
-├── master/                     agent, config, proxies, tx, converters, coverage, sequencers
-├── slave/                      agent, config, proxies, tx, converters, coverage, memory
-├── pkg/                        axi4_globals_pkg.sv — enums and transfer structs
-├── seq/                        master_sequences/, slave_sequences/  (~270 files)
-├── virtual_seq/                cross-agent scenario sequences (~137 files)
-├── virtual_seqr/               axi4_virtual_sequencer.sv
-├── test/                       187 test classes + axi4_test_pkg.sv
-├── top/                        hdl_top.sv, hvl_top.sv, fabric IP wrappers, fabric smoke TB
-├── sim/
-│   ├── axi4_compile.f              baseline (no interconnect)
-│   ├── axi4_compile_fabric_ip.f       Track-B 10×10
-│   ├── axi4_compile_*_4x4.f        Track-B 4×4 (commercial fabric IP)
-│   ├── *_rtl.f                     commercial fabric IP RTL file lists
-│   ├── coverage_scope.cm_hier      code-coverage instrumentation scope
-│   ├── run_fabric_smoke.sh         fabric-only sanity, no UVM
-│   └── synopsys_sim/               build/run area, axi4_regression.py
-├── testlists/                  regression test lists
-├── doc/                        documents and figures (doc/img/*.svg)
-└── ext/                        commercial fabric IP deliverable — LOCAL ONLY, never uploaded
-```
-
-Authoritative specs: **`claude.md`** (lowercase) is the 10×10 access matrix and address map.
-`CLAUDE.md` (uppercase) is the working agreement for this repo — build recipes, publish
-policy, iron rules. They are different files; do not conflate them.
-
----
-
-## Bus matrix modes
-
-<img src="doc/img/matrix_compare.svg" alt="BASE 4x4 vs ENHANCED 10x10 access matrix" width="100%">
-
-`bm/axi4_bus_matrix_ref.sv` implements three modes (`bus_matrix_mode_e`):
-
-| | `NONE` | `BASE_BUS_MATRIX` | `BUS_ENHANCED_MATRIX` |
+| Path | DUT between the AXI interfaces | Purpose | Source selection |
 |---|---|---|---|
-| Masters × slaves | 4 × 4 (nominal) | 4 × 4 | 10 × 10 |
-| Address decode | every address → slave 0 | 4 regions, else DECERR | 10 regions, else DECERR |
-| Access control | none — always OKAY | per-master R/W bitmask | R/W bitmask **plus** AxPROT qualifiers |
-| Security (`AxPROT[1]`) | not modelled | not modelled | `check_security_access()` on S0, S7 |
-| Privilege (`AxPROT[0]`) | not modelled | not modelled | `check_privilege_access()` on S6 |
-| Instruction (`AxPROT[2]`) | not modelled | not modelled | `check_instruction_access()` on S4 |
-| Write-only region | — | — | S9 (read → SLVERR) |
-| Hard hole | — | — | S3 (all access → DECERR) |
-| Plusarg | `+BUS_MATRIX_MODE=NONE` | `+BUS_MATRIX_MODE=4x4` | `+BUS_MATRIX_MODE=ENHANCED` |
+| **Baseline: VIP vs VIP** | None; manager `i` is wired directly to subordinate `i` | Develop and regress agents, sequences, monitors, checking, and coverage | `sim/axi4_compile.f` |
+| **Track-B 4×4** | Commercial 4×4 fabric through a project wrapper | Verify a real interconnect with the BASE reference map | `sim/axi4_compile_fabric_ip_4x4.f` |
+| **Track-B 10×10** | Commercial 10×10 fabric through a project wrapper | Verify a real interconnect with the ENHANCED reference map | `sim/axi4_compile_fabric_ip.f` |
 
-### BASE — 4 × 4
+The baseline is **not an N×M crossbar**. It is index-to-index direct wiring.
+The reference model predicts decode, permission, response, and memory behavior;
+it does not create physical routing. Cross-port arbitration and routing exist
+only when the Track-B fabric is compiled as the DUT.
 
-| Slave | Base address | Size | M0 | M1 | M2 | M3 |
-|---|---|---|---|---|---|---|
-| S0 DDR Memory | `0x0000_0100_0000_0000` | 32 GiB | R/W | R/W | R/W | R/W |
-| S1 Boot ROM | `0x0000_0000_0000_0000` | 128 KiB | R | R | R | R |
-| S2 Peripheral Regs | `0x0000_0010_0000_0000` | 1 MiB | R/W | R/W | R/W | — |
-| S3 HW Fuse Box | `0x0000_0020_0000_0000` | 4 KiB | R | — | — | R |
+The active implementation provides:
 
-### ENHANCED — 10 × 10
+- independent read and write sequencers per manager and subordinate agent;
+- blocking and nonblocking transfers with configurable outstanding depth;
+- reactive subordinate memory mode, which is the base-test default;
+- five-channel monitors on both sides of the connection;
+- a ten-stream scoreboard, targeted pin-level assertions, protocol coverage,
+  error-injection coverage, and performance metrics;
+- BASE and ENHANCED address/permission models; and
+- local or LSF regression orchestration with optional FSDB and VCS coverage.
 
-| Slave | Base address | Size | Masters | Qualifier |
-|---|---|---|---|---|
-| S0 DDR Secure Kernel | `0x0000_0008_0000_0000` | 1 GiB | R/W all | secure only |
-| S1 DDR Non-Secure User | `0x0000_0008_4000_0000` | 1 GiB | R/W all | — |
-| S2 DDR Shared Buffer | `0x0000_0008_8000_0000` | 1 GiB | R/W all | — |
-| S3 Illegal Address Hole | `0x0000_0008_C000_0000` | 1 GiB | none | always DECERR |
-| S4 XOM Instruction-Only | `0x0000_0009_0000_0000` | 1 GiB | R all | instruction fetch only |
-| S5 RO Peripheral | `0x0000_000A_0000_0000` | 64 KiB | R all | write → SLVERR |
-| S6 Privileged-Only | `0x0000_000A_0001_0000` | 64 KiB | R/W all | privileged only |
-| S7 Secure-Only | `0x0000_000A_0002_0000` | 64 KiB | R/W all | secure only |
-| S8 Scratchpad | `0x0000_000A_0003_0000` | 64 KiB | R/W all | — |
-| S9 Attribute Monitor | `0x0000_000A_0004_0000` | 64 KiB | W all | read → SLVERR |
+It does **not** provide AXI4-Lite, AXI4-Stream, AXI5 extensions, a UVM RAL
+model, or AMBA low-power handshakes.
 
-### The difference that matters
+## Architecture
 
-In **BASE**, permission is a static per-master bitmask — an address either is or is not
-reachable by a given master.
+### HDL/HVL split
 
-In **ENHANCED**, most regions have all-ones masks and the decision is made by the **AxPROT
-qualifier**. The same address, from the same master, legitimately returns `OKAY` or
-`SLVERR` depending on the transaction's security / privilege / instruction attributes.
+| Layer | Entry point | Active responsibilities |
+|---|---|---|
+| **HVL / UVM** | `top/hvl_top.sv` | Test selection, environment, virtual sequences, agent proxies, reference model, scoreboard, coverage, and metrics |
+| **HDL** | `top/hdl_top.sv` | Clocks/resets, `axi4_if` instances, driver/monitor BFMs, direct wiring or fabric wrapper, and bound assertion modules |
 
-That has a direct consequence for the checkers: any component that evaluates the access
-matrix must pass the transaction's *real* `AxPROT`. Hard-coding it (e.g. `ARPROT = 3'b000`)
-does not merely weaken the check — it disables every security rule above while still
-reporting success.
+`hvl_top` calls `run_test("axi4_base_test")`; standard UVM command-line
+selection with `+UVM_TESTNAME=<class>` overrides that default.
 
-### `NONE` is not a safe default
+Transactions cross the HVL/HDL boundary without DPI:
 
-`NONE` routes every address to slave 0 and answers `OKAY` unconditionally, so a test bound
-to it **cannot fail an access check**. Track-B tests therefore bind their topology at
-compile time and `uvm_fatal` if `+BUS_MATRIX_MODE` contradicts it, instead of silently
-degrading.
-
----
-
-## AXI4 protocol coverage
-
-This is a full **AMBA AXI4** (not AXI3, not AXI4-Lite) VIP. What that means concretely,
-checked against the interface (`intf/axi4_interface/axi4_if.sv`), the transaction classes
-(`master/axi4_master_tx.sv`, `pkg/axi4_globals_pkg.sv`), and the reference bus matrix
-(`bm/axi4_bus_matrix_ref.sv`):
-
-### Implemented
-
-| Feature | Notes |
-|---|---|
-| All 5 channels, AXI4 pin set | No `WID` — write bursts are identified solely by `AWID`, matching AXI4's removal of per-beat write IDs (AXI3 had `WID`; AXI4 does not). |
-| 8-bit `AxLEN` | Up to 256-beat `INCR` bursts, the AXI4 extension over AXI3's 4-bit/16-beat limit. |
-| Burst types | `FIXED`, `INCR`, `WRAP`, with length-legality constraints (`FIXED`/`WRAP` ≤ 16 beats, `WRAP` length a power of 2) — `master/axi4_master_tx.sv`. |
-| All 4 responses | `OKAY`, `EXOKAY`, `SLVERR`, `DECERR` on both write (`BRESP`) and read (`RRESP`). |
-| Exclusive access | `AxLOCK` + `EXOKAY`, with exclusive-monitor tracking on the slave side. |
-| Outstanding / multi-ID transactions | Configurable per-slave response ordering: in-order, read-only out-of-order, write-only out-of-order, or both (`RESP_IN_ORDER` / `*_OUT_OF_ORDER` in `pkg/axi4_globals_pkg.sv`), plus dedicated cross-ID and same-ID reorder tests. |
-| No write-data interleaving | Enforced and tested as an AXI4 rule (spec section A5.4) — AXI4 removed interleaving; a manager's write beats for different AWIDs are never interleaved on the W channel. |
-| `AxPROT` (security / privilege / instruction) | Enforced by the reference bus matrix in `ENHANCED` mode — see [Bus matrix modes](#bus-matrix-modes) above. Not modelled in `NONE`/`BASE`. |
-| `AxQOS`, `AxCACHE`, `AxREGION` | Driven, randomized, and functionally covered (dedicated QoS-priority/QoS-routing sequences, an arbitration-fairness metric). **Not** consumed as scheduling or memory-behaviour input by the reference model — see caveats below. |
-| `AxUSER`/`WUSER`/`BUSER`/`ARUSER`/`RUSER` | All 5 channels, independently configurable widths (`include/axi4_bus_config.svh`), with a dedicated USER-signal test suite (passthrough, corruption, width-mismatch, protocol-violation). |
-| Narrow / unaligned / sparse-strobe transfers | Including non-contiguous `WSTRB` per beat (AXI4 A3.4.3 byte-lane rules) and 4 KiB boundary-crossing checks. |
-| Reset behaviour | Independent, mid-burst, and multi-reset scenarios across a dedicated reset test family. |
-| Protocol-level SVA | X-propagation, VALID-stability-until-handshake, and per-channel handshake legality — `assertions/master_assertions.sv`, `assertions/slave_assertions.sv`. |
-| Directed protocol-violation / error injection | X-injection on every channel control/data signal, AWID/illegal-WSTRB mismatches, and randomized multi-signal error injection. |
-
-### Not implemented / out of scope
-
-| Feature | Status |
-|---|---|
-| AXI4-Lite | Not supported — this VIP is full AXI4 only, no register-style single-beat-only mode. |
-| AXI4-Stream | Not applicable — unrelated protocol. |
-| Low-power interface (`CACTIVE`/`CSYSREQ`/`CSYSACK`) | Not modelled — absent from the interface and both BFMs. |
-| QoS-driven arbitration as DUT behaviour | The reference bus matrix does **not** use `AxQOS` to schedule or prioritize; `AxQOS` is stimulus/coverage only in VIP-vs-VIP mode. Real QoS arbitration is exercised only when Track-B's commercial fabric IP is the DUT — the fabric arbitrates, the VIP does not. |
-| `AxCACHE`-driven memory behaviour | Cache attributes are protocol-legal and covered but do not change the abstract slave memory model (no write-through/write-back/allocate distinction). |
-| `AxREGION`-driven decode | Covered as a field; not used to select a distinct memory region in the reference model. |
-| AXI5 extensions (atomics, MTE, poison, etc.) | Out of scope — this is an AXI4, not AXI5, VIP. |
-
----
-
-## Build and run
-
-All commands run from `sim/synopsys_sim/`. Toolchain: **VCS W-2024.09-SP1**.
-
-### 1. Baseline — VIP vs VIP (no interconnect)
-
-```bash
-vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
-    -override_timescale=1ps/1ps +nospecify +no_timing_check \
-    -f ../../sim/axi4_compile.f -o simv
-
-./simv +UVM_TESTNAME=axi4_blocking_write_read_test +UVM_VERBOSITY=UVM_LOW
+```text
+class sequence item
+    → axi4_*_seq_item_converter
+    → packed/plain BFM transfer struct
+    → virtual BFM interface task
+    → AXI pins
 ```
 
-### 2. Track-B — commercial fabric IP, 10×10
+The reverse monitor path reconstructs class transactions from channel-specific
+BFM structs and publishes them through UVM analysis ports.
 
-```bash
-vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all -ntb_opts uvm-1.2 \
-    -override_timescale=1ps/1ps +nospecify +no_timing_check \
-    +define+BUS_MATRIX_FABRIC_IP \
-    +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 \
-    -f ../../sim/axi4_compile_fabric_ip.f -o simv_trackb
+### Active component topology
 
-./simv_trackb +UVM_TESTNAME=axi4_trackb_smoke_test +UVM_VERBOSITY=UVM_LOW
+```text
+axi4_test
+└── axi4_env
+    ├── axi4_master_agent[0..M-1]
+    │   ├── write_sequencer + read_sequencer       active agents only
+    │   ├── driver_proxy → virtual master BFM
+    │   ├── monitor_proxy ← virtual monitor BFM    always present
+    │   └── agent functional coverage
+    ├── axi4_slave_agent[0..S-1]
+    │   ├── write_sequencer + read_sequencer       created when active;
+    │   │                                            sequence-driven use is optional
+    │   ├── driver_proxy → reactive memory/BFM     base-test default
+    │   ├── monitor_proxy ← virtual monitor BFM    always present
+    │   └── agent functional coverage
+    ├── axi4_virtual_sequencer
+    ├── axi4_bus_matrix_ref
+    ├── axi4_scoreboard
+    ├── axi4_protocol_coverage
+    ├── axi4_error_injection_coverage
+    ├── axi4_performance_metrics
+    └── reset/frequency checkers                   optional, default off
 ```
 
-`AXI_ID_LAST` must equal `2**AXI_ID_WIDTH - 1`. It exists as a separate literal because VCS
-rejects an enum range built from a computed expression (`Error-[ETRNC]`); `hdl_top` asserts
-the two agree at time 0.
+The virtual sequencer contains arrays of manager/subordinate read and write
+sequencer handles. A virtual sequence can therefore coordinate concurrent
+traffic across ports and directions while each agent retains separate channel
+control.
 
-### 3. Track-B — commercial fabric IP, 4×4
+### Compile capacity versus runtime population
 
-```bash
-vcs ... +define+BUS_MATRIX_FABRIC_IP +define+FABRIC_IP_4X4 \
-        +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=6 +define+AXI_ID_LAST=63 \
-        -f ../../sim/axi4_compile_fabric_ip_4x4.f -o simv_trackb4x4
+Two sizes matter and should not be confused:
 
-./simv_trackb4x4 +UVM_TESTNAME=axi4_trackb_4x4_smoke_test +UVM_VERBOSITY=UVM_LOW
+- `AXI4_NUM_MASTERS` and `AXI4_NUM_SLAVES` determine how many HDL interfaces
+  are compiled. Both default to 10. `RUN_4X4_CONFIG` and `RUN_10X10_CONFIG`
+  select an explicit compile capacity.
+- `axi4_test_config` determines how many UVM agents a test creates. An ordinary
+  unclassified test defaults to four managers, four subordinates, and reference
+  mode `NONE`.
+
+The runtime `+BUS_MATRIX_MODE` mappings are:
+
+| Value | Reference mode | UVM agents |
+|---|---|---:|
+| `NONE` or `1x1` | `NONE` | 1×1 |
+| `SIMPLE` or `2x2` | `BASE_BUS_MATRIX` | 2×2 |
+| `BASE` or `4x4` | `BASE_BUS_MATRIX` | 4×4 |
+| `ENHANCED` or `10x10` | `BUS_ENHANCED_MATRIX` | 10×10 |
+
+The compiled HDL capacity must be at least as large as the runtime population.
+Track-B tests self-bind to the topology of their compiled DUT and raise
+`UVM_FATAL` if a supplied `+BUS_MATRIX_MODE` contradicts it.
+
+## AXI4 channel model
+
+<img src="doc/img/axi_channels.svg" alt="AXI4 five-channel write and read paths and monitor streams" width="100%">
+
+Every channel uses an independent `VALID`/`READY` handshake. Write data has no
+`WID`, as required by AXI4; AW order therefore determines the association of W
+bursts. The monitors queue AW-to-W association in arrival order and use
+per-ID pools to join B and R responses with their requests.
+
+### Signals and directions
+
+| Channel | Direction | Payload modeled by `axi4_if` |
+|---|---|---|
+| `AW` | Manager → subordinate | `AWID`, `AWADDR`, `AWLEN`, `AWSIZE`, `AWBURST`, `AWLOCK`, `AWCACHE`, `AWPROT`, `AWQOS`, `AWREGION`, `AWUSER` |
+| `W` | Manager → subordinate | `WDATA`, `WSTRB`, `WLAST`, `WUSER` |
+| `B` | Subordinate → manager | `BID`, `BRESP`, `BUSER` |
+| `AR` | Manager → subordinate | `ARID`, `ARADDR`, `ARLEN`, `ARSIZE`, `ARBURST`, `ARLOCK`, `ARCACHE`, `ARPROT`, `ARQOS`, `ARREGION`, `ARUSER` |
+| `R` | Subordinate → manager | `RID`, `RDATA`, `RRESP`, `RLAST`, `RUSER` |
+
+`VALID` travels with the payload producer; `READY` travels in the opposite
+direction. All five monitor paths publish one analysis stream on both the
+manager and subordinate side.
+
+### As-built widths
+
+| Field | Default width | Configuration source |
+|---|---:|---|
+| Address | 64 | `ADDRESS_WIDTH` package parameter |
+| Data | 1024 | `DATA_WIDTH` compile define; Track-B uses 256 |
+| Strobe | `DATA_WIDTH / 8` | derived package parameter |
+| ID | 4 | `AXI_ID_WIDTH`; Track-B 4×4 uses 6, 10×10 uses 8 |
+| Length | 8 | AXI4 `AxLEN` |
+| QoS | 4 | `AXI_QOS_WIDTH` |
+| `AWUSER`, `ARUSER`, `WUSER` | 32 each | per-channel compile defines |
+| `BUSER`, `RUSER` | 16 each | per-channel compile defines |
+
+`AXI_ID_LAST` must be the literal `2**AXI_ID_WIDTH - 1`. `hdl_top` checks this
+at time zero because the enum declaration cannot use the required computed
+range in the supported VCS flow.
+
+> [!NOTE]
+> `addr_width` and `data_width` fields in agent configuration objects are
+> coverage/print metadata; they do not re-parameterize the physical interface.
+> Width changes require a full recompile.
+
+## Transaction lifecycle
+
+### Write
+
+1. A manager write sequence randomizes an `axi4_master_tx` and sends it through
+   the write sequencer.
+2. The driver proxy converts the class item to BFM structs. Blocking mode can
+   drive AW and W in parallel, then waits for B. Nonblocking mode uses channel
+   workers, FIFOs, and outstanding-credit semaphores.
+3. The manager BFM holds each `VALID` and payload until the matching handshake.
+4. The subordinate monitor observes AW/W. In reactive memory mode, the
+   subordinate driver builds the response from the request and reference state.
+5. The B response returns by ID. Both-side monitors publish AW/W/B to the
+   scoreboard and agent-local coverage. Selected manager streams feed
+   environment coverage; manager AW/B alone feed the write-side metrics.
+
+### Read
+
+1. A manager read sequence sends AR through the read sequencer and driver proxy.
+2. The subordinate decodes the address and protection attributes, then returns
+   one or more R beats with `RID`, `RRESP`, and `RLAST`.
+3. Per-ID monitor pools reconstruct the response burst. Both-side AR/R streams
+   feed the scoreboard and agent-local coverage; selected manager AR/R streams
+   feed environment coverage and read-side metrics.
+
+### Blocking and nonblocking completion
+
+In nonblocking mode, a sequence item can complete at the address handshake
+while W, B, or R activity is still in flight. `axi4_env::run_phase` therefore
+applies an end-of-test drain. The compile default is 5000 ns and can be changed
+per run with `+END_OF_TEST_DRAIN_NS=<n>`.
+
+## Checking and coverage
+
+<img src="doc/img/verification_flow.svg" alt="AXI4 checking, reference-model, coverage, metrics, and verdict flow" width="100%">
+
+### Scoreboard and reference model
+
+The scoreboard receives ten channel streams: AW/W/B/AR/R from manager monitors
+and the same five from subordinate monitors. Its active responsibilities include:
+
+- manager-to-subordinate field comparison;
+- default arrival-order pairing for direct 1:1 wiring;
+- optional `(address, len, size, burst)` keyed pairing behind an interconnect,
+  enabled with `+SB_KEYED_PAIRING=1`;
+- response-ID and outstanding accounting;
+- expected response checks from address, source manager, and `AxPROT`;
+- byte-addressable expected-memory tracking where enabled;
+- reset-aware state disposal; and
+- end-of-test completeness checks for analysis-FIFO residue, in-flight and
+  unmatched transactions, unanswered IDs, holding pools, and pipeline balance.
+
+`axi4_bus_matrix_ref` is an oracle, not a DUT. It supplies address decode,
+permissions, expected responses, and per-subordinate byte memory.
+
+`+SB_SELFTEST_COMPLETENESS=<mask>` deliberately injects checker faults and must
+only be used as a negative self-test. A result from such a run is not a
+functional verdict.
+
+### Targeted assertions
+
+Each master and slave BFM instance binds a corresponding assertion module. The
+implemented properties target:
+
+- payload stability while `VALID && !READY`;
+- known payload/control values when `VALID` is asserted;
+- `VALID` persistence until handshake;
+- eventual `READY`; and
+- selected X-injection/recovery cover and check paths.
+
+These are targeted checks, not a complete AXI4 protocol-compliance checker.
+Several legality rules are instead constrained in transactions or exercised by
+directed tests and scoreboard logic.
+
+### Functional and code coverage
+
+Functional coverage is split across:
+
+- per-manager and per-subordinate agent-local channel coverage, each connected
+  to all five monitor analysis ports;
+- burst, length, size, ID, response, wait-state, handshake, strobe, reset, and
+  error crosses;
+- QoS/USER subscribers connected to manager/subordinate AW and AR ports;
+- environment-level protocol and error-injection coverage connected to selected
+  manager-side streams; and
+- throughput, latency, fairness, deadlock, and livelock metrics connected only
+  to manager-side AW, B, AR, and R streams—not W or subordinate streams.
+
+VCS code/assertion coverage can collect `line+cond+fsm+tgl+branch+assert`.
+For Track-B, `sim/coverage_scope.cm_hier` keeps project/VIP scope and excludes
+licensed fabric internals from the denominator.
+
+### Qualification verdict
+
+Every reportable pass must satisfy all of these **common necessary gates** in
+the complete log:
+
+```text
+TEST RESULT: PASS
+UVM_ERROR :    0
+UVM_FATAL :    0
 ```
 
-### 4. Fabric-only smoke (no UVM)
+The run must also reach a confirmed end (`$finish` or the test-done phase
+message). These gates are not sufficient by themselves: each directed test
+must also show its scenario-specific expected observation. In particular, an
+expected-error/negative test must prove that the intended violation was
+provoked and that the expected response type/count was observed; the current
+metrics code can print PASS for an error-expected test with zero error
+responses when no deadlock/livelock is detected.
+
+Use a fresh per-run log. Confirm that the final, unique UVM summary and metrics
+banner belong to the same test/seed; do not qualify a concatenated or truncated
+log. Simulator shell exit status alone is not a verdict.
 
 ```bash
-bash ../run_fabric_smoke.sh          # expect: FABRIC SMOKE TEST PASSED (3/3)
+rg -n 'TEST RESULT:|UVM_(ERROR|FATAL)[[:space:]]*:|\$finish called|TEST_DONE' smoke.log
 ```
 
-Gates on **log content**, not on exit status — a VCS run that ends in `$fatal` still exits 0.
+This command locates evidence; it does not evaluate scenario-specific intent
+or prove that the final summary is unique.
 
----
+> [!WARNING]
+> **Runner implementation gap.** The current `axi4_regression.py` classifies a
+> clean UVM summary plus confirmed completion as PASS without requiring
+> `TEST RESULT: PASS`. When no summary exists, it also has weaker text/CPU-time
+> fallbacks. Treat the runner summary as triage output and inspect the log for
+> the common gates and scenario-specific evidence above before reporting a
+> result.
 
-## Configuration reference
+## Bus-matrix reference modes
 
-### Compile-time defines
+<img src="doc/img/matrix_compare.svg" alt="BASE 4 by 4 and ENHANCED 10 by 10 reference address maps" width="100%">
+
+| Behavior | `NONE` | `BASE_BUS_MATRIX` | `BUS_ENHANCED_MATRIX` |
+|---|---|---|---|
+| Decode | Every address → S0 | Four regions; unmapped → DECERR | Ten regions; unmapped/S3 hole → DECERR |
+| Permission | Always OKAY | Per-manager read/write masks | Masks plus `AxPROT` security, privilege, and instruction checks |
+| Intended topology | Generic/direct smoke | 2×2 or 4×4 runtime population | 10×10 runtime population |
+
+`NONE` deliberately cannot fail an address-permission check. It is useful for
+basic VIP traffic, but it is not evidence that an address map is correct.
+
+### BASE map
+
+| Slave | Inclusive address range | Size | Access |
+|---|---|---:|---|
+| S0 DDR Memory | `0x0000_0100_0000_0000`–`0x0000_0107_FFFF_FFFF` | 32 GiB | M0–M3 read/write |
+| S1 Boot ROM | `0x0000_0000_0000_0000`–`0x0000_0000_0001_FFFF` | 128 KiB | M0–M3 read only |
+| S2 Peripheral Registers | `0x0000_0010_0000_0000`–`0x0000_0010_000F_FFFF` | 1 MiB | M0–M2 read/write |
+| S3 Hardware Fuse Box | `0x0000_0020_0000_0000`–`0x0000_0020_0000_0FFF` | 4 KiB | M0/M3 read only |
+
+### ENHANCED map
+
+| Slave | Inclusive address range | Size | Result/qualifier |
+|---|---|---:|---|
+| S0 Secure Kernel | `0x8_0000_0000`–`0x8_3FFF_FFFF` | 1 GiB | R/W; secure access check |
+| S1 Non-Secure User | `0x8_4000_0000`–`0x8_7FFF_FFFF` | 1 GiB | R/W |
+| S2 Shared Buffer | `0x8_8000_0000`–`0x8_BFFF_FFFF` | 1 GiB | R/W |
+| S3 Illegal Hole | `0x8_C000_0000`–`0x8_FFFF_FFFF` | 1 GiB | DECERR |
+| S4 XOM | `0x9_0000_0000`–`0x9_3FFF_FFFF` | 1 GiB | secure instruction reads only; write rejected |
+| S5 Read-Only Peripheral | `0xA_0000_0000`–`0xA_0000_FFFF` | 64 KiB | read only; write → SLVERR |
+| S6 Privileged Region | `0xA_0001_0000`–`0xA_0001_FFFF` | 64 KiB | R/W; privilege check |
+| S7 Secure Region | `0xA_0002_0000`–`0xA_0002_FFFF` | 64 KiB | R/W; security check |
+| S8 Scratchpad | `0xA_0003_0000`–`0xA_0003_FFFF` | 64 KiB | R/W |
+| S9 Attribute Monitor | `0xA_0004_0000`–`0xA_0004_FFFF` | 64 KiB | write only; read → SLVERR |
+
+Security and privilege helpers also recognize designated trusted manager IDs;
+therefore the response is a function of manager, address, operation, and the
+actual `AxPROT`, not address alone.
+
+## Feature status
+
+“Implemented” below means an active source path exists. It does not imply full
+protocol sign-off or current regression closure.
+
+| Area | Implemented behavior | Verification boundary |
+|---|---|---|
+| Five AXI4 channels | AW/W/B/AR/R with independent handshakes and no WID | Pin model and both-side monitors are active |
+| Bursts | FIXED, INCR, WRAP; INCR up to 256 beats; FIXED/WRAP up to 16; legal WRAP lengths 2/4/8/16 | Legal random constraints plus directed negative scenarios |
+| Transfer size/data | 1–128 byte beat sizes, per-beat WDATA/WSTRB, narrow and unaligned scenarios | Default legal WSTRB is nonzero with beat-size population; arbitrary sparse/illegal strobes require directed constraint overrides |
+| 4-KiB rule | Legal boundary constraint and directed boundary tests | Not covered by the targeted SVA set |
+| Responses | OKAY, EXOKAY, SLVERR, DECERR | Driver, reference response, scoreboard, and coverage paths |
+| Blocking/nonblocking | Separate driver flows; address-first nonblocking completion | End-of-test drain is required for residual channel activity |
+| Outstanding traffic | Configured read/write credits, maximum enum depth 16 | Credit semaphores are active in the manager driver |
+| Out-of-order response | In-order, read OOO, write OOO, or both in subordinate response policy | Per-ID ordering machinery exists; same-ID end checker coverage is incomplete—see limitations |
+| Exclusive access | Reactive monitor slots and success/failure response behavior | Directed exclusive tests are registered; not a formal proof of all exclusive semantics |
+| Protection/access | BASE masks and ENHANCED security/privilege/instruction rules | Reference behavior depends on the real `AxPROT` |
+| QoS | Stimulus and coverage fields; fairness metrics | Baseline reference model does not arbitrate using QoS |
+| CACHE/REGION | Stimulus, monitor, selected comparison/coverage | Reference memory/decode does not change behavior from CACHE or REGION |
+| USER | AW/AR/W 32-bit and B/R 16-bit defaults; stimulus and coverage | Propagation behind a DUT is configuration-dependent |
+| Reset/clock | Global and per-interface reset/clock-control machinery | Reset/frequency checkers are optional and default off |
+| X/error injection | Directed stimulus, selected assertion paths, coverage | Expected-error tests require careful verdict interpretation |
+| Track-B | Project wrappers for local commercial 4×4 and 10×10 fabrics | Licensed RTL is local-only; standard regression runner is baseline-only |
+
+## Configuration
+
+### Compile-time controls
 
 | Define | Default | Meaning |
-|---|---|---|
-| `DATA_WIDTH` | 1024 | AXI data bus width |
-| `ADDRESS_WIDTH` | 64 | address width |
-| `AXI_ID_WIDTH` | 4 | AxID / xID width |
-| `AXI_ID_LAST` | 15 | literal `2**AXI_ID_WIDTH - 1` (see above) |
-| `AXI_VID_WIDTH` | 4 | ingress-port tag width inside the fabric |
-| `AXI_{AW,W,B,AR,R}USER_WIDTH` | 16 | per-channel USER widths |
-| `AXI4_END_OF_TEST_DRAIN_NS` | 5000 | end-of-test drain, in ns (see below) |
-| `BUS_MATRIX_FABRIC_IP` | off | build against the commercial fabric IP |
-| `FABRIC_IP_4X4` | off | select the 4×4 fabric instead of 10×10 |
-| `FABRIC_IP_DEBUG_PROBE` | off | fabric-boundary tracing |
-| `DUMP_FSDB` | off | enable FSDB waveform dumping |
-| `DISABLE_X_ASSERTIONS` | off | drop the X-injection assertion block |
+|---|---:|---|
+| `DATA_WIDTH` | 1024 | Physical AXI data width |
+| `AXI_ID_WIDTH` | 4 | Physical ID width |
+| `AXI_ID_LAST` | 15 | Highest legal enum ID; must match ID width |
+| `AXI_QOS_WIDTH` | 4 | AWQOS/ARQOS width |
+| `AXI_AWUSER_WIDTH` | 32 | AWUSER width |
+| `AXI_ARUSER_WIDTH` | 32 | ARUSER width |
+| `AXI_WUSER_WIDTH` | 32 | WUSER width |
+| `AXI_BUSER_WIDTH` | 16 | BUSER width |
+| `AXI_RUSER_WIDTH` | 16 | RUSER width |
+| `AXI4_NUM_MASTERS` / `AXI4_NUM_SLAVES` | 10 / 10 | HDL interface capacity |
+| `RUN_4X4_CONFIG` | off | Compile four manager and four subordinate interfaces |
+| `RUN_10X10_CONFIG` | off | Explicitly compile ten of each |
+| `BUS_MATRIX_FABRIC_IP` | off | Compile a commercial fabric DUT path |
+| `FABRIC_IP_4X4` | off | Select the 4×4 fabric variant |
+| `DUMP_FSDB` | off in direct VCS flow | Enable FSDB dump code |
+| `FABRIC_IP_DEBUG_PROBE` | off | Emit Track-B boundary probe messages |
+| `DISABLE_X_ASSERTIONS` | off | Disable the selected X-injection assertion block |
 
-### Runtime plusargs
+`ADDRESS_WIDTH` is a fixed 64-bit package parameter in the current source, not
+a supported command-line define.
+
+### Runtime controls
 
 | Plusarg | Meaning |
 |---|---|
-| `+UVM_TESTNAME=<class>` | selects the test |
-| `+UVM_VERBOSITY=UVM_LOW\|MEDIUM\|HIGH` | verbosity; comparison verdicts print at HIGH |
-| `+BUS_MATRIX_MODE=NONE\|4x4\|ENHANCED` | reference-model topology |
-| `+ntb_random_seed=<n>` | seed — always record it with a result |
-| `+END_OF_TEST_DRAIN_NS=<n>` | override the drain time |
-| `+fsdbfile=<path>` | FSDB output path (needs `+define+DUMP_FSDB`) |
-| `+SB_SELFTEST_COMPLETENESS=<mask>` | inject one synthetic completeness fault per bit — proves each check can fire |
-| `+SB_KEYED_PAIRING=<0\|1>` | keyed vs FIFO-order master/slave pairing |
-| `+disable_end_of_test_checks=1` | opt out of end-of-test checking (logged as a warning) |
+| `+UVM_TESTNAME=<class>` | Select a registered UVM test |
+| `+UVM_VERBOSITY=UVM_LOW\|UVM_MEDIUM\|UVM_HIGH` | Set UVM verbosity |
+| `+ntb_random_seed=<n>` | Set the reproducible random seed |
+| `+BUS_MATRIX_MODE=<mode>` | Select runtime reference mode/population for non-self-binding tests |
+| `+END_OF_TEST_DRAIN_NS=<n>` | Override the 5000 ns environment drain |
+| `+SB_KEYED_PAIRING=0\|1` | Use arrival-order or keyed manager/subordinate pairing |
+| `+SB_SELFTEST_COMPLETENESS=<mask>` | Inject negative checker self-test faults; not a functional run |
+| `+fsdbfile=<path>` | Set FSDB path when `DUMP_FSDB` is compiled |
 
-### End-of-test drain
+The scoreboard's `disable_end_of_test_checks` control is a UVM config-db field,
+not a recognized bare plusarg. Tests that set it waive all completeness checks;
+such a PASS does not establish that every transaction was accounted for.
 
-A `NON_BLOCKING` sequence completes at the **address** handshake — `item_done()` is called
-there, not at the response. Every non-blocking test is
-`raise_objection → seq.start → drop_objection`, so without a drain the run phase ends with
-W, B and R still in flight, and those tests verify only the address channels.
+## Prerequisites
 
-`axi4_env::run_phase` therefore sets a drain time (default 5 µs). It lives in the **env**
-because the affected tests override `run_phase` without calling `super`, so anything placed
-in `axi4_base_test::run_phase` would never execute for them.
+The supported live flow is:
 
-### Pass criteria
+- Synopsys VCS/Verdi; the registered installation is
+  `W-2024.09-SP1`/`W-2024.09-SP1_Full64`;
+- VCS built-in UVM 1.2 via `-ntb_opts uvm-1.2`;
+- Python 3, using only the standard library, for regression; and
+- optionally Volclava/LSF commands `bsub`, `bjobs`, and `bkill` for `--lsf`;
+- optionally `urg` for merged coverage reports.
 
-A run passes only when **both** hold:
+Cadence and Questa material in this repository is dormant/reference material,
+not a verified current flow. Track-B additionally requires the licensed local
+fabric deliverable at the paths named by its file lists.
 
-1. `UVM_ERROR : 0` in the report summary, **and**
-2. `TEST RESULT: PASS` from `axi4_performance_metrics` (it consumes the deadlock and
-   livelock flags for every test).
+Check the tools before a long run:
 
-Do not gate on the simulator's exit code — a run ending `UVM_ERROR : 7` still exits 0.
+```bash
+vcs -ID
+python3 --version
+command -v urg                 # coverage merge only
+command -v bsub bjobs bkill    # LSF only
+```
 
----
+## Quick start
 
-## Regression
+All live standalone commands run from `sim/synopsys_sim/`.
 
 ```bash
 cd sim/synopsys_sim
 
-# local
-python3 axi4_regression.py --test-list ../../testlists/axi4_transfers_regression.list \
-                           --max-parallel 4
+make help
+make sim \
+  test=axi4_blocking_write_read_test \
+  SEED=12345 \
+  FSDB_DUMP=0 \
+  LOG_FILE=axi4_blocking_write_read_test.log
+```
+
+> [!WARNING]
+> The Make variable is lowercase **`test`**, not `TEST`. Historical quick-start
+> material using `TEST`, `WAVES`, or `DEFINES` does not match the live Makefile.
+
+The standalone Make parameters that are active in the recipe are:
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `test` | `axi4_default_test` | Test class; the default class is not currently registered, so specify one |
+| `SEED` | automatic | Reproducible seed when set |
+| `LOG_FILE` | `<test>.log` | VCS compile/run log |
+| `FSDB_DUMP` | `1` | Add `DUMP_FSDB`; set `0` for a fast text-only run |
+| `COVERAGE` | `0` | Enable VCS code/assert coverage |
+| `COMMAND_ADD` | empty | Raw trusted VCS compile/runtime text; not an input-sanitized interface |
+| `CLEANUP_DELAY` | `5` | Delay after cleanup before VCS starts |
+
+> [!CAUTION]
+> `make sim` performs a broad cleanup in the current run directory before VCS:
+> it removes `simv*`, `csrc*`, FSDB, VDB, and `*.log` artifacts. Do not run two
+> jobs in the same directory and do not keep the only copy of an evidence log
+> there. Regression uses isolated run folders for this reason.
+
+### Explicit topology selection
+
+The Makefile contains test-name filters intended to select 4×4/10×10 compile
+defines, but the current GNU make patterns do not reliably match names such as
+`axi4_qos_basic_priority_test`. Do not rely on name auto-detection. Pass the
+minimum compile/runtime choice explicitly:
+
+```bash
+# Baseline direct wiring with a 10x10 UVM population and ENHANCED reference map
+make sim \
+  test=axi4_qos_basic_priority_test \
+  SEED=12345 \
+  FSDB_DUMP=0 \
+  COMMAND_ADD='+define+BUS_MATRIX_10X10 +BUS_MATRIX_MODE=ENHANCED'
+
+# Baseline direct wiring with a 4x4 population and BASE reference map
+make sim \
+  test=axi4_base_matrix_test \
+  SEED=12345 \
+  FSDB_DUMP=0 \
+  COMMAND_ADD='+define+RUN_4X4_CONFIG +BUS_MATRIX_MODE=BASE'
+```
+
+The 10×10 example relies on the current default HDL capacity of ten interfaces;
+`BUS_MATRIX_10X10` selects the associated compile-time ID map, while the
+plusarg selects the ten-agent ENHANCED reference mode. The 4×4 example must
+reduce the compiled interface capacity explicitly.
+
+`COMMAND_ADD` is expanded by GNU make and then inserted directly into a shell
+recipe. Use only reviewed, fixed literals such as the examples above; never
+populate it from untrusted user/CI text. An unknown `BUS_MATRIX_MODE` spelling
+only warns and keeps the derived default, so confirm the `TEST_CONFIG` summary
+in the log. Run each job in an isolated directory because cleanup happens
+before a malformed option can fail. Any compile define change requires a full
+recompile.
+
+### Separated VCS build and run
+
+Use this form when you need independent build/run logs or do not want Make's
+cleanup behavior:
+
+```bash
+cd sim/synopsys_sim
+
+vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all \
+  -ntb_opts uvm-1.2 -override_timescale=1ps/1ps \
+  +nospecify +no_timing_check \
+  -f ../../sim/axi4_compile.f \
+  -o simv -l build.log
+
+./simv \
+  +UVM_TESTNAME=axi4_blocking_write_read_test \
+  +UVM_VERBOSITY=UVM_LOW \
+  +ntb_random_seed=12345 \
+  -l smoke.log
+```
+
+## Track-B: commercial fabric as DUT
+
+<img src="doc/img/build_run_flow.svg" alt="Baseline and Track-B build, run, artifact, and verdict flow" width="100%">
+
+Track-B must use the fabric-specific file list; adding only a fabric define to
+the baseline list does not compile the licensed RTL.
+
+### 10×10 fabric
+
+```bash
+cd sim/synopsys_sim
+
+vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all \
+  -ntb_opts uvm-1.2 -override_timescale=1ps/1ps \
+  +nospecify +no_timing_check \
+  +define+BUS_MATRIX_FABRIC_IP \
+  +define+DATA_WIDTH=256 \
+  +define+AXI_ID_WIDTH=8 \
+  +define+AXI_ID_LAST=255 \
+  -f ../../sim/axi4_compile_fabric_ip.f \
+  -o simv_trackb -l build_trackb.log
+
+./simv_trackb \
+  +UVM_TESTNAME=axi4_trackb_smoke_test \
+  +UVM_VERBOSITY=UVM_LOW \
+  +ntb_random_seed=12345 \
+  -l axi4_trackb_smoke_test.log
+```
+
+### 4×4 fabric
+
+```bash
+cd sim/synopsys_sim
+
+vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all \
+  -ntb_opts uvm-1.2 -override_timescale=1ps/1ps \
+  +nospecify +no_timing_check \
+  +define+BUS_MATRIX_FABRIC_IP \
+  +define+FABRIC_IP_4X4 \
+  +define+DATA_WIDTH=256 \
+  +define+AXI_ID_WIDTH=6 \
+  +define+AXI_ID_LAST=63 \
+  -f ../../sim/axi4_compile_fabric_ip_4x4.f \
+  -o simv_trackb4x4 -l build_trackb4x4.log
+
+./simv_trackb4x4 \
+  +UVM_TESTNAME=axi4_trackb_4x4_smoke_test \
+  +UVM_VERBOSITY=UVM_LOW \
+  +ntb_random_seed=12345 \
+  -l axi4_trackb_4x4_smoke_test.log
+```
+
+### Fabric-only sanity test
+
+This test verifies only the 10×10 fabric wrapper/pins and does not instantiate
+the UVM environment:
+
+```bash
+cd sim/synopsys_sim
+bash ../run_fabric_smoke.sh
+```
+
+Required script result:
+
+```text
+FABRIC SMOKE TEST PASSED (3/3)
+run_fabric_smoke: PASS
+```
+
+The script writes `fabric_smoke_work/vcs.log` and
+`fabric_smoke_work/run.log` and gates on log content rather than VCS exit status.
+
+## Regression
+
+The canonical runner is `sim/synopsys_sim/axi4_regression.py`.
+
+```bash
+cd sim/synopsys_sim
+
+# Local
+python3 axi4_regression.py \
+  --test-list ../../testlists/axi4_transfers_regression.list \
+  --max-parallel 4 \
+  --timeout 1800
 
 # LSF
-python3 axi4_regression.py --test-list ../../testlists/axi4_transfers_regression.list \
-                           --lsf --max-parallel 6 --timeout 1800
+python3 axi4_regression.py \
+  --test-list ../../testlists/axi4_transfers_regression.list \
+  --lsf --max-parallel 6 --timeout 1800
 
-# with coverage
-python3 axi4_regression.py --test-list ... --lsf --max-parallel 6 --cov
+# LSF with coverage
+python3 axi4_regression.py \
+  --test-list ../../testlists/axi4_transfers_regression.list \
+  --lsf --max-parallel 6 --timeout 1800 --cov
 ```
+
+Use `python3 axi4_regression.py --help` as the executable option reference.
+Important options include:
 
 | Option | Meaning |
 |---|---|
-| `--test-list` | path to the list; entries are `<test_name> run_cnt=<n>` |
-| `--max-parallel` | number of execution folders **and** the concurrency limit |
-| `--lsf` | submit through `bsub` instead of running locally |
-| `--timeout` | per-test wall-clock limit, seconds |
-| `--cov` | collect functional + code coverage into per-test `.vdb` |
-| `--fsdb-dump` | add `+define+DUMP_FSDB` to the build |
+| `--test-list <path>` | Select the list; default is the symlinked list in `synopsys_sim/` |
+| `--max-parallel N`, `-p N` | Bound isolated run folders and concurrency |
+| `--timeout SEC`, `-t SEC` | Per-test wall-clock limit; default 600, minimum 60 |
+| `--lsf` | Submit and supervise jobs through `bsub`/`bjobs`/`bkill` |
+| `--cov` | Collect and merge VCS coverage |
+| `--fsdb-dump` | Compile FSDB dumping; regression default is off |
+| `--verbose` | Print additional orchestration detail |
 
-Each job compiles its own `simv` inside an execution folder. `--max-parallel` bounds how
-many folders exist *and* how many jobs may hold one at a time — two live jobs in one folder
-would delete each other's build products.
+### Test-list grammar
 
-Results land in `regression_result_<timestamp>/` with `regression_summary.txt`,
-`no_pass_list`, and `logs/{pass_logs,no_pass_logs}/`.
+Blank lines and `#` comments are ignored. Each active line begins with a test
+class and may include:
 
-> Two regression lists exist — `sim/axi4_transfers_regression.list` and
-> `testlists/axi4_transfers_regression.list`. They are **not** currently in sync
-> (133 tests in common; 41 only in `testlists/`, 1 only in `sim/`). Pick deliberately.
-
----
-
-## Coverage
-
-```bash
-vcs ... -cm line+cond+fsm+tgl+branch+assert -cm_seqnoconst \
-        -cm_hier ../../sim/coverage_scope.cm_hier -cm_dir cov.vdb
-
-./simv ... -cm line+cond+fsm+tgl+branch+assert -cm_dir cov.vdb -cm_name <test>
-urg -dir cov.vdb -format text -report cov_rpt
+```text
+axi4_blocking_write_read_test run_cnt=3
+axi4_outstanding_depth_test run_cnt=2 seed=424242
+axi4_base_matrix_test run_cnt=1 command_add="+BUS_MATRIX_MODE=BASE +define+RUN_4X4_CONFIG"
 ```
 
-**Code coverage is scoped to the fabric interface only.** `coverage_scope.cm_hier` keeps
-`hdl_top` and the project-authored `u_fabric_ip` wrapper and drops
-`u_fabric_ip.u_fabric` — the generated fabric IP internals are licensed, pre-verified
-third-party IP and are not a VIP verification target; ~300 vendor `.v` files in the
-denominator only deflate LINE and TOGGLE. Functional coverage has no such carve-out.
+Quote `command_add` when it contains spaces. The authoritative list is
+`testlists/axi4_transfers_regression.list`; the similarly named physical file
+under `sim/` is an older, divergent list. The file in `sim/synopsys_sim/` is a
+symlink to the authoritative list.
 
-Never merge `.vdb` databases across different builds: baseline and Track-B use different
-defines and a different `-cm` scope.
+### Scope and artifacts
 
----
+The current runner hardcodes the baseline `axi4_compile.f`. It is therefore a
+baseline runner; `command_add=+define+BUS_MATRIX_FABRIC_IP` does not substitute
+for a Track-B file list.
 
-## Waveform debug
+Each job receives an isolated execution folder. Results are collected under:
+
+```text
+regression_result_<timestamp>/
+├── running_list
+├── pass_list
+├── no_pass_list
+├── regression_results_<timestamp>.txt
+├── regression_summary.txt
+├── logs/
+│   ├── pass_logs/
+│   └── no_pass_logs/
+└── coverage_collect/                 present with --cov
+    ├── merged_coverage.vdb/
+    └── coverage_report/
+```
+
+List sizes and historical pass ratios drift as tests change. Recompute them
+from the selected list/result directory rather than treating a README number as
+a release sign-off claim.
+
+## Waveforms and coverage
+
+### FSDB
+
+The standalone Make flow enables FSDB by default; direct VCS and regression do
+not. For a separated flow:
 
 ```bash
 vcs ... +define+DUMP_FSDB -o simv_fsdb
-./simv_fsdb +UVM_TESTNAME=<test> +fsdbfile=/tmp/run.fsdb
+./simv_fsdb \
+  +UVM_TESTNAME=axi4_blocking_write_read_test \
+  +ntb_random_seed=12345 \
+  +fsdbfile=/tmp/axi4_smoke.fsdb \
+  -l smoke.log
+
+verdi -ssf /tmp/axi4_smoke.fsdb -elab simv_fsdb.daidir/kdb
 ```
 
-The dump covers `hdl_top`, which is where the AXI pins are — dumping only `hvl_top` cannot
-answer any question about `AWVALID`/`WREADY`/`WLAST` timing.
+The relevant dump scope is `hdl_top`, which contains the AXI pins. Track-B
+boundary tracing can additionally be compiled with
+`+define+FABRIC_IP_DEBUG_PROBE`; its messages use the `[NICPROBE]` tag.
 
----
+### VCS code/assert coverage
 
-## Status
+```bash
+vcs ... \
+  -cm line+cond+fsm+tgl+branch+assert \
+  -cm_seqnoconst \
+  -cm_dir cov.vdb
 
-Measured, not aspirational. Numbers are only meaningful with the build and seed that
-produced them.
+./simv ... \
+  -cm line+cond+fsm+tgl+branch+assert \
+  -cm_dir cov.vdb \
+  -cm_name axi4_smoke
 
-* **Track-B 10×10 and 4×4** — smoke and coverage-sweep tests pass with `UVM_ERROR : 0`,
-  `TEST RESULT: PASS` and `Protocol Issues : 0` (960 writes / 960 reads on 10×10;
-  384 / 384 on 4×4).
-* **Functional coverage is not at 100%**, and the reported figure is not yet a sound
-  baseline: the model has been under repair (per-channel sampling, ID/response cross fixes,
-  legality `ignore_bins`), and pre-repair merged numbers included hits scored by
-  zero-filled fields on the opposite channel. Re-baseline before quoting a number.
-* **Full regression**: `testlists/axi4_transfers_regression.list` (761 expanded runs)
-  passes 760/761 (99.9%). The one failure is a pre-existing manager-BFM read-response
-  timing issue, independently confirmed unrelated to the fixes below — see
-  [Recent fixes](#recent-fixes).
+urg -dir cov.vdb -format text -report cov_rpt
+```
 
-If you find a check that looks present but never fires, that is a known failure mode in
-this codebase — grep for `assert property` and for the actual sampling call, not for the
-description comment above it.
+For Track-B add `-cm_hier ../../sim/coverage_scope.cm_hier`. Do not merge VDBs
+from builds with different file lists, defines, widths, or coverage scopes.
 
----
+## Adding a sequence and test
 
-## Recent fixes
+Use the existing base classes and package-registration pattern.
 
-Outstanding-transaction and out-of-order (OOO) handling received a focused pass. All
-items below have fail-then-pass evidence (a red run before the fix, a green run after,
-same seed) and were re-verified against a full regression pass plus the Track-B
-4×4/10×10 fabric smoke.
+### 1. Add a manager or subordinate sequence
 
-| Area | What was wrong | Fix |
-|---|---|---|
-| QoS `BID` assignment | The slave built `BID` by popping a package-scope queue shared across all 10×10 master/slave pairs, with no size guard and no per-agent isolation — risk of an empty-queue pop (`BID`=0) or one master's ID leaking into another pair's response. | `BID` now comes from the `AWID` this agent sampled on its own AW channel. |
-| Same-ID response ordering (read) | Same-ID detection only compared the tail of a shuffled response queue, so a non-adjacent repeated ID (e.g. A, B, A) could have its two occurrences returned out of order — a protocol violation generated by the VIP itself, not the DUT. | Replaced with per-ID FIFOs plus a random cross-ID arbiter: same ID stays strictly in order, different IDs may still legally interleave. |
-| Same-ID response ordering (write) / `BID`↔`BRESP` binding | An early write-side redesign selected `BID` via an independent arbiter while `BRESP` came from strict FIFO order, so a completion could carry the wrong transaction's `BID`. | `BID` now comes from the same AW packet `BRESP` is computed from — one source of truth. |
-| Same-ID order checking | No checker existed to catch same-ID reordering on live regression traffic. | New per-(port, ID) scoreboard checker (`env/axi4_scoreboard.sv`), on by default. |
-| Outstanding-transaction depth | `outstanding_write_tx`/`outstanding_read_tx` config fields were silent no-ops, and the manager's channel semaphores were hardcoded to a fixed depth of 1 regardless of configuration. | Manager credit counters are now sized from config; a directed depth test (`axi4_outstanding_depth_test`) exercises depth > 1. |
-| Read-data memory model | The reference memory model stored one word per 128-byte-aligned address while the datapath wrote one byte at a time, so only the last byte of a multi-beat write survived and reads replicated it across every lane. | Model is now byte-addressable. |
-| Read-data checking | The only call site of the read-data verification function had been commented out, and the live check compared two monitors observing the same physical wire (never actually independent). | Rewritten as a real expected-vs-actual check with a known-bit mask, now live. |
-| Manager-BFM read-response robustness | With a single active read-claim task waiting for one specific ID, a legally-reordering subordinate could fill the bounded read-response collector with other-ID bursts first, deadlocking the R channel until a fixed-cycle timeout silently dropped the awaited transaction. | Collector depth raised; deeper structural fix (crediting AR issuance itself) remains tracked as future work. |
-| Regression pass/fail classification | `axi4_regression.py` (and its two sibling scripts) could report PASS on a log-text heuristic match before checking the UVM error count, misfiling some failing runs as passing. | UVM Report Summary now checked first and is authoritative when present. |
-| `axi4_all_master_slave_access_test` stimulus | Fully unconstrained random addresses are harmless in `NONE` mode (every address decodes to slave 0) but legitimately `DECERR` under `BASE`/`ENHANCED`, causing mode-dependent flakiness. | Addresses now constrained to the active mode's legal slave-address ranges. |
+1. Create the sequence under `seq/master_sequences/` or
+   `seq/slave_sequences/`.
+2. Extend the relevant base sequence and register it with the UVM factory.
+3. Constrain or construct the transaction explicitly; do not silently depend
+   on the test-name topology heuristic.
+4. Add the source to `axi4_master_seq_pkg.sv` or `axi4_slave_seq_pkg.sv`.
 
----
+### 2. Add a virtual sequence when coordination is required
 
-## Key documents
+1. Extend `axi4_virtual_base_seq` under `virtual_seq/`.
+2. Use `p_sequencer` read/write arrays for the selected manager/subordinate
+   indices.
+3. Include it in `virtual_seq/axi4_virtual_seq_pkg.sv`.
 
-| File | Contents |
+### 3. Add and register the test
+
+1. Extend `axi4_base_test` unless a narrower existing test base applies.
+2. Factory-register the class.
+3. Configure topology and agent modes during build; for a fixed-DUT topology,
+   use the self-binding configuration pattern used by Track-B tests.
+4. In `run_phase`, raise an objection, start the virtual sequence on
+   `axi4_env_h.axi4_virtual_seqr_h`, then drop the objection.
+5. Include the source in `test/axi4_test_pkg.sv`. A file that is not included
+   there cannot be found by `+UVM_TESTNAME` in the active compile.
+6. Add a fixed-seed entry to `testlists/axi4_transfers_regression.list`.
+
+### 4. Verify registration and behavior
+
+```bash
+rg -n 'my_new_test' test/axi4_test_pkg.sv testlists/axi4_transfers_regression.list
+
+cd sim/synopsys_sim
+make sim \
+  test=my_new_test \
+  SEED=424242 \
+  FSDB_DUMP=0 \
+  LOG_FILE=my_new_test.log
+
+grep -E 'TEST RESULT:|UVM_(ERROR|FATAL)[[:space:]]*:' my_new_test.log
+```
+
+For a new checker, first add a negative test that proves the checker fires,
+then run the corresponding legal case and regression slice.
+
+## Repository map
+
+```text
+tim_axi4_vip/
+├── agent/
+│   ├── master_agent_bfm/        HDL manager driver/monitor BFM wrappers
+│   └── slave_agent_bfm/         HDL subordinate driver/monitor BFM wrappers
+├── assertions/                  targeted manager/subordinate SVA
+├── bm/                          address/permission/memory reference model
+├── env/                         env, config, scoreboard, coverage, metrics, checkers
+├── include/                     compile-time widths, topology, and drain controls
+├── intf/axi4_interface/         physical AXI interface
+├── master/                      manager agent, cfg, tx, proxies, converter, coverage
+├── slave/                       subordinate agent, cfg, tx, proxies, memory, coverage
+├── pkg/                         shared enums, parameters, and BFM structs
+├── seq/
+│   ├── master_sequences/        manager stimulus library and package
+│   └── slave_sequences/         subordinate response library and package
+├── virtual_seq/                 cross-agent scenarios and package
+├── virtual_seqr/                virtual sequencer
+├── test/                        UVM tests, base test, config, and test package
+├── top/                         hvl_top, hdl_top, wrappers, fabric smoke top
+├── sim/
+│   ├── axi4_compile.f           baseline active file list
+│   ├── axi4_compile_fabric_ip.f Track-B 10x10 file list
+│   ├── axi4_compile_fabric_ip_4x4.f
+│   ├── coverage_scope.cm_hier
+│   ├── run_fabric_smoke.sh
+│   └── synopsys_sim/            Makefile and Python regression runner
+├── testlists/                   authoritative regression lists
+├── doc/                         supporting documents and SVG figures
+├── ref_vip/                     historical/upstream snapshot, not active file list
+└── ext/                         licensed commercial RTL; local-only
+```
+
+Active baseline compile order is shared globals/agent/reference packages,
+sequence packages, environment, virtual sequences, tests, interface/BFMs,
+tops, then assertions. `sim/axi4_compile.f` is the executable source of truth.
+
+## Known limitations
+
+| Limitation | Practical effect |
 |---|---|
-| `claude.md` | 10×10 access matrix + address map — authoritative spec |
-| `AXI-Case-list.csv`, `doc/testcase_matrix.csv` | case status — verify before trusting |
+| No certification claim | The repository has significant stimulus/checking, but no certified compliance-suite result is established here |
+| Baseline direct wiring | It cannot prove N×M routing or arbitration; use a real interconnect DUT for those behaviors |
+| Two-bit `AWLOCK`/`ARLOCK` pins | The interface declares AXI3-style `[1:0]` pins while class semantics are one-bit AXI4; Track-B uses bit 0 |
+| Plain interface | `axi4_if` defines no modports or interface-level clocking blocks; monitor BFMs have their own sampling clocking blocks |
+| ID stimulus range | Track-B pins/enums can carry up to 8-bit IDs, but default initiator constraints/helpers generate IDs 0–15 |
+| Assertion scope | AW/AR stable/known payload sets omit QoS, REGION, and USER; there are no comprehensive SVA rules for all burst/4-KiB/WLAST/WSTRB/same-ID cases |
+| READY timeout wording | The property uses unbounded `##[1:$]`; the reported finite ready-delay configuration is not wired into the assertions |
+| Same-ID closure | Read-side adjudication is selective and write-side same-ID ordering is not fully adjudicated by the end checker |
+| Content checking defaults | Independent write-to-read memory content checking is not universally enabled; direct-side equality can compare observations of the same wire |
+| QoS/CACHE/REGION semantics | Fields are driven/observed/covered, but the reference model does not implement QoS arbitration, cache behavior, or REGION-based decode |
+| Coverage sampling gaps | QoS/USER and protocol subscribers can sample unused-side/default fields; response-paired error-injection coverage has an unassigned subordinate transaction and recovery cycles are randomized rather than measured |
+| Optional checker readiness | Reset/frequency checkers default off; frequency-checker VIF integration has not been established by this documentation pass |
+| Clock comment mismatch | `hdl_top` labels a 10 ns toggle delay as 100 MHz, but toggling every 10 ns produces a 20 ns period; do not use the comment as a frequency contract |
+| Make topology inference | GNU make name filters currently fail for representative `%qos%`/`%boundary%` patterns; select topology explicitly |
+| Regression verdict gap | Runner PASS does not require the metrics PASS banner and has weaker no-summary fallbacks |
+| Baseline-only runner | The Python runner always selects the baseline file list; Track-B needs an explicit fabric build flow |
+| Error-injection verdicts | Metrics intentionally interpret expected-error tests differently and may PASS with zero error responses; require scenario-specific provocation and expected type/count evidence |
+
+## Troubleshooting
+
+### Test class not found
+
+- Confirm the spelling passed to lowercase Make variable `test`.
+- Confirm the source is included in `test/axi4_test_pkg.sv`.
+- Confirm `top/hvl_top.sv` imports that package through the active file list.
+- Do not use the Makefile's unregistered `axi4_default_test` default.
+
+### Wrong number of agents or wrong address responses
+
+- Check both the compile defines and the runtime `+BUS_MATRIX_MODE`.
+- Read the `TEST_CONFIG` summary near the start of the log.
+- Do not infer topology from the test name.
+- For Track-B, use the matching file list/test pair; a contradictory plusarg is
+  supposed to fatal.
+
+### First error or fatal
+
+```bash
+rg -n -m 1 'UVM_FATAL|UVM_ERROR|Error-\[' smoke.log
+```
+
+Investigate the first error before downstream fallout. Re-run one fixed seed and
+change one variable at a time.
+
+### Hang or phase never ends
+
+```bash
+./simv \
+  +UVM_TESTNAME=<test> \
+  +ntb_random_seed=<seed> \
+  +UVM_OBJECTION_TRACE \
+  +UVM_PHASE_TRACE \
+  -l hang.log
+```
+
+Inspect outstanding credits, unconsumed B/R responses, objections, and the
+end-of-test drain. For config-db issues add `+UVM_CONFIG_DB_TRACE`.
+
+### PASS in summary but missing metrics banner
+
+This is the known runner-classification gap. Open a fresh, complete job log and
+require both the common gates and scenario-specific evidence in
+[Qualification verdict](#qualification-verdict) before reporting the test as
+passed.
+
+### Fabric compile cannot find sources
+
+Stop before changing file lists. Confirm that the licensed local deliverable is
+installed at the exact `ext/` paths referenced by the selected Track-B file
+list. Never replace it with uploaded or copied third-party content.
+
+## Evidence index
+
+The following citations were re-read in this working tree on **2026-08-13**.
+They are the compact audit trail for the highest-impact statements above:
+
+| Claim | Executable/source evidence |
+|---|---|
+| HVL entry and UVM test selection | `top/hvl_top.sv:4-19` |
+| HDL interfaces, BFM instances, direct and fabric paths | `top/hdl_top.sv:500-559,550-970` |
+| Active baseline compile order | `sim/axi4_compile.f:15-34` |
+| Five-channel pin set | `intf/axi4_interface/axi4_if.sv:14-67` |
+| Width and USER defaults | `pkg/axi4_globals_pkg.sv:25-80`; `include/axi4_bus_config.svh:71-97,156-188` |
+| Compile capacity and 4×4/10×10 overrides | `include/axi4_defines.svh:9-37` |
+| Runtime mode/population mapping | `test/axi4_base_test.sv:98-159`; `test/axi4_test_config.sv:73-225` |
+| Manager/subordinate active-vs-passive composition | `master/axi4_master_agent.sv:9-139`; `slave/axi4_slave_agent.sv:8-133` |
+| Virtual sequencer arrays | `virtual_seqr/axi4_virtual_sequencer.sv:8-35` |
+| Converter/BFM boundary | `master/axi4_master_seq_item_converter.sv:10-23`; `agent/master_agent_bfm/axi4_master_agent_bfm.sv:168-185` |
+| Five-channel monitor publication and ID pools | `master/axi4_master_monitor_proxy.sv:12-317`; `slave/axi4_slave_monitor_proxy.sv:10-313` |
+| Scoreboard streams, pairing, and completeness | `env/axi4_scoreboard.sv:8-258,648-793,3867-4167` |
+| BASE/ENHANCED maps and expected responses | `bm/axi4_bus_matrix_ref.sv:7-76,105-371` |
+| Targeted SVA | `assertions/master_assertions.sv:79-448`; `assertions/slave_assertions.sv:77-279` |
+| Coverage construction and known error-coverage gap | `env/axi4_env.sv:245-336`; `env/axi4_error_injection_coverage.sv:8-23` |
+| Standalone Make arguments and cleanup | `sim/synopsys_sim/Makefile:5-14,46-130` |
+| Regression grammar, options, classifier, and artifacts | `sim/synopsys_sim/axi4_regression.py:176-333,340-572,1483-1584,2271-2358` |
+| Project qualification contract | `CLAUDE.md:42-50` |
+| Metrics banner semantics | `env/axi4_performance_metrics.sv:544-654` |
+| Track-B compile inputs | `sim/axi4_compile_fabric_ip.f:1-10`; `sim/axi4_compile_fabric_ip_4x4.f:1-16` |
+| Licensed-IP egress exclusions | `.gitignore:1-18`; `CLAUDE.md` section “Publish & upload policy” |
+
+## Document authority
+
+Use executable truth first:
+
+| Source | Authority |
+|---|---|
+| `sim/synopsys_sim/Makefile`, `axi4_regression.py`, active file lists | Current build/run behavior |
+| `intf/`, `master/`, `slave/`, `env/`, `bm/`, `top/` | Current implementation behavior |
+| `claude.md` | Project 10×10 access-map specification; lowercase filename is intentional |
+| `CLAUDE.md` | Repository working agreement and licensed-IP policy |
+| `AXI-Case-list.csv`, `doc/testcase_matrix.csv` | Case inventory; verify freshness before using as status |
+| `doc/AXI4_VIP_Quick_Start.md` | Historical and superseded where it disagrees with this README/live Makefile |
+| `ref_vip/` | Historical/upstream reference; not in the active baseline file list |
+
+When a document and executable source disagree, bind the claim to the exact
+working tree and date, reproduce it with a safe probe, then update the stale
+project-side document. Never edit licensed vendor collateral to make it match
+project behavior.
