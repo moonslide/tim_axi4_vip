@@ -20,6 +20,42 @@ class axi4_performance_metrics extends uvm_component;
     int data_bytes;
   } transaction_info_t;
   
+  //-------------------------------------------------------
+  // Stall-detector tuning.
+  //
+  // These were localparams, and that made the whole detector DEAD CODE in this
+  // suite.  Measured over the 413 logs of a full regression: the median test
+  // ends at ~5us and the longest at 25us, while the first poll is at 10us and
+  // the deadlock window is 100 polls == 1ms.  Only 15 of 413 tests reached even
+  // ONE poll, and none came within 40x of the window, so deadlock_detected and
+  // livelock_detected were permanently 0 -- which quietly reduced
+  // report_phase's acceptance criteria to "no error responses".
+  //
+  // As variables read from the config DB in build_phase, a directed test can
+  // scale the whole detector down to microseconds and actually exercise it,
+  // while every existing test keeps the historical numbers untouched.
+  //
+  // LIVELOCK_STALL_POLLS stays half of DEADLOCK_STALL_POLLS by default so a
+  // livelock report precedes the deadlock report for the same stall rather
+  // than racing it.
+  //-------------------------------------------------------
+  time stall_poll_interval        = 10us;
+  int  deadlock_stall_polls       = 100;
+  int  livelock_stall_polls       = 50;
+  // Backlog depth that makes a stall interesting. Unlike the previous magic
+  // 50, this is compared against sums over every (sb_src_index, ID) FIFO,
+  // which are unbounded, so it is named and documented rather than inline.
+  int  livelock_pending_threshold = 50;
+
+  // Completion counters.  total_write_transactions/total_read_transactions
+  // are incremented in process_write_addr/process_read_addr, i.e. they count
+  // REQUESTS, not completions.  Stall detection must not be based on those: a
+  // test that issues a burst of requests and then stops issuing while the
+  // responses drain normally has a frozen request count and a deep backlog,
+  // which is healthy behaviour, not a stall.
+  int completed_write_count;
+  int completed_read_count;
+
   // Performance counters
   int total_write_transactions;
   int total_read_transactions;
@@ -47,8 +83,12 @@ class axi4_performance_metrics extends uvm_component;
   // Latency tracking
   longint write_latencies[$];
   longint read_latencies[$];
-  transaction_info_t pending_writes[bit[15:0]]; // Indexed by AWID
-  transaction_info_t pending_reads[bit[15:0]];  // Indexed by ARID
+  // AXI permits multiple outstanding transactions with the same ID, and each
+  // master port has its own ID namespace. Keep an issue-order FIFO for every
+  // (observing master port, ID) pair so response latency is never correlated
+  // with a different request or overwritten by a later same-ID request.
+  transaction_info_t pending_writes[int][int][$]; // [sb_src_index][AWID]
+  transaction_info_t pending_reads[int][int][$];  // [sb_src_index][ARID]
   
   // Arbitration fairness tracking
   int master_grant_count[int];
@@ -89,7 +129,11 @@ class axi4_performance_metrics extends uvm_component;
   extern function real calculate_percentile(longint latencies[$], int percentile);
   extern function real calculate_throughput(int bytes_transferred, time duration);
   extern function real calculate_fairness_index(int grant_count[int]);
+  extern task watch_reset();
+  extern function void flush_pending_on_reset(int src_index);
   extern function void detect_deadlock_livelock();
+  extern function int pending_write_count();
+  extern function int pending_read_count();
   extern function real calculate_error_isolation_rate();
   extern function real calculate_retry_rate();
   extern function time calculate_reset_recovery_time();
@@ -114,6 +158,18 @@ function void axi4_performance_metrics::build_phase(uvm_phase phase);
   read_addr_fifo = new("read_addr_fifo", this);
   read_data_fifo = new("read_data_fifo", this);
   
+  // Optional stall-detector overrides.  Absent => the historical values above.
+  // A directed test sets these before the env is built so it can trigger the
+  // detector inside a microsecond-scale run; see the class-level comment.
+  void'(uvm_config_db#(time)::get(this, "", "stall_poll_interval",        stall_poll_interval));
+  void'(uvm_config_db#(int)::get (this, "", "deadlock_stall_polls",       deadlock_stall_polls));
+  void'(uvm_config_db#(int)::get (this, "", "livelock_stall_polls",       livelock_stall_polls));
+  void'(uvm_config_db#(int)::get (this, "", "livelock_pending_threshold", livelock_pending_threshold));
+  `uvm_info(get_type_name(),
+            $sformatf("Stall detector: poll=%0t deadlock=%0d polls livelock=%0d polls pending_threshold=%0d",
+                      stall_poll_interval, deadlock_stall_polls, livelock_stall_polls,
+                      livelock_pending_threshold), UVM_MEDIUM)
+
   test_start_time = $time;
 endfunction
 
@@ -125,10 +181,11 @@ task axi4_performance_metrics::run_phase(uvm_phase phase);
   // Monitor for deadlock/livelock conditions and process transactions
   fork
     forever begin
-      #10us;
+      #(stall_poll_interval);
       detect_deadlock_livelock();
     end
     process_transactions();
+    watch_reset();
   join_none
 endtask
 
@@ -173,12 +230,12 @@ function void axi4_performance_metrics::process_write_addr(axi4_master_tx t);
   info.burst_len = t.awlen + 1;
   info.data_bytes = (t.awlen + 1) * (1 << t.awsize);
   
-  pending_writes[t.awid] = info;
+  pending_writes[t.sb_src_index][int'(t.awid)].push_back(info);
   total_write_transactions++;
   total_bytes_written += info.data_bytes;
   
-  // Track request count (using AWID as proxy for master)
-  master_id = t.awid[3:0]; // Use lower bits of AWID as master proxy
+  // sb_src_index is the observing master port; AWID is not a master identity.
+  master_id = t.sb_src_index;
   if (master_request_count.exists(master_id))
     master_request_count[master_id]++;
   else
@@ -189,29 +246,40 @@ function void axi4_performance_metrics::process_write_resp(axi4_master_tx t);
   transaction_info_t info;
   longint latency;
   int master_id;
+
+  // Every B beat is one completed write, whatever its response.
+  completed_write_count++;
   
-  if (pending_writes.exists(t.bid)) begin
-    info = pending_writes[t.bid];
+  // Count every observed error response, even if its matching request was
+  // flushed or otherwise unavailable for latency correlation. Metrics must
+  // never turn a real SLVERR/DECERR into a passing acceptance result.
+  if (t.bresp == WRITE_SLVERR) begin
+    total_error_responses++;
+    total_slverr_responses++;
+    write_slverr_count++;
+  end else if (t.bresp == WRITE_DECERR) begin
+    total_error_responses++;
+    total_decerr_responses++;
+    write_decerr_count++;
+  end
+
+  if (pending_writes.exists(t.sb_src_index) &&
+      pending_writes[t.sb_src_index].exists(int'(t.bid)) &&
+      pending_writes[t.sb_src_index][int'(t.bid)].size() > 0) begin
+    info = pending_writes[t.sb_src_index][int'(t.bid)].pop_front();
     info.end_time = $time;
     
     latency = info.end_time - info.start_time;
     write_latencies.push_back(latency);
     
-    pending_writes.delete(t.bid);
-    
-    // Track errors
-    if (t.bresp == WRITE_SLVERR) begin
-      total_error_responses++;
-      total_slverr_responses++;
-      write_slverr_count++;
-    end else if (t.bresp == WRITE_DECERR) begin
-      total_error_responses++;
-      total_decerr_responses++;
-      write_decerr_count++;
+    if (pending_writes[t.sb_src_index][int'(t.bid)].size() == 0) begin
+      pending_writes[t.sb_src_index].delete(int'(t.bid));
+      if (pending_writes[t.sb_src_index].num() == 0)
+        pending_writes.delete(t.sb_src_index);
     end
     
-    // Track arbitration grants (using BID as proxy for master)
-    master_id = t.bid[3:0]; // Use lower bits of BID as master proxy
+    // Attribute the grant to the source master port, not to BID bits.
+    master_id = t.sb_src_index;
     if (master_grant_count.exists(master_id))
       master_grant_count[master_id]++;
     else
@@ -230,12 +298,12 @@ function void axi4_performance_metrics::process_read_addr(axi4_master_tx t);
   info.burst_len = t.arlen + 1;
   info.data_bytes = (t.arlen + 1) * (1 << t.arsize);
   
-  pending_reads[t.arid] = info;
+  pending_reads[t.sb_src_index][int'(t.arid)].push_back(info);
   total_read_transactions++;
   total_bytes_read += info.data_bytes;
   
-  // Track request count (using ARID as proxy for master)
-  master_id = t.arid[3:0]; // Use lower bits of ARID as master proxy
+  // sb_src_index is the observing master port; ARID is not a master identity.
+  master_id = t.sb_src_index;
   if (master_request_count.exists(master_id))
     master_request_count[master_id]++;
   else
@@ -247,37 +315,63 @@ function void axi4_performance_metrics::process_read_data(axi4_master_tx t);
   longint latency;
   int master_id;
   
-  if (pending_reads.exists(t.rid)) begin
-    if (t.rlast) begin // Only on last beat
-      info = pending_reads[t.rid];
+  // The monitor publishes one completed read burst at RLAST.
+  if (t.rlast) completed_read_count++;
+
+  // Count an error response before attempting latency correlation so an
+  // unmatched response still fails a normal test.
+  if (t.rlast && t.rresp == READ_SLVERR) begin
+    total_error_responses++;
+    total_slverr_responses++;
+    read_slverr_count++;
+  end else if (t.rlast && t.rresp == READ_DECERR) begin
+    total_error_responses++;
+    total_decerr_responses++;
+    read_decerr_count++;
+  end
+
+  if (t.rlast && pending_reads.exists(t.sb_src_index) &&
+      pending_reads[t.sb_src_index].exists(int'(t.rid)) &&
+      pending_reads[t.sb_src_index][int'(t.rid)].size() > 0) begin
+      info = pending_reads[t.sb_src_index][int'(t.rid)].pop_front();
       info.end_time = $time;
       
       latency = info.end_time - info.start_time;
       read_latencies.push_back(latency);
       
-      pending_reads.delete(t.rid);
-      
-      // Track errors
-      if (t.rresp == READ_SLVERR) begin
-        total_error_responses++;
-        total_slverr_responses++;
-        read_slverr_count++;
-      end else if (t.rresp == READ_DECERR) begin
-        total_error_responses++;
-        total_decerr_responses++;
-        read_decerr_count++;
+      if (pending_reads[t.sb_src_index][int'(t.rid)].size() == 0) begin
+        pending_reads[t.sb_src_index].delete(int'(t.rid));
+        if (pending_reads[t.sb_src_index].num() == 0)
+          pending_reads.delete(t.sb_src_index);
       end
       
-      // Track arbitration grants (using RID as proxy for master)
-      master_id = t.rid[3:0]; // Use lower bits of RID as master proxy
+      // Attribute the grant to the source master port, not to RID bits.
+      master_id = t.sb_src_index;
       if (master_grant_count.exists(master_id))
         master_grant_count[master_id]++;
       else
         master_grant_count[master_id] = 1;
       
       last_grant_time[master_id] = $time;
-    end
   end
+endfunction
+
+function int axi4_performance_metrics::pending_write_count();
+  int count = 0;
+  foreach (pending_writes[src]) begin
+    foreach (pending_writes[src][id])
+      count += pending_writes[src][id].size();
+  end
+  return count;
+endfunction
+
+function int axi4_performance_metrics::pending_read_count();
+  int count = 0;
+  foreach (pending_reads[src]) begin
+    foreach (pending_reads[src][id])
+      count += pending_reads[src][id].size();
+  end
+  return count;
 endfunction
 
 function real axi4_performance_metrics::calculate_percentile(longint latencies[$], int percentile);
@@ -325,31 +419,152 @@ function real axi4_performance_metrics::calculate_fairness_index(int grant_count
   return fairness;
 endfunction
 
+//--------------------------------------------------------------------------------------------
+// Task: watch_reset
+// AXI4 discards outstanding transactions across reset, so every request this
+// component is still holding becomes unanswerable the moment ARESETn drops.
+// env/axi4_scoreboard.sv:759 already subscribes to the same global event for
+// the same reason; this component did not, and that only became a defect when
+// pending_writes/pending_reads changed from a map keyed by ID -- where the next
+// same-ID request OVERWROTE the stale entry, so it self-healed -- to per-(port,
+// ID) FIFOs, which accumulate.
+//--------------------------------------------------------------------------------------------
+task axi4_performance_metrics::watch_reset();
+  // One watcher per master port, listening to that port's OWN reset event.
+  // The global "axi4_sb_reset_e" is deliberately NOT used here: every master
+  // interface triggers it from its own aresetn (see
+  // agent/master_agent_bfm/axi4_master_monitor_bfm.sv), so an INDEPENDENT reset
+  // of one master would look identical to a reset of all of them. Flushing
+  // every source on that would drop the outstanding requests of masters that
+  // are still mid-transaction -- zeroing their pending count and letting
+  // detect_deadlock_livelock() read a busy bus as idle, which is the exact
+  // inverse of the stale-entry problem the flush exists to solve.
+  int num_masters = (axi4_env_cfg_h != null) ? axi4_env_cfg_h.no_of_masters : NO_OF_MASTERS;
+
+  for (int i = 0; i < num_masters; i++) begin
+    automatic int idx = i;
+    fork
+      forever begin
+        uvm_event_pool::get_global($sformatf("axi4_sb_reset_e_%0d", idx)).wait_trigger();
+        flush_pending_on_reset(idx);
+      end
+    join_none
+  end
+endtask
+
+//--------------------------------------------------------------------------------------------
+// Function: flush_pending_on_reset
+// Two things have to go, not one:
+//  * the pending FIFOs, or the first post-reset response of a reused ID pops a
+//    pre-reset request and reports a latency for two unrelated transfers, while
+//    the real post-reset request stays queued for good -- so
+//    pending_*_count() never returns to 0 again. That last part matters beyond
+//    the metric: detect_deadlock_livelock() uses "nothing outstanding" to
+//    decide the bus is IDLE rather than STALLED, so a permanently non-empty
+//    queue reintroduces exactly the false deadlock that check was fixed to
+//    avoid.
+//  * the completion baselines, because dropping the queues does not change
+//    completed_*_count, and leaving last_*_count behind would make the next
+//    poll read as progress that never happened.
+//--------------------------------------------------------------------------------------------
+function void axi4_performance_metrics::flush_pending_on_reset(int src_index);
+  int dropped_w = 0;
+  int dropped_r = 0;
+
+  if (pending_writes.exists(src_index)) begin
+    foreach (pending_writes[src_index][id]) dropped_w += pending_writes[src_index][id].size();
+    pending_writes.delete(src_index);
+  end
+  if (pending_reads.exists(src_index)) begin
+    foreach (pending_reads[src_index][id]) dropped_r += pending_reads[src_index][id].size();
+    pending_reads.delete(src_index);
+  end
+
+  if (dropped_w != 0 || dropped_r != 0)
+    `uvm_info(get_type_name(),
+              $sformatf("Reset of master port %0d: discarded %0d outstanding write(s) and %0d outstanding read(s) from its latency FIFOs",
+                        src_index, dropped_w, dropped_r), UVM_MEDIUM)
+endfunction
+
 function void axi4_performance_metrics::detect_deadlock_livelock();
   static int no_progress_count = 0;
   static int last_write_count = 0;
   static int last_read_count = 0;
-  
-  if (total_write_transactions == last_write_count && 
-      total_read_transactions == last_read_count) begin
+
+  // Compare COMPLETIONS, not requests.  total_write_transactions and
+  // total_read_transactions are bumped in the address callbacks, so a test
+  // that has stopped issuing while its responses drain would look frozen here
+  // even though the bus is emptying normally -- and with the livelock arm
+  // below now requiring a stall (rather than the old, inverted
+  // no_progress_count == 0), that would have turned every end-of-test drain
+  // longer than LIVELOCK_STALL_POLLS into a livelock failure.
+  // An IDLE bus is not a stalled one.  With nothing outstanding there is
+  // nothing that could be stuck, so the timer is held at zero rather than
+  // being allowed to run.  Without this the counter climbs freely through any
+  // quiet period -- the `pending > 0` guard below only suppresses the REPORT,
+  // not the counting -- and the first transaction issued after >1ms of quiet
+  // is declared deadlocked on the very next poll, before its response has had
+  // any chance to arrive.  (The previous request-based comparison hid this:
+  // issuing a request changed total_*_transactions and so reset the timer.
+  // Moving to completions removed that reset path and made the idle period
+  // prime a false deadlock.)
+  if (pending_write_count() == 0 && pending_read_count() == 0) begin
+    no_progress_count = 0;
+    last_write_count  = completed_write_count;
+    last_read_count   = completed_read_count;
+  end
+  else if (completed_write_count == last_write_count &&
+           completed_read_count == last_read_count) begin
     no_progress_count++;
-    
-    if (no_progress_count > 100) begin // 1ms with no progress
-      if (pending_writes.size() > 0 || pending_reads.size() > 0) begin
-        deadlock_detected = 1;
-        `uvm_warning(get_type_name(), "Potential deadlock detected - no progress for 1ms with pending transactions")
-      end
+
+    if (no_progress_count > deadlock_stall_polls) begin
+      deadlock_detected = 1;
+      `uvm_warning(get_type_name(),
+                   $sformatf("Potential deadlock detected - no completion for %0d polls with %0d writes / %0d reads outstanding",
+                             no_progress_count, pending_write_count(), pending_read_count()))
     end
   end else begin
     no_progress_count = 0;
-    last_write_count = total_write_transactions;
-    last_read_count = total_read_transactions;
+    last_write_count = completed_write_count;
+    last_read_count = completed_read_count;
   end
   
-  // Livelock detection - high activity but no completion
-  if (no_progress_count == 0 && pending_writes.size() > 50 && pending_reads.size() > 50) begin
+  // Livelock detection - the bus is busy but completions have stalled.
+  //
+  // Two things were wrong with the previous predicate
+  // (`no_progress_count == 0 && pending_write_count() > 50 && pending_read_count() > 50`):
+  //
+  //  1. `no_progress_count == 0` is only true when completions DID advance on
+  //     this poll. Requiring it made the check fire on a bus that is making
+  //     progress and merely has a deep backlog -- i.e. a healthy
+  //     high-outstanding bus, which AXI explicitly permits. That is the
+  //     opposite of livelock, and report_phase turns the flag into
+  //     "TEST RESULT: FAIL", so it is a false failure waiting to happen.
+  //  2. The counts changed from map sizes (keyed by AxID, so bounded by the
+  //     4-bit ID space at 16 -- the arm could never fire at all) to sums over
+  //     every (sb_src_index, ID) FIFO, which are unbounded. The magic 50 was
+  //     calibrated against the first meaning and carried over to the second.
+  //
+  // What it now means: completions have been stalled for a sustained window --
+  // long enough to be more than jitter, short of the deadlock threshold -- while
+  // a large backlog is outstanding. Either direction alone is enough; requiring
+  // BOTH to exceed the threshold meant a read-only or write-only stall was
+  // invisible.
+  //
+  // Honest limitation: distinguishing livelock from deadlock properly needs
+  // evidence that work is being retried while not completing.  This VIP has no
+  // such signal -- `total_retry_count` is declared and read by
+  // calculate_retry_rate() but is never incremented anywhere, so it is
+  // permanently 0.  Until retry accounting exists, this check is "a sustained
+  // stall with a deep backlog", which is a subset of deadlock rather than a
+  // truly independent condition.
+  if (no_progress_count >= livelock_stall_polls && no_progress_count <= deadlock_stall_polls &&
+      (pending_write_count() > livelock_pending_threshold ||
+       pending_read_count()  > livelock_pending_threshold)) begin
     livelock_detected = 1;
-    `uvm_warning(get_type_name(), "Potential livelock detected - high pending transactions")
+    `uvm_warning(get_type_name(),
+                 $sformatf("Potential livelock detected - completions stalled for %0d polls with %0d writes / %0d reads outstanding",
+                           no_progress_count, pending_write_count(), pending_read_count()))
   end
 endfunction
 

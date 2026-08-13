@@ -277,6 +277,7 @@ endfunction : to_write_class
 //--------------------------------------------------------------------------------------------
 function void axi4_master_seq_item_converter::to_read_class( input axi4_read_transfer_char_s
   input_conv_h, output axi4_master_tx output_conv_h);
+  bit [1:0] worst_rresp;
 
   output_conv_h = new();
 
@@ -314,7 +315,20 @@ function void axi4_master_seq_item_converter::to_read_class( input axi4_read_tra
   output_conv_h.wait_count_read_address_channel = input_conv_h.wait_count_read_address_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_read_address_channel =  %0h",output_conv_h.wait_count_read_address_channel),UVM_HIGH);
 
-  $cast(output_conv_h.rresp,input_conv_h.rresp);
+  // Collapse the per-beat RRESP array onto the packet's single rresp using the
+  // WORST response in the burst.  The struct field is
+  // `bit [2**LENGTH:0][1:0] rresp` -- one entry per beat -- so casting the
+  // WHOLE array into a 2-bit enum only ever worked while the monitor wrote
+  // just element [0]; once beats 1..N carry their own response the array no
+  // longer fits and $cast fails outright (Error-[STASKE_DCF]).  rresp_e is
+  // ordered by severity (OKAY 2'b00 < EXOKAY 2'b01 < SLVERR 2'b10 <
+  // DECERR 2'b11), so "worst" is the maximum, and every struct->class site
+  // collapses identically so master and slave stay comparable.
+  worst_rresp = READ_OKAY;
+  foreach(input_conv_h.rresp[i]) begin
+    if(input_conv_h.rresp[i] > worst_rresp) worst_rresp = input_conv_h.rresp[i];
+  end
+  $cast(output_conv_h.rresp,worst_rresp);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting rresp =  %b",output_conv_h.rresp),UVM_HIGH);
   
   $cast(output_conv_h.rid,input_conv_h.rid);
@@ -444,6 +458,7 @@ endfunction : to_write_addr_data_resp_class
 // name - axi4_master_tx, axi4_read_transfer_char_s
 //--------------------------------------------------------------------------------------------
 function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4_master_tx raddr_packet, input axi4_read_transfer_char_s input_conv_h, output axi4_master_tx output_conv_h);
+  bit [1:0] worst_rresp;
 
   output_conv_h = new();
 
@@ -459,13 +474,33 @@ function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4
   output_conv_h.arregion = raddr_packet.arregion;   // was dropped -- see to_read_class
   $cast(output_conv_h.rid,input_conv_h.rid);
 
+  // Collapse the per-beat RRESP array onto the packet's single rresp using
+  // the WORST response seen in the burst.  AXI4 gives every read beat its own
+  // RRESP, so a burst can answer OKAY on some beats and SLVERR/DECERR on
+  // others; taking the last beat (or bit-casting the whole array, which is the
+  // same thing since element [0] holds the low bits) silently dropped an error
+  // that did not land on the final beat.  The rresp_e encoding is ordered by
+  // severity -- OKAY 2'b00 < EXOKAY 2'b01 < SLVERR 2'b10 < DECERR 2'b11 -- so
+  // "worst" is the maximum.  The slave-side converter collapses identically,
+  // which is what keeps the scoreboard's master-vs-slave compare valid.
+  worst_rresp = READ_OKAY;
   for(int i=0;i<raddr_packet.arlen+1;i++)begin
         output_conv_h.rdata[i] = input_conv_h.rdata[i];
+    if(input_conv_h.rresp[i] > worst_rresp) worst_rresp = input_conv_h.rresp[i];
     `uvm_info("axi4_master_seq_item_conv_class",$sformatf("combined read data packet after reading rdata= %0p",output_conv_h.rdata[i]),UVM_FULL);
     end
-  
-  $cast(output_conv_h.rresp,input_conv_h.rresp);
-  
+
+  $cast(output_conv_h.rresp,worst_rresp);
+
+  // The BFM hands up one COMPLETED burst at a time (axi4_master_monitor_proxy
+  // ::axi4_read_data), so this combined packet always represents a burst that
+  // ended on RLAST.  axi4_read_transfer_char_s carries no rlast field, and a
+  // fresh object defaults it to 0, which silently disabled every rlast-gated
+  // consumer -- read SLVERR/DECERR counting and read latency correlation in
+  // axi4_performance_metrics.  Mirrors the wlast carried on the write-side
+  // response packet in to_write_addr_data_resp_class.
+  output_conv_h.rlast = 1'b1;
+
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting read_addr_data_packet =  %s",output_conv_h.sprint()),UVM_HIGH);
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_HIGH);
 

@@ -62,6 +62,19 @@ task axi4_concurrent_reads_test::run_phase(uvm_phase phase);
   axi4_env_h.axi4_env_cfg_h.write_read_mode_h = ONLY_READ_DATA;
   `uvm_info(get_type_name(), "TC001: Configured as ONLY_READ_DATA test mode", UVM_MEDIUM);
 
+  // This test's whole focus is AxPROT/AxCACHE access control, so error
+  // responses are the expected outcome, not a defect: of its 5 reads the
+  // scoreboard expects READ_SLVERR for the ARPROT=111 access-control case and
+  // READ_DECERR for two out-of-range addresses, and confirms all three
+  // ("Correctly generated READ_SLVERR ... access control validation
+  // successful").  axi4_performance_metrics still scored them as Protocol
+  // Issues because this class name matches none of its auto-detect patterns
+  // and allow_error_responses defaults to 0 (axi4_base_test.sv:172).  Same
+  // convention as axi4_sequential_mixed_ops_test.sv:38.  The scoreboard
+  // remains the real checker for response correctness.
+  axi4_env_h.axi4_env_cfg_h.allow_error_responses = 1;
+  `uvm_info(get_type_name(), "TC001: allow_error_responses=1 - AxPROT/decode rejections are expected", UVM_MEDIUM);
+
   // Start timeout watchdog
   fork
     timeout_watchdog();

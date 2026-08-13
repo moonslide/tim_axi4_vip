@@ -11,6 +11,17 @@ class axi4_virtual_exception_multi_abort_seq extends axi4_virtual_base_seq;
   axi4_master_exception_multi_abort_seq master_abort_seq;
   axi4_master_bk_write_seq write_seq;
   axi4_master_bk_read_seq read_seq;
+
+  // Background traffic is a forever loop forked with join_none. Without a way
+  // to stop it and wait for it, the sequence just ran a fixed #500ns and ended
+  // while a transaction issued moments earlier was still in flight -- the
+  // scoreboard then reported it as "issued N read(s) ... that never received an
+  // RID" and the run failed. Whether that happened depended on where the last
+  // `$urandom_range(50,200)` interval landed relative to the fixed recovery
+  // delay, i.e. it was seed-dependent flake, not a data defect: the imbalance
+  // was always exactly 1, always the last transaction.
+  bit stop_background;
+  bit background_done;
   
   // Randomization parameters
   rand int unsigned num_abort_sequences;  // Number of abort sequences to run
@@ -58,14 +69,37 @@ class axi4_virtual_exception_multi_abort_seq extends axi4_virtual_base_seq;
       #(delays_between_sequences[seq] * 1ns);
     end
     
-    // Final recovery period
+    // Stop generating, then WAIT for the generator to actually finish its
+    // in-flight sequence. This is what makes the end of test deterministic:
+    // the bound is one transaction's latency, not the random issue interval.
+    stop_background = 1;
+    fork
+      begin
+        wait(background_done);
+      end
+      begin
+        // Never hang the test on a generator that is itself stuck; 20x the
+        // longest issue interval is far more than one transaction needs.
+        #4us;
+        if(!background_done)
+          `uvm_warning(get_type_name(),
+                       "background traffic did not finish draining within 4us - ending anyway")
+      end
+    join_any
+    disable fork;
+
+    // Settle: let anything already accepted by a driver retire before the
+    // scoreboard's end-of-test accounting runs.
     #500ns;
-    
+
   endtask
   
   // Generate continuous background traffic
   task generate_background_traffic();
-    forever begin
+    // bk_* sequences are BLOCKING, so start() returns only after the response
+    // has come back. Checking the flag at the top of each iteration therefore
+    // means the loop exits with NOTHING outstanding from this generator.
+    while(!stop_background) begin
       if($urandom_range(0, 1)) begin
         write_seq = axi4_master_bk_write_seq::type_id::create("bg_write");
         write_seq.start(p_sequencer.axi4_master_write_seqr_h);
@@ -75,6 +109,7 @@ class axi4_virtual_exception_multi_abort_seq extends axi4_virtual_base_seq;
       end
       #($urandom_range(50, 200) * 1ns);
     end
+    background_done = 1;
   endtask
   
 endclass

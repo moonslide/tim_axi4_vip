@@ -130,7 +130,8 @@ package axi4_master_seq_pkg;
   `include "axi4_master_upper_boundary_read_seq.sv"
   `include "axi4_master_lower_boundary_read_seq.sv"
   `include "axi4_master_4k_boundary_cross_seq.sv"
-  
+  `include "axi4_master_4k_boundary_cross_read_seq.sv"
+
   // ID_MULTIPLE_WRITES_SAME_AWID~TC_058: AXI4 ID Management and Protocol Violation Test Sequences
   `include "axi4_master_id_multiple_writes_same_awid_seq.sv"
   `include "axi4_master_id_multiple_writes_different_awid_seq.sv"
@@ -237,6 +238,8 @@ package axi4_master_seq_pkg;
   `include "axi4_master_trackb_base_seq.sv"
   `include "axi4_master_trackb_write_seq.sv"
   `include "axi4_master_trackb_read_seq.sv"
+  `include "axi4_master_trackb_4k_cross_seq.sv"
+  `include "axi4_master_trackb_4k_cross_read_seq.sv"
   `include "axi4_master_trackb_cov_sweep_seq.sv"
 
 endpackage : axi4_master_seq_pkg

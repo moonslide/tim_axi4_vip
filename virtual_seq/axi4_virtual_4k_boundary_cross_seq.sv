@@ -16,11 +16,13 @@ task axi4_virtual_4k_boundary_cross_seq::body();
   axi4_slave_bk_write_seq axi4_slave_bk_write_seq_h;
   axi4_slave_bk_read_seq axi4_slave_bk_read_seq_h;
   axi4_master_4k_boundary_cross_seq axi4_master_4k_boundary_cross_seq_h;
-  
+  axi4_master_4k_boundary_cross_read_seq axi4_master_4k_boundary_cross_read_seq_h;
+
   // Create sequence handles
   axi4_slave_bk_write_seq_h = axi4_slave_bk_write_seq::type_id::create("axi4_slave_bk_write_seq_h");
   axi4_slave_bk_read_seq_h = axi4_slave_bk_read_seq::type_id::create("axi4_slave_bk_read_seq_h");
   axi4_master_4k_boundary_cross_seq_h = axi4_master_4k_boundary_cross_seq::type_id::create("axi4_master_4k_boundary_cross_seq_h");
+  axi4_master_4k_boundary_cross_read_seq_h = axi4_master_4k_boundary_cross_read_seq::type_id::create("axi4_master_4k_boundary_cross_read_seq_h");
   
   // Start slave responders (exactly like working test)
   fork
@@ -36,8 +38,11 @@ task axi4_virtual_4k_boundary_cross_seq::body();
     end
   join_none
   
-  // Run master sequence
+  // Run master sequences.  The read leg needs its own sequencer: a read item
+  // started on axi4_master_write_seqr_h goes to the write driver and never
+  // reaches the AR channel, so without this the test issued zero reads.
   axi4_master_4k_boundary_cross_seq_h.start(p_sequencer.axi4_master_write_seqr_h);
+  axi4_master_4k_boundary_cross_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h);
 endtask
 
 `endif

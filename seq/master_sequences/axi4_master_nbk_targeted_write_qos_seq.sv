@@ -11,7 +11,14 @@ class axi4_master_nbk_targeted_write_qos_seq extends axi4_master_nbk_base_seq;
   // Configuration parameters
   bit [63:0] target_addr = 64'h0;
   bit [63:0] target_size = 64'h100;
-  string awid_val = "AWID_0";
+  // Typed as the enum, NOT a string.  `string awid_val = "AWID_0"` assigned
+  // straight into the enum field compiled with only a VCS
+  // Warning-[ENUMASSIGN] and packed the last two CHARACTERS' ASCII into the
+  // value: at AXI_ID_WIDTH=4 that happened to give the right low nibble for
+  // AWID_0..AWID_9 and the WRONG one for two-digit names, and at
+  // AXI_ID_WIDTH=8 (Track-B) every value was wrong -- "AWID_4" drove 52.
+  // See .claude/docs/known-landmines.md #41.
+  awid_e awid_val = AWID_0;
   int master_id = 0;
   int target_slave = 0;
   bit is_enhanced_mode = 0;

@@ -112,7 +112,7 @@ task axi4_sequential_mixed_ops_virtual_seq::execute_sequential_operations();
     `uvm_info("TC003_VSEQ", "Step 1: M4 → S8 Write (Expect: OKAY)", UVM_MEDIUM);
     // Configure sequence for S8 address (0x0000_000A_0003_0000)
     m4_write_seq_h.target_addr = 64'h0000_000A_0003_0000;
-    m4_write_seq_h.awid_val = "AWID_4";
+    m4_write_seq_h.awid_val = AWID_4;
     m4_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[4]);
     #200;
     
@@ -120,7 +120,7 @@ task axi4_sequential_mixed_ops_virtual_seq::execute_sequential_operations();
     `uvm_info("TC003_VSEQ", "Step 2: M6 → S8 Read (Expect: OKAY)", UVM_MEDIUM);
     // Configure sequence for S8 address (0x0000_000A_0003_0000)
     m6_read_seq_h.target_addr = 64'h0000_000A_0003_0000;
-    m6_read_seq_h.arid_val = "ARID_6";
+    m6_read_seq_h.arid_val = ARID_6;
     m6_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h_all[6]);
     #200;
     
@@ -128,7 +128,7 @@ task axi4_sequential_mixed_ops_virtual_seq::execute_sequential_operations();
     `uvm_info("TC003_VSEQ", "Step 3: M7 → S7 Write (Expect: SLVERR)", UVM_MEDIUM);
     // Configure sequence for S7 address (0x0000_000A_0002_0000)
     m7_write_seq_h.target_addr = 64'h0000_000A_0002_0000;
-    m7_write_seq_h.awid_val = "AWID_7";
+    m7_write_seq_h.awid_val = AWID_7;
     m7_write_seq_h.start(p_sequencer.axi4_master_write_seqr_h_all[7]);
     #200;
     
@@ -136,7 +136,7 @@ task axi4_sequential_mixed_ops_virtual_seq::execute_sequential_operations();
     `uvm_info("TC003_VSEQ", "Step 4: M2 → S0 Read (Expect: OKAY)", UVM_MEDIUM);
     // Configure sequence for S0 address (0x0000_0008_0000_0000)
     m2_read_seq_h.target_addr = 64'h0000_0008_0000_0000;
-    m2_read_seq_h.arid_val = "ARID_2";
+    m2_read_seq_h.arid_val = ARID_2;
     m2_read_seq_h.start(p_sequencer.axi4_master_read_seqr_h_all[2]);
     #200;
   end

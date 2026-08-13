@@ -170,7 +170,8 @@ task axi4_virtual_nbk_qos_write_read_seq::body();
               
               // Configure the sequence
               master_targeted_write_seq[master_idx].target_addr = get_valid_slave_addr(slave_idx, master_idx);
-              master_targeted_write_seq[master_idx].awid_val = $sformatf("AWID_%0d", master_idx);
+              // Cast the index, do not build a name string: see known-landmines.md #41.
+              master_targeted_write_seq[master_idx].awid_val = awid_e'(master_idx);
               master_targeted_write_seq[master_idx].master_id = master_idx;
               master_targeted_write_seq[master_idx].target_slave = slave_idx;
               master_targeted_write_seq[master_idx].is_enhanced_mode = is_enhanced_mode;
@@ -204,7 +205,8 @@ task axi4_virtual_nbk_qos_write_read_seq::body();
               
               // Configure the sequence
               master_targeted_read_seq[master_idx].target_addr = get_valid_slave_addr(slave_idx, master_idx);
-              master_targeted_read_seq[master_idx].arid_val = $sformatf("ARID_%0d", master_idx);
+              // Cast the index, do not build a name string: see known-landmines.md #41.
+              master_targeted_read_seq[master_idx].arid_val = arid_e'(master_idx);
               master_targeted_read_seq[master_idx].master_id = master_idx;
               master_targeted_read_seq[master_idx].target_slave = slave_idx;
               master_targeted_read_seq[master_idx].is_enhanced_mode = is_enhanced_mode;

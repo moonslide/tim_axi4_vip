@@ -268,6 +268,42 @@ class axi4_master_tx extends uvm_sequence_item;
   //Adding a soft constraint to detrmine the awsize
   constraint awsize_c6 {soft awsize inside {[0:2]};}
 
+  // AXI4 A3.4.1: a burst must not cross a 4KB address boundary.  FIXED
+  // bursts repeatedly access one address, so they cannot cross.  INCR bursts
+  // advance from the start address; WRAP bursts stay inside their aligned
+  // wrap region, which must itself fit in the containing 4KB page.
+  // The WRAP arm only has to bound the wrap region's SIZE.  The region is
+  // aligned to that size, so a power-of-two region of <=4096 bytes always sits
+  // inside one page -- the old form recomputed that containment with a
+  // variable-divisor division, `(floor(addr[11:0]/total)+1)*total <= 4096`,
+  // which can never reject anything: awlength_c3 forces awlen+1 inside
+  // {2,4,8,16} for WRAP, awsize is 3 bits so a beat is at most 128 bytes, so
+  // total is a power of two of at most 2048, and floor(4095/total)*total+total
+  // is exactly 4096.  Every master randomization in every test paid for that
+  // division and a variable shift for a branch that never fired.  Keeping the
+  // size bound (linear, and still meaningful if awlength_c3 is switched off by
+  // a directed sequence) preserves the guard at a fraction of the solver cost.
+  // The INCR arm measures the span from the ALIGNED start address, per AXI4
+  // A3.4.1's address structure: an INCR burst may start unaligned, but the
+  // first beat's byte lanes are truncated into the aligned block that contains
+  // the start address, and every later beat is Aligned_Address + n*Number_Bytes.
+  // So the last byte of the burst is Aligned_Address + (len+1)*bytes - 1, and
+  // measuring from the raw address over-counts by the misalignment.  Using the
+  // raw address rejected legal transfers: AWADDR=...0FFF with AWSIZE=2,
+  // AWLEN=0 is a single beat covering the aligned block 0xFFC..0xFFF, entirely
+  // inside the page, but 4095+4=4099 > 4096 refused it.  awaddr_c0 is SOFT, so
+  // an unaligned sequence can legitimately reach this state and was then
+  // blocked by this hard constraint.
+  // Alignment is done by masking rather than `% (1<<awsize)` to keep a
+  // variable-divisor modulo out of every master randomization.
+  constraint aw_4kb_boundary_c7 {
+    if (awburst == WRITE_INCR)
+      (int'(awaddr[11:0]) & ~((1 << int'(awsize)) - 1))
+        + ((int'(awlen) + 1) * (1 << int'(awsize))) <= 4096;
+    else if (awburst == WRITE_WRAP)
+      ((int'(awlen) + 1) * (1 << int'(awsize))) <= 4096;
+  }
+
   //-------------------------------------------------------
   // WRITE DATA Constraints
   //-------------------------------------------------------
@@ -332,6 +368,16 @@ class axi4_master_tx extends uvm_sequence_item;
   //Constraint : arsize_c6
   //Adding a soft constraint to detrmine the arsize
   constraint arsize_c6 { soft arsize inside {[0:2]};}
+
+  // AXI4 A3.4.1 read-side counterpart of aw_4kb_boundary_c7, including the
+  // same WRAP simplification -- see the reasoning there.
+  constraint ar_4kb_boundary_c7 {
+    if (arburst == READ_INCR)
+      (int'(araddr[11:0]) & ~((1 << int'(arsize)) - 1))
+        + ((int'(arlen) + 1) * (1 << int'(arsize))) <= 4096;
+    else if (arburst == READ_WRAP)
+      ((int'(arlen) + 1) * (1 << int'(arsize))) <= 4096;
+  }
 
   //-------------------------------------------------------
   // Memory Constraints
@@ -608,6 +654,12 @@ function void axi4_master_tx::do_copy(uvm_object rhs);
   rid   = axi4_master_tx_copy_obj.rid;
   rdata = axi4_master_tx_copy_obj.rdata;
   rresp = axi4_master_tx_copy_obj.rresp;
+  // rlast was missing here.  axi4_master_monitor_proxy publishes a CLONE of
+  // the combined read packet, so anything do_copy skips is silently reset to
+  // its default on every analysis-port consumer -- which is what kept the
+  // rlast-gated read error counting and read latency correlation in
+  // axi4_performance_metrics dead even after the converter started setting it.
+  rlast = axi4_master_tx_copy_obj.rlast;
   ruser = axi4_master_tx_copy_obj.ruser;
   //OTHERS
   tx_type       = axi4_master_tx_copy_obj.tx_type;
@@ -732,4 +784,3 @@ function void axi4_master_tx::do_print(uvm_printer printer);
 endfunction : do_print
 
 `endif
-

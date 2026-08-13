@@ -146,6 +146,12 @@ endfunction : connect_phase
 function void axi4_master_monitor_proxy::end_of_elaboration_phase(uvm_phase phase);
   super.end_of_elaboration_phase(phase);
   axi4_master_mon_bfm_h.axi4_master_mon_proxy_h = this;
+  // Same identity the packets are stamped with below (sb_src_index =
+  // axi4_master_agent_cfg_h.master_id), so a consumer keyed by sb_src_index can
+  // match a per-port reset to the port's own pending state. Set here rather
+  // than parameterising the interface: a parameter changes the interface TYPE
+  // and every `virtual axi4_master_monitor_bfm` handle then fails to match.
+  axi4_master_mon_bfm_h.master_index = axi4_master_agent_cfg_h.master_id;
 endfunction : end_of_elaboration_phase
 
 

@@ -26,6 +26,18 @@ task axi4_exhaustive_random_reads_test::run_phase(uvm_phase phase);
   axi4_env_h.axi4_env_cfg_h.write_read_mode_h = ONLY_READ_DATA;
   `uvm_info(get_type_name(), "TC005: Configured as ONLY_READ_DATA test mode", UVM_MEDIUM);
 
+  // This test reads 500 unconstrained 64-bit addresses (0xeb0ddeac87357890,
+  // 0x8bb3e40f8dcd431a, ...), essentially all of which are outside the map, so
+  // DECERR is the CORRECT answer for essentially every read -- the scoreboard
+  // confirms all 500 ("Correctly generated READ_DECERR") with zero data
+  // mismatches.  Proving the interconnect rejects unmapped space IS the test.
+  // axi4_performance_metrics still scored them as Protocol Issues because this
+  // class name matches none of its auto-detect patterns and
+  // allow_error_responses defaults to 0 (axi4_base_test.sv:172).  Same
+  // convention as axi4_sequential_mixed_ops_test.sv:38.
+  axi4_env_h.axi4_env_cfg_h.allow_error_responses = 1;
+  `uvm_info(get_type_name(), "TC005: allow_error_responses=1 - random addresses are unmapped by construction", UVM_MEDIUM);
+
   fork
     timeout_watchdog();
   join_none

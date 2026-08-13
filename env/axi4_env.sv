@@ -295,10 +295,12 @@ function void axi4_env::connect_phase(uvm_phase phase);
     end
     
     // Connect protocol coverage to master agent transaction analysis ports
-    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_protocol_coverage_h.address_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_error_injection_coverage_h.analysis_export);
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_error_injection_coverage_h.analysis_export);
-    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_protocol_coverage_h.analysis_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_address_analysis_port.connect(axi4_protocol_coverage_h.address_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_response_analysis_port.connect(axi4_protocol_coverage_h.write_resp_export);
+    axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_read_data_analysis_port.connect(axi4_protocol_coverage_h.read_resp_export);
     
     // Connect performance metrics to master agent transaction analysis ports
     axi4_master_agent_h[i].axi4_master_mon_proxy_h.axi4_master_write_address_analysis_port.connect(axi4_performance_metrics_h.write_addr_fifo.analysis_export);
@@ -421,4 +423,3 @@ task axi4_env::run_phase(uvm_phase phase);
 endtask : run_phase
 
 `endif
-

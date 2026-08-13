@@ -37,6 +37,9 @@ from datetime import datetime, timedelta
 import signal
 import json
 
+DEFAULT_MAX_PARALLEL = 8
+MAX_PARALLEL = 50
+
 
 class TestResult:
     """Container for test execution results"""
@@ -60,7 +63,7 @@ class RegressionRunner:
     """Main regression test runner class"""
     
     def __init__(self, max_parallel=None, timeout=600, verbose=False, use_lsf=False, fsdb_dump=False, coverage=False):
-        self.max_parallel = max_parallel  # Will be set to number of tests if None
+        self.max_parallel = max_parallel  # Default is applied after list expansion.
         self.timeout = timeout
         self.verbose = verbose
         self.use_lsf = use_lsf
@@ -1199,14 +1202,13 @@ class RegressionRunner:
         os.chmod(run_script, 0o755)
 
         try:
-            # Change to the test folder and stay there for VCS execution
-            original_cwd = os.getcwd()
-            os.chdir(folder_path)
-            
+            # cwd is per child process. Do not call os.chdir() here: local
+            # regression workers are threads and process-wide cwd changes let
+            # one worker launch another worker's run script or read its log.
             # Run the test with timeout and early hang detection
-            script_name = f'./run_{test_name}.sh'
             process = subprocess.Popen(
-                [script_name],
+                [str(run_script)],
+                cwd=str(folder_path),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -1224,7 +1226,6 @@ class RegressionRunner:
                 # Check multiple possible log file locations
                 log_locations = [
                     log_file,  # Expected location
-                    Path.cwd() / f"{test_name}.log",  # Current directory
                     self.base_dir / f"{test_name}.log",  # synopsys_sim directory
                 ]
                 
@@ -1355,10 +1356,6 @@ class RegressionRunner:
                 run_number=test_obj.get('run_number', 1),
                 test_group=test_obj.get('test_group')
             )
-        finally:
-            # Restore original directory
-            os.chdir(original_cwd)
-    
     def _analyze_test_result(self, log_file, stdout):
         """Analyze test output to determine pass/fail status and extract error message
         Returns: (status, error_msg, uvm_errors, uvm_fatals)
@@ -1912,6 +1909,26 @@ class RegressionRunner:
                     if result.uvm_errors > 0 or result.uvm_fatals > 0:
                         f.write(f"         └─ UVM_ERROR Count: {result.uvm_errors}, UVM_FATAL Count: {result.uvm_fatals}\n")
     
+    def _default_max_parallel(self, num_tests):
+        """Worker count to use when -p was omitted.
+
+        The DEFAULT_MAX_PARALLEL cap is LOCAL-ONLY on purpose. It exists
+        because local workers are threads inside one process competing for one
+        machine's cores (and historically for one process-wide cwd -- see the
+        comment in _run_single_test). None of that applies on LSF: each run is
+        a separate bsub job on a separate host, and the farm's own queue limits
+        are the real bound.
+
+        Applying the local cap to LSF silently turned the documented default
+        `axi4_regression.py --lsf` over the 301-entry authoritative list from
+        one dispatch into ~38 sequential batches of 8.
+
+        Explicit -p values never reach here; main() validates those against
+        MAX_PARALLEL.
+        """
+        ceiling = MAX_PARALLEL if self.use_lsf else DEFAULT_MAX_PARALLEL
+        return min(ceiling, num_tests)
+
     def run_regression(self, test_list_file) :
         """Main method to run the regression"""
         try:
@@ -1920,9 +1937,8 @@ class RegressionRunner:
             # Load test list
             tests = self._load_test_list(test_list_file)
             
-            # Set max_parallel to number of tests if not specified
             if self.max_parallel is None:
-                self.max_parallel = len(tests)
+                self.max_parallel = self._default_max_parallel(len(tests))
             
             execution_mode = "LSF" if self.use_lsf else "Local"
             print(f"⚙️  Configuration: {execution_mode} mode, {self.max_parallel} parallel workers, {self.timeout}s timeout")
@@ -2317,8 +2333,8 @@ Examples:
     args = parser.parse_args()
     
     # Validate arguments
-    if args.max_parallel is not None and (args.max_parallel < 1 or args.max_parallel > 50):
-        print("❌ Error: max-parallel must be between 1 and 50")
+    if args.max_parallel is not None and (args.max_parallel < 1 or args.max_parallel > MAX_PARALLEL):
+        print(f"❌ Error: max-parallel must be between 1 and {MAX_PARALLEL}")
         return 1
     
     if args.timeout < 60:

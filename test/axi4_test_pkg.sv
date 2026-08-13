@@ -194,8 +194,13 @@ package axi4_test_pkg;
 
   // Basic and sanity tests
   `include "axi4_basic_sanity_test.sv"
+  `include "axi4_stall_detector_base_test.sv"
+  `include "axi4_stall_detector_idle_test.sv"
+  `include "axi4_stall_detector_reset_test.sv"
   `include "axi4_trackb_smoke_test.sv"
   `include "axi4_trackb_4x4_smoke_test.sv"
+  `include "axi4_trackb_4k_boundary_test.sv"
+  `include "axi4_trackb_reset_test.sv"
   `include "axi4_trackb_cov_sweep_test.sv"
   `include "axi4_master_base_test.sv"
   `include "axi4_basic_reset_test.sv"

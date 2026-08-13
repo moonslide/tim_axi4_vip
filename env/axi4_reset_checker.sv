@@ -109,8 +109,12 @@ class axi4_reset_checker extends uvm_component;
             `uvm_info(get_type_name(), $sformatf("Detected Master[%0d] reset completion #%0d", i, master_reset_count[i]), UVM_MEDIUM)
             // Clear the completion flag
             uvm_config_db#(bit)::set(null, "*", $sformatf("reset_complete_master_%0d", i), 0);
+            // Completion is a pulse handshake. Re-arm immediately after
+            // consuming it so a new pulse is not hidden by a stale high.
+            prev_complete[i] = 0;
+          end else begin
+            prev_complete[i] = reset_complete[i];
           end
-          prev_complete[i] = reset_complete[i];
         end
       end
       #1ns; // Check frequently
@@ -133,8 +137,12 @@ class axi4_reset_checker extends uvm_component;
             `uvm_info(get_type_name(), $sformatf("Detected Slave[%0d] reset completion #%0d", i, slave_reset_count[i]), UVM_MEDIUM)
             // Clear the completion flag
             uvm_config_db#(bit)::set(null, "*", $sformatf("reset_complete_slave_%0d", i), 0);
+            // Completion is a pulse handshake. Re-arm immediately after
+            // consuming it so a new pulse is not hidden by a stale high.
+            prev_complete[i] = 0;
+          end else begin
+            prev_complete[i] = reset_complete[i];
           end
-          prev_complete[i] = reset_complete[i];
         end
       end
       #1ns; // Check frequently
@@ -156,8 +164,12 @@ class axi4_reset_checker extends uvm_component;
           `uvm_info(get_type_name(), $sformatf("Detected global reset completion #%0d", global_reset_count), UVM_MEDIUM)
           // Clear the completion flag
           uvm_config_db#(bit)::set(null, "*", "reset_complete_global", 0);
+          // Completion is a pulse handshake. Re-arm immediately after
+          // consuming it so a new pulse is not hidden by a stale high.
+          prev_complete = 0;
+        end else begin
+          prev_complete = reset_complete;
         end
-        prev_complete = reset_complete;
       end
       #1ns; // Check frequently
     end

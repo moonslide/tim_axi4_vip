@@ -73,6 +73,18 @@ function void axi4_non_blocking_qos_write_read_test::build_phase(uvm_phase phase
   // Set number of masters and slaves based on configuration
   num_masters = axi4_env_cfg_h.no_of_masters;
   num_slaves = axi4_env_cfg_h.no_of_slaves;
+
+  // The QoS traffic pattern walks addresses past the end of a slave region
+  // (0x0000002000003000 is beyond the 4 KiB HW_Fuse_Box at
+  // 0x0000_0020_0000_0000-0x0000_0020_0000_0FFF), so DECERR is the correct
+  // answer there; the scoreboard expects and confirms it ("Correctly generated
+  // READ_DECERR ... validation successful") with zero data mismatches.
+  // axi4_performance_metrics still scored them as Protocol Issues because this
+  // class name matches none of its auto-detect patterns and
+  // allow_error_responses defaults to 0 (axi4_base_test.sv:172).  Same
+  // convention as axi4_sequential_mixed_ops_test.sv:38.
+  axi4_env_cfg_h.allow_error_responses = 1;
+  `uvm_info(get_type_name(), "allow_error_responses=1 - out-of-region QoS reads must return DECERR", UVM_LOW)
   
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), "AXI4 NON-BLOCKING QOS WRITE READ TEST", UVM_LOW)

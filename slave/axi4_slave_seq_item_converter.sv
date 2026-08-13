@@ -288,6 +288,7 @@ endfunction : to_write_class
 // name - axi4_slave_tx, axi4_read_transfer_char_s                                                      
 //--------------------------------------------------------------------------------------------      
 function void axi4_slave_seq_item_converter::to_read_class( input axi4_read_transfer_char_s input_conv_h, output axi4_slave_tx output_conv_h);
+  bit [1:0] worst_rresp;
  int i;
   output_conv_h = new();
 
@@ -315,9 +316,15 @@ function void axi4_slave_seq_item_converter::to_read_class( input axi4_read_tran
   $cast(output_conv_h.arprot,input_conv_h.arprot);
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After randomize arprot =  %b",output_conv_h.arprot),UVM_FULL);
 
+  // Worst response across the burst, matching the master-side collapse in
+  // master/axi4_master_seq_item_converter.sv::to_read_addr_data_class.  This
+  // loop used to overwrite on every iteration, so it kept the LAST beat and
+  // dropped an error on any earlier one.
+  worst_rresp = READ_OKAY;
   foreach(input_conv_h.rresp[i]) begin
-    $cast(output_conv_h.rresp,input_conv_h.rresp[i]);
+    if(input_conv_h.rresp[i] > worst_rresp) worst_rresp = input_conv_h.rresp[i];
   end
+  $cast(output_conv_h.rresp,worst_rresp);
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After randomize rresp =  %b",output_conv_h.rresp),UVM_FULL);
 
   output_conv_h.araddr = input_conv_h.araddr;
@@ -568,6 +575,7 @@ endfunction : to_write_addr_data_resp_class
 //--------------------------------------------------------------------------------------------
 function void axi4_slave_seq_item_converter::to_read_addr_data_class(input axi4_slave_tx raddr_packet, 
   input axi4_read_transfer_char_s input_conv_h, output axi4_slave_tx output_conv_h);
+  bit [1:0] worst_rresp;
 
   output_conv_h = new();
 
@@ -597,7 +605,20 @@ function void axi4_slave_seq_item_converter::to_read_addr_data_class(input axi4_
   // value, same convention as the master converter.
   output_conv_h.ruser = input_conv_h.ruser[0];
 
-  $cast(output_conv_h.rresp,input_conv_h.rresp);
+  // Collapse the per-beat RRESP array onto the packet's single rresp using the
+  // WORST response in the burst.  The struct field is
+  // `bit [2**LENGTH:0][1:0] rresp` -- one entry per beat -- so casting the
+  // WHOLE array into a 2-bit enum only ever worked while the monitor wrote
+  // just element [0]; once beats 1..N carry their own response the array no
+  // longer fits and $cast fails outright (Error-[STASKE_DCF]).  rresp_e is
+  // ordered by severity (OKAY 2'b00 < EXOKAY 2'b01 < SLVERR 2'b10 <
+  // DECERR 2'b11), so "worst" is the maximum, and every struct->class site
+  // collapses identically so master and slave stay comparable.
+  worst_rresp = READ_OKAY;
+  foreach(input_conv_h.rresp[i]) begin
+    if(input_conv_h.rresp[i] > worst_rresp) worst_rresp = input_conv_h.rresp[i];
+  end
+  $cast(output_conv_h.rresp,worst_rresp);
 
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After converting read_addr_data_packet =  %s",output_conv_h.sprint()),UVM_HIGH);
 

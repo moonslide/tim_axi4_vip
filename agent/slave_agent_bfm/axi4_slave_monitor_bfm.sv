@@ -132,6 +132,38 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   end
 
   //-------------------------------------------------------
+  // Clocking block: mon_cb
+  //
+  // AXI4 A3.2.1 defines a transfer as occurring at the rising ACLK edge where
+  // VALID and READY are both HIGH -- meaning the payload that met SETUP before
+  // that edge.  Reading an interface signal directly inside a task woken by
+  // `@(posedge aclk)` samples in the Active region instead, which races the
+  // drivers: today it happens to give the right answer only because the
+  // drivers assign with non-blocking assignments, so their updates land in the
+  // NBA region after the monitor's read.  That is correct by accident, not by
+  // construction -- any driver (or a real DUT hooked to these pins) that
+  // updates differently would be sampled one cycle early.
+  //
+  // `default input #1step` samples in the PREPONED region, i.e. the value
+  // immediately before the edge, which is exactly what the spec means by the
+  // value that met setup.  Every sampling task below therefore waits on
+  // @(mon_cb) and reads mon_cb.<signal>.
+  //
+  // aresetn is deliberately NOT in here: wait_for_aresetn() and the
+  // r_acc/r_beat flush are asynchronous to ACLK by design.
+  //-------------------------------------------------------
+  clocking mon_cb @(posedge aclk);
+    default input #1step;
+    input awid, awaddr, awlen, awsize, awburst, awlock, awcache, awprot,
+          awqos, awregion, awuser, awvalid, awready;
+    input wdata, wstrb, wlast, wuser, wvalid, wready;
+    input bid, bresp, buser, bvalid, bready;
+    input arid, araddr, arlen, arsize, arburst, arlock, arcache, arprot,
+          arqos, arregion, aruser, arvalid, arready;
+    input rid, rdata, rresp, rlast, ruser, rvalid, rready;
+  endclocking
+
+  //-------------------------------------------------------
   // Task: wait_for_aresetn
   // Waiting for the system reset to be active low
   //-------------------------------------------------------
@@ -152,15 +184,15 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
 
     int aw_ws = 0;
 
-    @(posedge aclk);
+    @(mon_cb);
     `uvm_info("FROM SLAVE MON BFM",$sformatf("from axi4_slave_write_address_sampling "),UVM_HIGH)
 
-    while(awvalid !== 1) begin
-      @(posedge aclk);
+    while(mon_cb.awvalid !== 1) begin
+      @(mon_cb);
     end
 
-    while(awready !== 1) begin
-      @(posedge aclk);
+    while(mon_cb.awready !== 1) begin
+      @(mon_cb);
       aw_ws++;
       `uvm_info("FROM SLAVE MON BFM",$sformatf("Inside while loop from axi4_slave_write_address_sampling"),UVM_HIGH)
     end
@@ -168,21 +200,21 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
     `uvm_info("FROM SLAVE MON BFM",$sformatf("after while loop from axi4_slave_write_address_sampling "),UVM_HIGH)
 
     req.aw_wait_states = aw_ws;
-    req.awid = awid;
-    req.awaddr = awaddr;
-    req.awlen = awlen;
-    req.awsize = awsize;
-    req.awburst = awburst;
-    req.awlock = awlock;
-    req.awcache = awcache;
-    req.awprot = awprot;
+    req.awid = mon_cb.awid;
+    req.awaddr = mon_cb.awaddr;
+    req.awlen = mon_cb.awlen;
+    req.awsize = mon_cb.awsize;
+    req.awburst = mon_cb.awburst;
+    req.awlock = mon_cb.awlock;
+    req.awcache = mon_cb.awcache;
+    req.awprot = mon_cb.awprot;
     // AWUSER was never sampled here at all, while the read-address task right
     // below has always sampled ARUSER. The slave side therefore handed the
     // scoreboard a hard-coded zero AWUSER, and env/axi4_scoreboard.sv's
     // axuser_passthrough_chk_cfg comparison was vacuous: it compared the
     // master's AWUSER against that zero and could only ever "pass" while the
     // master also drove zero.
-    req.awuser = awuser;
+    req.awuser = mon_cb.awuser;
     `uvm_info("FROM SLAVE MON BFM",$sformatf("after while loop from axi4_slave_write_address_sampling req=%p ",req),UVM_HIGH)
   endtask
 
@@ -196,20 +228,20 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
    int w_ws = 0;
    // wait for valid
    do begin
-     @(posedge aclk);
-   end while(wvalid !== 1);
+     @(mon_cb);
+   end while(mon_cb.wvalid !== 1);
 
    // wait for ready
-   while(wready !== 1) begin
-     @(posedge aclk);
+   while(mon_cb.wready !== 1) begin
+     @(mon_cb);
      w_ws++;
    end
 
    `uvm_info("FROM SLAVE MON BFM",$sformatf("Inside while loop......"),UVM_HIGH)
-   req.wdata[i] = wdata;
-   req.wstrb[i] = wstrb;
-   req.wlast = wlast;
-   req.wuser[i] = wuser;
+   req.wdata[i] = mon_cb.wdata;
+   req.wstrb[i] = mon_cb.wstrb;
+   req.wlast = mon_cb.wlast;
+   req.wuser[i] = mon_cb.wuser;
 
    if(i == 0) req.w_wait_states = w_ws;
 
@@ -233,27 +265,29 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
      int b_ws = 0;
       
-      @(posedge aclk);
-    while(bvalid !== 1) begin
-      @(posedge aclk);
+      @(mon_cb);
+    while(mon_cb.bvalid !== 1) begin
+      @(mon_cb);
     end
-    while(bready !== 1) begin
-      `uvm_info("FROM SLAVE MON BFM",$sformatf("values :: bvalid=%d & bready=%d",bvalid,bready),UVM_HIGH)
-      @(posedge aclk);
+    while(mon_cb.bready !== 1) begin
+      `uvm_info("FROM SLAVE MON BFM",$sformatf("values :: bvalid=%d & bready=%d",mon_cb.bvalid,mon_cb.bready),UVM_HIGH)
+      @(mon_cb);
       b_ws++;
       `uvm_info("FROM SLAVE MON BFM",$sformatf("Inside while loop of write response sample"),UVM_HIGH)
     end
     `uvm_info("FROM SLAVE MON BFM",$sformatf("after while loop of write response "),UVM_HIGH)
 
-    @(posedge aclk);
-    req.bid      = bid;
-    req.bresp    = bresp;
+    // Sample at the BVALID && BREADY handshake.  Advancing one more clock
+    // here consumes the next response's payload when legal B responses are
+    // back-to-back.
+    req.bid      = mon_cb.bid;
+    req.bresp    = mon_cb.bresp;
     // BUSER is a per-transaction field on B, like BID/BRESP -- sampled with
     // them and at the same instant, so it inherits whatever timing bid/bresp
     // already rely on rather than introducing a second, different one.
     // It was dropped entirely, so the slave-side BUSER handed to the
     // scoreboard was a hard-coded zero.
-    req.buser    = buser;
+    req.buser    = mon_cb.buser;
     req.b_wait_states = b_ws;
     `uvm_info("FROM SLAVE MON BFM WRITE RESPONSE",$sformatf("write response packet: \n %p",req),UVM_HIGH)
   endtask
@@ -265,28 +299,28 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   task axi4_read_address_sampling(output axi4_read_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
     int ar_ws = 0;
-    @(posedge aclk);
-    while(arvalid !== 1) begin
-      @(posedge aclk);
+    @(mon_cb);
+    while(mon_cb.arvalid !== 1) begin
+      @(mon_cb);
     end
-    while(arready !== 1) begin
-      @(posedge aclk);
+    while(mon_cb.arready !== 1) begin
+      @(mon_cb);
       ar_ws++;
       `uvm_info("FROM SLAVE MON BFM READ ADDR",$sformatf("INSIDE WHILE LOOP OF READ ADDRESS"),UVM_HIGH)
     end
     `uvm_info("FROM SLAVE MON BFM READ ADDR",$sformatf("AFTER WHILE LOOP OF READ ADDRESS"),UVM_HIGH)
     
-    req.arid     = arid;
-    req.araddr   = araddr;
-    req.arlen    = arlen;
-    req.arsize   = arsize;
-    req.arburst  = arburst;
-    req.arlock   = arlock;
-    req.arcache  = arcache;
-    req.arprot   = arprot;
-    req.arqos    = arqos;
-    req.arregion = arregion;
-    req.aruser   = aruser;
+    req.arid     = mon_cb.arid;
+    req.araddr   = mon_cb.araddr;
+    req.arlen    = mon_cb.arlen;
+    req.arsize   = mon_cb.arsize;
+    req.arburst  = mon_cb.arburst;
+    req.arlock   = mon_cb.arlock;
+    req.arcache  = mon_cb.arcache;
+    req.arprot   = mon_cb.arprot;
+    req.arqos    = mon_cb.arqos;
+    req.arregion = mon_cb.arregion;
+    req.aruser   = mon_cb.aruser;
     req.ar_wait_states = ar_ws;
 
     `uvm_info("FROM SLAVE MON BFM READ ADDR",$sformatf("datapacket =%p",req),UVM_HIGH)
@@ -305,39 +339,44 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
       int r_ws = 0;
       // Wait for valid
       do begin
-        @(posedge aclk);
-      end while(rvalid !== 1);
+        @(mon_cb);
+      end while(mon_cb.rvalid !== 1);
 
       // Wait for ready
-      while(rready !== 1) begin
-        @(posedge aclk);
+      while(mon_cb.rready !== 1) begin
+        @(mon_cb);
         r_ws++;
       end
 
       `uvm_info("FROM SLAVE MON BFM",$sformatf("after do_while loop of read data sample"),UVM_HIGH)
 
       // Route this beat to its own RID's accumulator, creating one on first sight.
-      rid_key = int'(rid);
+      rid_key = int'(mon_cb.rid);
       if(!r_acc.exists(rid_key)) begin
         r_acc[rid_key]  = r_blank;
         r_beat[rid_key] = 0;
       end
       beat = r_beat[rid_key];
 
-      r_acc[rid_key].rid         = rid;
-      r_acc[rid_key].rdata[beat] = rdata;
+      r_acc[rid_key].rid         = mon_cb.rid;
+      r_acc[rid_key].rdata[beat] = mon_cb.rdata;
       // Per beat, like rdata. This was an assignment to the WHOLE ruser array,
       // which packed the R-channel USER of one beat across the low beats'
       // slots instead of recording it against its own beat.
-      r_acc[rid_key].ruser[beat] = ruser;
-      r_acc[rid_key].rresp       = rresp;
-      r_acc[rid_key].rlast       = rlast;
+      r_acc[rid_key].ruser[beat] = mon_cb.ruser;
+      // Per beat, like rdata/ruser.  axi4_read_transfer_char_s.rresp is a
+      // per-beat packed array, but this used to assign the 2-bit value to the
+      // WHOLE array, which lands it in element [0] and leaves every other beat
+      // at READ_OKAY.  A burst whose error was on a non-final beat therefore
+      // reported OKAY once the packet was collapsed downstream.
+      r_acc[rid_key].rresp[beat] = mon_cb.rresp;
+      r_acc[rid_key].rlast       = mon_cb.rlast;
       if(beat == 0) r_acc[rid_key].r_wait_states = r_ws;
       r_beat[rid_key] = beat + 1;
 
-      `uvm_info("FROM SLAVE MON BFM READ DATA",$sformatf("DEBUG:SLAVE MON RID=%0d RDATA[%0d]=%0h",rid_key,beat,rdata),UVM_HIGH)
+      `uvm_info("FROM SLAVE MON BFM READ DATA",$sformatf("DEBUG:SLAVE MON RID=%0d RDATA[%0d]=%0h",rid_key,beat,mon_cb.rdata),UVM_HIGH)
 
-      if(rlast === 1) begin
+      if(mon_cb.rlast === 1) begin
        // Only THIS RID's burst is complete; any other RID still accumulating
        // keeps its own partial packet for a later call.
        req = r_acc[rid_key];
@@ -346,7 +385,7 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
        `uvm_info("FROM SLAVE MON BFM read data",$sformatf("Inside RLAST Read Data Packet rid=%0d beats=%0d =%p",rid_key,beat+1,req),UVM_HIGH)
        break;
       end
-      `uvm_info("FROM SLAVE MON BFM READ DATA",$sformatf("Read data beat rid=%0d beat=%0d rdata=%0h",rid_key,beat,rdata),UVM_HIGH)
+      `uvm_info("FROM SLAVE MON BFM READ DATA",$sformatf("Read data beat rid=%0d beat=%0d rdata=%0h",rid_key,beat,mon_cb.rdata),UVM_HIGH)
    end
   endtask
 

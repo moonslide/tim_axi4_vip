@@ -10,7 +10,14 @@ class axi4_master_targeted_read_seq extends axi4_master_bk_base_seq;
 
   // Target address and ID
   bit [63:0] target_addr = 64'h0;
-  string arid_val = "ARID_0";
+  // Typed as the enum, NOT a string.  `string arid_val = "ARID_0"` assigned
+  // straight into the enum field compiled with only a VCS
+  // Warning-[ENUMASSIGN] and packed the last two CHARACTERS' ASCII into the
+  // value: at AXI_ID_WIDTH=4 that happened to give the right low nibble for
+  // ARID_0..ARID_9 and the WRONG one for two-digit names, and at
+  // AXI_ID_WIDTH=8 (Track-B) every value was wrong -- "ARID_4" drove 52.
+  // See .claude/docs/known-landmines.md #41.
+  arid_e arid_val = ARID_0;
   
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
@@ -47,7 +54,7 @@ task axi4_master_targeted_read_seq::body();
   // Set ARID after randomization
   req.arid = arid_val;
   
-  `uvm_info(get_type_name(), $sformatf("Targeted read from addr=0x%016h, arid=%s", req.araddr, req.arid), UVM_MEDIUM);
+  `uvm_info(get_type_name(), $sformatf("Targeted read from addr=0x%016h, arid=%s", req.araddr, req.arid.name()), UVM_MEDIUM);
   finish_item(req);
 
 endtask : body

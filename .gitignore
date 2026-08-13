@@ -17,6 +17,27 @@ sim/synopsys_sim/vc_hdrs.h
 *.fsdb
 *.vdb
 
+# Simulation run output — logs, per-phase result trees, regression results and
+# the ad-hoc .rc/.list scratch files that accumulate beside them. None of this
+# is source. Measured before adding: `git add -A --dry-run` staged 158 files /
+# 87.6 MB of these, the largest a 2.2 MB bsub log. The publish policy in
+# CLAUDE.md is described as "enforced mechanically by .gitignore", so keeping
+# bulk-add clean is part of that enforcement, not just tidiness.
+sim/synopsys_sim/*.out
+sim/synopsys_sim/*.rc
+sim/synopsys_sim/*.lsf
+sim/synopsys_sim/regression_result_*/
+sim/synopsys_sim/run_folder_*/
+sim/synopsys_sim/fabric_smoke_work/
+# per-phase debug/result trees (p1, p1ref, p2, p2b, p3, p3d, p3t3, p4, f2to, ...)
+sim/synopsys_sim/p[0-9]*/
+sim/synopsys_sim/f2to/
+# scratch dirs created while collecting fail-then-pass evidence
+sim/synopsys_sim/red/
+sim/synopsys_sim/green*/
+sim/synopsys_sim/bresp/
+sim/synopsys_sim/trackb*/
+
 # ---------------------------------------------------------------------------
 # Claude/Codex agent tooling — kept locally for continued AI-assisted work,
 # not published to GitHub.
