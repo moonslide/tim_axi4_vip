@@ -399,12 +399,12 @@ protocol sign-off or current regression closure.
 ## Recent verification updates (2026-09-17)
 
 Two maintainer-queue defects (`VIP_ISSUES.md`) were implemented and directed-test
-verified this session. Both required BFM/proxy-level changes and are documented
-in `VIP_065_066_enhance.html` (design plan) and the canonical
-`BENCH-065_soc01_cpu_axi_midburst_rready_stimulus_missing.md` /
-`BENCH-066_x_injection_flag_cleared_before_item.md` records. Citations below
-were re-read on **2026-09-17**; nothing else in this document was re-verified
-on that date.
+verified this session; both required BFM/proxy-level changes. The design plan
+and the canonical BENCH-065/BENCH-066 issue records that this section
+summarizes were session-scoped working documents and are not part of this
+tree — see `VIP_ISSUES.md` for the maintainer queue's current status and
+ownership of these two entries. Citations below were re-read on **2026-09-17**;
+nothing else in this document was re-verified on that date.
 
 ### BENCH-065 — controllable mid-burst RREADY backpressure
 
@@ -434,8 +434,10 @@ queue-full or reset-driven `RREADY` drop cannot satisfy it).
   functions, and the corresponding coverpoints in `master/axi4_master_coverage.sv`
   were bound to the wrong sampling phase — together these had left
   `R_WAIT_STATES_CP`/`AR_WAIT_STATES_CP` (and their write-side counterparts)
-  structurally dead since introduction. See `.claude/docs/known-landmines.md`
-  #45–#47 for the fix and the still-open slave-side counterpart.
+  structurally dead since introduction. The write-side monitor BFM has an
+  independent, still-open counterpart of the same class of bug (a per-beat
+  wait-state counter that only initializes once due to SystemVerilog static
+  task-variable lifetime) — not fixed in this pass.
 - Known scope limit: the SoC-side API that would propagate this descriptor
   through a consuming environment's own config layer is outside this repository
   (see BENCH-065's own record, acceptance criterion 1).
