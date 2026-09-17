@@ -37,6 +37,14 @@ sim/synopsys_sim/red/
 sim/synopsys_sim/green*/
 sim/synopsys_sim/bresp/
 sim/synopsys_sim/trackb*/
+sim/synopsys_sim/b065_evidence/
+sim/synopsys_sim/b066_evidence/
+
+# VCS build products anywhere in the tree, not just sim/synopsys_sim/ — a
+# slave/simv.daidir/ predating this rule was committed and had to be removed
+# after the fact; this pattern matches at any depth without a leading slash.
+*.daidir/
+simv*
 
 # ---------------------------------------------------------------------------
 # Claude/Codex agent tooling — kept locally for continued AI-assisted work,
