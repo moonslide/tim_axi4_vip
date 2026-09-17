@@ -182,7 +182,12 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   //-------------------------------------------------------
   task axi4_slave_write_address_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
-    int aw_ws = 0;
+    // See agent/master_agent_bfm/axi4_master_monitor_bfm.sv:209-220 and
+    // known-landmines.md #46: this task has STATIC lifetime, so a declaration
+    // initializer (`int aw_ws = 0;`) runs exactly once before time 0, not on
+    // each call. Reset with an explicit statement instead.
+    int aw_ws;
+    aw_ws = 0;
 
     @(mon_cb);
     `uvm_info("FROM SLAVE MON BFM",$sformatf("from axi4_slave_write_address_sampling "),UVM_HIGH)
@@ -225,7 +230,10 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   task axi4_slave_write_data_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
   
   forever begin
-   int w_ws = 0;
+   // Static task lifetime -- see landmine #46 -- so reset by statement, not
+   // by declaration initializer.
+   int w_ws;
+   w_ws = 0;
    // wait for valid
    do begin
      @(mon_cb);
@@ -263,8 +271,11 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   // Used for sample the write response channel signals
   //-------------------------------------------------------
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
-     int b_ws = 0;
-      
+     // Static task lifetime -- see landmine #46 -- so reset by statement, not
+     // by declaration initializer.
+     int b_ws;
+     b_ws = 0;
+
       @(mon_cb);
     while(mon_cb.bvalid !== 1) begin
       @(mon_cb);
@@ -298,7 +309,10 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
   //-------------------------------------------------------  
   task axi4_read_address_sampling(output axi4_read_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
-    int ar_ws = 0;
+    // Static task lifetime -- see landmine #46 -- so reset by statement, not
+    // by declaration initializer.
+    int ar_ws;
+    ar_ws = 0;
     @(mon_cb);
     while(mon_cb.arvalid !== 1) begin
       @(mon_cb);
@@ -336,7 +350,10 @@ interface axi4_slave_monitor_bfm(input aclk, input aresetn,
 
     forever begin
 
-      int r_ws = 0;
+      // Static task lifetime -- see landmine #46 -- so reset by statement,
+      // not by declaration initializer.
+      int r_ws;
+      r_ws = 0;
       // Wait for valid
       do begin
         @(mon_cb);

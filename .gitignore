@@ -39,6 +39,7 @@ sim/synopsys_sim/bresp/
 sim/synopsys_sim/trackb*/
 sim/synopsys_sim/b065_evidence/
 sim/synopsys_sim/b066_evidence/
+sim/synopsys_sim/awrand_evidence/
 
 # VCS build products anywhere in the tree, not just sim/synopsys_sim/ — a
 # slave/simv.daidir/ predating this rule was committed and had to be removed

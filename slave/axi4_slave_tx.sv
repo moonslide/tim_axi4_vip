@@ -326,6 +326,18 @@ function void axi4_slave_tx::do_copy (uvm_object rhs);
   //OTHERS
   tx_type = axi_slave_tx_copy_obj.tx_type;
   transfer_type = axi_slave_tx_copy_obj.transfer_type;
+  // Wait states were not copied, so the clone that
+  // slave/axi4_slave_monitor_proxy.sv publishes to every analysis port
+  // ($cast(req_*_clone_packet, req_*.clone())) reached the scoreboard with
+  // all five at 0 no matter what the converter had put on the original.
+  // Second half of the measured-wait-state path on this side (the first is
+  // axi4_slave_seq_item_converter carrying them struct -> class); the master
+  // side got the identical do_copy fix in master/axi4_master_tx.sv.
+  aw_wait_states = axi_slave_tx_copy_obj.aw_wait_states;
+  w_wait_states  = axi_slave_tx_copy_obj.w_wait_states;
+  b_wait_states  = axi_slave_tx_copy_obj.b_wait_states;
+  ar_wait_states = axi_slave_tx_copy_obj.ar_wait_states;
+  r_wait_states  = axi_slave_tx_copy_obj.r_wait_states;
 
 endfunction : do_copy
 

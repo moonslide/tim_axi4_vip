@@ -185,9 +185,21 @@ function void axi4_slave_seq_item_converter::from_read_class(input axi4_slave_tx
   output_conv.wait_count_read_address_channel =input_conv_h.wait_count_read_address_channel ;
   output_conv.wait_count_read_data_channel =input_conv_h.wait_count_read_data_channel ;
 
+  // Read-side wait states, class -> struct, mirroring aw/w/b in
+  // from_write_class. These were never carried on the read side (the two
+  // assignments that existed lived in the WRITE converters and were removed as
+  // misplaced in eb4edc7), so agent/slave_agent_bfm/axi4_slave_driver_bfm.sv's
+  // `repeat(data_read_packet.ar_wait_states)` always ran zero times and a slave
+  // sequence's requested ARREADY delay never reached the pins. In SLAVE_MEM_MODE
+  // (the axi4_base_test default) the proxy's dummy item pins both to 0, so this
+  // changes nothing there; it only takes effect where a slave read sequence is
+  // actually consumed.
+  output_conv.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv.r_wait_states  = input_conv_h.r_wait_states;
+
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_FULL);
-  
-endfunction : from_read_class  
+
+endfunction : from_read_class
 
 //--------------------------------------------------------------------------------------------      
 // Function: to_write_class                                                                               
@@ -364,6 +376,20 @@ function void axi4_slave_seq_item_converter::to_read_class( input axi4_read_tran
   output_conv_h.araddr = input_conv_h.araddr;
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("after reading araddr =  %0h",output_conv_h.araddr),UVM_FULL);
 
+  // Measured wait states, struct -> class. The slave monitor BFM measures the
+  // ARVALID->ARREADY delay into ar_wait_states on the AR packet and the
+  // RVALID->RREADY delay of beat 0 into r_wait_states on the R packet
+  // (axi4_slave_monitor_bfm.sv ar_ws / r_ws), but no struct -> class converter
+  // on this side ever carried them, so every slave packet reached
+  // env/axi4_scoreboard.sv with both at 0. That was invisible while the MASTER
+  // converters dropped them too (0 == 0 on every check_wait_states compare);
+  // once master/axi4_master_seq_item_converter.sv started carrying its
+  // measurements, every ar/r/w/b wait-state compare failed against a slave-side
+  // hard zero. Same convention as the master side: AR on the address packet,
+  // R = beat 0 on the data packet.
+  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_FULL);
 endfunction : to_read_class
 
@@ -515,6 +541,14 @@ function void axi4_slave_seq_item_converter::to_write_addr_data_class(input axi4
   $cast(output_conv_h.bid,input_conv_h.bid);
   $cast(output_conv_h.bresp,input_conv_h.bresp);
   output_conv_h.buser = input_conv_h.buser;
+  // Measured wait states: AW rides on the carried-forward address packet
+  // (to_write_class did carry it), W is measured for beat 0 on the data-phase
+  // struct being converted here (axi4_slave_monitor_bfm.sv w_ws). This
+  // function allocates a fresh object, so anything not copied is a hard 0 --
+  // which is what the scoreboard's w_wait_states compare used to see on the
+  // slave side. Same rule as the master converter's to_write_addr_data_class.
+  output_conv_h.aw_wait_states = waddr_packet.aw_wait_states;
+  output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After converting =  %s",output_conv_h.sprint()),UVM_HIGH);
 
 endfunction : to_write_addr_data_class
@@ -562,6 +596,13 @@ function void axi4_slave_seq_item_converter::to_write_addr_data_resp_class(input
   // BUSER comes from the RESPONSE struct (this is the B-channel packet), not
   // from the carried-forward address+data packet.
   output_conv_h.buser = input_conv_h.buser;
+  // Same rule for the wait states: AW/W ride on the carried-forward packet, B
+  // is measured on this response struct (axi4_slave_monitor_bfm.sv b_ws).
+  // Nothing carried them before, so the slave side of the scoreboard's
+  // b_wait_states compare was always 0.
+  output_conv_h.aw_wait_states = waddr_data_packet.aw_wait_states;
+  output_conv_h.w_wait_states  = waddr_data_packet.w_wait_states;
+  output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After converting =  %s",output_conv_h.sprint()),UVM_HIGH);
 
 endfunction : to_write_addr_data_resp_class
@@ -619,6 +660,13 @@ function void axi4_slave_seq_item_converter::to_read_addr_data_class(input axi4_
     if(input_conv_h.rresp[i] > worst_rresp) worst_rresp = input_conv_h.rresp[i];
   end
   $cast(output_conv_h.rresp,worst_rresp);
+
+  // Measured wait states: AR was measured on the carried-forward address
+  // packet, R (beat 0) on the R-phase struct being converted here. Neither was
+  // carried, so the slave's completed-read packet always published 0 for both
+  // -- see to_read_class for the history.
+  output_conv_h.ar_wait_states = raddr_packet.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
 
   `uvm_info("axi4_slave_seq_item_conv_class",$sformatf("After converting read_addr_data_packet =  %s",output_conv_h.sprint()),UVM_HIGH);
 

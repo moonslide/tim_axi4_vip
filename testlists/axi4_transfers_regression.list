@@ -81,7 +81,7 @@ axi4_x_inject_none_control_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
 axi4_x_inject_none_control_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_x_inject_assert_detect_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
 axi4_x_inject_reset_abort_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
-axi4_x_inject_concurrent_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_concurrent_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_blocking_incr_burst_write_test run_cnt=2
 axi4_blocking_incr_burst_write_read_test run_cnt=2
 axi4_blocking_fixed_burst_write_read_test run_cnt=2

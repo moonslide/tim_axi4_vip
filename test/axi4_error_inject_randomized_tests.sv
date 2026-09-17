@@ -261,7 +261,23 @@ function void axi4_error_inject_awaddr_random_test::build_phase(uvm_phase phase)
   uvm_config_db#(bit)::set(this, "*", "allow_x_propagation", 1);
   uvm_config_db#(bit)::set(this, "*", "randomize_injection", 1);
   uvm_config_db#(int)::set(this, "*", "x_recovery_timeout", 100);
-  
+
+  // Same stimulus, same consequence, same disposition as
+  // axi4_error_inject_awaddr_x_test (BENCH-066): each injection asserts AWVALID
+  // with AWADDR=X for N edges through axi4_master_x_inject_seq. This VIP's
+  // subordinate keeps AWREADY high, so it legally accepts one orphan address
+  // transfer per edge and pairs the following W bursts with them; every later
+  // write's response then carries the orphan's ID, the manager drops it (AXI4
+  // A3.2) and the write is never response-verified. The scoreboard's
+  // completeness accounting deliberately never skips, so it reports exactly
+  // sum(x_inject_cycles) unverified writes - the injection itself, not a
+  // defect (measured 14/13/13 for 7+7 / 5+8 / 5+8 injected edges across the
+  // three bus modes). Before BENCH-066 this test passed only because the
+  // injection was silently never driven (0 X-witness events, 0.00% X
+  // coverage in the 2026-08-13 baseline logs). The injection is verified by
+  // the sequence's acknowledgement check and the X-witness instead.
+  axi4_env_cfg_h.has_scoreboard = 0;
+
   `uvm_info(get_type_name(), "Build phase completed for AWADDR Random X injection test", UVM_LOW)
 endfunction : build_phase
 
