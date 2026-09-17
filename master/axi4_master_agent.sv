@@ -110,6 +110,10 @@ function void axi4_master_agent::connect_phase(uvm_phase phase);
     //Connecting the ports
     axi4_master_drv_proxy_h.axi_write_seq_item_port.connect(axi4_master_write_seqr_h.seq_item_export);
     axi4_master_drv_proxy_h.axi_read_seq_item_port.connect(axi4_master_read_seqr_h.seq_item_export);
+
+    // BENCH-065: let the monitor proxy read the driver BFM's mid-burst stall
+    // request log (see axi4_master_monitor_proxy::axi4_master_drv_bfm_h).
+    axi4_master_mon_proxy_h.axi4_master_drv_bfm_h = axi4_master_drv_proxy_h.axi4_master_drv_bfm_h;
   end
 
   if(axi4_master_agent_cfg_h.has_coverage) begin

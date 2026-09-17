@@ -129,14 +129,16 @@ class axi4_master_coverage extends uvm_component;
   // sample. Sampling it on a read packet is what used to score WRITE_FIXED /
   // AWSIZE_1BYTE / AWID_0 for free on read-only traffic.
   //
-  // Note on the wait-state coverpoints: the master struct->class converters
-  // (to_write_class / to_write_addr_data_class / to_write_addr_data_resp_class)
-  // never assign aw/w/b_wait_states at all -- only the class->struct direction
-  // does (axi4_master_seq_item_converter.sv:100-102). They therefore read 0 on
-  // every monitored packet regardless of where they are sampled; keeping them
-  // on the first packet of the write burst at least stops them being counted
-  // five times per transaction. The always-zero source is a converter gap, not
-  // a coverage-model gap, and is reported separately.
+  // Note on the wait-state coverpoints (fixed 2026-09-17): they used to read a
+  // hard 0 on every monitored packet for two independent reasons -- the master
+  // struct->class converters never assigned any *_wait_states, and
+  // axi4_master_tx::do_copy (which every published clone goes through) did not
+  // copy them either. Both are fixed. The measured delay of a channel only
+  // exists on the packet of that channel or later, so each coverpoint now sits
+  // on the FIRST packet that carries its value: AW here (AW packet), W and B in
+  // axi4_master_write_resp_cg (the completed write carries all three), AR in
+  // axi4_master_read_addr_cg, R in axi4_master_read_data_cg. Sampling W/B/R on
+  // the address packet could only ever score the zero bin.
   //-------------------------------------------------------
   covergroup axi4_master_write_addr_cg with function sample (axi4_master_agent_config cfg, axi4_master_tx packet);
     option.per_instance = 1;
@@ -214,25 +216,8 @@ class axi4_master_coverage extends uvm_component;
       bins HANDSHAKE = {1};
     }
 
-    W_WAIT_STATES_CP : coverpoint packet.w_wait_states {
-      option.comment = "WREADY wait states";
-      bins W_WS[] = {[0:6]};
-    }
-
-    W_HANDSHAKE_CP : coverpoint (packet.w_wait_states == 0) {
-      option.comment = "WREADY handshake";
-      bins HANDSHAKE = {1};
-    }
-
-    B_WAIT_STATES_CP : coverpoint packet.b_wait_states {
-      option.comment = "BREADY wait states";
-      bins B_WS[] = {[0:6]};
-    }
-
-    B_HANDSHAKE_CP : coverpoint (packet.b_wait_states == 0) {
-      option.comment = "BREADY handshake";
-      bins HANDSHAKE = {1};
-    }
+    // W_WAIT_STATES_CP / B_WAIT_STATES_CP live in axi4_master_write_resp_cg:
+    // the AW packet is published before either delay has been measured.
 
     //-------------------------------------------------------
     // Error injection / exception scenarios keyed off the write ADDRESS.
@@ -389,6 +374,30 @@ class axi4_master_coverage extends uvm_component;
       bins decode_error = {3};  // DECERR for invalid addresses
     }
 
+    //-------------------------------------------------------
+    // Wait state coverage (W beat 0 and B), measured by the monitor BFM and
+    // carried onto the completed-write packet by to_write_addr_data_resp_class.
+    //-------------------------------------------------------
+    W_WAIT_STATES_CP : coverpoint packet.w_wait_states {
+      option.comment = "WREADY wait states (beat 0)";
+      bins W_WS[] = {[0:6]};
+    }
+
+    W_HANDSHAKE_CP : coverpoint (packet.w_wait_states == 0) {
+      option.comment = "WREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
+    B_WAIT_STATES_CP : coverpoint packet.b_wait_states {
+      option.comment = "BREADY wait states";
+      bins B_WS[] = {[0:6]};
+    }
+
+    B_HANDSHAKE_CP : coverpoint (packet.b_wait_states == 0) {
+      option.comment = "BREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
     // Cross-partner copies of the address / environment coverpoints. They are
     // already counted in axi4_master_write_addr_cg / axi4_master_env_cg, so
     // weight 0 keeps them out of this covergroup's denominator while still
@@ -537,15 +546,8 @@ class axi4_master_coverage extends uvm_component;
       bins HANDSHAKE = {1};
     }
 
-    R_WAIT_STATES_CP : coverpoint packet.r_wait_states {
-      option.comment = "RREADY wait states";
-      bins R_WS[] = {[0:6]};
-    }
-
-    R_HANDSHAKE_CP : coverpoint (packet.r_wait_states == 0) {
-      option.comment = "RREADY handshake";
-      bins HANDSHAKE = {1};
-    }
+    // R_WAIT_STATES_CP lives in axi4_master_read_data_cg: the AR packet is
+    // published before the first R beat exists, so it could only score R_WS_0.
 
     ARLENGTH_CP_X_ARSIZE_X_ARBURST    :cross ARLEN_CP,ARSIZE_CP,ARBURST_CP {
       ignore_bins illegal_long_fixed_wrap =
@@ -582,6 +584,43 @@ class axi4_master_coverage extends uvm_component;
     // read-side name, so RID/RRESP correlation was never actually collected
     // and the report showed the write-side cross twice.
     RID_CP_X_RRESP_CP : cross RID_CP,RRESP_CP;
+
+    //-------------------------------------------------------
+    // Wait state coverage (R beat 0), measured by axi4_master_monitor_bfm
+    // (r_ws, stored for beat 0 only) and carried onto the completed-read packet
+    // by to_read_addr_data_class.
+    //-------------------------------------------------------
+    R_WAIT_STATES_CP : coverpoint packet.r_wait_states {
+      option.comment = "RREADY wait states in front of beat 0";
+      bins R_WS[] = {[0:6]};
+    }
+
+    R_HANDSHAKE_CP : coverpoint (packet.r_wait_states == 0) {
+      option.comment = "RREADY handshake";
+      bins HANDSHAKE = {1};
+    }
+
+    //-------------------------------------------------------
+    // BENCH-065 pin-level mid-burst RREADY stall witness.
+    //
+    // Sampled value: the number of cycles the monitor BFM measured RVALID high
+    // with RREADY low in front of the first back-pressured INTERIOR beat.
+    // Gate: only when the transaction REQUESTED a stall (r_stall_beat >= 1,
+    // stamped from the driver's request log) and the beat the monitor saw
+    // stalled is that requested beat. A queue-full (R_ACCEPT_DEPTH) stall,
+    // reset, X injection, or the documented interleaving limit can all lower
+    // RREADY mid-burst, but none of them comes with a matching request, so
+    // none of them can hit this point - which is BENCH-065's "open
+    // discriminator" between the implemented actuator and an incidental stall.
+    // Zero hits means unexercised; first-beat R_WAIT_STATES_CP cannot close it.
+    //-------------------------------------------------------
+    R_MID_BURST_STALL_CP : coverpoint packet.r_stall_cycles_observed
+      iff (packet.r_stall_beat >= 1 && packet.r_stall_beat_observed == packet.r_stall_beat) {
+      option.comment = "Requested mid-burst RREADY stall observed on the pins at the requested beat (cycles)";
+      bins R_STALL_1      = {1};
+      bins R_STALL_2_TO_7 = {[2:7]};
+      bins R_STALL_8_UP   = {[8:R_BEAT_STALL_MAX]};
+    }
 
   endgroup: axi4_master_read_data_cg
 
@@ -849,14 +888,21 @@ endfunction : sample_ok
 //--------------------------------------------------------------------------------------------
 function void axi4_master_coverage::collect_env_state(axi4_master_tx t);
 
-  // Check for X injection signals via config_db
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", x_inject_awvalid_detected));
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", x_inject_awaddr_detected));
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", x_inject_wdata_detected));
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", x_inject_arvalid_detected));
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bready", x_inject_bready_detected));
-  void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready_detected));
-  void'(uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_duration));
+  // BENCH-066: the X-injection state is read from the PACKET, not from the
+  // six wildcard config_db request flags. Those flags described a sequence's
+  // flag window (open during its sleep, closed before its item could carry
+  // the request), so the bins below were sampled against a value unrelated
+  // to what this packet's transaction actually experienced. The packet now
+  // carries the request that preceded it, stamped by axi4_master_monitor_proxy
+  // from the driver BFM's request log, and the duration is the number of
+  // cycles the BFM actually drove, not the number asked for.
+  x_inject_awvalid_detected = (t.x_inject_target == X_INJ_AWVALID) && t.x_inject_started;
+  x_inject_awaddr_detected  = (t.x_inject_target == X_INJ_AWADDR)  && t.x_inject_started;
+  x_inject_wdata_detected   = (t.x_inject_target == X_INJ_WDATA)   && t.x_inject_started;
+  x_inject_arvalid_detected = (t.x_inject_target == X_INJ_ARVALID) && t.x_inject_started;
+  x_inject_bready_detected  = (t.x_inject_target == X_INJ_BREADY)  && t.x_inject_started;
+  x_inject_rready_detected  = (t.x_inject_target == X_INJ_RREADY)  && t.x_inject_started;
+  x_inject_duration         = t.x_inject_cycles_driven;
 
   // Determine which X injection signal is active
   if (x_inject_awvalid_detected) x_inject_signal = X_INJECT_AWVALID;
@@ -869,8 +915,8 @@ function void axi4_master_coverage::collect_env_state(axi4_master_tx t);
 
   // Report X injection detection
   if (x_inject_signal != X_INJECT_NONE) begin
-    `uvm_info(get_type_name(), $sformatf("X injection detected - Signal: %s, Duration: %0d cycles",
-                                        x_inject_signal.name(), x_inject_duration), UVM_MEDIUM)
+    `uvm_info(get_type_name(), $sformatf("X injection carried by this packet - Signal: %s, Duration: %0d cycles (%s)",
+                                        x_inject_signal.name(), x_inject_duration, t.x_inject_result.name()), UVM_MEDIUM)
   end
 
   // Check for clock frequency changes via config_db

@@ -2,6 +2,15 @@
 `define AXI4_VIRTUAL_ERROR_INJECT_SEQ_INCLUDED_
 
 //--------------------------------------------------------------------------------------------
+// BENCH-066: the four flag-only virtual sequences below (AWVALID / AWADDR /
+// WDATA / ARVALID) used to set a wildcard config_db request, sleep, and clear
+// it without ever starting a transaction on the master - so the driver, which
+// only read the flag after get_next_item(), never injected anything. They
+// now run the basic axi4_master_x_inject_seq on master 0's sequencer, exactly
+// like the BREADY / RREADY ones always did; the basic sequence owns the
+// request/acknowledge contract (see its header).
+//--------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------
 // Class: axi4_virtual_error_inject_awvalid_x_seq
 // Virtual sequence for injecting X on AWVALID
 //--------------------------------------------------------------------------------------------
@@ -20,23 +29,13 @@ class axi4_virtual_error_inject_awvalid_x_seq extends axi4_virtual_base_seq;
     
     `uvm_info(get_type_name(), "Starting AWVALID X injection test", UVM_MEDIUM)
     
-    // For error injection tests, just inject X and wait
-    // Don't try to send recovery transactions as they will timeout
-    
-    // Set X injection directly via config_db (bypass sequence)
-    uvm_config_db#(bit)::set(null, "*", "x_inject_awvalid", 1);
-    uvm_config_db#(int)::set(null, "*", "x_inject_cycles", 8);
-    
-    `uvm_info(get_type_name(), "X injection configured for AWVALID", UVM_MEDIUM)
-    
-    // Wait for injection to complete
-    #100ns;
-    
-    // Clear injection flag
-    uvm_config_db#(bit)::set(null, "*", "x_inject_awvalid", 0);
-    
-    // Just wait for observation, don't send recovery transaction
-    #200ns;
+    master_x_seq = axi4_master_x_inject_seq::type_id::create("master_x_seq");
+    master_x_seq.inject_phase  = axi4_master_x_inject_seq::PHASE_AW;
+    master_x_seq.inject_signal = axi4_master_x_inject_seq::SIGNAL_VALID;
+    master_x_seq.x_inject_cycles = 8;
+    master_x_seq.target_addr   = 64'h0000_0008_0000_1000;  // Valid DDR address
+    master_x_seq.test_id       = 4'h1;
+    master_x_seq.start(p_sequencer.axi4_master_write_seqr_h);
     
     `uvm_info(get_type_name(), "AWVALID X injection test completed", UVM_MEDIUM)
     
@@ -61,20 +60,13 @@ class axi4_virtual_error_inject_awaddr_x_seq extends axi4_virtual_base_seq;
     
     `uvm_info(get_type_name(), "Starting AWADDR X injection test", UVM_MEDIUM)
     
-    // Set X injection directly via config_db
-    uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 1);
-    uvm_config_db#(int)::set(null, "*", "x_inject_cycles", 6);
-    
-    `uvm_info(get_type_name(), "X injection configured for AWADDR", UVM_MEDIUM)
-    
-    // Wait for injection to complete
-    #100ns;
-    
-    // Clear injection flag
-    uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 0);
-    
-    // Just wait for observation
-    #100ns;
+    master_x_seq = axi4_master_x_inject_seq::type_id::create("master_x_seq");
+    master_x_seq.inject_phase  = axi4_master_x_inject_seq::PHASE_AW;
+    master_x_seq.inject_signal = axi4_master_x_inject_seq::SIGNAL_ADDR;
+    master_x_seq.x_inject_cycles = 6;
+    master_x_seq.target_addr   = 64'h0000_0008_0000_1010;  // Valid DDR address
+    master_x_seq.test_id       = 4'h2;
+    master_x_seq.start(p_sequencer.axi4_master_write_seqr_h);
     
     `uvm_info(get_type_name(), "AWADDR X injection test completed", UVM_MEDIUM)
     
@@ -99,20 +91,13 @@ class axi4_virtual_error_inject_wdata_x_seq extends axi4_virtual_base_seq;
     
     `uvm_info(get_type_name(), "Starting WDATA X injection test", UVM_MEDIUM)
     
-    // Set X injection directly via config_db
-    uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 1);
-    uvm_config_db#(int)::set(null, "*", "x_inject_cycles", 6);
-    
-    `uvm_info(get_type_name(), "X injection configured for WDATA", UVM_MEDIUM)
-    
-    // Wait for injection to complete
-    #100ns;
-    
-    // Clear injection flag
-    uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 0);
-    
-    // Just wait for observation
-    #100ns;
+    master_x_seq = axi4_master_x_inject_seq::type_id::create("master_x_seq");
+    master_x_seq.inject_phase  = axi4_master_x_inject_seq::PHASE_W;
+    master_x_seq.inject_signal = axi4_master_x_inject_seq::SIGNAL_DATA;
+    master_x_seq.x_inject_cycles = 6;
+    master_x_seq.target_addr   = 64'h0000_0008_0000_1020;  // Valid DDR address
+    master_x_seq.test_id       = 4'h3;
+    master_x_seq.start(p_sequencer.axi4_master_write_seqr_h);
     
     `uvm_info(get_type_name(), "WDATA X injection test completed", UVM_MEDIUM)
     
@@ -138,20 +123,13 @@ class axi4_virtual_error_inject_arvalid_x_seq extends axi4_virtual_base_seq;
     
     `uvm_info(get_type_name(), "Starting ARVALID X injection test", UVM_MEDIUM)
     
-    // Set X injection directly via config_db
-    uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 1);
-    uvm_config_db#(int)::set(null, "*", "x_inject_cycles", 8);
-    
-    `uvm_info(get_type_name(), "X injection configured for ARVALID", UVM_MEDIUM)
-    
-    // Wait for injection to complete
-    #100ns;
-    
-    // Clear injection flag
-    uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 0);
-    
-    // Just wait for observation, don't send recovery transaction
-    #200ns;
+    master_x_seq = axi4_master_x_inject_seq::type_id::create("master_x_seq");
+    master_x_seq.inject_phase  = axi4_master_x_inject_seq::PHASE_AR;
+    master_x_seq.inject_signal = axi4_master_x_inject_seq::SIGNAL_VALID;
+    master_x_seq.x_inject_cycles = 8;
+    master_x_seq.target_addr   = 64'h0000_0008_0000_1030;  // Valid DDR address
+    master_x_seq.test_id       = 4'h4;
+    master_x_seq.start(p_sequencer.axi4_master_read_seqr_h);
     
     `uvm_info(get_type_name(), "ARVALID X injection test completed", UVM_MEDIUM)
     

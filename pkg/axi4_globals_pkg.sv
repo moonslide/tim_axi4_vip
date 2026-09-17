@@ -78,7 +78,19 @@ package axi4_globals_pkg;
   //it was the dead half of the equally dead outstanding-depth knob, AXI_ooo.md
   //F4. Revived rather than deleted, per VIP_future.md ST-A2.)
   parameter int OUTSTANDING_FIFO_DEPTH = 16;
-  
+
+  //Variable: R_BEAT_STALL_MAX
+  //Upper bound on axi4_master_tx::r_stall_cycles, the number of clock cycles the
+  //manager holds RREADY low in front of one requested interior beat of a read
+  //burst (BENCH-065). It is the declared response-bound policy the BENCH record
+  //asks for: with at most OUTSTANDING_FIFO_DEPTH reads truly in flight and one
+  //stall per read, the worst-case delay a claim task can see ahead of its own
+  //burst stays well under the read-data claim escape
+  //(axi4_master_driver_bfm.sv, R_CLAIM_ESCAPE_CYCLES = 50000), so a legal stall
+  //can never be mistaken for the abandoned-burst failure of landmine #37. The
+  //driver BFM checks that product at time 0.
+  parameter int R_BEAT_STALL_MAX = 1000;
+
   //-------------------------------------------------------
   // Enums used in axi4_avip are given below
   //-------------------------------------------------------
@@ -316,6 +328,93 @@ package axi4_globals_pkg;
   awid_e awid_queue_for_qos[$];
 
   //-------------------------------------------------------
+  // BENCH-066: transaction-attached X-injection descriptor
+  //-------------------------------------------------------
+  //Enum: x_inject_target_e
+  //The manager-side signal an X-injection request targets. X_INJ_NONE (the
+  //default of every axi4_master_tx) means "no injection" and leaves every
+  //existing item bit-identical in behaviour. AWVALID/AWADDR/WDATA/BREADY are
+  //write-side targets (dispatched by the proxy's write loop), ARVALID/RREADY
+  //read-side (read loop); a descriptor naming a signal of the other channel
+  //is a sequence error and is reported once as X_INJ_RESULT_INVALID.
+  //The numeric values are also the index into the per-signal pin-level
+  //witness arrays of assertions/master_assertions.sv (1..6).
+  typedef enum int {
+    X_INJ_NONE    = 0,
+    X_INJ_AWVALID = 1,
+    X_INJ_AWADDR  = 2,
+    X_INJ_WDATA   = 3,
+    X_INJ_ARVALID = 4,
+    X_INJ_BREADY  = 5,
+    X_INJ_RREADY  = 6
+  } x_inject_target_e;
+  localparam int X_INJ_NUM_TARGETS = 7;
+
+  //Enum: x_inject_result_e
+  //Outcome the driver writes back onto the requesting item (or idle request).
+  //  NOT_REQUESTED    - descriptor was X_INJ_NONE, nothing was attempted
+  //  OK               - the BFM drove X for exactly the requested aclk cycles
+  //  TIMEOUT          - the channel's pin-level mutex could not be taken within
+  //                     X_INJECT_ACQUIRE_TIMEOUT cycles (another owner never
+  //                     released it); nothing was driven
+  //  ABORTED_BY_RESET - ARESETn fell while waiting for the channel or while
+  //                     driving; the signal was restored to idle immediately
+  //  INVALID          - request rejected at accept time (cycle count out of
+  //                     [1:X_INJECT_CYCLES_MAX], target on the wrong channel);
+  //                     nothing was driven, reported with uvm_error
+  typedef enum int {
+    X_INJ_RESULT_NOT_REQUESTED    = 0,
+    X_INJ_RESULT_OK               = 1,
+    X_INJ_RESULT_TIMEOUT          = 2,
+    X_INJ_RESULT_ABORTED_BY_RESET = 3,
+    X_INJ_RESULT_INVALID          = 4
+  } x_inject_result_e;
+
+  //Enum: x_inject_assert_policy_e
+  //Explicit assertion policy carried by the request (BENCH-066 repair-contract
+  //item 6). SUPPRESS is today's behaviour: the master_assertions gate
+  //x_inject_mode is raised for exactly the cycles the BFM owns the wire, so
+  //NO_HANDSHAKE_DURING_X / NO_READY_HANDSHAKE_DURING_X / AWVALID_X_RECOVERY
+  //are disabled during the drive. KEEP_ARMED leaves the gate low so an
+  //assertion-detection self-test can observe its target assertion fire.
+  typedef enum bit {
+    X_INJ_SUPPRESS_CHECKS = 1'b0,
+    X_INJ_KEEP_ARMED      = 1'b1
+  } x_inject_assert_policy_e;
+
+  //Variable: X_INJECT_CYCLES_MAX
+  //Upper bound on a single X-injection hold, in aclk cycles. Well under the
+  //driver BFM's 50000-cycle claim escapes so an injection can never be
+  //mistaken for an abandoned transaction.
+  parameter int X_INJECT_CYCLES_MAX = 1000;
+
+  //Struct: x_inject_req_s
+  //One completed item-attached X-injection request as the driver BFM logs it
+  //for the monitor (axi4_master_driver_bfm::x_inject_req_log, popped by
+  //axi4_master_monitor_proxy at the AW/AR handshake with the same id).
+  //Built with a NAMED aggregate literal at its only push site
+  //(axi4_master_driver_proxy::dispatch_x_inject) - keep it that way.
+  typedef struct {
+    bit                      is_write;
+    bit [`AXI_ID_WIDTH-1:0]  id;
+    x_inject_target_e        target;
+    int                      cycles;
+    x_inject_assert_policy_e policy;
+    bit                      accepted;
+    bit                      started;
+    bit                      completed;
+    x_inject_result_e        result;
+    time                     start_time;
+    time                     end_time;
+    int                      cycles_driven;
+  } x_inject_req_s;
+
+  //Variable: X_INJECT_ACQUIRE_TIMEOUT
+  //Cycles the driver BFM will wait for the target channel's pin-level mutex
+  //(aw/w/ar_channel_key) before giving up with X_INJ_RESULT_TIMEOUT.
+  parameter int X_INJECT_ACQUIRE_TIMEOUT = 10000;
+
+  //-------------------------------------------------------
   // Structs used in axi_avip are given below
   //-------------------------------------------------------
   
@@ -399,6 +498,18 @@ package axi4_globals_pkg;
     int                               outstanding_read_tx;
     int                               ar_wait_states;
     int                               r_wait_states;
+    // BENCH-065 mid-burst RREADY stall. REQUEST side (class -> struct -> driver):
+    // r_stall_beat is the interior beat index (1..arlen) in front of which the
+    // manager holds RREADY low for r_stall_cycles clocks; -1 = no request. Beat
+    // 0 stays r_wait_states' domain. OBSERVED side (monitor -> struct -> class):
+    // the first interior beat at which the monitor measured RVALID high with
+    // RREADY low, and for how many cycles; -1 / 0 when none. A plain struct
+    // default is 0 for both -- the monitor BFM sets the observed sentinel
+    // explicitly and the class field carries its own -1 initializer.
+    int                               r_stall_beat;
+    int                               r_stall_cycles;
+    int                               r_stall_beat_observed;
+    int                               r_stall_cycles_observed;
   } axi4_read_transfer_char_s;
 
   //Struct: axi4_cfg_char_s

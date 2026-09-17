@@ -67,7 +67,13 @@ interface master_assertions (input                     aclk,
                              input                  rlast,
                              input [`AXI_RUSER_WIDTH-1:0] ruser,
                              input                  rvalid,
-                             input                  rready  
+                             input                  rready,
+                             // BENCH-066: X-injection gate inputs, driven by the
+                             // agent BFM from the driver BFM's ownership state
+                             // (x_inject_drive_active) and the active request's
+                             // assertion policy (x_inject_keep_armed).
+                             input                  x_drive_active,
+                             input                  x_keep_armed
                             );  
 
   //-------------------------------------------------------
@@ -385,31 +391,21 @@ interface master_assertions (input                     aclk,
     $display("[%0t] X detected on RREADY signal", $time);
   `endif
   
-  // Control flag for X injection testing
+  // Gate for the X-protocol checks below (BENCH-066).
+  //
+  // This used to be re-derived every aclk edge from the six wildcard
+  // config_db request flags, i.e. it followed the SEQUENCE's flag window,
+  // not the drive: open during the sequence's sleep when nothing was on the
+  // wire, and already closed by the time an item could have carried the
+  // request to the BFM. It is now the driver BFM's own ownership state (any
+  // of aw/w/ar/bready/rready_x_inject_active), so the checks are disabled
+  // for exactly the cycles this manager is deliberately driving X on this
+  // interface - and, per the request's assertion policy, not at all
+  // (KEEP_ARMED) when a test wants to see the named assertion fire.
+  // No config_db key is read here any more; a test that wants these checks
+  // off for another reason must say so through a request, not a flag.
   bit x_inject_mode = 0;
-  
-  initial begin
-    bit awvalid_inject, arvalid_inject, wdata_inject;
-    bit bready_inject, rready_inject, awaddr_inject;
-    
-    forever begin
-      @(posedge aclk);
-      // Check config_db for X injection mode - set to 1 if any injection is active
-      awvalid_inject = 0; arvalid_inject = 0; wdata_inject = 0;
-      bready_inject = 0; rready_inject = 0; awaddr_inject = 0;
-      
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", awvalid_inject));
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", arvalid_inject));
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", wdata_inject));
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bready", bready_inject));
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", rready_inject));
-      void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", awaddr_inject));
-      
-      // Set x_inject_mode to 1 if any injection is active
-      x_inject_mode = (awvalid_inject || arvalid_inject || wdata_inject || 
-                       bready_inject || rready_inject || awaddr_inject) ? 1 : 0;
-    end
-  end
+  always @(*) x_inject_mode = (x_drive_active === 1'b1) && (x_keep_armed !== 1'b1);
   
   `ifndef DISABLE_X_ASSERTIONS
   // Check no handshake during X on any valid signal
@@ -433,19 +429,88 @@ interface master_assertions (input                     aclk,
     else `uvm_error("X_PROTOCOL", "Handshake completed during X on ready signal");
   `endif // DISABLE_X_ASSERTIONS
   
-  // Track X injection duration
-  int x_inject_cycle_count = 0;
+  //-------------------------------------------------------
+  // BENCH-066 pin-level X witness, PER SIGNAL.
+  //
+  // This replaces the single aggregated x_inject_cycle_count: one counter over
+  // six conditions could say "X was seen for N cycles" but never WHICH signal,
+  // WHEN, or how many separate events - which is exactly what the BENCH-066
+  // record (section 3.3) says a monitor message must state before it can
+  // serve as evidence. Every run of consecutive X cycles on one signal is one
+  // event: (signal, first aclk edge, last aclk edge, cycle count), pushed to
+  // x_witness_q and reported once at its end. Counting starts only while
+  // ARESETn is high: initialisation X before/through reset is not a witness
+  // (record section 5, step 4). The index is x_inject_target_e (1..6).
+  //
+  // Sampling: an X driven by the BFM's NBA at posedge N is first visible to
+  // this block at posedge N+1 and last visible at the edge on which the BFM
+  // issues its restore, so a request for C cycles yields exactly C counted
+  // edges; the driver BFM stamps its start/end on those same edges, which is
+  // what lets a test match witness and request by time, not by inference.
+  //-------------------------------------------------------
+  typedef struct {
+    x_inject_target_e sig;
+    time              start_time;
+    time              end_time;
+    int               cycles;
+  } x_witness_s;
+
+  x_witness_s x_witness_q[$];
+  int         x_witness_events[X_INJ_NUM_TARGETS];   // completed events per signal
+  int         x_witness_cycles[X_INJ_NUM_TARGETS];   // total X cycles per signal
+  int         x_run_cnt       [X_INJ_NUM_TARGETS];   // open run, if any
+  time        x_run_start     [X_INJ_NUM_TARGETS];
+  time        x_run_end       [X_INJ_NUM_TARGETS];
+
+  function automatic bit x_seen_on(input int s);
+    case(s)
+      X_INJ_AWVALID: return $isunknown(awvalid);
+      X_INJ_AWADDR : return (awvalid === 1'b1) && $isunknown(awaddr);
+      X_INJ_WDATA  : return (wvalid  === 1'b1) && $isunknown(wdata);
+      X_INJ_ARVALID: return $isunknown(arvalid);
+      X_INJ_BREADY : return $isunknown(bready);
+      X_INJ_RREADY : return $isunknown(rready);
+      default      : return 1'b0;
+    endcase
+  endfunction : x_seen_on
+
+  function automatic void x_witness_close(input int s);
+    x_witness_s w;
+    x_inject_target_e sig_e;
+    sig_e        = x_inject_target_e'(s);
+    w.sig        = sig_e;
+    w.start_time = x_run_start[s];
+    w.end_time   = x_run_end[s];
+    w.cycles     = x_run_cnt[s];
+    x_witness_q.push_back(w);
+    x_witness_events[s]++;
+    x_witness_cycles[s] += x_run_cnt[s];
+    `uvm_info("X_INJECT_WITNESS", $sformatf("X on %s for %0d aclk cycle(s), %0t .. %0t (event #%0d on this interface)",
+                                            sig_e.name(), w.cycles, w.start_time, w.end_time, x_witness_events[s]), UVM_MEDIUM)
+    x_run_cnt[s] = 0;
+  endfunction : x_witness_close
+
   always @(posedge aclk) begin
-    if($isunknown(awvalid) || $isunknown(arvalid) || 
-       ($isunknown(awaddr) && awvalid) || ($isunknown(wdata) && wvalid) ||
-       $isunknown(bready) || $isunknown(rready)) begin
-      x_inject_cycle_count++;
-      `uvm_info("X_INJECT_MONITOR", $sformatf("X injection active for %0d cycles", x_inject_cycle_count), UVM_HIGH)
-    end else if(x_inject_cycle_count > 0) begin
-      `uvm_info("X_INJECT_MONITOR", $sformatf("X injection completed after %0d cycles", x_inject_cycle_count), UVM_MEDIUM)
-      x_inject_cycle_count = 0;
+    for(int s = 1; s < X_INJ_NUM_TARGETS; s++) begin
+      if(aresetn === 1'b1 && x_seen_on(s)) begin
+        if(x_run_cnt[s] == 0) x_run_start[s] = $time;
+        x_run_end[s] = $time;
+        x_run_cnt[s]++;
+      end
+      else if(x_run_cnt[s] > 0) begin
+        x_witness_close(s);
+      end
     end
   end
+
+  // Read-side accessors for tests holding the virtual interface.
+  function automatic int x_witness_event_count(input x_inject_target_e s);
+    return x_witness_events[int'(s)];
+  endfunction : x_witness_event_count
+
+  function automatic int x_witness_cycle_total(input x_inject_target_e s);
+    return x_witness_cycles[int'(s)];
+  endfunction : x_witness_cycle_total
 
 endinterface : master_assertions
 

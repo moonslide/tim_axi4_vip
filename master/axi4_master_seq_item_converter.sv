@@ -168,13 +168,20 @@ function void axi4_master_seq_item_converter::from_read_class( input axi4_master
 
   output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
   output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+  // BENCH-065 mid-burst RREADY stall request travels to the driver BFM with
+  // the rest of the read; the observed-side fields are the monitor's and are
+  // carried through untouched so a driver-side round trip stays faithful.
+  output_conv_h.r_stall_beat            = input_conv_h.r_stall_beat;
+  output_conv_h.r_stall_cycles          = input_conv_h.r_stall_cycles;
+  output_conv_h.r_stall_beat_observed   = input_conv_h.r_stall_beat_observed;
+  output_conv_h.r_stall_cycles_observed = input_conv_h.r_stall_cycles_observed;
 
   output_conv_h.wait_count_read_address_channel =input_conv_h.wait_count_read_address_channel ;
   output_conv_h.wait_count_read_data_channel =input_conv_h.wait_count_read_data_channel ;
 
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("----------------------------------------------------------------------"),UVM_HIGH);
-  
-endfunction : from_read_class  
+
+endfunction : from_read_class
 
 //--------------------------------------------------------------------------------------------
 // Function: to_write_class
@@ -224,6 +231,12 @@ function void axi4_master_seq_item_converter::to_write_class( input axi4_write_t
 
   output_conv_h.wait_count_write_address_channel = input_conv_h.wait_count_write_address_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_write_address_channel =  %0h",output_conv_h.wait_count_write_address_channel),UVM_HIGH);
+
+  // The measured AWREADY wait states (axi4_master_monitor_bfm, aw_ws) were
+  // dropped by every struct -> class converter on this side; only the
+  // class -> struct direction carried them. AW_WAIT_STATES_CP therefore read a
+  // hard 0 on every monitored packet.
+  output_conv_h.aw_wait_states = input_conv_h.aw_wait_states;
 
   // Copy exactly the beats this burst has, in order.
   //
@@ -315,6 +328,23 @@ function void axi4_master_seq_item_converter::to_read_class( input axi4_read_tra
   output_conv_h.wait_count_read_address_channel = input_conv_h.wait_count_read_address_channel;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting wait_count_read_address_channel =  %0h",output_conv_h.wait_count_read_address_channel),UVM_HIGH);
 
+  // Wait states were never carried struct -> class (same gap as to_write_class).
+  // On the monitor's AR packet ar_wait_states is the measured ARREADY delay and
+  // r_wait_states is still 0 (the R phase has not happened yet); on the
+  // driver's completed packet both are the values the sequence requested.
+  output_conv_h.ar_wait_states = input_conv_h.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+  // BENCH-065 fields. On the driver's completed packet these are the request
+  // the sequence made (round trip). On the monitor's AR packet the struct is a
+  // fresh zero-initialised local, so the request would read as beat 0 -- the
+  // -1/"no request" sentinel is restored there; the stamped request reaches
+  // the monitor path only on the completed-read packet
+  // (axi4_master_monitor_proxy::axi4_read_data).
+  output_conv_h.r_stall_beat            = (input_conv_h.r_stall_beat == 0) ? -1 : input_conv_h.r_stall_beat;
+  output_conv_h.r_stall_cycles          = input_conv_h.r_stall_cycles;
+  output_conv_h.r_stall_beat_observed   = (input_conv_h.r_stall_beat_observed == 0) ? -1 : input_conv_h.r_stall_beat_observed;
+  output_conv_h.r_stall_cycles_observed = input_conv_h.r_stall_cycles_observed;
+
   // Collapse the per-beat RRESP array onto the packet's single rresp using the
   // WORST response in the burst.  The struct field is
   // `bit [2**LENGTH:0][1:0] rresp` -- one entry per beat -- so casting the
@@ -379,6 +409,26 @@ function void axi4_master_seq_item_converter::to_write_addr_data_class(input axi
   output_conv_h.awaddr = waddr_packet.awaddr;
   output_conv_h.awqos = waddr_packet.awqos;
   output_conv_h.awuser = waddr_packet.awuser;
+  // AW delay comes from the carried-forward address packet, W delay from the
+  // data-phase struct being converted here (measured for beat 0 by the monitor).
+  // BENCH-066: the X-injection descriptor and driver-stamped status ride on
+  // the carried-forward address packet (stamped there by
+  // axi4_master_monitor_proxy from the driver BFM's request log). This
+  // function allocates a fresh object, so they must be copied explicitly or
+  // every combined packet reads X_INJ_NONE.
+  output_conv_h.x_inject_target        = waddr_packet.x_inject_target;
+  output_conv_h.x_inject_cycles        = waddr_packet.x_inject_cycles;
+  output_conv_h.x_inject_assert_policy = waddr_packet.x_inject_assert_policy;
+  output_conv_h.x_inject_accepted      = waddr_packet.x_inject_accepted;
+  output_conv_h.x_inject_started       = waddr_packet.x_inject_started;
+  output_conv_h.x_inject_completed     = waddr_packet.x_inject_completed;
+  output_conv_h.x_inject_result        = waddr_packet.x_inject_result;
+  output_conv_h.x_inject_start_time    = waddr_packet.x_inject_start_time;
+  output_conv_h.x_inject_end_time      = waddr_packet.x_inject_end_time;
+  output_conv_h.x_inject_cycles_driven = waddr_packet.x_inject_cycles_driven;
+
+  output_conv_h.aw_wait_states = waddr_packet.aw_wait_states;
+  output_conv_h.w_wait_states  = input_conv_h.w_wait_states;
 
   // Copy exactly the beats this burst has, in order.
   //
@@ -446,6 +496,26 @@ function void axi4_master_seq_item_converter::to_write_addr_data_resp_class(inpu
   // This allocates a fresh object, so anything not copied here is lost; BUSER
   // was not copied, which is the second half of the always-zero master BUSER.
   output_conv_h.buser = input_conv_h.buser;
+  // Same rule for the wait states: AW/W ride on the carried-forward packet,
+  // B is measured on this response struct (axi4_master_monitor_bfm, b_ws).
+  output_conv_h.aw_wait_states = waddr_data_packet.aw_wait_states;
+  output_conv_h.w_wait_states  = waddr_data_packet.w_wait_states;
+  output_conv_h.b_wait_states  = input_conv_h.b_wait_states;
+  // BENCH-066: the X-injection descriptor and driver-stamped status ride on
+  // the carried-forward address+data packet (stamped there by
+  // axi4_master_monitor_proxy from the driver BFM's request log). This
+  // function allocates a fresh object, so they must be copied explicitly or
+  // every combined packet reads X_INJ_NONE.
+  output_conv_h.x_inject_target        = waddr_data_packet.x_inject_target;
+  output_conv_h.x_inject_cycles        = waddr_data_packet.x_inject_cycles;
+  output_conv_h.x_inject_assert_policy = waddr_data_packet.x_inject_assert_policy;
+  output_conv_h.x_inject_accepted      = waddr_data_packet.x_inject_accepted;
+  output_conv_h.x_inject_started       = waddr_data_packet.x_inject_started;
+  output_conv_h.x_inject_completed     = waddr_data_packet.x_inject_completed;
+  output_conv_h.x_inject_result        = waddr_data_packet.x_inject_result;
+  output_conv_h.x_inject_start_time    = waddr_data_packet.x_inject_start_time;
+  output_conv_h.x_inject_end_time      = waddr_data_packet.x_inject_end_time;
+  output_conv_h.x_inject_cycles_driven = waddr_data_packet.x_inject_cycles_driven;
   `uvm_info("axi4_master_seq_item_conv_class",$sformatf("After converting =  %s",output_conv_h.sprint()),UVM_HIGH);
 
 endfunction : to_write_addr_data_resp_class
@@ -507,6 +577,37 @@ function void axi4_master_seq_item_converter::to_read_addr_data_class(input axi4
   // Same gap as to_read_class above: carry ARUSER/RUSER onto the combined packet.
   output_conv_h.aruser = raddr_packet.aruser;
   output_conv_h.ruser  = input_conv_h.ruser[0];
+
+  // Wait states: AR was measured on the address packet, R (beat 0) on the
+  // R-phase struct being converted here. Neither was carried before, so the
+  // completed-read packet -- the only one on which r_wait_states can be
+  // non-zero -- always published 0.
+  output_conv_h.ar_wait_states = raddr_packet.ar_wait_states;
+  output_conv_h.r_wait_states  = input_conv_h.r_wait_states;
+  // BENCH-066: the X-injection descriptor and driver-stamped status ride on
+  // the carried-forward read-address packet (stamped there by
+  // axi4_master_monitor_proxy from the driver BFM's request log). This
+  // function allocates a fresh object, so they must be copied explicitly or
+  // every combined packet reads X_INJ_NONE.
+  output_conv_h.x_inject_target        = raddr_packet.x_inject_target;
+  output_conv_h.x_inject_cycles        = raddr_packet.x_inject_cycles;
+  output_conv_h.x_inject_assert_policy = raddr_packet.x_inject_assert_policy;
+  output_conv_h.x_inject_accepted      = raddr_packet.x_inject_accepted;
+  output_conv_h.x_inject_started       = raddr_packet.x_inject_started;
+  output_conv_h.x_inject_completed     = raddr_packet.x_inject_completed;
+  output_conv_h.x_inject_result        = raddr_packet.x_inject_result;
+  output_conv_h.x_inject_start_time    = raddr_packet.x_inject_start_time;
+  output_conv_h.x_inject_end_time      = raddr_packet.x_inject_end_time;
+  output_conv_h.x_inject_cycles_driven = raddr_packet.x_inject_cycles_driven;
+
+  // BENCH-065 pin-level witness measured by axi4_master_monitor_bfm on the R
+  // phase. A monitor accumulator that never saw an interior stall carries the
+  // -1 sentinel the BFM set; a struct that was never routed through the BFM
+  // (0) is normalised to the same sentinel. The REQUEST fields stay at the
+  // class initializer (-1 / 0) here; axi4_master_monitor_proxy stamps them from
+  // the driver BFM's request log right after this conversion.
+  output_conv_h.r_stall_beat_observed   = (input_conv_h.r_stall_beat_observed == 0) ? -1 : input_conv_h.r_stall_beat_observed;
+  output_conv_h.r_stall_cycles_observed = input_conv_h.r_stall_cycles_observed;
 
 endfunction : to_read_addr_data_class
 

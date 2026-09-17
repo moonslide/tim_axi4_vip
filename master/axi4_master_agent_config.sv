@@ -80,6 +80,15 @@ class axi4_master_agent_config extends uvm_object;
   // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
   bit error_inject = 0;
 
+  // Variable: x_inject_idle_mbx (BENCH-066, Option C)
+  // Per-agent delivery path for X-injection requests that are not attached to
+  // any transaction (idle injection, e.g. AWVALID while the bus is idle). A
+  // sequence puts an axi4_master_x_inject_idle_req here and waits on it; the
+  // agent's axi4_master_driver_proxy services it in a thread of its own that
+  // does not wait on get_next_item(). One config object per agent means one
+  // mailbox per agent: no wildcard key, no other master can consume it.
+  mailbox #(axi4_master_x_inject_idle_req) x_inject_idle_mbx;
+
   //-------------------------------------------------------
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
@@ -97,6 +106,7 @@ endclass : axi4_master_agent_config
 //--------------------------------------------------------------------------------------------
 function axi4_master_agent_config::new(string name = "axi4_master_agent_config");
   super.new(name);
+  x_inject_idle_mbx = new();
 endfunction : new
 
 //--------------------------------------------------------------------------------------------

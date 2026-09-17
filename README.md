@@ -9,7 +9,11 @@ optional commercial-fabric DUT path.
 
 > [!IMPORTANT]
 > **Evidence scope.** This document describes the current working tree as
-> inspected on **2026-08-13**. Source paths are repository-relative. A listed
+> inspected on **2026-08-13**, with an update on **2026-09-17** covering the
+> BENCH-065/BENCH-066 fixes described in
+> [Recent verification updates](#recent-verification-updates-2026-09-17) — that
+> section's citations were re-read on the later date; the rest of the document
+> was not re-verified then. Source paths are repository-relative. A listed
 > component or registered test is not, by itself, a claim that every scenario
 > has passed a current regression or that this VIP is a certified AXI4
 > compliance product.
@@ -30,6 +34,7 @@ optional commercial-fabric DUT path.
 - [Checking and coverage](#checking-and-coverage)
 - [Bus-matrix reference modes](#bus-matrix-reference-modes)
 - [Feature status](#feature-status)
+- [Recent verification updates (2026-09-17)](#recent-verification-updates-2026-09-17)
 - [Configuration](#configuration)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
@@ -390,6 +395,99 @@ protocol sign-off or current regression closure.
 | Reset/clock | Global and per-interface reset/clock-control machinery | Reset/frequency checkers are optional and default off |
 | X/error injection | Directed stimulus, selected assertion paths, coverage | Expected-error tests require careful verdict interpretation |
 | Track-B | Project wrappers for local commercial 4×4 and 10×10 fabrics | Licensed RTL is local-only; standard regression runner is baseline-only |
+
+## Recent verification updates (2026-09-17)
+
+Two maintainer-queue defects (`VIP_ISSUES.md`) were implemented and directed-test
+verified this session. Both required BFM/proxy-level changes and are documented
+in `VIP_065_066_enhance.html` (design plan) and the canonical
+`BENCH-065_soc01_cpu_axi_midburst_rready_stimulus_missing.md` /
+`BENCH-066_x_injection_flag_cleared_before_item.md` records. Citations below
+were re-read on **2026-09-17**; nothing else in this document was re-verified
+on that date.
+
+### BENCH-065 — controllable mid-burst RREADY backpressure
+
+The manager read BFM previously delayed only beat 0 of a burst (`r_wait_states`);
+nothing could deliberately hold `RREADY=0` mid-burst to prove a DUT/fabric
+handles backpressure correctly partway through a transfer. A per-transaction
+descriptor (`r_stall_beat`/`r_stall_cycles` on `master/axi4_master_tx.sv`,
+default `-1`/`0` = unused, so an empty descriptor reproduces prior behavior) now
+lets a directed sequence request a stall at a specific interior beat, enforced
+in `agent/master_agent_bfm/axi4_master_driver_bfm.sv`'s R-channel arming logic
+and independently observed via a pin-level coverage witness
+(`master/axi4_master_coverage.sv`'s `R_MID_BURST_STALL_CP`, gated so a
+queue-full or reset-driven `RREADY` drop cannot satisfy it).
+
+- New tests: `axi4_rready_stall_first_beat_test`, `axi4_rready_stall_mid_burst_test`,
+  `axi4_rready_stall_last_beat_test` — registered in
+  `testlists/axi4_transfers_regression.list` for all three bus-matrix modes.
+- Evidence: fail-before/pass-after directed-test logs plus FSDB pin-level traces
+  in `sim/synopsys_sim/b065_evidence/`. Independently re-derived from the raw
+  FSDB via the `xverif` MCP waveform tools (not by re-reading the implementing
+  session's own logs): the requested stall position and duration match observed
+  `RREADY`/`RVALID` timing exactly, `RID`/`RLAST`/`RRESP`/`RDATA` stay stable
+  throughout the hold, and the burst completes with exactly `ARLEN+1` beats.
+- A prerequisite, independent defect was found and fixed along the way:
+  `axi4_master_tx::do_copy()` was not copying the five `*_wait_states` fields,
+  the seq-item converter was missing the same copy in five conversion
+  functions, and the corresponding coverpoints in `master/axi4_master_coverage.sv`
+  were bound to the wrong sampling phase — together these had left
+  `R_WAIT_STATES_CP`/`AR_WAIT_STATES_CP` (and their write-side counterparts)
+  structurally dead since introduction. See `.claude/docs/known-landmines.md`
+  #45–#47 for the fix and the still-open slave-side counterpart.
+- Known scope limit: the SoC-side API that would propagate this descriptor
+  through a consuming environment's own config layer is outside this repository
+  (see BENCH-065's own record, acceptance criterion 1).
+
+### BENCH-066 — X-injection request/consume synchronization
+
+The basic X-injection sequences (`seq/master_sequences/axi4_master_x_inject_seq.sv`)
+previously set a global `uvm_config_db` flag, slept a fixed duration, cleared
+the flag, and only then submitted their own item — an idle driver with no
+concurrent traffic would see the flag already cleared by the time its own item
+arrived, silently skipping the intended injection. The mechanism is reworked so
+the request travels with the driver call instead of a wildcard `uvm_config_db`
+flag for the five signals that carry an item (AWADDR/WDATA/ARVALID/BREADY/RREADY),
+plus a new idle-bus injection path for AWVALID (which has no transaction to
+attach a descriptor to at all), built on the driver BFM's existing per-channel
+pin-level ownership mutex rather than a new synchronization primitive.
+
+- New tests: `axi4_x_inject_{awvalid,awaddr,wdata,arvalid,bready,rready}_witness_test`,
+  `axi4_x_inject_none_control_test`, `axi4_x_inject_assert_detect_test`,
+  `axi4_x_inject_reset_abort_test`, `axi4_x_inject_concurrent_test` — registered
+  in `testlists/axi4_transfers_regression.list`. The pre-existing
+  `axi4_error_inject_<signal>_x_test` family (all six signals, all three bus
+  modes) and the separate active/random family (`BENCH-040`) were re-verified
+  and left registered as-is.
+- Evidence: fail-before/pass-after directed-test logs plus FSDB pin-level traces
+  in `sim/synopsys_sim/b066_evidence/`. Independently re-derived via `xverif`
+  for AWADDR/AWVALID/WDATA: the injected unknown value appears for exactly the
+  requested duration on the requested signal (including the AWVALID idle-bus
+  case, where the signal itself — not just its payload — goes unknown with no
+  backing transaction), the signal recovers to a legitimate driven value
+  afterward, and the following transaction completes without corruption. A
+  cross-agent isolation test (one master injecting while another runs ~28k
+  unrelated background writes with zero contamination) and a reset-during-injection
+  abort scenario were also directed-tested.
+- Known, explicitly scoped-out limitation: ACTIVE_PHASE injection (X overlapping
+  the item's own VALID/READY phase) is not implemented, only PRE_TRANSACTION
+  mode. Holding `AWADDR=X` while `AWVALID=1` legitimately causes the slave BFM
+  to accept the garbage address as an ordinary handshake, so the AWADDR-specific
+  tests run with the scoreboard disabled and do not claim recovery-response
+  verification for that one case — this is a consequence of the stimulus itself,
+  not of the request/consume synchronization fix; see BENCH-066's record and the
+  new test source for the reasoning. Sequence-abort mid-injection (as opposed to
+  reset) is not implemented.
+
+Both changes pass `run_fabric_smoke.sh` (3/3) and their own directed-test
+regression sample. The full 301-test authoritative regression
+(`testlists/axi4_transfers_regression.list`) was in progress at the time this
+section was written — see the regression result directory under
+`sim/synopsys_sim/` for the completed outcome. Neither BENCH-065 nor BENCH-066
+is marked `CLOSED` in `VIP_ISSUES.md`; per this project's own status
+vocabulary, that requires the human tracker owner's sign-off, not a documentation
+update.
 
 ## Configuration
 

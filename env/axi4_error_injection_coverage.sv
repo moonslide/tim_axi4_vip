@@ -261,14 +261,18 @@ class axi4_error_injection_coverage extends uvm_subscriber#(axi4_master_tx);
       endcase
     end
     
-    // Check for X injection signals via config_db
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", x_inject_awvalid_detected));
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", x_inject_awaddr_detected));
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", x_inject_wdata_detected));
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", x_inject_arvalid_detected));
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_bready", x_inject_bready_detected));
-    void'(uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready_detected));
-    void'(uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_duration));
+    // BENCH-066: X-injection state comes from the PACKET (the request that
+    // preceded this transaction, stamped by axi4_master_monitor_proxy from the
+    // driver BFM's request log), not from the six wildcard config_db flags,
+    // which described a sequence's flag window rather than anything this
+    // transaction experienced. Duration = cycles the BFM actually drove.
+    x_inject_awvalid_detected = (t.x_inject_target == X_INJ_AWVALID) && t.x_inject_started;
+    x_inject_awaddr_detected  = (t.x_inject_target == X_INJ_AWADDR)  && t.x_inject_started;
+    x_inject_wdata_detected   = (t.x_inject_target == X_INJ_WDATA)   && t.x_inject_started;
+    x_inject_arvalid_detected = (t.x_inject_target == X_INJ_ARVALID) && t.x_inject_started;
+    x_inject_bready_detected  = (t.x_inject_target == X_INJ_BREADY)  && t.x_inject_started;
+    x_inject_rready_detected  = (t.x_inject_target == X_INJ_RREADY)  && t.x_inject_started;
+    x_inject_duration         = t.x_inject_cycles_driven;
     
     // Determine which X injection signal is active
     if (x_inject_awvalid_detected) x_inject_signal = X_INJECT_AWVALID;

@@ -51,6 +51,8 @@ package axi4_test_pkg;
   `include "axi4_blocking_write_read_test.sv"
   `include "axi4_non_blocking_write_read_test.sv"
   `include "axi4_blocking_incr_burst_read_test.sv"
+  `include "axi4_rready_stall_base_test.sv"
+  `include "axi4_x_inject_witness_base_test.sv"
   `include "axi4_blocking_wrap_burst_read_test.sv"
   `include "axi4_blocking_8b_data_read_test.sv"
   `include "axi4_blocking_16b_data_read_test.sv"

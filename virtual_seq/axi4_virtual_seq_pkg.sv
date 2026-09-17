@@ -46,6 +46,8 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_bk_write_read_seq.sv"
   `include "axi4_virtual_nbk_write_read_seq.sv"
   `include "axi4_virtual_bk_incr_burst_read_seq.sv"
+  `include "axi4_virtual_rready_stall_seq.sv"
+  `include "axi4_virtual_x_inject_witness_seq.sv"
   `include "axi4_virtual_bk_wrap_burst_read_seq.sv"
   `include "axi4_virtual_bk_okay_response_read_seq.sv"
   `include "axi4_virtual_bk_exokay_response_read_seq.sv"

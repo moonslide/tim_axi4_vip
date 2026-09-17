@@ -74,6 +74,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_r_ready_delay_seq.sv"
   `include "axi4_master_aw_w_channel_separation_seq.sv"
   `include "axi4_master_bk_read_incr_burst_seq.sv"
+  `include "axi4_master_bk_read_rready_stall_seq.sv"
   `include "axi4_master_bk_read_wrap_burst_seq.sv"
   `include "axi4_master_bk_read_8b_transfer_seq.sv"
   `include "axi4_master_bk_read_16b_transfer_seq.sv"

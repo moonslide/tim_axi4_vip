@@ -58,7 +58,12 @@ module axi4_master_agent_bfm #(parameter int MASTER_ID = 0)(axi4_if intf);
     .rlast(intf.rlast),
     .ruser(intf.ruser),
     .rvalid(intf.rvalid),
-    .rready(intf.rready)
+    .rready(intf.rready),
+    // BENCH-066: the X-protocol assertion gate follows the driver BFM's own
+    // "I am driving X on this wire" state and the request's assertion policy,
+    // not a config_db flag window.
+    .x_drive_active(axi4_master_drv_bfm_h.x_inject_drive_active),
+    .x_keep_armed(axi4_master_drv_bfm_h.x_inject_keep_armed)
   ); 
   //-------------------------------------------------------
   // AXI4 Master Driver bfm instantiation

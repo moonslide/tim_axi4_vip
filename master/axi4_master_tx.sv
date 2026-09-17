@@ -205,6 +205,88 @@ class axi4_master_tx extends uvm_sequence_item;
   rand int ar_wait_states;
   rand int r_wait_states;
 
+  //Variable : r_stall_beat / r_stall_cycles (BENCH-065)
+  //Programmable MID-BURST RREADY back-pressure: hold RREADY low for
+  //r_stall_cycles clock cycles in front of interior beat r_stall_beat
+  //(1 <= r_stall_beat <= arlen) of this read burst. One position per
+  //transaction; -1 = no request (the default, so nothing in the regression
+  //changes unless a sequence asks). Beat 0 is deliberately NOT reachable
+  //through these fields -- the first-beat delay is r_wait_states, exactly as
+  //before -- so the two knobs never describe the same beat. The countdown is
+  //in CLOCK cycles from the handshake of beat r_stall_beat-1, whether or not
+  //the subordinate presents the next beat immediately; with a subordinate that
+  //streams RVALID gaplessly (this VIP's slave BFM) that is also the number of
+  //RVALID-high cycles the monitor measures as r_stall_cycles_observed.
+  //A request set by direct assignment instead of randomize() is validated in
+  //the driver BFM at the AR handshake: beat 0, a beat beyond arlen, a negative
+  //value, or a cycle count outside [0:R_BEAT_STALL_MAX] is reported with
+  //uvm_error and applied as NO stall (never silently mis-applied).
+  //The -1 initializer is load-bearing: a directed sequence that new()s a
+  //transaction and sets fields directly (a documented usage pattern) must not
+  //land on beat 0 by default.
+  rand int r_stall_beat   = -1;
+  rand int r_stall_cycles = 0;
+
+  //Variable : r_stall_beat_observed / r_stall_cycles_observed
+  //Pin-level witness, populated ONLY by axi4_master_monitor_bfm: the first
+  //interior beat (index >= 1) at which RVALID was high while RREADY was low,
+  //and for how many cycles. -1 / 0 when no interior beat was back-pressured.
+  //Not a request field, not randomized, not compared.
+  int r_stall_beat_observed   = -1;
+  int r_stall_cycles_observed = 0;
+
+  //-------------------------------------------------------
+  // BENCH-066: transaction-attached X-injection descriptor (REQUEST side)
+  //
+  // x_inject_target names the manager-side signal to drive X on BEFORE this
+  // item's own channel phases are dispatched (PRE_TRANSACTION mode - the only
+  // mode this VIP advertises; an ACTIVE_PHASE mode overlapping the item's
+  // own VALID/READY phase is deliberately NOT implemented, see the BENCH-066
+  // handoff). The request rides on the item, so it is consumed by exactly the
+  // proxy/BFM that owns the sequencer the item was started on: no wildcard
+  // config_db key, no fixed-time sleep, nothing another master can steal.
+  // Default X_INJ_NONE: every existing item is untouched.
+  // x_inject_cycles is the hold in aclk cycles (1..X_INJECT_CYCLES_MAX).
+  // x_inject_assert_policy: SUPPRESS_CHECKS (default) raises the
+  // master_assertions gate for the drive window; KEEP_ARMED leaves the named
+  // X-protocol assertions armed so a self-test can watch them fire.
+  // DELIBERATELY NOT rand: the descriptor is set by assignment after
+  // randomize() (the SVT exception-list shape - an attachment, not a
+  // solved variable). Making these rand, even soft-defaulted, changed the
+  // solver's random stream for EVERY master transaction in the regression
+  // (measured: the baseline axi4_blocking_incr_burst_write_test produced
+  // different AWADDR/WDATA/AWLEN values for the same seed - VCD line count
+  // 500755 vs 500537), which is exactly the "zero drift when unused" the
+  // BENCH-066 acceptance forbids. Validation is done where the request is
+  // consumed: axi4_master_driver_bfm::x_inject_drive rejects a cycle count
+  // outside [1:X_INJECT_CYCLES_MAX] as X_INJ_RESULT_INVALID (uvm_error) and
+  // drives nothing.
+  //-------------------------------------------------------
+  x_inject_target_e        x_inject_target        = X_INJ_NONE;
+  int                      x_inject_cycles        = 0;
+  x_inject_assert_policy_e x_inject_assert_policy = X_INJ_SUPPRESS_CHECKS;
+
+  //-------------------------------------------------------
+  // BENCH-066: X-injection STATUS, written back by the driver (proxy + BFM),
+  // never by the sequence. accepted = the request passed validation and was
+  // handed to the BFM; started = the BFM took the channel and drove X;
+  // completed = the hold finished (for any result). start/end are the aclk
+  // edges on which X was first and last visible on the pins - the same edges
+  // master_assertions' witness stamps - and cycles_driven counts them.
+  // On a monitor-published packet these are stamped from the driver BFM's
+  // per-transaction request log (pop by AWID/ARID at the address handshake,
+  // BENCH-065 precedent), so coverage and the scoreboard's view carry the
+  // request that actually preceded this transaction.
+  // Not compared (see do_compare).
+  //-------------------------------------------------------
+  bit                x_inject_accepted      = 1'b0;
+  bit                x_inject_started       = 1'b0;
+  bit                x_inject_completed     = 1'b0;
+  x_inject_result_e  x_inject_result        = X_INJ_RESULT_NOT_REQUESTED;
+  time               x_inject_start_time    = 0;
+  time               x_inject_end_time      = 0;
+  int                x_inject_cycles_driven = 0;
+
   //Variable: wait_count_write_address_channel
   //Used to determine wait count for write address channel
   int wait_count_write_address_channel;
@@ -330,11 +412,30 @@ class axi4_master_tx extends uvm_sequence_item;
                               soft b_wait_states  inside {[0:6]};
                               soft ar_wait_states inside {[0:6]};
                               soft r_wait_states  inside {[0:6]};}
-  
+
+  //Constraint : r_mid_burst_stall_c (BENCH-065)
+  //Default is "no stall requested" (soft), so every existing randomization is
+  //unchanged. The hard part is an IMPLICATION on purpose: a plain
+  //`r_stall_beat inside {[1:arlen]}` is unsatisfiable for arlen == 0 and
+  //would silently delete every single-beat read from the regression's
+  //solution space (`solve arlen before` only reweights, it does not add
+  //solutions). A sequence that wants a stall constrains r_stall_beat to a
+  //value >= 1, which then forces arlen >= r_stall_beat.
+  //r_stall_cycles is bounded unconditionally: the driver's countdown is
+  //`if(cnt > 0) cnt--; rready <= (cnt == 0)`, so a negative count would park
+  //RREADY low forever. Directed sequences that bypass randomize() are caught
+  //by the driver BFM's capture-time check instead.
+  constraint r_mid_burst_stall_c {
+    soft r_stall_beat   == -1;
+    soft r_stall_cycles == 0;
+    r_stall_cycles inside {[0:R_BEAT_STALL_MAX]};
+    (r_stall_beat == -1) || (arlen > 0 && r_stall_beat inside {[1:arlen]});
+  }
+
   //-------------------------------------------------------
   // READ ADDRESS Constraints
   //-------------------------------------------------------
-  
+
   //Constraint : araddr
   //Used to generate the alligned address with respect to size
   constraint araddr_c0 {soft araddr % (2**arsize) == 0;}
@@ -664,6 +765,36 @@ function void axi4_master_tx::do_copy(uvm_object rhs);
   //OTHERS
   tx_type       = axi4_master_tx_copy_obj.tx_type;
   transfer_type = axi4_master_tx_copy_obj.transfer_type;
+  //WAIT STATES (timing metadata)
+  // None of these five were copied. This class uses `uvm_object_utils (no
+  // field automation), and axi4_master_monitor_proxy publishes a CLONE of every
+  // packet, so anything skipped here reaches every analysis-port consumer as
+  // its 2-state default. That is why the AW/W/B/AR/R_WAIT_STATES_CP coverpoints
+  // in axi4_master_coverage only ever hit their zero bin (fail-then-pass
+  // recorded 2026-09-17: R_WS_0=3 / R_WS_1..6=0 before, real distribution after).
+  aw_wait_states = axi4_master_tx_copy_obj.aw_wait_states;
+  w_wait_states  = axi4_master_tx_copy_obj.w_wait_states;
+  b_wait_states  = axi4_master_tx_copy_obj.b_wait_states;
+  ar_wait_states = axi4_master_tx_copy_obj.ar_wait_states;
+  r_wait_states  = axi4_master_tx_copy_obj.r_wait_states;
+  //MID-BURST RREADY STALL (BENCH-065): request and pin-level witness
+  r_stall_beat            = axi4_master_tx_copy_obj.r_stall_beat;
+  r_stall_cycles          = axi4_master_tx_copy_obj.r_stall_cycles;
+  r_stall_beat_observed   = axi4_master_tx_copy_obj.r_stall_beat_observed;
+  r_stall_cycles_observed = axi4_master_tx_copy_obj.r_stall_cycles_observed;
+  //X INJECTION (BENCH-066): request and driver-stamped status. The monitor
+  //proxy publishes CLONES, so anything skipped here reaches every subscriber
+  //(coverage included) as its default.
+  x_inject_target        = axi4_master_tx_copy_obj.x_inject_target;
+  x_inject_cycles        = axi4_master_tx_copy_obj.x_inject_cycles;
+  x_inject_assert_policy = axi4_master_tx_copy_obj.x_inject_assert_policy;
+  x_inject_accepted      = axi4_master_tx_copy_obj.x_inject_accepted;
+  x_inject_started       = axi4_master_tx_copy_obj.x_inject_started;
+  x_inject_completed     = axi4_master_tx_copy_obj.x_inject_completed;
+  x_inject_result        = axi4_master_tx_copy_obj.x_inject_result;
+  x_inject_start_time    = axi4_master_tx_copy_obj.x_inject_start_time;
+  x_inject_end_time      = axi4_master_tx_copy_obj.x_inject_end_time;
+  x_inject_cycles_driven = axi4_master_tx_copy_obj.x_inject_cycles_driven;
 endfunction : do_copy
 
 //--------------------------------------------------------------------------------------------
@@ -712,6 +843,23 @@ function bit axi4_master_tx::do_compare (uvm_object rhs, uvm_comparer comparer);
   rid   == axi4_master_tx_compare_obj.rid   &&
   rdata == axi4_master_tx_compare_obj.rdata &&
   rresp == axi4_master_tx_compare_obj.rresp;
+  // The *_wait_states fields are DELIBERATELY not compared. On a driver-side
+  // packet they are the requested delay; on a monitor-side packet they are the
+  // measured one, and the two legitimately differ (a zero-delay response is
+  // accepted one cycle late while another outstanding write/read asked for a
+  // delay; an interleaved burst's first-beat delay is not applied -- see the
+  // R collector in axi4_master_driver_bfm.sv). Timing metadata is not part of
+  // transaction identity.
+  // The x_inject_* request and status fields (BENCH-066) are DELIBERATELY not
+  // compared either, and for a stronger reason than the wait states: the
+  // scoreboard's only use of do_compare is master-monitor packet against
+  // subordinate-monitor packet, and an X-injection request is a MANAGER-SIDE
+  // stimulus attribute with no representation on the subordinate side at
+  // all (the subordinate never learns that the X preceding this address was
+  // requested). Comparing them would make every injected transaction a
+  // guaranteed mismatch and every non-injected one a vacuous match. Whether
+  // the request was honoured is checked where it is knowable: on the item
+  // returned to the sequence, and against master_assertions' pin witness.
 endfunction : do_compare
 
 //--------------------------------------------------------------------------------------------
@@ -778,9 +926,27 @@ function void axi4_master_tx::do_print(uvm_printer printer);
     printer.print_field("ruser",ruser,$bits(ruser),UVM_HEX);
     printer.print_field("ar_wait_states",ar_wait_states,$bits(ar_wait_states),UVM_DEC);
     printer.print_field("r_wait_states",r_wait_states,$bits(r_wait_states),UVM_DEC);
+    printer.print_field("r_stall_beat",r_stall_beat,$bits(r_stall_beat),UVM_DEC);
+    printer.print_field("r_stall_cycles",r_stall_cycles,$bits(r_stall_cycles),UVM_DEC);
+    printer.print_field("r_stall_beat_observed",r_stall_beat_observed,$bits(r_stall_beat_observed),UVM_DEC);
+    printer.print_field("r_stall_cycles_observed",r_stall_cycles_observed,$bits(r_stall_cycles_observed),UVM_DEC);
     printer.print_field("wait_count_read_data_channel",wait_count_read_data_channel,$bits(wait_count_read_data_channel),UVM_HEX);
   end
   printer.print_string("transfer_type",transfer_type.name());
+  //BENCH-066: the descriptor is printed on every packet (it is part of the
+  //request), the status only when something was actually requested.
+  printer.print_string("x_inject_target",x_inject_target.name());
+  if(x_inject_target != X_INJ_NONE) begin
+    printer.print_field("x_inject_cycles",x_inject_cycles,$bits(x_inject_cycles),UVM_DEC);
+    printer.print_string("x_inject_assert_policy",x_inject_assert_policy.name());
+    printer.print_field("x_inject_accepted",x_inject_accepted,1,UVM_DEC);
+    printer.print_field("x_inject_started",x_inject_started,1,UVM_DEC);
+    printer.print_field("x_inject_completed",x_inject_completed,1,UVM_DEC);
+    printer.print_string("x_inject_result",x_inject_result.name());
+    printer.print_time("x_inject_start_time",x_inject_start_time);
+    printer.print_time("x_inject_end_time",x_inject_end_time);
+    printer.print_field("x_inject_cycles_driven",x_inject_cycles_driven,$bits(x_inject_cycles_driven),UVM_DEC);
+  end
 endfunction : do_print
 
 `endif

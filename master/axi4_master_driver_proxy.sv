@@ -149,6 +149,8 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   extern virtual function void report_phase(uvm_phase phase);
   extern virtual task axi4_write_task();
   extern virtual task axi4_read_task();
+  extern virtual task dispatch_x_inject(axi4_master_tx item, bit is_write);
+  extern virtual task axi4_x_inject_idle_task();
 
 endclass : axi4_master_driver_proxy
 
@@ -333,9 +335,117 @@ task axi4_master_driver_proxy::run_phase(uvm_phase phase);
   fork 
     axi4_write_task();
     axi4_read_task();
+    // BENCH-066 Option C: services idle (item-less) X-injection requests from
+    // this agent's own mailbox, independently of get_next_item().
+    axi4_x_inject_idle_task();
   join
 
 endtask : run_phase
+
+//--------------------------------------------------------------------------------------------
+// Task: dispatch_x_inject (BENCH-066)
+//  Runs the X-injection descriptor riding on the item that get_next_item()
+//  has just returned, BEFORE the item's own channel phases are dispatched
+//  (PRE_TRANSACTION mode). This replaces the six wildcard config_db flag reads
+//  that used to sit here: the request is now consumed by construction by the
+//  driver that owns the sequencer the item was started on, is never read by
+//  or written to any global key, and its outcome is stamped back onto the
+//  item so the sequence sees it when finish_item() returns.
+//  A descriptor naming a signal of the other channel (a read item asking for
+//  AWADDR, say) is a sequence error: reported once, result INVALID, nothing
+//  driven, and the item is then driven normally.
+//--------------------------------------------------------------------------------------------
+task axi4_master_driver_proxy::dispatch_x_inject(axi4_master_tx item, bit is_write);
+  bit               accepted, started, completed;
+  x_inject_result_e result;
+  time              t_start, t_end;
+  int               driven;
+  bit               right_channel;
+  x_inject_req_s r;
+
+  if(item.x_inject_target == X_INJ_NONE) return;
+
+  right_channel = is_write ? (item.x_inject_target inside {X_INJ_AWVALID, X_INJ_AWADDR, X_INJ_WDATA, X_INJ_BREADY})
+                           : (item.x_inject_target inside {X_INJ_ARVALID, X_INJ_RREADY});
+  if(!right_channel) begin
+    `uvm_error("X_INJECT",$sformatf("item %s (%s) requests X on %s, which belongs to the %s channel - request rejected, item driven normally",
+                                    item.get_full_name(), is_write ? "write" : "read", item.x_inject_target.name(), is_write ? "read" : "write"))
+    accepted = 1'b0; started = 1'b0; completed = 1'b1;
+    result = X_INJ_RESULT_INVALID; t_start = 0; t_end = 0; driven = 0;
+  end
+  else begin
+    axi4_master_drv_bfm_h.x_inject_drive(item.x_inject_target, item.x_inject_cycles, item.x_inject_assert_policy,
+                                         accepted, started, completed, result, t_start, t_end, driven);
+  end
+
+  item.x_inject_accepted      = accepted;
+  item.x_inject_started       = started;
+  item.x_inject_completed     = completed;
+  item.x_inject_result        = result;
+  item.x_inject_start_time    = t_start;
+  item.x_inject_end_time      = t_end;
+  item.x_inject_cycles_driven = driven;
+
+  `uvm_info("X_INJECT",$sformatf("X on %s: result=%s cycles_driven=%0d/%0d %0t .. %0t, requested by item %s (%s id=0x%0h, transaction_id=%0d)",
+                                 item.x_inject_target.name(), result.name(), driven, item.x_inject_cycles, t_start, t_end,
+                                 item.get_full_name(), is_write ? "awid" : "arid",
+                                 is_write ? int'(item.awid) : int'(item.arid), item.get_transaction_id()), UVM_LOW)
+
+  // Hand the completed request to the monitor side, keyed by the id the item
+  // is about to handshake with (see x_inject_req_log in the driver BFM).
+  r = '{is_write:      is_write,
+        id:            is_write ? item.awid : item.arid,
+        target:        item.x_inject_target,
+        cycles:        item.x_inject_cycles,
+        policy:        item.x_inject_assert_policy,
+        accepted:      accepted,
+        started:       started,
+        completed:     completed,
+        result:        result,
+        start_time:    t_start,
+        end_time:      t_end,
+        cycles_driven: driven};
+  axi4_master_drv_bfm_h.log_x_inject_request(r);
+endtask : dispatch_x_inject
+
+//--------------------------------------------------------------------------------------------
+// Task: axi4_x_inject_idle_task (BENCH-066, Option C)
+//  Third driver thread. Blocks on this agent's own request mailbox (no
+//  wildcard, no polling), forwards each request to the BFM, writes the
+//  status back onto the request object and signals its `done` event. Channel
+//  ownership against the item loops is settled inside the BFM by the
+//  channel mutex (aw/w/ar_channel_key) plus the per-channel ownership bit -
+//  see the x_inject_drive header for the traced cases; reset is handled
+//  there too (the BFM restores the wire and returns ABORTED_BY_RESET, this
+//  loop simply reports it and waits for the next request).
+//--------------------------------------------------------------------------------------------
+task axi4_master_driver_proxy::axi4_x_inject_idle_task();
+  forever begin
+    axi4_master_x_inject_idle_req r;
+    bit               accepted, started, completed;
+    x_inject_result_e result;
+    time              t_start, t_end;
+    int               driven;
+
+    axi4_master_agent_cfg_h.x_inject_idle_mbx.get(r);
+    if(r == null) continue;
+
+    `uvm_info("X_INJECT",$sformatf("idle X-injection request %s: target=%s cycles=%0d policy=%s",
+                                   r.get_name(), r.target.name(), r.cycles, r.assert_policy.name()), UVM_MEDIUM)
+    axi4_master_drv_bfm_h.x_inject_drive(r.target, r.cycles, r.assert_policy,
+                                         accepted, started, completed, result, t_start, t_end, driven);
+    r.x_inject_accepted      = accepted;
+    r.x_inject_started       = started;
+    r.x_inject_completed     = completed;
+    r.x_inject_result        = result;
+    r.x_inject_start_time    = t_start;
+    r.x_inject_end_time      = t_end;
+    r.x_inject_cycles_driven = driven;
+    `uvm_info("X_INJECT",$sformatf("idle X on %s: result=%s cycles_driven=%0d/%0d %0t .. %0t, requested by %s (no transaction)",
+                                   r.target.name(), result.name(), driven, r.cycles, t_start, t_end, r.get_name()), UVM_LOW)
+    -> r.done;
+  end
+endtask : axi4_x_inject_idle_task
 
 //--------------------------------------------------------------------------------------------
 // Task: axi4_write_task
@@ -348,76 +458,13 @@ task axi4_master_driver_proxy::axi4_write_task();
     axi4_master_tx             local_master_tx;
     axi4_transfer_cfg_s        struct_cfg;
     axi4_write_transfer_char_s struct_write_packet;
-    bit x_inject_awvalid;
-    int x_inject_cycles;
 
     axi_write_seq_item_port.get_next_item(req_wr);
     `uvm_info(get_type_name(),$sformatf("WRITE_TASK::Before Sending_req_write_packet = \n%s",req_wr.sprint()),UVM_HIGH); 
 
-    // Check for X injection configuration
-    if(!uvm_config_db#(bit)::get(null, "*", "x_inject_awvalid", x_inject_awvalid))
-      x_inject_awvalid = 0;
-    
-    if(x_inject_awvalid) begin
-      if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-        x_inject_cycles = 3; // Default cycles
-      
-      `uvm_info(get_type_name(), $sformatf("Triggering AWVALID X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-      
-      // Call BFM's X injection task
-      axi4_master_drv_bfm_h.inject_x_on_awvalid(x_inject_cycles);
-      
-      // Clear the injection flag after use
-      uvm_config_db#(bit)::set(null, "*", "x_inject_awvalid", 0);
-    end
-    
-    // Check for AWADDR X injection
-    begin
-      bit x_inject_awaddr;
-      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_awaddr", x_inject_awaddr))
-        x_inject_awaddr = 0;
-      
-      if(x_inject_awaddr) begin
-        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-          x_inject_cycles = 3;
-        
-        `uvm_info(get_type_name(), $sformatf("Triggering AWADDR X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-        axi4_master_drv_bfm_h.inject_x_on_awaddr(x_inject_cycles);
-        uvm_config_db#(bit)::set(null, "*", "x_inject_awaddr", 0);
-      end
-    end
-    
-    // Check for WDATA X injection
-    begin
-      bit x_inject_wdata;
-      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_wdata", x_inject_wdata))
-        x_inject_wdata = 0;
-      
-      if(x_inject_wdata) begin
-        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-          x_inject_cycles = 3;
-        
-        `uvm_info(get_type_name(), $sformatf("Triggering WDATA X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-        axi4_master_drv_bfm_h.inject_x_on_wdata(x_inject_cycles);
-        uvm_config_db#(bit)::set(null, "*", "x_inject_wdata", 0);
-      end
-    end
-    
-    // Check for BREADY X injection
-    begin
-      bit x_inject_bready;
-      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_bready", x_inject_bready))
-        x_inject_bready = 0;
-      
-      if(x_inject_bready) begin
-        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-          x_inject_cycles = 3;
-        
-        `uvm_info(get_type_name(), $sformatf("Triggering BREADY X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-        axi4_master_drv_bfm_h.inject_x_on_bready(x_inject_cycles);
-        uvm_config_db#(bit)::set(null, "*", "x_inject_bready", 0);
-      end
-    end
+    // BENCH-066: transaction-attached X injection (AWVALID/AWADDR/WDATA/BREADY),
+    // run to completion before this item's own phases.
+    dispatch_x_inject(req_wr, 1'b1);
 
     if(axi4_master_agent_cfg_h.read_data_mode == SLAVE_MEM_MODE) begin 
       address = req_wr.awaddr;
@@ -888,39 +935,9 @@ task axi4_master_driver_proxy::axi4_read_task();
     axi_read_seq_item_port.get_next_item(req_rd);
     `uvm_info(get_type_name(),$sformatf("READ_TASK:: Before Sending_req_read_packet = \n %s",req_rd.sprint()),UVM_NONE); 
 
-    // Check for ARVALID X injection
-    begin
-      bit x_inject_arvalid;
-      int x_inject_cycles;
-      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_arvalid", x_inject_arvalid))
-        x_inject_arvalid = 0;
-      
-      if(x_inject_arvalid) begin
-        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-          x_inject_cycles = 3;
-        
-        `uvm_info(get_type_name(), $sformatf("Triggering ARVALID X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-        axi4_master_drv_bfm_h.inject_x_on_arvalid(x_inject_cycles);
-        uvm_config_db#(bit)::set(null, "*", "x_inject_arvalid", 0);
-      end
-    end
-    
-    // Check for RREADY X injection
-    begin
-      bit x_inject_rready;
-      int x_inject_cycles;
-      if(!uvm_config_db#(bit)::get(null, "*", "x_inject_rready", x_inject_rready))
-        x_inject_rready = 0;
-      
-      if(x_inject_rready) begin
-        if(!uvm_config_db#(int)::get(null, "*", "x_inject_cycles", x_inject_cycles))
-          x_inject_cycles = 3;
-        
-        `uvm_info(get_type_name(), $sformatf("Triggering RREADY X injection for %0d cycles", x_inject_cycles), UVM_MEDIUM)
-        axi4_master_drv_bfm_h.inject_x_on_rready(x_inject_cycles);
-        uvm_config_db#(bit)::set(null, "*", "x_inject_rready", 0);
-      end
-    end
+    // BENCH-066: transaction-attached X injection (ARVALID/RREADY), run to
+    // completion before this item's own phases.
+    dispatch_x_inject(req_rd, 1'b0);
 
     // Skip SLAVE_MEM_MODE logic for independent read operations
     // This was causing reads to hang waiting for write addresses in mixed operation tests

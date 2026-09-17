@@ -23,6 +23,15 @@ class axi4_master_monitor_proxy extends uvm_component;
   // Variable : apb_master_mon_bfm_h
   // Declaring handle for apb monitor bfm
   virtual axi4_master_monitor_bfm axi4_master_mon_bfm_h;
+
+  // Variable : axi4_master_drv_bfm_h
+  // BENCH-065: the driver BFM of THIS port, handed over by axi4_master_agent
+  // only when the agent is ACTIVE (null in a passive agent). Used for exactly
+  // one thing: popping the mid-burst RREADY stall REQUEST that was logged at
+  // each AR handshake (r_stall_req_log), so the published completed-read
+  // packet carries the request next to the pin-level witness the monitor BFM
+  // measured. The monitor never drives or reads pins through this handle.
+  virtual axi4_master_driver_bfm axi4_master_drv_bfm_h;
   
   // Declaring analysis port for the monitor port
   uvm_analysis_port#(axi4_master_tx) axi4_master_read_address_analysis_port;
@@ -189,6 +198,26 @@ task axi4_master_monitor_proxy::axi4_write_address();
     axi4_master_cfg_converter::from_class(axi4_master_agent_cfg_h, struct_cfg);
     axi4_master_mon_bfm_h.axi4_write_address_sampling(struct_write_packet,struct_cfg);
     axi4_master_seq_item_converter::to_write_class(struct_write_packet,req_wr);
+
+    // BENCH-066: stamp the X-injection request that preceded this write (if
+    // any) onto the packet, from the driver BFM's per-item request log, popped
+    // oldest-first by AWID - the same same-ID ordering rule the response join
+    // below relies on. Passive agent: no driver, the packet keeps X_INJ_NONE.
+    if(axi4_master_drv_bfm_h != null) begin
+      x_inject_req_s xr;
+      if(axi4_master_drv_bfm_h.pop_x_inject_request(1'b1, struct_write_packet.awid, xr)) begin
+        req_wr.x_inject_target        = xr.target;
+        req_wr.x_inject_cycles        = xr.cycles;
+        req_wr.x_inject_assert_policy = xr.policy;
+        req_wr.x_inject_accepted      = xr.accepted;
+        req_wr.x_inject_started       = xr.started;
+        req_wr.x_inject_completed     = xr.completed;
+        req_wr.x_inject_result        = xr.result;
+        req_wr.x_inject_start_time    = xr.start_time;
+        req_wr.x_inject_end_time      = xr.end_time;
+        req_wr.x_inject_cycles_driven = xr.cycles_driven;
+      end
+    end
     
     axi4_master_write_address_fifo_h.write(req_wr);
 
@@ -282,6 +311,23 @@ task axi4_master_monitor_proxy::axi4_read_address();
     axi4_master_mon_bfm_h.axi4_read_address_sampling(struct_read_packet,struct_cfg);
     axi4_master_seq_item_converter::to_read_class(struct_read_packet,req_rd);
 
+    // BENCH-066: read-side counterpart of the AW stamp above, keyed by ARID.
+    if(axi4_master_drv_bfm_h != null) begin
+      x_inject_req_s xr;
+      if(axi4_master_drv_bfm_h.pop_x_inject_request(1'b0, struct_read_packet.arid, xr)) begin
+        req_rd.x_inject_target        = xr.target;
+        req_rd.x_inject_cycles        = xr.cycles;
+        req_rd.x_inject_assert_policy = xr.policy;
+        req_rd.x_inject_accepted      = xr.accepted;
+        req_rd.x_inject_started       = xr.started;
+        req_rd.x_inject_completed     = xr.completed;
+        req_rd.x_inject_result        = xr.result;
+        req_rd.x_inject_start_time    = xr.start_time;
+        req_rd.x_inject_end_time      = xr.end_time;
+        req_rd.x_inject_cycles_driven = xr.cycles_driven;
+      end
+    end
+
     // Park the read request under ITS OWN ARID so the R channel can find it by
     // RID instead of by arrival order.
     axi4_master_read_addr_pool[int'(req_rd.arid)].push_back(req_rd);
@@ -316,7 +362,21 @@ task axi4_master_monitor_proxy::axi4_read_data();
 
     axi4_master_seq_item_converter::to_read_addr_data_class(local_read_addr_packet,struct_read_packet,req_rd);
 
-    //clone and publish the clone to the analysis port 
+    // BENCH-065: stamp the REQUESTED mid-burst stall onto the completed-read
+    // packet. The request has no wire representation, so it comes from the
+    // driver BFM's per-AR log, popped oldest-first by RID - the same same-ID
+    // ordering rule (AXI4 A5.3) that get_read_addr_packet_by_id above already
+    // relies on to pair this burst with its AR. Passive agent: no driver, the
+    // packet keeps its "no request" default and the witness cannot fire.
+    if(axi4_master_drv_bfm_h != null) begin
+      int req_beat;
+      int req_cycles;
+      void'(axi4_master_drv_bfm_h.pop_r_stall_request(struct_read_packet.rid,req_beat,req_cycles));
+      req_rd.r_stall_beat   = req_beat;
+      req_rd.r_stall_cycles = req_cycles;
+    end
+
+    //clone and publish the clone to the analysis port
     $cast(req_rd_clone_packet,req_rd.clone());
     `uvm_info(get_type_name(),$sformatf("Packet received from axi4_read_data clone packet is \n %s",req_rd_clone_packet.sprint()),UVM_HIGH)
     req_rd_clone_packet.sb_src_index = axi4_master_agent_cfg_h.master_id;

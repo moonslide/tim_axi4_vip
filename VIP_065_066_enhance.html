@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIP BENCH-065 / BENCH-066 Enhancement Plan (DRAFT)</title>
+<style>
+  :root { --ink:#1e1e1e; --muted:#555; --line:#c9c9c9; --code-bg:#f2f2f2; --draft:#fff3cd; --draft-border:#e0a800; --head:#e9eef5; }
+  body { font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:#fafafa; margin:0; padding:24px 16px 64px; line-height:1.5; }
+  main { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size:1.7em; margin:0 0 4px; }
+  h2 { font-size:1.35em; border-bottom:2px solid var(--line); padding-bottom:4px; margin-top:44px; }
+  h3 { font-size:1.1em; margin-top:28px; }
+  h4 { font-size:1em; margin-top:20px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .meta { color:var(--muted); font-size:.95em; }
+  .banner { background:var(--draft); border:2px solid var(--draft-border); border-left-width:10px; padding:12px 16px; margin:18px 0 28px; }
+  .banner strong { display:block; font-size:1.05em; margin-bottom:4px; }
+  code, .path { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size:.9em; background:var(--code-bg); padding:1px 4px; border-radius:3px; }
+  .path { color:#0b3d6e; }
+  pre { background:var(--code-bg); border:1px solid var(--line); padding:10px 12px; overflow-x:auto; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:.93em; }
+  th, td { border:1px solid var(--line); padding:6px 9px; vertical-align:top; text-align:left; }
+  th { background:var(--head); }
+  .rec { background:#e6f4ea; }
+  .note { border-left:4px solid #6c8ebf; background:#eef3fa; padding:8px 12px; margin:12px 0; }
+  .warn { border-left:4px solid #c0392b; background:#fbeeee; padding:8px 12px; margin:12px 0; }
+  .status { font-variant:small-caps; font-weight:bold; }
+  ol li, ul li { margin-bottom:4px; }
+  .toc { columns:2; column-gap:32px; font-size:.95em; }
+  .toc ul { margin:0; padding-left:18px; }
+  footer { margin-top:48px; color:var(--muted); font-size:.85em; border-top:1px solid var(--line); padding-top:10px; }
+  @media (max-width:640px){ .toc { columns:1; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>tim_axi4_vip — Enhancement Plan for BENCH-065 and BENCH-066</h1>
+<p class="meta">Date: 2026-09-17 &nbsp;|&nbsp; Repo: <span class="path">/home/timtim01/eda_test/project/tim_axi4_vip</span> (branch <code>main</code>, HEAD <code>68e835c</code>) &nbsp;|&nbsp; Authored by a Claude / Fable-5.1 planning pass</p>
+
+<div class="banner">
+  <strong>DRAFT PLANNING DOCUMENT — FOR HUMAN REVIEW ONLY</strong>
+  This document proposes design-level changes. Nothing described here is approved, scheduled, implemented, or verified.
+  No VIP source was modified and no simulation was run to produce it. Both underlying issues are
+  <span class="status">Open</span> Medium-severity dispositions; per this project's governance a plan that proposes a fix
+  is not authorization to execute it (see <a href="#gate">Section 5</a>).
+</div>
+
+<div class="toc">
+<ul>
+  <li><a href="#scope">0. Scope, sources and epistemic rules</a></li>
+  <li><a href="#b065">1. BENCH-065 — programmable mid-burst RREADY backpressure</a></li>
+  <li><a href="#b066">2. BENCH-066 — X-injection request cleared before the item reaches the driver</a></li>
+  <li><a href="#cross">3. Cross-cutting: BENCH-065 vs landmine #37 / FW-6; the missing <code>VIP_future.md</code></a></li>
+  <li><a href="#shared">4. Shared verification discipline for both fixes</a></li>
+  <li><a href="#gate">5. Open questions and approval gate</a></li>
+  <li><a href="#refs">6. References</a></li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="scope">0. Scope, sources and epistemic rules</h2>
+<p>
+This plan covers the two entries currently listed under "Open issues" in
+<span class="path">VIP_ISSUES.md</span> (repo root): BENCH-066 (X-injection ordering) and BENCH-065 (mid-burst RREADY stimulus gap).
+Both were filed as <em>static source findings</em>; the BENCH records state explicitly that no simulation, FSDB or UVM verdict is claimed.
+This plan preserves that status: everything below that the BENCH records mark as <strong>INFERRED</strong> or <strong>UNSETTLED</strong> remains so here.
+</p>
+<p>
+Line anchors: the BENCH records cite line numbers from the SoC-bound tree (e.g. driver <code>:400/423/431</code>, assertions <code>:463–483/537/550</code>).
+This plan quotes the <em>local</em> repo (<code>main</code> @ <code>68e835c</code>) and gives local line numbers; the code text is the same construct, the offsets differ.
+Every file:line below was opened during this planning pass on 2026-09-17.
+</p>
+<p>
+A commercial VIP (Synopsys SVT AMBA AXI, W-2025.03, read-only reference) is consulted <em>only for architectural pattern</em> through its HTML user guide.
+No SVT source is copied or paraphrased; only the documented API concepts named in <a href="#refs">Section 6</a> are used.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="b065">1. BENCH-065 — CPU-replacement AXI master lacks programmable legal mid-burst RREADY backpressure</h2>
+
+<h3>1.1 Problem summary</h3>
+<p>
+Per <span class="path">BENCH-065_soc01_cpu_axi_midburst_rready_stimulus_missing.md</span> ("The defect"), the shared master BFM exposes no supported control
+to select an internal read-burst beat and hold <code>RREADY=0</code> for a specified number of clocks. The transaction-level <code>r_wait_states</code>
+applies only in front of beat 0; once a burst is partially collected the BFM keeps RREADY asserted unless the completed-response queue is full.
+Consequently a green burst read "does not establish that the target memory/bridge holds its response correctly when this CPU-replacement master
+deliberately stops accepting data between beats". The record grades this as <strong>STATIC OBSERVED</strong> for the code facts,
+<strong>INFERRED</strong> for "the supported API cannot select a legal internal-beat pause", and <strong>UNSETTLED</strong> for any runtime impact or masked DUT defect.
+It is a <em>capability gap</em>, not a VIP correctness bug, and not an RTL defect.
+</p>
+
+<h3>1.2 Current-code evidence (local tree)</h3>
+<table>
+<tr><th style="width:34%">Location</th><th>What is there today</th><th style="width:30%">Consequence</th></tr>
+<tr><td><span class="path">agent/master_agent_bfm/axi4_master_driver_bfm.sv:399</span></td>
+    <td><code>localparam int R_ACCEPT_DEPTH = 64;</code> — bounded completed-burst collector (raised from 8 as the landmine #37 mitigation).</td>
+    <td>Only queue saturation lowers RREADY mid-burst today — an incidental, not a controllable, stall.</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:410, 412</span></td>
+    <td><code>r_capture_q[$]</code> (completed bursts) and <code>r_accum_q[rid]</code> (beats of bursts still in flight, one accumulator per RID).</td>
+    <td><code>r_accum_q</code> is the existing "this RID is mid-burst" indicator that a mid-burst stall would key on.</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:414–431</span></td>
+    <td>Comment block: "PER-BURST RREADY back-pressure — the R-side counterpart of <code>b_wait_cnt</code> … the delay now travels with the request (queued into <code>ar_outstanding_q</code> at the ARVALID &amp;&amp; ARREADY handshake). … the delay is a property of the FIRST beat only … Back-pressuring mid-burst would be different stimulus, so RREADY is held asserted for as long as any burst is mid-flight."</td>
+    <td>First-beat-only is a <em>documented, deliberate</em> choice made during a prior rework. BENCH-065 asks for new stimulus, not restoration of something removed.</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:440–443</span></td>
+    <td><code>ar_outstanding_s { arid; int r_wait_states; }</code> — one scalar delay per outstanding read.</td>
+    <td>The structural slot where a per-beat / positional stall descriptor would naturally live.</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:450–455, 460–464</span></td>
+    <td><code>r_wait_pending()</code> (any outstanding read requests a delay) and <code>r_wait_for_id(id)</code> (delay of the OLDEST outstanding read with that id).</td>
+    <td>Existing per-ID lookup that a positional stall can reuse.</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:466–485</span></td>
+    <td><code>r_default_ready()</code>: <code>if(r_capture_q.size() &gt;= R_ACCEPT_DEPTH) return 0; if(r_accum_q.size() &gt; 0) return 1; return !r_wait_pending();</code> with the "Known limit" comment (476–480): "if a subordinate INTERLEAVES read data … One shared RREADY cannot back-pressure one RID and not another, and not stalling a burst that is already being accepted is the more important of the two properties."</td>
+    <td>Names the exact difficulty any mid-burst stall must confront (Section 1.7 / 5).</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:560–575</span></td>
+    <td>R-channel task, RVALID-high-not-yet-accepted branch: <code>r_wait_cnt = r_accum_q.exists(rid) ? 0 : r_wait_for_id(rid);</code> then <code>rready &lt;= (r_wait_cnt == 0) &amp;&amp; (r_capture_q.size() &lt; R_ACCEPT_DEPTH);</code></td>
+    <td>The single place where wait states are spent; a RID that already has an accumulator is forced to zero delay (beat-0-only by construction).</td></tr>
+<tr><td><span class="path">…driver_bfm.sv:179, 221, 251, 319–342</span></td>
+    <td>B-channel precedent: <code>B_ACCEPT_DEPTH</code>, <code>b_wait_cnt</code>, <code>b_wait_pending()</code>, <code>b_wait_for_id(bid)</code>, registered <code>bready &lt;= (b_wait_cnt == 0) &amp;&amp; …</code>.</td>
+    <td>The queued-delay-at-handshake pattern that the R side already mirrors and that an extension should stay consistent with.</td></tr>
+<tr><td><span class="path">master/axi4_master_tx.sv:204–206, 330–332</span></td>
+    <td><code>rand int b_wait_states; ar_wait_states; r_wait_states;</code> with <code>soft … inside {[0:6]}</code>.</td>
+    <td>Transaction-level knobs are scalar; there is no per-beat or positional field.</td></tr>
+<tr><td><span class="path">testlists/axi4_transfers_regression.list:199–333</span></td>
+    <td>Existing "backpressure" tests (<code>axi4_qos_region_routing_reset_backpressure_test</code>, <code>…longtail_backpressure_error_recovery_test</code>, …).</td>
+    <td>Per the BENCH record these exercise activity-level backpressure; none is a pin-level mid-burst-RREADY witness.</td></tr>
+</table>
+<div class="note">
+The SoC-side observations in the record (C1, C4, C5: <code>01_SOC_DV_ENV</code> wiring, <code>SOC01_RDY_BP</code> mapping only AW/W/AR wait fields, burst sequences not setting <code>r_wait_states</code>) live in the consuming SoC repository, <em>not</em> in this VIP checkout, and were not re-verified here. This plan covers the VIP-side actuator; the SoC API propagation is a downstream step for that repository's owner.
+</div>
+
+<h3>1.3 Design options</h3>
+<table>
+<tr><th style="width:4%">#</th><th style="width:22%">Option</th><th>Mechanism (structural)</th><th style="width:14%">Risk</th><th style="width:12%">Cost</th><th style="width:16%">Blast radius</th></tr>
+<tr class="rec"><td><b>A</b><br>(recommended)</td>
+  <td><b>Transaction-carried positional stall</b>, queued at the AR handshake</td>
+  <td>Add a stall descriptor to <code>axi4_master_tx</code> (beat index + cycles; extensible to a per-beat array, see 1.5). Copy it into <code>ar_outstanding_s</code> at the ARVALID&amp;&amp;ARREADY handshake exactly as <code>r_wait_states</code> is today. In the R task, when a beat for RID <i>r</i> is presented and <i>r</i>'s accumulator already holds <i>k</i> beats, consult the descriptor of the OLDEST outstanding entry for <i>r</i> (same lookup as <code>r_wait_for_id</code>) and, if <i>k</i> equals the requested position, spend the requested cycles before asserting RREADY. Beat-0 path and all-zero defaults untouched.</td>
+  <td>Medium: touches the R-channel task that landmine #37 sits next to; must stay bounded and must not change the claim/credit logic.</td>
+  <td>Medium: tx field + struct field + one new branch in the R task + monitor/coverage witness + directed test.</td>
+  <td>Master BFM R path, <code>axi4_master_tx</code>, master monitor (witness), one new test. Default behaviour identical when descriptor is empty.</td></tr>
+<tr><td><b>B</b></td>
+  <td><b>Port-level live hold</b> (SVT <code>suspend_awready</code> analog on RREADY)</td>
+  <td>A BFM-scoped boolean the proxy/agent-config can raise and lower at any time; while raised, <code>r_default_ready()</code> and the RVALID branch both return 0. Position is chosen by the test by watching a beats-accepted event (the BFM already keeps <code>r_event_cnt</code>, line 431).</td>
+  <td>Medium–high: positioning is racy unless the BFM exports a precise per-beat event; must be arbitrated against <code>rready_x_inject_active</code> (433) and reset; a test can hold the port indefinitely and trip the 50 000-cycle escape in the claim task.</td>
+  <td>Low–medium.</td>
+  <td>Master BFM + proxy API + agent config. Affects every RID on the port for the hold duration (by construction).</td></tr>
+<tr><td><b>C</b></td>
+  <td><b>Minimal scalar hack</b>: reuse <code>r_wait_states</code> and drop the <code>r_accum_q.exists(rid) ? 0 :</code> guard</td>
+  <td>Apply the existing first-beat delay in front of <em>every</em> beat of the burst.</td>
+  <td>High: changes the meaning of an existing knob (monitor records it for beat 0 only, line 421 comment), silently re-times every existing test that randomizes <code>r_wait_states</code>, and cannot select a single interior position as the acceptance criteria require.</td>
+  <td>Very low.</td>
+  <td>Every read transaction in every regression. Rejected.</td></tr>
+</table>
+
+<h3>1.4 Recommended option and rationale</h3>
+<p>
+<b>Option A</b>, with Option B recorded as a possible later addition for SoC-level "hold now" use if the SoC owners need it.
+Rationale:
+</p>
+<ul>
+  <li><b>Follows the existing architecture.</b> The BFM comment at 414–418 already says the delay "travels with the request" and is "queued into <code>ar_outstanding_q</code> at the handshake"; the B channel does the same. Option A extends that record with a position, instead of introducing a second, out-of-band control path.</li>
+  <li><b>Matches the reference-VIP precedent.</b> The SVT user guide models response timing as per-beat arrays on the transaction object (e.g. <code>rvalid_delay[]</code>, <code>rresp[]</code>) rather than as a single first-beat scalar (<span class="path">…/how_to_provide_data_response_information_to_slave_after_time_delay.html</span>). A transaction-scoped, beat-indexed construct is the industry-normal way to express "stall at beat <i>k</i>". The SVT <code>suspend_awready</code> live-hold (<span class="path">…/wait_state_mechanisms.html</span>) shows the port-level alternative is also legitimate — that is why Option B is kept as a candidate, not discarded.</li>
+  <li><b>Deterministic and per-transaction</b>, which is what BENCH-065 acceptance items 2–3 require ("check first/middle/final-beat positions separately"; "for multiple IDs, account per transaction rather than by total bus beats"). Option B can only stall "the port at time <i>t</i>".</li>
+  <li><b>Zero-stall and first-beat semantics preserved</b> (acceptance item 1) because the new descriptor defaults to "no stall" and the beat-0 branch is not rewritten.</li>
+</ul>
+
+<h3>1.5 Design outline (structural — no code)</h3>
+<ol>
+  <li><b>Transaction descriptor</b> (<span class="path">master/axi4_master_tx.sv</span>): a new, non-randomized-by-default stall specification for read data acceptance. Minimum form: a beat position and a cycle count. Preferred form, mirroring the SVT per-beat array precedent: a dynamic array of per-beat RREADY wait states whose element 0 is defined to alias the existing <code>r_wait_states</code> so no existing constraint, printer or monitor field changes meaning. Empty array = current behaviour. A soft constraint keeps the array empty unless a sequence sets it, so no regression's randomization changes.</li>
+  <li><b>Outstanding-read record</b> (<span class="path">…driver_bfm.sv:440–443</span>, <code>ar_outstanding_s</code>): carry the descriptor alongside <code>r_wait_states</code>, copied at the same AR handshake point where <code>r_wait_states</code> is queued today. Nothing about entry creation/deletion, <code>ar_issued_cnt</code>, <code>r_burst_cnt</code>, or the credit path changes.</li>
+  <li><b>R-channel task</b> (<span class="path">…driver_bfm.sv:560–575</span>): today the RVALID-not-yet-accepted branch forces zero delay when <code>r_accum_q.exists(rid)</code>. The change is to replace that forced zero with a lookup: "beats already accepted for this RID" (from the accumulator's <code>beats</code>) indexes the descriptor of the oldest outstanding entry for this RID; the resulting count is loaded into the existing <code>r_wait_cnt</code>/<code>r_wait_armed</code> mechanism, which then behaves exactly as it does for beat 0 (registered RREADY, count down, assert at zero). No new counters; the existing arm/disarm points (556–558, 577–579) already reset state after each handshake.</li>
+  <li><b>Default-ready function</b> (<span class="path">…driver_bfm.sv:481–485</span>): unchanged in ordering. The mid-flight "return 1" remains the idle value; the stall is spent only in the RVALID branch, so a stall can never be applied when no beat is offered (no dead cycles added to an idle bus).</li>
+  <li><b>Bound on stall length</b>: the descriptor's cycle count is capped by a named agent-config limit that is strictly below the R-claim escape timeout (the 50 000-cycle bound referenced in landmine #37) so that a legal stall cannot be mistaken for the abandoned-burst failure. Acceptance item 2 requires "stall duration below any declared response-bound policy unless testing that policy explicitly" — this cap is that declaration.</li>
+  <li><b>Pin-level witness</b> (<span class="path">agent/master_agent_bfm/axi4_master_monitor_bfm.sv</span> + the VIP's master covergroups): a per-transaction record of "RVALID===1 &amp;&amp; RREADY===0 observed after ≥1 accepted beat and before RLAST for this RID", with the stall length and the beat position at which it occurred, and a coverage point over {first, middle, final} positions. This is new sampling of existing wire state; it does not gate or alter the driver. Zero hits must read as <em>unexercised</em>, per acceptance item 4.</li>
+  <li><b>Directed sequence + test</b>: a new master sequence issuing an INCR read with <code>ARLEN ≥ 3</code>, descriptor set for each of the three positions, plus a no-stall control run of the same sequence; a checker (scoreboard or SVA in <span class="path">assertions/master_assertions.sv</span>) that during the stall requires stable <code>RDATA/RRESP/RID/RLAST</code> and held <code>RVALID</code>, then exactly <code>ARLEN+1</code> beats and correct final RLAST for that transaction. Test registered in <span class="path">testlists/axi4_transfers_regression.list</span> for all three bus modes.</li>
+  <li><b>Shared-RREADY policy (explicit, documented)</b>: when a beat of a <em>different</em> RID is presented while a stall for RID <i>r</i> is being spent, RREADY stays low for that beat too — AXI permits a master to deassert RREADY at any time, so this is protocol-legal; the witness and beat accounting are per-transaction so the interleaved burst is neither counted as stalled nor lost. This is the same trade-off the existing "Known limit" comment already accepts in the opposite direction. The alternative (defer the stall until the presented beat belongs to <i>r</i>) is listed as an open question in Section 5 because the master cannot influence which RID the subordinate presents.</li>
+  <li><b>SoC propagation (out of this repo)</b>: the SoC environment's <code>SOC01_RDY_BP</code>-style knob mapping and burst-sequence API gain a way to populate the descriptor. Not part of the VIP change; called out so the BENCH-065 "propagated through the SoC API/config" clause is not silently dropped.</li>
+</ol>
+
+<h3>1.6 Acceptance criteria (mapped 1:1 from BENCH-065 "Disposition / acceptance criteria")</h3>
+<table>
+<tr><th style="width:5%">#</th><th>BENCH-065 criterion (verbatim intent)</th><th>How Option A satisfies it / what must be shown</th></tr>
+<tr><td>1</td><td>Supported master-side control for internal-beat stall position and duration, propagated through the SoC API/config to the RREADY owner; preserve zero-stall and first-beat semantics; do not use X injection/reset or queue exhaustion as the actuator.</td><td>Descriptor on the tx → <code>ar_outstanding_s</code> → R task (1.5 items 1–4). Empty descriptor = byte-identical RREADY behaviour to today (to be proven by the no-stall control run and the baseline regression). The actuator is the ordinary wait-state path, not <code>rready_x_inject_active</code>, not reset, not <code>R_ACCEPT_DEPTH</code>.</td></tr>
+<tr><td>2</td><td>Deterministic read burst with <code>ARLEN&gt;=3</code>; observe ≥1 accepted beat, then <code>RVALID===1 &amp;&amp; RREADY===0</code> with beats remaining, then complete the same transaction; first/middle/final positions checked separately; stall below any declared response-bound policy.</td><td>Directed sequence (1.5 item 7) with three positional variants; the cap in 1.5 item 5 is the declared policy.</td></tr>
+<tr><td>3</td><td>During the stall: stable <code>RDATA/RRESP/RID/RLAST</code>, held <code>RVALID</code>; then exactly <code>ARLEN+1</code> beats, correct final RLAST, no loss/duplication; multi-ID accounting per transaction.</td><td>Checker in 1.5 item 7; per-transaction accounting is inherent because the accumulator is keyed by RID and the descriptor is per outstanding entry.</td></tr>
+<tr><td>4</td><td>Nonzero pin-level mid-burst-stall coverage witness; zero matches = unexercised; first-beat <code>r_wait_states</code> coverage cannot close it.</td><td>New monitor sampling + cover point (1.5 item 6), distinct from any existing <code>r_wait_states</code> bin.</td></tr>
+<tr><td>5</td><td>Fail-first: baseline cannot satisfy the directed stimulus/witness; after the fix run the same guarded case and a no-stall control; record parser verdict, logs and FSDB before closing.</td><td>Section 1.7 below.</td></tr>
+<tr><td>—</td><td>Open discriminator: run the directed case with the witness armed to separate an implemented actuator from incidental queue-full stalls.</td><td>The witness records the stall's cause context (accumulator depth vs. descriptor hit); a queue-full stall must not satisfy the directed test's expectation.</td></tr>
+</table>
+
+<h3>1.7 Verification plan</h3>
+<ol>
+  <li><b>Fail-before.</b> Add the directed test and witness first, on the unmodified BFM. Expected: the checker/witness reports the mid-burst stall as absent (test fails, or the cover point reads zero and the test's own expectation fails). Record log + FSDB. A run that merely finishes with <code>UVM_ERROR : 0</code> is not fail-before evidence; the expected failure signature must be stated in advance.</li>
+  <li><b>Pass-after.</b> Same test, same seed set, after the BFM/tx change: <code>UVM_ERROR : 0</code> <em>and</em> performance-metrics <code>TEST RESULT: PASS</code> (both required; neither implies the other — a run that dies at time 0 also reports zero errors), witness count &gt; 0 for each of the three positions, no-stall control identical to the pre-change control.</li>
+  <li><b>Baseline regression sample (Iron Rule 2).</b> This is a BFM change, so the 12+ test baseline sample enumerated in <span class="path">TRACKB_DEBUG_NOTES.md</span> must be re-run and <span class="path">sim/run_fabric_smoke.sh</span> must report 3/3 PASS before any claim. Include in the sample the landmine #37 reproducer (<code>axi4_same_id_nonadjacent_reorder_test_1</code>, seed 1413795560) so the redesign is shown not to reopen it, plus the existing <code>*_backpressure_*</code> tests and the <code>axi4_error_inject_rready_*</code> tests (the RREADY ownership hand-off with <code>rready_x_inject_active</code> is adjacent code). Use <code>axi4_regression.py --lsf</code>, not ad-hoc loops.</li>
+  <li><b>Registration.</b> New test registered in <span class="path">testlists/axi4_transfers_regression.list</span> (authoritative default list) for NONE / 4x4 / ENHANCED; also in <span class="path">sim/axi4_transfers_regression.list</span> only if it is meant for the smaller sample.</li>
+  <li><b>Evidence record.</b> Fail/pass log pairs and FSDB paths recorded in a fresh tracking doc (Section 3) and the BENCH-065 record's status moved by the tracker owner, not by this plan.</li>
+</ol>
+
+<h3>1.8 Rollback plan</h3>
+<ul>
+  <li>The change is additive: an empty descriptor reproduces today's behaviour. First-line rollback is therefore <em>configuration</em>: forbid non-empty descriptors via the agent-config cap (set to 0) without touching the BFM.</li>
+  <li>Source rollback: revert the BFM R-task branch and the <code>ar_outstanding_s</code> field in one commit, keeping the tx field and monitor witness (harmless when never populated) if desired, or revert all three. Do not partially revert the R task while leaving the struct field populated.</li>
+  <li>Re-run the same baseline sample + <code>run_fabric_smoke.sh</code> after rollback; the directed test returns to its fail-before signature and must be de-registered or marked expected-fail, never left silently red.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="b066">2. BENCH-066 — Basic X-injection request cleared before driver consumption</h2>
+
+<h3>2.1 Problem summary</h3>
+<p>
+Per <span class="path">BENCH-066_x_injection_flag_cleared_before_item.md</span> (Summary; Section 1), the basic master X-injection sequences set a wildcard
+<code>uvm_config_db</code> flag, sleep a fixed <code>#(x_inject_cycles * 10ns)</code>, clear the flag, re-arm assertions, and only then submit their
+recovery item; the driver proxy reads the flag only after <code>get_next_item()</code> returns. With an idle driver and no concurrent traffic during the flag
+window, the sequence's own item arrives after the flag is already 0 and the BFM's X-drive task is never called. The record grades the ordering as
+<strong>MEASURED (static)</strong>, "isolated execution skips the intended BFM call" as <strong>INFERRED</strong>, and the dynamic behaviour, concurrency effects and
+per-signal recovery as <strong>UNSETTLED</strong>. Its supported conclusion is narrow: "the basic sequence does not reliably synchronize its injection request with its own traffic" — it is not a claim that every regression has zero X activity.
+</p>
+
+<h3>2.2 Current-code evidence (local tree)</h3>
+<table>
+<tr><th style="width:34%">Location</th><th>What is there today</th><th style="width:30%">Consequence</th></tr>
+<tr><td><span class="path">seq/master_sequences/axi4_master_x_inject_seq.sv:166–206</span> (<code>inject_x_on_awaddr</code>)</td>
+    <td>171 <code>disable_x_assertions();</code> → 174 <code>set(null,"*","x_inject_awaddr",1)</code> → 180 <code>#(x_inject_cycles * 10ns);</code> → 183 <code>set(…,0)</code> → 186 <code>enable_x_assertions();</code> → 189–202 <code>create / start_item / randomize / finish_item</code>.</td>
+    <td>Flag is cleared and assertions re-armed <em>before</em> the item exists. The comment at 179 ("Wait for the injection duration") assumes the wait <em>is</em> the injection; it is only a sleep.</td></tr>
+<tr><td>Same file: <code>inject_x_on_wdata</code> 212–250, <code>inject_x_on_arvalid</code> 256–296, <code>inject_x_on_bready</code> 302–340, <code>inject_x_on_rready</code> 346–384</td>
+    <td>Identical set → sleep → clear → enable → item pattern.</td>
+    <td>Five of six basic entry points share the defect.</td></tr>
+<tr><td>Same file: <code>inject_x_on_awvalid</code> 130–160</td>
+    <td>set(138) → sleep(144) → clear(147) → <code>#50ns</code> → enable(153) → <code>#100ns</code>; <b>no <code>start_item/finish_item</code> at all</b>.</td>
+    <td>Structurally worse: there is no item for the proxy to gate on even in principle; it can only fire if some <em>other</em> sequence's item happens to arrive inside the window (cross-agent "request theft", Section 3.1 of the record).</td></tr>
+<tr><td>Same file: 390–404 (<code>disable_x_assertions</code>/<code>enable_x_assertions</code>)</td>
+    <td><code>$assertoff(0, "*NO_HANDSHAKE_DURING_X*")</code> / <code>$asserton(…)</code> with wildcard scope.</td>
+    <td>Global, simulator-dependent targeting; not scoped to the injecting agent. The record notes this was not dynamically verified.</td></tr>
+<tr><td><span class="path">master/axi4_master_driver_proxy.sv:345–420</span> (<code>axi4_write_task</code>)</td>
+    <td>354 <code>axi_write_seq_item_port.get_next_item(req_wr);</code> then 358–372 <code>x_inject_awvalid</code>, 377–387 <code>x_inject_awaddr</code>, 393–403 <code>x_inject_wdata</code>, 409–419 <code>x_inject_bready</code>: each is <code>config_db::get</code> → call BFM task → <code>config_db::set(…,0)</code>.</td>
+    <td>Consumption is item-gated by construction. The proxy also clears the flag, so two writers race on the same global bit.</td></tr>
+<tr><td><span class="path">master/axi4_master_driver_proxy.sv:888–923</span> (read task)</td>
+    <td>888 <code>get_next_item(req_rd);</code> then 895–905 <code>x_inject_arvalid</code>, 912–922 <code>x_inject_rready</code>, same pattern.</td>
+    <td>Read side mirrors the write side.</td></tr>
+<tr><td><span class="path">agent/master_agent_bfm/axi4_master_driver_bfm.sv:1022–1035, 1041–1056, 1130–1146</span></td>
+    <td>Real X-drive tasks exist (<code>awvalid &lt;= 1'bx</code>; <code>awvalid &lt;= 1; awaddr &lt;= 'x</code>; <code>rready &lt;= 1'bx</code> with <code>rready_x_inject_active</code> ownership hand-off), each holding for <code>repeat(cycles) @(posedge aclk)</code>.</td>
+    <td>The BFM measures real clock edges; the sequence's <code>10ns</code> sleep is a separate, unrelated clock assumption. The defect is request/consume timing, not the BFM.</td></tr>
+<tr><td><span class="path">assertions/master_assertions.sv:389–412</span></td>
+    <td><code>bit x_inject_mode</code>; a <code>forever @(posedge aclk)</code> poller re-derives it every cycle from the six wildcard flags.</td>
+    <td>Gating follows the <em>flag</em>, not the drive.</td></tr>
+<tr><td><span class="path">assertions/master_assertions.sv:416–433</span></td>
+    <td><code>NO_HANDSHAKE_DURING_X</code> (422) and <code>NO_READY_HANDSHAKE_DURING_X</code> (432), both <code>disable iff (!aresetn || x_inject_mode)</code>.</td>
+    <td>Because the flag is already 0 when (if ever) the BFM drives X, the suppression window has closed before the event it was meant to cover; conversely the window <em>is</em> open during the sleep when no X exists — checks are suppressed without an injection (record Section 3.2).</td></tr>
+<tr><td><span class="path">assertions/master_assertions.sv:436–448</span> (<code>X_INJECT_MONITOR</code>)</td>
+    <td><code>$isunknown</code>-based cycle counter over six signals, reported via <code>uvm_info</code>.</td>
+    <td>A genuine wire-level observation, but aggregated across signals; needs attribution to signal/interface/window before it can serve as the acceptance witness (record Section 3.3).</td></tr>
+<tr><td><span class="path">virtual_seq/axi4_virtual_error_inject_seq.sv</span> and siblings (<code>…_simple_seq</code>, <code>…_full_seq</code>, <code>…_randomized_seq</code>, <code>axi4_safe_x_injection_controller.sv</code>)</td>
+    <td>Additional entry points that toggle the same ordinary flags (record Section 2, last paragraph).</td>
+    <td>Must be included in the repair regression; the active/random orphaned-key family is BENCH-040 and is <em>out of scope</em> here.</td></tr>
+<tr><td><span class="path">testlists/axi4_transfers_regression.list:363–379, 435–457</span></td>
+    <td><code>axi4_error_inject_rready_x_test</code>, <code>axi4_error_inject_rready_random_test</code> registered in all three bus modes.</td>
+    <td>Existing tests whose "PASS" currently cannot be read as proof of an X event (record Section 3.3 trap).</td></tr>
+</table>
+
+<h3>2.3 Design options</h3>
+<table>
+<tr><th style="width:4%">#</th><th style="width:22%">Option</th><th>Mechanism (structural)</th><th style="width:14%">Risk</th><th style="width:12%">Cost</th><th style="width:16%">Blast radius</th></tr>
+<tr><td><b>A</b></td>
+  <td><b>Reorder only</b>: move <code>set(…,0)</code> / <code>enable_x_assertions()</code> after <code>finish_item()</code></td>
+  <td>Sequence keeps the flag high until its own item has been consumed.</td>
+  <td>High residual: does nothing for <code>inject_x_on_awvalid</code> (no item), leaves the wildcard global key open to theft by any other master, keeps the <code>10ns</code> assumption, gives no accept/complete acknowledgement, and leaves the assertion window flag-driven. The BENCH record itself says this "is not a complete repair".</td>
+  <td>Very low.</td>
+  <td>Six sequence tasks. Acceptable only as a stop-gap and only if labelled as such.</td></tr>
+<tr class="rec"><td><b>B</b><br>(recommended)</td>
+  <td><b>Transaction-attached injection descriptor</b> (SVT exception-list analog)</td>
+  <td>Add an X-injection descriptor to <code>axi4_master_tx</code>: target signal (enum over the six), cycle count, mode (PRE_TRANSACTION as today's hook / ACTIVE_PHASE where the BFM supports it), and write-back status fields (accepted / started / completed, each with the aclk cycle stamp). The sequence populates it on the item it already builds. The proxy reads the descriptor from <code>req_wr</code>/<code>req_rd</code> right after <code>get_next_item</code> — where it already reads the flags — and calls the BFM task; the BFM writes the status back through the proxy. The sequence sees completion via the returned item (already the UVM contract), bounded by a timeout it owns.</td>
+  <td>Medium: touches tx, proxy, BFM task signatures; ACTIVE_PHASE mode is new BFM behaviour and may be deferred.</td>
+  <td>Medium.</td>
+  <td>Master tx / proxy / BFM / basic sequences. Scoped to the agent that owns the sequencer by construction — no global key.</td></tr>
+<tr class="rec"><td><b>C</b><br>(recommended, with B)</td>
+  <td><b>Dedicated idle-injection API</b> not gated on <code>get_next_item</code></td>
+  <td>A proxy-level request path (obtained by the sequence through the agent/config handle, not a wildcard key) that a sequence calls to inject on a signal while the channel is idle. The proxy forwards to the BFM in a thread independent of the item loops and returns accept/complete status with the same bounded-timeout contract. Ownership arbitration with the item loops (e.g. <code>rready_x_inject_active</code>, and its AW/W/AR equivalents) becomes explicit.</td>
+  <td>Medium: a second driver thread must not race the item loops for signal ownership; needs reset/abort handling.</td>
+  <td>Medium.</td>
+  <td>Proxy + BFM; needed for <code>inject_x_on_awvalid</code> and the virtual flag-only sequences, which have no item at all.</td></tr>
+<tr><td><b>D</b></td>
+  <td><b>Handshake on the existing global flag</b> (ack-bit added to config_db)</td>
+  <td>Keep wildcard keys; add "…_ack" keys the proxy sets; sequence polls.</td>
+  <td>High: preserves cross-agent theft and the two-writer race; adds more global state; polling on config_db in a clocked poller is already the pattern that produced the assertion-gating mismatch.</td>
+  <td>Low.</td>
+  <td>Sequences + proxy + assertions. Not recommended.</td></tr>
+</table>
+
+<h3>2.4 Recommended option and rationale</h3>
+<p><b>Option B for transaction-triggered injection, plus Option C for idle injection</b>, with the wildcard config_db flags retired (or, during transition, retained only as a read-only mirror the assertion gate no longer depends on). Rationale:</p>
+<ul>
+  <li><b>It removes the root cause by construction.</b> The SVT reference attaches error injection to the transaction object itself (<code>svt_axi_transaction_exception</code> / <code>…_exception_list</code>, populated inside a <code>svt_axi_master_callback::post_input_port_get()</code> callback, <span class="path">…/verification_features/error_injection.html</span>): injection fires exactly when <em>that</em> transaction is processed by <em>that</em> agent, with no async flag and no sleep timer racing item delivery. Option B is the same shape using this VIP's existing tx/proxy/BFM layering. The record's own repair-contract item 2 ("arm before the relevant item reaches the consumer and keep the request valid until consumption is acknowledged") is satisfied trivially when the request <em>is</em> the item.</li>
+  <li><b>Scoping and ownership come for free</b> (contract item 4): the descriptor rides on an item delivered to one sequencer → one proxy → one BFM. No other master can consume it; no shared duration variable exists.</li>
+  <li><b>Acknowledgement is native</b> (contract item 3): the item's status fields are written by the BFM in <code>aclk</code> terms, so "duration follows observed clock edges" (repair-matrix row 5) is inherent and the <code>10ns</code> assumption disappears from the sequence.</li>
+  <li><b>Idle mode needs C</b> (contract item 2, second sentence; matrix row 3): AWVALID idle injection and the virtual flag-only sequences have no item, so a transaction descriptor cannot carry them. A dedicated, agent-scoped call is the smallest honest mechanism.</li>
+  <li><b>Assertion policy becomes explicit</b> (contract item 6): the gate <code>x_inject_mode</code> should be derived from a BFM-owned "injection in progress on this interface" state (raised when the BFM starts driving X, lowered when it restores the signal), not from the request flag. That closes the window on both sides and makes "assertion-detection self-test keeps its target assertion armed" a matter of the test <em>not</em> requesting suppression, rather than of <code>$assertoff</code> wildcards.</li>
+</ul>
+
+<h3>2.5 Design outline (structural — no code)</h3>
+<ol>
+  <li><b>Descriptor on the transaction</b> (<span class="path">master/axi4_master_tx.sv</span>): target-signal enum (NONE / AWVALID / AWADDR / WDATA / ARVALID / BREADY / RREADY), cycle count, mode enum (PRE_TRANSACTION = today's "drive X, restore, then dispatch the item" hook; ACTIVE_PHASE = X overlapping the item's own VALID/READY phase, to be advertised per signal only where the BFM implements it), and status fields written back by the driver: accepted/started/completed flags with aclk-cycle stamps, plus a result code (OK / TIMEOUT / ABORTED_BY_RESET). Default NONE: no behavioural change for any existing item.</li>
+  <li><b>Proxy consumption</b> (<span class="path">master/axi4_master_driver_proxy.sv:358–420, 893–922</span>): the six flag-read blocks are replaced by one descriptor dispatch on the item just obtained. The proxy no longer reads or writes the wildcard keys. The write task handles AW/W/B targets, the read task AR/R targets; a descriptor naming a signal of the other channel is a sequence error reported once, not silently ignored.</li>
+  <li><b>BFM task contract</b> (<span class="path">…driver_bfm.sv:1022–1146</span>): existing per-signal tasks keep their drive semantics but gain (a) a status return so the proxy can stamp accept/start/complete, (b) an interface-level "X drive in progress" state bit per channel (generalising the existing <code>bready_x_inject_active</code> / <code>rready_x_inject_active</code> ownership hand-off to AW/W/AR), and (c) a reset/abort path that restores the signal to its idle value and clears the state bit. This is the "restore signal ownership on completion, timeout, reset and sequence abort" requirement (contract item 7).</li>
+  <li><b>Idle-injection path</b> (Option C): an agent-scoped request object (obtained via the agent's config object / proxy handle, not a <code>"*"</code> key) with the same descriptor and status shape, serviced by a proxy thread that runs alongside the item loops and acquires the channel's ownership bit before calling the BFM. The virtual flag-only sequences and <code>inject_x_on_awvalid</code> migrate to it.</li>
+  <li><b>Assertion gating</b> (<span class="path">assertions/master_assertions.sv:389–433</span>): <code>x_inject_mode</code> derived from the BFM's per-channel "X drive in progress" state (exposed on the interface the assertions module already binds to), replacing the six-key config_db poller. The <code>disable iff</code> terms on 417/427 stay as written; only their source changes. The sequence-level <code>$assertoff/$asserton</code> wildcards (390–404) are removed from the basic sequences; a test that wants a check suppressed asks for it explicitly through the descriptor's assertion-policy field (SUPPRESS_DURING_INJECTION / KEEP_ARMED), so the assertion-detection self-test can keep its target armed (matrix row 9).</li>
+  <li><b>Witness</b> (<span class="path">assertions/master_assertions.sv:436–448</span>, <code>X_INJECT_MONITOR</code>): split the aggregated counter into per-signal counters, attributed to interface instance and to the descriptor that requested the drive (by the accepted/started stamps), so the log line can state "X on AWADDR, master N, cycles a–b, requested by item id X". This is what the record's Section 3.3 requires before a monitor message can count as evidence.</li>
+  <li><b>Sequence rewrite</b> (<span class="path">seq/master_sequences/axi4_master_x_inject_seq.sv</span>): each basic task becomes "build the injection item (descriptor set) → start/finish → inspect status → build the recovery item (descriptor NONE) → start/finish → run the recovery checks". Injection and recovery are separate items (contract item 5). No sleeps.</li>
+  <li><b>Out of scope, explicitly</b>: the active/random family and its orphaned key (BENCH-040) and the slave-side injectors are not changed; their disposition must be recorded separately (record Section 7, fourth bullet).</li>
+</ol>
+
+<h3>2.6 Acceptance criteria (mapped from BENCH-066 Section 4 "Suggested repair contract" and Section 5 "Required repair matrix")</h3>
+<table>
+<tr><th style="width:5%">#</th><th>Repair-contract requirement</th><th>Design element that discharges it</th></tr>
+<tr><td>1</td><td>Define the injection mode per signal (idle / pre-transaction / active-phase); preserving today's pre-dispatch hook alone does not establish active-phase injection.</td><td>Descriptor <code>mode</code> enum; ACTIVE_PHASE advertised only per signal where implemented (2.5 items 1, 3).</td></tr>
+<tr><td>2</td><td>Couple request consumption to the intended driver/interface; keep the request valid until acknowledged; provide an idle path not waiting on <code>get_next_item</code>.</td><td>Descriptor rides on the item (B); agent-scoped idle API (C).</td></tr>
+<tr><td>3</td><td>Explicit accepted/started/completed status with bounded timeout; do not assume <code>#(cycles*10ns)</code> means done.</td><td>Status fields stamped by the BFM in aclk edges; sequence-owned timeout (2.5 items 1, 3).</td></tr>
+<tr><td>4</td><td>Scope control to a specific agent/interface and signal; no request theft or shared-duration overwrite.</td><td>No wildcard keys remain on the request path (2.5 items 2, 4).</td></tr>
+<tr><td>5</td><td>Separate injection traffic from the recovery transaction; define when recovery starts and which checks prove it.</td><td>Two items per basic task; recovery checks named in the sequence (2.5 item 7).</td></tr>
+<tr><td>6</td><td>Explicit assertion policy; self-tests keep their target assertion armed; never suppress every expected failure and then claim detection.</td><td>Per-descriptor assertion-policy field; gate driven by actual drive state (2.5 item 5).</td></tr>
+<tr><td>7</td><td>Restore ownership and request state on completion, timeout, reset, abort; item loops must not overwrite the injection.</td><td>Per-channel ownership bit + reset/abort path (2.5 items 3, 4).</td></tr>
+</table>
+<table>
+<tr><th style="width:32%">Repair-matrix scenario (record §5)</th><th>Required evidence (record)</th><th>Where it comes from in this design</th></tr>
+<tr><td>Each of AWVALID/AWADDR/WDATA/ARVALID/BREADY/RREADY</td><td>Correct interface signal actually becomes X; request/consume/complete timestamps agree</td><td>Per-signal witness + item status stamps; FSDB.</td></tr>
+<tr><td>Injection disabled control</td><td>No intentional X event; normal checks active</td><td>Descriptor NONE run of the same test; witness count 0; assertions armed.</td></tr>
+<tr><td>Idle injection, where supported</td><td>Starts/completes without an unrelated item</td><td>Option C path exercised with the sequencer idle.</td></tr>
+<tr><td>Active-phase mode, where advertised</td><td>X overlaps the required VALID/READY/response phase</td><td>Only claimed for signals whose BFM task implements ACTIVE_PHASE; otherwise recorded as "not advertised".</td></tr>
+<tr><td>Different clock periods and injection lengths</td><td>Duration follows observed clock edges</td><td>Run the directed test at two clock periods; compare stamps to requested cycles.</td></tr>
+<tr><td>Concurrent traffic on another master</td><td>No cross-agent injection or request theft</td><td>Two-master run; witness attributes every X event to the requesting agent.</td></tr>
+<tr><td>Reset / timeout / abort</td><td>No stuck request, stale X, hung item or disabled-check leakage</td><td>Directed reset-during-injection and sequence-kill cases; status result codes; assertion gate observed low afterwards.</td></tr>
+<tr><td>Recovery</td><td>Expected transaction completes; data/response checks pass</td><td>Recovery item + scoreboard.</td></tr>
+<tr><td>Assertion-detection test</td><td>Named target assertion enabled and its expected failure observed</td><td>KEEP_ARMED policy; expected failure signature stated separately from the zero-error verdict.</td></tr>
+</table>
+
+<h3>2.7 Verification plan</h3>
+<ol>
+  <li><b>Fail-before.</b> Add the per-signal witness/checker first and run the isolated basic AWADDR case (one active master, no background traffic, valid responder, bounded timeout — record §5 "Minimal isolated reproduction") on the unmodified VIP. Expected signature, stated in advance: flag 1 → flag 0 → item delivered → no <code>inject_x_on_awaddr</code> call → checker fails for lack of the intended X event, counting only after reset (initialisation X is not a witness). Record log + FSDB. Repeat for the other five signals and the virtual flag-only entry points.</li>
+  <li><b>Pass-after.</b> Same cases after the change: checker observes X on the correct signal of the correct interface for the requested aclk cycles, followed by the specified recovery; <code>UVM_ERROR : 0</code> <em>and</em> <code>TEST RESULT: PASS</code>, both read from the run's own summary. For the assertion-detection self-test the expected failure signature and the harness verdict are recorded separately; a zero-error PASS is not the verdict for that case.</li>
+  <li><b>Repair matrix.</b> Every row of the table in 2.6 gets a named run with log/FSDB path, or an explicit "not advertised / not supported" entry. No row is inferred from another.</li>
+  <li><b>Baseline regression sample (Iron Rule 2).</b> BFM and proxy are both touched, so the 12+ test baseline sample from <span class="path">TRACKB_DEBUG_NOTES.md</span> and <span class="path">sim/run_fabric_smoke.sh</span> (3/3 PASS) are mandatory before any claim; include <code>axi4_error_inject_rready_x_test</code>, <code>axi4_error_inject_rready_random_test</code>, and the virtual error-inject tests already registered. Run via <code>axi4_regression.py --lsf</code>.</li>
+  <li><b>Registration.</b> Any new or renamed test in <span class="path">testlists/axi4_transfers_regression.list</span> (all three bus modes); the smaller <span class="path">sim/axi4_transfers_regression.list</span> only if intended.</li>
+  <li><b>Disposition record.</b> The record's Section 7 deliverables (patch explanation, isolated evidence, matrix results, active/random/slave-family disposition, remaining limitations) go into the fresh tracking doc of Section 3; BENCH-040 is not touched or closed by this work.</li>
+</ol>
+
+<h3>2.8 Rollback plan</h3>
+<ul>
+  <li>Descriptor default NONE means the tx-side addition is inert; the behaviour-changing pieces are the proxy dispatch, the BFM status/ownership additions, the assertion-gate source, and the sequence rewrite. Revert those four in one commit (they are only meaningful together); leave or revert the tx field as a separate decision.</li>
+  <li>If only the assertion-gate change regresses (e.g. a test that relied on the flag-driven suppression window now fires <code>NO_HANDSHAKE_DURING_X</code>), that is a finding about the test, not grounds to restore the poller; record it, then decide.</li>
+  <li>After any rollback re-run the same baseline sample + <code>run_fabric_smoke.sh</code>, and mark the new directed tests expected-fail or de-register them explicitly.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="cross">3. Cross-cutting: BENCH-065 vs landmine #37 / "FW-6", and the missing <code>VIP_future.md</code></h2>
+<table>
+<tr><th style="width:18%"></th><th style="width:41%">BENCH-065 (this plan, Section 1)</th><th>Landmine #37 / "FW-6" (<span class="path">.claude/docs/known-landmines.md</span> §37)</th></tr>
+<tr><td><b>Goal</b></td><td>A <em>deliberate, controllable</em> test stimulus: hold RREADY low at a chosen interior beat for a chosen number of cycles to test DUT backpressure tolerance.</td><td>A <em>correctness/robustness hardening</em>: credit AR issuance itself so at most <code>outstanding_read_credits</code> reads are truly in flight, so that legal DUT reordering can never overflow the bounded collector and cause silent read-data loss.</td></tr>
+<tr><td><b>Nature</b></td><td>Capability gap (nothing is wrong today; something is missing).</td><td>Mitigated failure mode (<code>R_ACCEPT_DEPTH</code> 8 → 64 landed 2026-08-05 with fail-then-pass evidence; structural fix still open, lower priority).</td></tr>
+<tr><td><b>Code touched</b></td><td><code>ar_outstanding_s</code>, the RVALID-not-accepted branch of the R task, <code>axi4_master_tx</code>, monitor witness.</td><td>AR issuance / claim-task credit logic, <code>R_ACCEPT_DEPTH</code>, the 50 000-cycle claim escape.</td></tr>
+<tr><td><b>Shared risk</b></td><td colspan="2">Same architecture neighbourhood. The #37 defect was the <em>conjunction</em> of a bounded collector + per-ID wait + credit-of-1 claiming. A mid-burst stall adds a new reason for RREADY to be low while bursts for other RIDs may be queued. Therefore: (a) the stall must be strictly bounded (Section 1.5 item 5), (b) it must not alter credit or claim semantics, (c) the #37 reproducer (seed 1413795560) is a mandatory member of the baseline sample for BENCH-065, and (d) if FW-6 is ever implemented, its regression sample must include the BENCH-065 directed test. Neither change should be reviewed as if it were the other.</td></tr>
+</table>
+<div class="warn">
+<b>Untraceable reference.</b> Both the BFM comment (<span class="path">…driver_bfm.sv:395</span>: "tracked as VIP_future.md FW-6 / landmine #37") and landmine #37 itself point to <code>VIP_future.md</code> as the tracker for FW-6. That file does not exist in the working tree, and <code>git log --all -- VIP_future.md</code> shows it was dropped in commit <code>54dbc52</code> ("Remove Claude/Codex agent tooling from the published repo; drop session docs"). The project <span class="path">CLAUDE.md</span> still lists it under "Key documents". A parallel task is recording this as a fresh known-landmines finding; this plan does not recreate the file. <b>Consequence for this plan:</b> if either BENCH-065 or BENCH-066 proceeds, open a new, real tracking document (or rows in an existing live tracker) for the work and for FW-6, and update the two dangling references to point at it. Do not assume continuity with a plan nobody can read.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="shared">4. Shared verification discipline for both fixes</h2>
+<ul>
+  <li><b>Fix at the correct layer, one change at a time.</b> BENCH-065 and BENCH-066 are separate commits with separate fail/pass evidence; BENCH-066's Option B and Option C are themselves separate steps.</li>
+  <li><b>Two independent pass criteria.</b> Every claimed PASS shows the run's own <code>UVM_ERROR : 0</code> summary <em>and</em> perf-metrics <code>TEST RESULT: PASS</code>. <code>TEST RESULT: PASS</code> never consults the UVM error count (landmine 39); a run that dies at time 0 reports zero errors (landmine 15).</li>
+  <li><b>Iron Rule 2.</b> Both changes touch BFM and/or proxy: 12+ test baseline sample (<span class="path">TRACKB_DEBUG_NOTES.md</span>) + <code>run_fabric_smoke.sh</code> 3/3 before any claim; <code>run_fabric_smoke.sh</code> is run from <span class="path">sim/synopsys_sim/</span> and says nothing about the 4x4 drop.</li>
+  <li><b>Registration.</b> <span class="path">testlists/axi4_transfers_regression.list</span> is the list the default regression actually runs; a test registered only in <span class="path">sim/axi4_transfers_regression.list</span> never runs by default.</li>
+  <li><b>Coverage scope.</b> New functional coverage (the mid-burst witness, the per-signal X witness) counts fully; code coverage remains scoped to the fabric interface by <code>-cm_hier</code> and is unaffected.</li>
+  <li><b>Publish policy.</b> Nothing under <code>ext/</code> is involved in either change. Any FSDB or build artefact produced while verifying against the Track-B fabric stays local.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="gate">5. Open questions and approval gate</h2>
+<div class="banner">
+<strong>Approval gate</strong>
+BENCH-065 and BENCH-066 are both <span class="status">Open</span>, Medium-severity, unassigned dispositions in <span class="path">VIP_ISSUES.md</span>.
+Per this project's governance, implementation of either may begin only after a human reviews this plan, chooses the option, assigns an owner,
+and confirms the verification/rollback plan. This document is the proposal, not the authorization.
+</div>
+<h4>Genuinely open design questions</h4>
+<ol>
+  <li><b>Shared RREADY under interleaved read data (BENCH-065, record "Blast radius" and BFM "Known limit").</b> While a stall for RID <i>r</i> is being spent, a beat of RID <i>s</i> may be presented. Two legal policies: (a) stall it too — simple, deterministic, protocol-legal, but <i>s</i> experiences an unrequested stall; (b) defer <i>r</i>'s stall until a beat of <i>r</i> is actually presented — never touches <i>s</i>, but the stall may then land at a different absolute time and, if the subordinate finishes <i>s</i> first, effectively at a later beat of <i>r</i> only if the descriptor is re-evaluated per beat. This plan proposes (a) with per-transaction accounting; the reviewer must confirm, because the SoC CPU-replacement use case may be single-ID and (a) may be all that is needed.</li>
+  <li><b>Descriptor shape (BENCH-065).</b> Scalar pair (position, cycles) versus per-beat array with element 0 aliased to <code>r_wait_states</code>. The array follows the SVT precedent and future-proofs multi-stall bursts; the pair is smaller. Reviewer's call.</li>
+  <li><b>Stall cap value and its relation to the claim-task escape.</b> The cap must be below the 50 000-cycle bound; the precise value and whether it is per-agent config or a compile-time parameter is open.</li>
+  <li><b>Which signals may advertise ACTIVE_PHASE (BENCH-066).</b> Today's BFM tasks are idle/pre-transaction drives. Implementing X during an item's own VALID/READY phase is new BFM behaviour per signal; the reviewer should decide whether ACTIVE_PHASE is in this repair's scope or recorded as "not advertised" per matrix row 4.</li>
+  <li><b>Transition policy for the wildcard config_db keys (BENCH-066).</b> Remove outright, or keep as read-only mirrors for one release so external sequences (SoC-side) do not break silently. Removal is cleaner; a mirror risks recreating the very race being fixed.</li>
+  <li><b>Where the reset/abort path lives (BENCH-066 contract item 7).</b> BFM-only (signal restore on <code>!aresetn</code>) versus proxy-coordinated (also unblocks the waiting sequence with an ABORTED status). The plan proposes both, but the sequence-kill case is <strong>UNSETTLED</strong> in the record and untested here.</li>
+  <li><b>SoC-side propagation ownership (BENCH-065 criterion 1).</b> Outside this repo; needs a named owner in the consuming environment before the VIP-side change is considered "delivered".</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="refs">6. References</h2>
+<table>
+<tr><th style="width:38%">Document</th><th>Path</th></tr>
+<tr><td>VIP maintainer queue</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/VIP_ISSUES.md</span></td></tr>
+<tr><td>BENCH-065 canonical record</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/BENCH-065_soc01_cpu_axi_midburst_rready_stimulus_missing.md</span></td></tr>
+<tr><td>BENCH-066 canonical record</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/BENCH-066_x_injection_flag_cleared_before_item.md</span></td></tr>
+<tr><td>Known landmines, entry #37 (credit-1 claiming + RID wait + bounded collector)</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/.claude/docs/known-landmines.md</span> (§37, line 594 ff.)</td></tr>
+<tr><td>Project binding / iron rules / pass criteria</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/CLAUDE.md</span></td></tr>
+<tr><td>Baseline regression sample for BFM/proxy changes</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/TRACKB_DEBUG_NOTES.md</span></td></tr>
+<tr><td>Master driver BFM (R-channel policy, X-drive tasks)</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/agent/master_agent_bfm/axi4_master_driver_bfm.sv</span></td></tr>
+<tr><td>Master driver proxy (item-gated flag consumption)</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/master/axi4_master_driver_proxy.sv</span></td></tr>
+<tr><td>Master transaction (wait-state fields)</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/master/axi4_master_tx.sv</span></td></tr>
+<tr><td>Basic X-injection sequence</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/seq/master_sequences/axi4_master_x_inject_seq.sv</span></td></tr>
+<tr><td>Master assertions (X gating, X_INJECT_MONITOR)</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/assertions/master_assertions.sv</span></td></tr>
+<tr><td>Authoritative regression list</td><td><span class="path">/home/timtim01/eda_test/project/tim_axi4_vip/testlists/axi4_transfers_regression.list</span></td></tr>
+<tr><td>SVT AMBA AXI user guide — wait-state mechanisms (<code>addr_ready_delay</code>, <code>suspend_awready</code>)</td><td><span class="path">/home/timtim01/eda_test/dw_vip_test/dw_vip_dec_202503/vip_install/vip/svt/amba_svt/W-2025.03/doc/axi_svt_user_doc_html/axi_svt_uvm_user_guide/using_axi_verification_ip/wait_state_mechanisms.html</span></td></tr>
+<tr><td>SVT AMBA AXI user guide — per-beat response delay arrays (<code>rvalid_delay[]</code>, <code>rresp[]</code>)</td><td><span class="path">…/axi_svt_uvm_user_guide/using_axi_verification_ip/how_to_provide_data_response_information_to_slave_after_time_delay.html</span></td></tr>
+<tr><td>SVT AMBA AXI user guide — error injection (<code>svt_axi_transaction_exception[_list]</code>, <code>post_input_port_get()</code>)</td><td><span class="path">…/axi_svt_uvm_user_guide/verification_features/error_injection.html</span></td></tr>
+<tr><td>Missing referenced tracker (recorded as a finding, not recreated)</td><td><span class="path">VIP_future.md</span> — absent from tree and history; last present before commit <code>54dbc52</code></td></tr>
+</table>
+
+<footer>
+DRAFT — planning pass only. No source modified, no simulation run, no fix claimed. SVT material is referenced by documented concept only; no vendor source was read or reproduced.
+</footer>
+</main>
+</body>
+</html>

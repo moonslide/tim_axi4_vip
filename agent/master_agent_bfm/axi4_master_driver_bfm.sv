@@ -266,8 +266,8 @@ interface axi4_master_driver_bfm(input bit                      aclk,
     return (idx_q.size() > 0) ? aw_outstanding_q[idx_q[0]].b_wait_states : 0;
   endfunction : b_wait_for_id
 
-  // Set while inject_x_on_bready owns the wire, so the collector does not fight
-  // the X injection (the X_INJECT_BREADY_COVER property depends on seeing it).
+  // Set while x_inject_drive (BENCH-066) owns BREADY, so the collector does not
+  // fight the X injection (the X_INJECT_BREADY_COVER property depends on seeing it).
   bit bready_x_inject_active = 1'b0;
 
   initial begin
@@ -284,7 +284,7 @@ interface axi4_master_driver_bfm(input bit                      aclk,
         b_event_cnt   = 0;
       end
       else if(bready_x_inject_active) begin
-        // inject_x_on_bready drives the wire for its duration.
+        // x_inject_drive owns BREADY for its duration.
       end
       else if(bvalid === 1'b1 && bready === 1'b1) begin
         // This edge IS the BVALID && BREADY handshake - capture it here, so a
@@ -417,12 +417,16 @@ interface axi4_master_driver_bfm(input bit                      aclk,
   // with the request (here: queued into ar_outstanding_q at the
   // ARVALID && ARREADY handshake).
   //
-  // R adds one rule that B does not need: the delay is a property of the FIRST
-  // beat only. axi4_master_monitor_bfm records r_wait_states from beat 0
+  // R adds one rule that B does not need: r_wait_states is a property of the
+  // FIRST beat only. axi4_master_monitor_bfm records it from beat 0
   // (`if(i == 0) req.r_wait_states = r_ws`), and the counter this replaces
   // likewise only ever inserted its gap at RLAST, never inside a burst.
-  // Back-pressuring mid-burst would be different stimulus, so RREADY is held
-  // asserted for as long as any burst is mid-flight (see r_default_ready).
+  // Mid-burst back-pressure is DIFFERENT, explicitly requested stimulus
+  // (BENCH-065): r_stall_beat / r_stall_cycles on the transaction, carried in
+  // ar_outstanding_q like r_wait_states and armed into this same counter pair
+  // at the handshake of the beat before the requested one (see the R collector
+  // below). With no such request RREADY is held asserted for as long as any
+  // burst is mid-flight, exactly as before (see r_default_ready).
   int r_wait_cnt   = 0;
   bit r_wait_armed = 1'b0;
   // Total R beats accepted at this port. A task uses it to tell "the channel is
@@ -437,14 +441,103 @@ interface axi4_master_driver_bfm(input bit                      aclk,
   // so a waiting task can tell "my burst is still owed" from "the subordinate has
   // already answered everything I asked for, so it is never coming". It carries
   // that read's requested RREADY delay for the same reason the write side does.
+  // r_stall_beat / r_stall_cycles (BENCH-065): the requested MID-BURST stall,
+  // validated at the AR handshake (see axi4_read_address_channel_task) so that
+  // an entry in this queue is always either "no request" (-1 / 0) or a legal
+  // one (1 <= beat <= arlen, 0 < cycles <= R_BEAT_STALL_MAX).
+  // NOTE: this struct is built with a NAMED aggregate literal at its only push
+  // site. Keep it that way - a positional '{a, b} literal breaks at compile
+  // time every time a field is added here.
   typedef struct {
     bit [`AXI_ID_WIDTH-1:0] arid;
     int                     r_wait_states;
+    int                     r_stall_beat;
+    int                     r_stall_cycles;
   } ar_outstanding_s;
 
   ar_outstanding_s ar_outstanding_q[$];
   int ar_issued_cnt  = 0;
   int r_burst_cnt    = 0;
+
+  // Read-data claim escape (axi4_read_data_channel_task): after this many
+  // cycles without its burst a claim task abandons. Named so the mid-burst
+  // stall bound can be checked against it below.
+  localparam int R_CLAIM_ESCAPE_CYCLES = 50000;
+
+  //-------------------------------------------------------
+  // BENCH-065: mid-burst RREADY stall request log for the MONITOR.
+  //
+  // The monitor BFM measures the stall on the pins, but it cannot know what
+  // was REQUESTED - r_stall_beat/r_stall_cycles have no wire representation
+  // (exactly like r_wait_states, which the monitor also only ever MEASURES).
+  // The request-gated coverage witness needs both on one packet, so every
+  // ARVALID && ARREADY handshake appends the (validated) request here, and
+  // axi4_master_monitor_proxy pops the OLDEST entry carrying the RID of each
+  // completed burst it publishes. That is the same same-ID in-order rule the
+  // R collector itself relies on (AXI4 A5.3), so with a compliant subordinate
+  // the popped entry is the burst's own request; entries are pushed for EVERY
+  // AR (with -1 for "no request") precisely so the two sides stay in lockstep
+  // even when only some reads ask for a stall.
+  // Only the monitor pops. The driver's abandon/timeout path never touches
+  // this log (it is not bookkeeping the driver acts on), so a burst that
+  // arrives after its claim task gave up is still attributed correctly. The
+  // only way an entry can go stale is a read the subordinate never answers at
+  // all; that is reported by the claim task already, and the size warning
+  // below makes a systematic leak visible.
+  //-------------------------------------------------------
+  typedef struct {
+    bit [`AXI_ID_WIDTH-1:0] arid;
+    int                     r_stall_beat;
+    int                     r_stall_cycles;
+  } r_stall_req_s;
+
+  r_stall_req_s r_stall_req_log[$];
+  localparam int R_STALL_REQ_LOG_WARN = 4096;
+
+  function automatic bit pop_r_stall_request(input  bit [`AXI_ID_WIDTH-1:0] id,
+                                             output int beat, output int cycles);
+    int idx_q[$];
+    idx_q = r_stall_req_log.find_first_index with (item.arid == id);
+    if(idx_q.size() == 0) begin
+      beat   = -1;
+      cycles = 0;
+      return 1'b0;
+    end
+    beat   = r_stall_req_log[idx_q[0]].r_stall_beat;
+    cycles = r_stall_req_log[idx_q[0]].r_stall_cycles;
+    r_stall_req_log.delete(idx_q[0]);
+    return 1'b1;
+  endfunction : pop_r_stall_request
+
+  // Cycles to hold RREADY low in front of beat `beat` of the OLDEST
+  // outstanding read carrying `id` - the entry the claim task will use, so the
+  // stall and the transaction it belongs to can never drift apart (same rule
+  // as r_wait_for_id). 0 unless that entry asked for exactly this beat.
+  function automatic int r_stall_for_id(input bit [`AXI_ID_WIDTH-1:0] id, input int beat);
+    int idx_q[$];
+    idx_q = ar_outstanding_q.find_first_index with (item.arid == id);
+    if(idx_q.size() == 0) return 0;
+    if(ar_outstanding_q[idx_q[0]].r_stall_beat != beat) return 0;
+    return ar_outstanding_q[idx_q[0]].r_stall_cycles;
+  endfunction : r_stall_for_id
+
+  // Cycles the R collector must hold RREADY low after the handshake it has just
+  // completed (armed in that branch, see below). Interface-scope on purpose:
+  // block-local declaration initializers in this static context run once,
+  // not per iteration (see axi4_master_monitor_bfm.sv for the measured leak).
+  int r_stall_next = 0;
+
+  // The declared stall policy must stay clear of the claim escape: at most
+  // OUTSTANDING_FIFO_DEPTH reads are truly in flight and each may stall once,
+  // so this product is the worst case a waiting claim task can see ahead of
+  // its own burst. Both constants have drifted independently before
+  // (R_ACCEPT_DEPTH 8 -> 64 for landmine #37); this makes such a drift loud.
+  initial begin
+    if(R_BEAT_STALL_MAX * OUTSTANDING_FIFO_DEPTH >= R_CLAIM_ESCAPE_CYCLES) begin
+      `uvm_fatal(name,$sformatf("R_BEAT_STALL_MAX (%0d) * OUTSTANDING_FIFO_DEPTH (%0d) = %0d reaches the read-data claim escape of %0d cycles - a legal stall could be reported as an abandoned burst (landmine #37)",
+                                R_BEAT_STALL_MAX,OUTSTANDING_FIFO_DEPTH,R_BEAT_STALL_MAX*OUTSTANDING_FIFO_DEPTH,R_CLAIM_ESCAPE_CYCLES))
+    end
+  end
 
   // Counterpart of b_wait_pending().
   function automatic bit r_wait_pending();
@@ -478,6 +571,14 @@ interface axi4_master_driver_bfm(input bit                      aclk,
   // held high, so that burst's r_wait_states are not applied. One shared RREADY
   // cannot back-pressure one RID and not another, and not stalling a burst that
   // is already being accepted is the more important of the two properties.
+  // The same limit applies to a mid-burst stall (BENCH-065): it is armed after
+  // a handshake of the requesting RID and holds the PORT's RREADY low for the
+  // requested cycles, so if the subordinate interleaves and presents another
+  // RID's beat next, that beat is the one that waits and the requesting RID's
+  // own beat is then accepted without back-pressure. Protocol-legal either way
+  // (a manager may deassert RREADY at any time); the monitor's witness is
+  // gated on the REQUESTING transaction, so the interleaved case reads as
+  // "not exercised", never as a false hit.
   function automatic bit r_default_ready();
     if(r_capture_q.size() >= R_ACCEPT_DEPTH) return 1'b0;
     if(r_accum_q.size() > 0)                 return 1'b1;
@@ -499,9 +600,11 @@ interface axi4_master_driver_bfm(input bit                      aclk,
         ar_outstanding_q.delete();
         ar_issued_cnt = 0;
         r_burst_cnt   = 0;
+        r_stall_req_log.delete();
+        r_stall_next  = 0;
       end
       else if(rready_x_inject_active) begin
-        // inject_x_on_rready drives the wire for its duration.
+        // x_inject_drive owns RREADY for its duration.
       end
       else if(rvalid === 1'b1 && rready === 1'b1) begin
         // This edge IS the RVALID && RREADY handshake - a beat is recorded if and
@@ -546,16 +649,38 @@ interface axi4_master_driver_bfm(input bit                      aclk,
             `uvm_warning(name,$sformatf("read burst rid=0x%0h answers no read outstanding at this manager port - dropped (AXI4 A3.2)",r_id))
           end
           r_accum_q.delete(r_id);
+          r_stall_next = 0;
         end
         else begin
           r_accum_q[r_id] = r_acc;
+          // BENCH-065: the beat just accepted was index r_acc.beats-1 of THIS
+          // RID's burst, so its next beat is index r_acc.beats. If the oldest
+          // outstanding read with this RID asked for a stall in front of
+          // exactly that beat, arm it NOW, at the handshake, and drop RREADY
+          // on this very edge. Arming here rather than by scanning inside
+          // r_default_ready() is what makes the mechanism safe against
+          // interleaving: while the countdown runs RREADY is low, so NO other
+          // RID can complete a handshake and reach this branch to reset it,
+          // and the `!r_wait_armed` guard in the branch below keeps another
+          // RID's presented beat from re-arming it. r_default_ready() itself is
+          // untouched, so with no request anywhere this branch is exactly what
+          // it was before.
+          r_stall_next = r_stall_for_id(r_id, r_acc.beats);
         end
-        // This beat's wait states (beat 0's, if any) were spent in front of it in
-        // the branch below - there is no gap to load AFTER a handshake any more.
-        // The next burst arms its own delay from its own ar_outstanding_q entry.
-        r_wait_cnt   = 0;
-        r_wait_armed = 1'b0;
-        rready <= r_default_ready();
+        if(r_stall_next > 0) begin
+          r_wait_cnt   = r_stall_next;
+          r_wait_armed = 1'b1;
+          rready <= 1'b0;
+        end
+        else begin
+          // This beat's wait states (beat 0's, if any) were spent in front of
+          // it in the branch below - there is no gap to load AFTER a handshake
+          // any more. The next burst arms its own delay from its own
+          // ar_outstanding_q entry.
+          r_wait_cnt   = 0;
+          r_wait_armed = 1'b0;
+          rready <= r_default_ready();
+        end
       end
       else if(rvalid === 1'b1) begin
         // RVALID is up and this port has not accepted the beat yet: THIS is where
@@ -573,6 +698,27 @@ interface axi4_master_driver_bfm(input bit                      aclk,
         // which is the number axi4_master_monitor_bfm records for beat 0.
         rready <= (r_wait_cnt == 0) && (r_capture_q.size() < R_ACCEPT_DEPTH);
       end
+      else if(r_wait_armed && r_wait_cnt > 0) begin
+        // No beat presented on this edge while a countdown is running. This
+        // can only be a MID-BURST stall (armed at a handshake above): a beat-0
+        // delay is armed only once RVALID is up, and RVALID may not drop before
+        // its handshake (AXI4 A3.2.1). BENCH-065 asks for RREADY low for N
+        // CLOCK cycles, so the countdown keeps ticking through a subordinate's
+        // RVALID gap instead of being wiped by the idle branch; if it expires
+        // before the next beat appears, RREADY simply returns to its idle
+        // value and that beat is accepted without back-pressure (the monitor
+        // then measures fewer stall cycles than requested and the
+        // request-gated witness does not fire - honest "not exercised", never
+        // a false hit).
+        r_wait_cnt--;
+        if(r_wait_cnt == 0) begin
+          r_wait_armed = 1'b0;
+          rready <= r_default_ready();
+        end
+        else begin
+          rready <= 1'b0;
+        end
+      end
       else begin
         r_wait_armed = 1'b0;
         r_wait_cnt   = 0;
@@ -581,14 +727,74 @@ interface axi4_master_driver_bfm(input bit                      aclk,
     end
   end
 
-  // X Injection Control Variables
-  bit x_inject_mode = 0;
-  bit awvalid_x_inject = 0;
-  bit awaddr_x_inject = 0;
-  bit wdata_x_inject = 0;
-  bit arvalid_x_inject = 0;
-  int x_inject_cycles = 0;
-  int x_inject_counter = 0;
+  //-------------------------------------------------------
+  // BENCH-066: X-injection ownership, status and request log
+  //
+  // Ownership. bready_x_inject_active / rready_x_inject_active (above) already
+  // make the standing B/R collectors yield their wire while an injection owns
+  // it. The AW, W and AR channels get the same per-channel bit here, and are
+  // in addition serialised by the pin-level channel mutexes every normal
+  // address/data task already takes (aw_channel_key / w_channel_key /
+  // ar_channel_key): an injection takes the SAME key, so it can never drive
+  // AWVALID/AWADDR, WDATA or ARVALID in the same time step as a transaction
+  // thread, whichever of the two arrived first. That single rule is what
+  // makes the idle-injection path (no item, serviced by a proxy thread that
+  // runs alongside the item loops) safe: a write item that starts while an
+  // idle injection is in progress simply waits for the key, and an idle
+  // request that arrives while an address task holds AWVALID waits - bounded
+  // by X_INJECT_ACQUIRE_TIMEOUT - for that handshake.
+  //
+  // x_inject_drive_active is the OR of the five bits and is what
+  // master_assertions' x_inject_mode gate is derived from (through
+  // axi4_master_agent_bfm), replacing the config_db poller: the checks are
+  // suppressed for exactly the cycles this BFM owns a wire, not for a
+  // sequence's flag window. x_inject_keep_armed carries the request's
+  // assertion policy and keeps the gate LOW for a KEEP_ARMED request.
+  //-------------------------------------------------------
+  bit aw_x_inject_active = 1'b0;
+  bit w_x_inject_active  = 1'b0;
+  bit ar_x_inject_active = 1'b0;
+  wire x_inject_drive_active = aw_x_inject_active | w_x_inject_active | ar_x_inject_active |
+                               bready_x_inject_active | rready_x_inject_active;
+  bit  x_inject_keep_armed = 1'b0;
+
+  // Reset-restore of an injection in flight is done INSIDE x_inject_drive
+  // (it polls ARESETn on every held edge and restores the signal it owns on
+  // the edge it sees reset), mirroring how the channel tasks abandon on
+  // reset. Nothing else may touch an owned wire during reset: the collectors
+  // above reset their own state but stay out of a wire whose ownership bit
+  // is set, and the bit is cleared by the owner on its way out.
+
+  // Request log for the MONITOR (BENCH-065 precedent, r_stall_req_log). An
+  // injection request has no wire representation, so the proxy records the
+  // completed request here, keyed by the requesting item's AWID/ARID, right
+  // before that item is dispatched; axi4_master_monitor_proxy pops the
+  // OLDEST entry with the id of each address handshake it publishes, so the
+  // packet every subscriber (coverage, scoreboard) sees carries the request
+  // that actually preceded it. Only item-attached requests are logged: an
+  // idle request has no transaction to attribute to and reports through its
+  // own request object.
+  // The entry type x_inject_req_s lives in axi4_globals_pkg so the proxy and
+  // the monitor proxy can name it through their virtual-interface handles.
+  x_inject_req_s x_inject_req_log[$];
+  localparam int X_INJECT_REQ_LOG_WARN = 1024;
+
+  function automatic void log_x_inject_request(input x_inject_req_s r);
+    x_inject_req_log.push_back(r);
+    if(x_inject_req_log.size() == X_INJECT_REQ_LOG_WARN) begin
+      `uvm_warning(name,$sformatf("x_inject_req_log holds %0d entries the monitor never consumed - injected items whose address never handshook?",X_INJECT_REQ_LOG_WARN))
+    end
+  endfunction : log_x_inject_request
+
+  function automatic bit pop_x_inject_request(input bit is_write, input bit [`AXI_ID_WIDTH-1:0] id,
+                                              output x_inject_req_s r);
+    int idx_q[$];
+    idx_q = x_inject_req_log.find_first_index with (item.is_write == is_write && item.id == id);
+    if(idx_q.size() == 0) return 1'b0;
+    r = x_inject_req_log[idx_q[0]];
+    x_inject_req_log.delete(idx_q[0]);
+    return 1'b1;
+  endfunction : pop_x_inject_request
 
   initial begin
     `uvm_info(name,$sformatf(name),UVM_LOW)
@@ -906,8 +1112,61 @@ task automatic axi4_read_address_channel_task (inout axi4_read_transfer_char_s d
       // aw_outstanding_q - see the R collector header - including carrying this
       // read's requested RREADY back-pressure, which has to be queued here and
       // not in axi4_read_data_channel_task for the reason given on the AW side.
-      ar_outstanding_q.push_back('{data_read_packet.arid,
-                                   data_read_packet.r_wait_states});
+      //
+      // BENCH-065 mid-burst stall request: validated HERE, where the live
+      // ARLEN is in scope, because a directed sequence may set the fields by
+      // direct assignment and never run the constraint. An invalid request is
+      // reported and applied as NO stall - never silently ignored (beat 0) and
+      // never mis-applied (a negative count would park RREADY low for good).
+      begin
+        int    stall_beat;
+        int    stall_cycles;
+        string why;
+        stall_beat   = data_read_packet.r_stall_beat;
+        stall_cycles = data_read_packet.r_stall_cycles;
+        why          = "";
+        if(stall_beat == -1) begin
+          stall_cycles = 0;
+        end
+        else if(stall_beat == 0) begin
+          why = "beat 0 is the first-beat delay r_wait_states, not a mid-burst position (legal: 1..arlen)";
+        end
+        else if(stall_beat < 0) begin
+          why = "negative position (only -1 = no request is legal)";
+        end
+        else if(stall_beat > int'(data_read_packet.arlen)) begin
+          why = $sformatf("beyond the last beat of this burst (arlen=%0d, legal: 1..%0d)",
+                          data_read_packet.arlen,data_read_packet.arlen);
+        end
+        else if(stall_cycles < 0) begin
+          why = "negative r_stall_cycles";
+        end
+        else if(stall_cycles > R_BEAT_STALL_MAX) begin
+          why = $sformatf("r_stall_cycles above R_BEAT_STALL_MAX=%0d",R_BEAT_STALL_MAX);
+        end
+        else if(stall_cycles == 0) begin
+          `uvm_info(name,$sformatf("mid-burst stall request for arid=0x%0h beat %0d carries r_stall_cycles=0 - treated as no request",
+                                   data_read_packet.arid,stall_beat),UVM_MEDIUM)
+          stall_beat = -1;
+        end
+        if(why != "") begin
+          `uvm_error(name,$sformatf("invalid mid-burst RREADY stall request on arid=0x%0h: r_stall_beat=%0d r_stall_cycles=%0d - %s. Applying NO stall to this read.",
+                                    data_read_packet.arid,stall_beat,stall_cycles,why))
+          stall_beat   = -1;
+          stall_cycles = 0;
+        end
+        // Named fields, not positional - see ar_outstanding_s.
+        ar_outstanding_q.push_back('{arid:           data_read_packet.arid,
+                                     r_wait_states:  data_read_packet.r_wait_states,
+                                     r_stall_beat:   stall_beat,
+                                     r_stall_cycles: stall_cycles});
+        r_stall_req_log.push_back('{arid:           data_read_packet.arid,
+                                    r_stall_beat:   stall_beat,
+                                    r_stall_cycles: stall_cycles});
+        if(r_stall_req_log.size() == R_STALL_REQ_LOG_WARN) begin
+          `uvm_warning(name,$sformatf("r_stall_req_log holds %0d entries the monitor never consumed - reads issued at this port that were never answered?",R_STALL_REQ_LOG_WARN))
+        end
+      end
       ar_issued_cnt++;
     end
 
@@ -982,7 +1241,7 @@ task automatic axi4_read_data_channel_task (inout axi4_read_transfer_char_s data
         return;
       end
 
-      if(rv_cycles++ > 50000) begin
+      if(rv_cycles++ > R_CLAIM_ESCAPE_CYCLES) begin
         if(error_inject) begin
           `uvm_warning(name,$sformatf("timeout waiting for a read burst with rid=0x%0h - read data phase abandoned, no beats sampled",data_read_packet.arid))
         end
@@ -1016,163 +1275,167 @@ task automatic axi4_read_data_channel_task (inout axi4_read_transfer_char_s data
   endtask : axi4_read_data_channel_task
 
   //-------------------------------------------------------
-  // Task: inject_x_on_awvalid
-  // Injects X value on AWVALID signal for specified cycles
+  // Task: x_inject_drive (BENCH-066)
+  //
+  // Drives X on ONE manager-side signal for `cycles` aclk edges and reports
+  // what happened. This is the single X-drive entry point; the six
+  // per-signal inject_x_on_* tasks it replaces kept their drive semantics
+  // (AWVALID/ARVALID/BREADY/RREADY: the signal itself goes X; AWADDR: AWVALID
+  // is asserted with AWADDR X; WDATA: WVALID is asserted with WDATA/WSTRB X)
+  // but had no ownership, no status and no reset path.
+  //
+  // Contract:
+  //   accepted   - request validated (target != NONE, 1 <= cycles <= MAX)
+  //   started    - the channel was taken and X was driven
+  //   completed  - the task is done, for ANY result
+  //   result     - OK / TIMEOUT (channel never freed, nothing driven) /
+  //                ABORTED_BY_RESET (signal restored on the reset edge) /
+  //                INVALID (rejected, nothing driven, uvm_error)
+  //   start_time / end_time - the first and last aclk edges on which X is
+  //                visible on the pin (exactly the edges master_assertions'
+  //                witness counts), cycles_driven = number of such edges.
+  // Timing: the drive is issued on a posedge (as every channel task does),
+  // is visible from the next posedge, and is restored on the last held
+  // posedge; ownership is released one edge after the restore so the
+  // collectors and the assertion gate never overlap the restore edge.
   //-------------------------------------------------------
-  task inject_x_on_awvalid(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on AWVALID for %0d cycles", cycles), UVM_MEDIUM)
-    
-    // Drive X on awvalid
-    awvalid <= 1'bx;
-    
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-    
-    // Return to idle state
-    awvalid <= 1'b0;
-    
-    `uvm_info(name, "X injection on AWVALID completed", UVM_MEDIUM)
-  endtask : inject_x_on_awvalid
+  task automatic x_inject_drive(input  x_inject_target_e        target,
+                                input  int                      cycles,
+                                input  x_inject_assert_policy_e policy,
+                                output bit                      accepted,
+                                output bit                      started,
+                                output bit                      completed,
+                                output x_inject_result_e        result,
+                                output time                     start_time,
+                                output time                     end_time,
+                                output int                      cycles_driven);
+    semaphore key;
+    int       waited;
+    bit       aborted;
 
-  //-------------------------------------------------------
-  // Task: inject_x_on_awaddr
-  // Injects X value on AWADDR signal with AWVALID=1
-  //-------------------------------------------------------
-  task inject_x_on_awaddr(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on AWADDR for %0d cycles", cycles), UVM_MEDIUM)
-    
-    // Set awvalid high with X on address
-    awvalid <= 1'b1;
-    awaddr <= 'x;
-    
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-    
-    // Return to idle state
-    awvalid <= 1'b0;
-    awaddr <= '0;
-    
-    `uvm_info(name, "X injection on AWADDR completed", UVM_MEDIUM)
-  endtask : inject_x_on_awaddr
+    accepted      = 1'b0;
+    started       = 1'b0;
+    completed     = 1'b0;
+    result        = X_INJ_RESULT_NOT_REQUESTED;
+    start_time    = 0;
+    end_time      = 0;
+    cycles_driven = 0;
+    aborted       = 1'b0;
 
-  //-------------------------------------------------------
-  // Task: inject_x_on_wdata
-  // Injects X value on WDATA signal with WVALID=1
-  //-------------------------------------------------------
-  task inject_x_on_wdata(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on WDATA for %0d cycles", cycles), UVM_MEDIUM)
-    
-    // Set wvalid high with X on data
-    wvalid <= 1'b1;
-    wdata <= 'x;
-    wstrb <= 'x;
-    
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-    
-    // Return to idle state
-    wvalid <= 1'b0;
-    wdata <= '0;
-    wstrb <= '0;
-    
-    `uvm_info(name, "X injection on WDATA completed", UVM_MEDIUM)
-  endtask : inject_x_on_wdata
+    if(target == X_INJ_NONE) return;
 
-  //-------------------------------------------------------
-  // Task: inject_x_on_arvalid
-  // Injects X value on ARVALID signal for specified cycles
-  //-------------------------------------------------------
-  task inject_x_on_arvalid(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on ARVALID for %0d cycles", cycles), UVM_MEDIUM)
-    
-    // Drive X on arvalid
-    arvalid <= 1'bx;
-    
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-    
-    // Return to idle state
-    arvalid <= 1'b0;
-    
-    `uvm_info(name, "X injection on ARVALID completed", UVM_MEDIUM)
-  endtask : inject_x_on_arvalid
-
-  //-------------------------------------------------------
-  // Task: inject_x_on_bready
-  // Injects X value on BREADY signal for specified cycles
-  //-------------------------------------------------------
-  task inject_x_on_bready(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on BREADY for %0d cycles", cycles), UVM_MEDIUM)
-
-    // Take BREADY away from the standing B collector for the duration, otherwise
-    // the two drive the same wire in the same time step and whether the X is
-    // observable becomes a scheduling race (X_INJECT_BREADY_COVER depends on it).
-    bready_x_inject_active = 1'b1;
-
-    // Drive X on bready
-    bready <= 1'bx;
-
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-
-    // Return to idle state
-    bready <= 1'b0;
-    @(posedge aclk);
-    bready_x_inject_active = 1'b0;
-
-    `uvm_info(name, "X injection on BREADY completed", UVM_MEDIUM)
-  endtask : inject_x_on_bready
-
-  //-------------------------------------------------------
-  // Task: inject_x_on_rready
-  // Injects X value on RREADY signal for specified cycles
-  //-------------------------------------------------------
-  task inject_x_on_rready(int cycles);
-    `uvm_info(name, $sformatf("Injecting X on RREADY for %0d cycles", cycles), UVM_MEDIUM)
-
-    // Take RREADY away from the standing R collector for the duration - same
-    // reason as bready_x_inject_active.
-    rready_x_inject_active = 1'b1;
-
-    // Drive X on rready
-    rready <= 1'bx;
-
-    // Hold for specified cycles
-    repeat(cycles) @(posedge aclk);
-
-    // Return to idle state
-    rready <= 1'b0;
-    @(posedge aclk);
-    rready_x_inject_active = 1'b0;
-
-    `uvm_info(name, "X injection on RREADY completed", UVM_MEDIUM)
-  endtask : inject_x_on_rready
-
-  //-------------------------------------------------------
-  // Task: set_x_injection_mode
-  // Enables/disables X injection mode
-  //-------------------------------------------------------
-  task set_x_injection_mode(bit enable, string signal_name, int cycles);
-    x_inject_mode = enable;
-    x_inject_cycles = cycles;
-    
-    if(enable) begin
-      case(signal_name)
-        "AWVALID": awvalid_x_inject = 1;
-        "AWADDR":  awaddr_x_inject = 1;
-        "WDATA":   wdata_x_inject = 1;
-        "ARVALID": arvalid_x_inject = 1;
-        default: `uvm_error(name, $sformatf("Unknown signal for X injection: %s", signal_name))
-      endcase
-      `uvm_info(name, $sformatf("X injection enabled for %s, cycles=%0d", signal_name, cycles), UVM_LOW)
-    end else begin
-      awvalid_x_inject = 0;
-      awaddr_x_inject = 0;
-      wdata_x_inject = 0;
-      arvalid_x_inject = 0;
-      `uvm_info(name, "X injection disabled", UVM_LOW)
+    if(cycles < 1 || cycles > X_INJECT_CYCLES_MAX) begin
+      `uvm_error(name,$sformatf("invalid X-injection request on %s: cycles=%0d is outside [1:%0d] - rejected, nothing driven",
+                                target.name(),cycles,X_INJECT_CYCLES_MAX))
+      result    = X_INJ_RESULT_INVALID;
+      completed = 1'b1;
+      return;
     end
-  endtask : set_x_injection_mode
+    accepted = 1'b1;
+
+    // Channel ownership: the same pin-level mutex the address/data tasks
+    // take. B and R have no task-side driver to exclude - the standing
+    // collectors yield on the ownership bit alone.
+    case(target)
+      X_INJ_AWVALID, X_INJ_AWADDR: key = aw_channel_key;
+      X_INJ_WDATA               : key = w_channel_key;
+      X_INJ_ARVALID             : key = ar_channel_key;
+      default                   : key = null;
+    endcase
+    if(key != null) begin
+      waited = 0;
+      while(!key.try_get(1)) begin
+        @(posedge aclk);
+        if(aresetn === 1'b0) begin
+          `uvm_info(name,$sformatf("ARESETn asserted while waiting for the %s channel - X injection abandoned before it started",target.name()),UVM_LOW)
+          result    = X_INJ_RESULT_ABORTED_BY_RESET;
+          completed = 1'b1;
+          return;
+        end
+        waited++;
+        if(waited >= X_INJECT_ACQUIRE_TIMEOUT) begin
+          `uvm_warning(name,$sformatf("X injection on %s: channel not released within %0d cycles - request timed out, nothing driven",
+                                      target.name(),X_INJECT_ACQUIRE_TIMEOUT))
+          result    = X_INJ_RESULT_TIMEOUT;
+          completed = 1'b1;
+          return;
+        end
+      end
+    end
+
+    // Take ownership BEFORE the edge on which X is driven, so a collector that
+    // runs on that same edge already sees the bit and does not schedule its
+    // own NBA on the wire (same ordering rule the B/R injections used).
+    x_inject_keep_armed = (policy == X_INJ_KEEP_ARMED);
+    case(target)
+      X_INJ_AWVALID, X_INJ_AWADDR: aw_x_inject_active     = 1'b1;
+      X_INJ_WDATA               : w_x_inject_active      = 1'b1;
+      X_INJ_ARVALID             : ar_x_inject_active     = 1'b1;
+      X_INJ_BREADY              : bready_x_inject_active = 1'b1;
+      X_INJ_RREADY              : rready_x_inject_active = 1'b1;
+    endcase
+
+    @(posedge aclk);
+    `uvm_info(name,$sformatf("Injecting X on %s for %0d cycles (policy %s)",target.name(),cycles,policy.name()),UVM_MEDIUM)
+    case(target)
+      X_INJ_AWVALID: begin awvalid <= 1'bx; end
+      X_INJ_AWADDR : begin awvalid <= 1'b1; awaddr <= 'x; end
+      X_INJ_WDATA  : begin wvalid  <= 1'b1; wdata  <= 'x; wstrb <= 'x; end
+      X_INJ_ARVALID: begin arvalid <= 1'bx; end
+      X_INJ_BREADY : begin bready  <= 1'bx; end
+      X_INJ_RREADY : begin rready  <= 1'bx; end
+    endcase
+    started = 1'b1;
+
+    // Hold: one iteration per aclk edge on which X is visible. ARESETn is
+    // polled on every edge; reset restores the wire on that very edge.
+    for(int c = 0; c < cycles; c++) begin
+      @(posedge aclk);
+      if(aresetn === 1'b0) begin
+        aborted = 1'b1;
+        break;
+      end
+      if(c == 0) start_time = $time;
+      end_time = $time;
+      cycles_driven++;
+    end
+
+    // Restore to the idle value the channel tasks / collectors leave behind.
+    case(target)
+      X_INJ_AWVALID: begin awvalid <= 1'b0; end
+      X_INJ_AWADDR : begin awvalid <= 1'b0; awaddr <= '0; end
+      X_INJ_WDATA  : begin wvalid  <= 1'b0; wdata  <= '0; wstrb <= '0; end
+      X_INJ_ARVALID: begin arvalid <= 1'b0; end
+      X_INJ_BREADY : begin bready  <= 1'b0; end
+      X_INJ_RREADY : begin rready  <= 1'b0; end
+    endcase
+
+    if(aborted) begin
+      `uvm_info(name,$sformatf("ARESETn asserted during X injection on %s after %0d of %0d cycles - signal restored to idle (the only legal abandon)",
+                               target.name(),cycles_driven,cycles),UVM_LOW)
+      result = X_INJ_RESULT_ABORTED_BY_RESET;
+    end
+    else begin
+      // One more edge with ownership held, so the restore NBA and a
+      // collector's first own drive never land in the same time step.
+      @(posedge aclk);
+      result = X_INJ_RESULT_OK;
+    end
+
+    case(target)
+      X_INJ_AWVALID, X_INJ_AWADDR: aw_x_inject_active     = 1'b0;
+      X_INJ_WDATA               : w_x_inject_active      = 1'b0;
+      X_INJ_ARVALID             : ar_x_inject_active     = 1'b0;
+      X_INJ_BREADY              : bready_x_inject_active = 1'b0;
+      X_INJ_RREADY              : rready_x_inject_active = 1'b0;
+    endcase
+    x_inject_keep_armed = 1'b0;
+    if(key != null) key.put(1);
+    completed = 1'b1;
+
+    `uvm_info(name,$sformatf("X injection on %s %s: %0d cycle(s) driven, %0t .. %0t",
+                             target.name(),result.name(),cycles_driven,start_time,end_time),UVM_MEDIUM)
+  endtask : x_inject_drive
 
 endinterface : axi4_master_driver_bfm
 

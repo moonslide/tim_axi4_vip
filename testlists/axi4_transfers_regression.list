@@ -43,6 +43,45 @@ axi4_blocking_64b_write_read_test run_cnt=2
 # Burst Type Tests (Blocking)
 #------------------------------------------------------------------------------------
 axi4_blocking_incr_burst_read_test run_cnt=2
+# BENCH-065: programmable mid-burst RREADY back-pressure (first / middle / last beat), all three bus modes
+axi4_rready_stall_first_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_rready_stall_first_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_rready_stall_first_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_rready_stall_mid_burst_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_rready_stall_mid_burst_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_rready_stall_mid_burst_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_rready_stall_last_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_rready_stall_last_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_rready_stall_last_beat_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+# BENCH-066: transaction-attached / idle X injection with a pin-level per-signal witness
+# (one test per target signal + injection-disabled control), all three bus modes; the
+# assertion-detection self-test, reset-during-injection and concurrent-traffic scenarios
+# are directed NONE-mode runs (the latter two run without the scoreboard by design).
+axi4_x_inject_awvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_awvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_awvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_awaddr_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_awaddr_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_awaddr_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_wdata_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_wdata_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_wdata_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_arvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_arvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_arvalid_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_bready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_bready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_bready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_rready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_rready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_rready_witness_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_none_control_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_none_control_test run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_x_inject_none_control_test run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_x_inject_assert_detect_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_reset_abort_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_x_inject_concurrent_test run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
 axi4_blocking_incr_burst_write_test run_cnt=2
 axi4_blocking_incr_burst_write_read_test run_cnt=2
 axi4_blocking_fixed_burst_write_read_test run_cnt=2

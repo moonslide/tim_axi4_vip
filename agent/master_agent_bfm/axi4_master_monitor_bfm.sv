@@ -205,9 +205,23 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   // Task: axi4_write_address_sampling
   // Used for sample the write address channel signals
   //-------------------------------------------------------
+  //-------------------------------------------------------
+  // Wait-state counters (aw_ws / w_ws / b_ws / ar_ws / r_ws below) are reset
+  // by an explicit STATEMENT, not by a declaration initializer. Every task in
+  // this interface has STATIC lifetime, and IEEE 1800-2017 6.21 initializes a
+  // static variable's declaration initializer exactly once, before time 0 --
+  // NOT on each call or loop iteration. `int r_ws = 0;` therefore never reset,
+  // and each counter accumulated over the whole run: measured 2026-09-17 on
+  // axi4_blocking_incr_burst_read_test seed 1, master 0, three reads whose
+  // pin-level RREADY delays were 0 / 2 / 4 (VCD, hdl_top.master_if_gen[0]),
+  // the monitor published r_wait_states 0 / 2 / 6 and ar_wait_states 1 / 2 / 3
+  // for three ARs that each waited one cycle. Inside a burst the same leak
+  // carried beat 0's delay into every later beat's count.
+  //-------------------------------------------------------
   task axi4_write_address_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
-    int aw_ws = 0;
+    int aw_ws;
+    aw_ws = 0;
     @(mon_cb);
     while(mon_cb.awvalid !== 1) begin
       @(mon_cb);
@@ -243,7 +257,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     static int i = 0;
 
     forever begin
-      int w_ws = 0;
+      int w_ws;
+      w_ws = 0;
       // Wait for valid
       do begin
         @(mon_cb);
@@ -278,7 +293,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   // Used for sample the write response channel signals
   //-------------------------------------------------------
   task axi4_write_response_sampling(output axi4_write_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
-    int b_ws = 0;
+    int b_ws;
+    b_ws = 0;
     `uvm_info("FROM MASTER MON BFM",$sformatf("AFTER WHILE LOOP OF WRITE RESPONSE"),UVM_HIGH)
 
 
@@ -313,7 +329,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
   //-------------------------------------------------------
   task axi4_read_address_sampling(output axi4_read_transfer_char_s req ,input axi4_transfer_cfg_s cfg);
 
-    int ar_ws = 0;
+    int ar_ws;
+    ar_ws = 0;
     do begin
       @(mon_cb);
     end while(mon_cb.arvalid !== 1);
@@ -346,7 +363,8 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
     int rid_key;
     int beat;
     forever begin
-      int r_ws = 0;
+      int r_ws;
+      r_ws = 0;
       // Wait for valid
       do begin
         @(mon_cb);
@@ -362,6 +380,10 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
       rid_key = int'(mon_cb.rid);
       if(!r_acc.exists(rid_key)) begin
         r_acc[rid_key]  = r_blank;
+        // "no interior stall seen yet" - 0 would alias beat 0, which is
+        // r_wait_states' domain and never a mid-burst position.
+        r_acc[rid_key].r_stall_beat_observed   = -1;
+        r_acc[rid_key].r_stall_cycles_observed = 0;
         r_beat[rid_key] = 0;
       end
       beat = r_beat[rid_key];
@@ -376,7 +398,22 @@ interface axi4_master_monitor_bfm(input bit aclk, input bit aresetn,
       // whole-array assignment this replaces lost non-final-beat errors.
       r_acc[rid_key].rresp[beat] = mon_cb.rresp;
       r_acc[rid_key].rlast      = mon_cb.rlast;
-      if(beat == 0) r_acc[rid_key].r_wait_states = r_ws;
+      if(beat == 0) begin
+        r_acc[rid_key].r_wait_states = r_ws;
+      end
+      else if(r_ws > 0 && r_acc[rid_key].r_stall_beat_observed == -1) begin
+        // BENCH-065 pin-level witness: r_ws is the number of clock edges on
+        // which RVALID was high and RREADY low in front of THIS beat (the same
+        // measurement that becomes r_wait_states for beat 0 - it was computed
+        // for every beat and thrown away for beat > 0). Record the FIRST
+        // interior beat that was back-pressured and by how much; the request
+        // that asked for it is stamped onto the published packet by
+        // axi4_master_monitor_proxy, and the coverage witness fires only when
+        // the two agree, so a queue-full or otherwise incidental stall is
+        // never mistaken for the implemented actuator.
+        r_acc[rid_key].r_stall_beat_observed   = beat;
+        r_acc[rid_key].r_stall_cycles_observed = r_ws;
+      end
       r_beat[rid_key] = beat + 1;
 
       if(mon_cb.rlast === 1) begin
