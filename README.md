@@ -9,9 +9,9 @@ optional commercial-fabric DUT path.
 
 > [!IMPORTANT]
 > **Evidence scope.** This document describes the current working tree as
-> inspected on **2026-08-13**, with an update on **2026-09-17** covering the
+> inspected on **2026-08-13**, with an update on **2026-09-18** covering the
 > BENCH-065/BENCH-066 fixes described in
-> [Recent verification updates](#recent-verification-updates-2026-09-17) — that
+> [Recent verification updates](#recent-verification-updates-2026-09-18) — that
 > section's citations were re-read on the later date; the rest of the document
 > was not re-verified then. Source paths are repository-relative. A listed
 > component or registered test is not, by itself, a claim that every scenario
@@ -34,7 +34,7 @@ optional commercial-fabric DUT path.
 - [Checking and coverage](#checking-and-coverage)
 - [Bus-matrix reference modes](#bus-matrix-reference-modes)
 - [Feature status](#feature-status)
-- [Recent verification updates (2026-09-17)](#recent-verification-updates-2026-09-17)
+- [Recent verification updates (2026-09-18)](#recent-verification-updates-2026-09-18)
 - [Configuration](#configuration)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
@@ -396,15 +396,16 @@ protocol sign-off or current regression closure.
 | X/error injection | Directed stimulus, selected assertion paths, coverage | Expected-error tests require careful verdict interpretation |
 | Track-B | Project wrappers for local commercial 4×4 and 10×10 fabrics | Licensed RTL is local-only; standard regression runner is baseline-only |
 
-## Recent verification updates (2026-09-17)
+## Recent verification updates (2026-09-18)
 
-Two maintainer-queue defects (`VIP_ISSUES.md`) were implemented and directed-test
-verified this session; both required BFM/proxy-level changes. The design plan
-and the canonical BENCH-065/BENCH-066 issue records that this section
-summarizes were session-scoped working documents and are not part of this
-tree — see `VIP_ISSUES.md` for the maintainer queue's current status and
-ownership of these two entries. Citations below were re-read on **2026-09-17**;
-nothing else in this document was re-verified on that date.
+Two maintainer-queue defects (`VIP_ISSUES.md`) were implemented, directed-test
+verified, and then confirmed against the full authoritative regression across
+2026-09-17/18; both required BFM/proxy-level changes. The design plan and the
+canonical BENCH-065/BENCH-066 issue records that this section summarizes were
+session-scoped working documents and are not part of this tree — see
+`VIP_ISSUES.md` for the maintainer queue's current status and ownership of
+these two entries. Citations below were re-read on **2026-09-18**; nothing
+else in this document was re-verified on that date.
 
 ### BENCH-065 — controllable mid-burst RREADY backpressure
 
@@ -434,10 +435,28 @@ queue-full or reset-driven `RREADY` drop cannot satisfy it).
   functions, and the corresponding coverpoints in `master/axi4_master_coverage.sv`
   were bound to the wrong sampling phase — together these had left
   `R_WAIT_STATES_CP`/`AR_WAIT_STATES_CP` (and their write-side counterparts)
-  structurally dead since introduction. The write-side monitor BFM has an
-  independent, still-open counterpart of the same class of bug (a per-beat
-  wait-state counter that only initializes once due to SystemVerilog static
-  task-variable lifetime) — not fixed in this pass.
+  structurally dead since introduction. The monitor BFM also had a separate,
+  independent bug on both sides (master and slave): a per-beat wait-state
+  counter that only initializes once due to SystemVerilog static task-variable
+  lifetime, so it silently accumulated instead of resetting per measurement —
+  fixed on both `agent/master_agent_bfm/axi4_master_monitor_bfm.sv` and
+  `agent/slave_agent_bfm/axi4_slave_monitor_bfm.sv`.
+- Fixing the master side alone surfaced a second, older, and fully independent
+  defect: `slave/axi4_slave_seq_item_converter.sv` and
+  `slave/axi4_slave_tx.sv::do_copy()` had never carried the same five
+  `*_wait_states` fields on the slave side either (one gap traced by `git
+  blame` to an accidental deletion years earlier). Every slave-reported
+  wait-state value reaching the scoreboard was always 0 regardless of the
+  actual randomized stimulus — a dead checker for six wait-state/ready-delay
+  tests that predates this session and was proven so by re-running the
+  pre-session commit in an isolated worktree. BENCH-065's correct master-side
+  fix turned that long-standing false `0 == 0` pass into a real, honest
+  mismatch, which is what surfaced it. Fixed on the slave side to match.
+  A separate, still-open finding from the same investigation: in
+  `SLAVE_MEM_MODE` (the base test's default slave mode), the slave's own
+  `ar/aw/w_ready_delay` sequences never actually reach the pins at all, so
+  those six tests exercise only the manager side's fixed, real wire delay —
+  not a regression, but a stimulus gap worth closing separately.
 - Known scope limit: the SoC-side API that would propagate this descriptor
   through a consuming environment's own config layer is outside this repository
   (see BENCH-065's own record, acceptance criterion 1).
@@ -481,15 +500,34 @@ pin-level ownership mutex rather than a new synchronization primitive.
   not of the request/consume synchronization fix; see BENCH-066's record and the
   new test source for the reasoning. Sequence-abort mid-injection (as opposed to
   reset) is not implemented.
+- Making injection genuinely fire also surfaced a pre-existing false pass
+  elsewhere: `axi4_error_inject_awaddr_random_test` (a member of the separate
+  active/random family, `BENCH-040`) turns out to drive the same basic
+  sequence this fix rewired, and every historical "pass" for it had 0%
+  injection coverage — the injection had never actually happened. Once it
+  does, holding `AWADDR=X` produces the identical, already-accepted
+  address-phase consequence noted above, so `test/axi4_error_inject_randomized_tests.sv`
+  now disables the scoreboard for this test too, on the same evidenced basis.
+  `BENCH-040`'s own orphaned-key defect is untouched.
 
-Both changes pass `run_fabric_smoke.sh` (3/3) and their own directed-test
-regression sample. The full 301-test authoritative regression
-(`testlists/axi4_transfers_regression.list`) was in progress at the time this
-section was written — see the regression result directory under
-`sim/synopsys_sim/` for the completed outcome. Neither BENCH-065 nor BENCH-066
+### Full-regression confirmation
+
+The full 794-run authoritative regression (`testlists/axi4_transfers_regression.list`,
+all three bus-matrix modes) was run twice. The first run found 22 failing
+runs across three causes: the two pre-existing dead-checker defects described
+above, and a new test (`axi4_x_inject_concurrent_test`) registered against a
+bus-matrix mode with too few masters and an address illegal for it under that
+mode's map (fixed by registering it under `ENHANCED`, which its background
+master index and hardcoded address both assume). After fixing all three, the
+second full run reported 794/794 functional passes — `UVM_ERROR : 0` and
+perf-metrics `TEST RESULT: PASS` in every run's own log, `run_fabric_smoke.sh`
+3/3. (The runner's own summary showed 792/794 due to two runs it
+mis-classified as `TIMEOUT`; both logs independently confirm a clean pass in
+under two minutes of actual VCS time — a runner job-monitoring gap, not a
+simulation failure, unrelated to either fix.) Neither BENCH-065 nor BENCH-066
 is marked `CLOSED` in `VIP_ISSUES.md`; per this project's own status
-vocabulary, that requires the human tracker owner's sign-off, not a documentation
-update.
+vocabulary, that requires the human tracker owner's sign-off, not a
+documentation update.
 
 ## Configuration
 
