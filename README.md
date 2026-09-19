@@ -452,11 +452,24 @@ queue-full or reset-driven `RREADY` drop cannot satisfy it).
   pre-session commit in an isolated worktree. BENCH-065's correct master-side
   fix turned that long-standing false `0 == 0` pass into a real, honest
   mismatch, which is what surfaced it. Fixed on the slave side to match.
-  A separate, still-open finding from the same investigation: in
-  `SLAVE_MEM_MODE` (the base test's default slave mode), the slave's own
-  `ar/aw/w_ready_delay` sequences never actually reach the pins at all, so
-  those six tests exercise only the manager side's fixed, real wire delay —
-  not a regression, but a stimulus gap worth closing separately.
+  A separate finding from the same investigation, since closed: in
+  `SLAVE_MEM_MODE` (the base test's default slave mode), the slave driver
+  proxy never calls `get_next_item()` on its sequencer at all — it
+  self-generates a dummy item with every wait-state field hardcoded to 0 —
+  so the six wait-state/channel-separation tests' own slave-side sequences
+  (`axi4_slave_ar_ready_delay_seq.sv` etc.) silently never ran; both monitor
+  sides had only ever agreed on the reactive slave's fixed, real wire-level
+  delay, not a swept 0-6 range. Fixed by scoping a `RANDOM_DATA_MODE`
+  override to exactly these six test classes (not the global default every
+  other test in the suite relies on). Two of the six additionally needed a
+  second, independent fix: `axi4_slave_aw_ready_delay_seq.sv` and
+  `axi4_slave_b_ready_delay_seq.sv` constrained `req.awid`/`req.bid` inside
+  their sweep, but neither field is `rand` in `axi4_slave_tx` (by design —
+  the BFM overwrites them from real sampled signals regardless), so the
+  constraint was trivially satisfied at `ws=0` and fatally unsatisfiable at
+  `ws=1`; the two dead clauses were dropped. All six now show a genuine
+  0-6 wait-state distribution matching on both monitor sides, verified per
+  comparison count, not just a zero-error run.
 - Known scope limit: the SoC-side API that would propagate this descriptor
   through a consuming environment's own config layer is outside this repository
   (see BENCH-065's own record, acceptance criterion 1).
