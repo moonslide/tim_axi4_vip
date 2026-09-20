@@ -537,10 +537,21 @@ perf-metrics `TEST RESULT: PASS` in every run's own log, `run_fabric_smoke.sh`
 3/3. (The runner's own summary showed 792/794 due to two runs it
 mis-classified as `TIMEOUT`; both logs independently confirm a clean pass in
 under two minutes of actual VCS time — a runner job-monitoring gap, not a
-simulation failure, unrelated to either fix.) Neither BENCH-065 nor BENCH-066
-is marked `CLOSED` in `VIP_ISSUES.md`; per this project's own status
-vocabulary, that requires the human tracker owner's sign-off, not a
-documentation update.
+simulation failure, unrelated to either fix; see the runner's own known
+limitations.)
+
+A third full run (2026-09-20/21), after also closing the six-test
+`SLAVE_MEM_MODE` stimulus gap described above, again reported 794/794
+functional passes. The runner's own summary showed 793/794: one run
+(`axi4_wid_awid_mismatch_test`, unrelated to any change in this section) hit
+the identical job-monitoring `TIMEOUT` misclassification — confirmed by its
+own log as a clean pass (`TEST RESULT: PASS`, `UVM_ERROR : 0`, under a minute
+of actual VCS time) — which is the same runner gap recurring on a different,
+unrelated test, not a new or test-specific defect.
+
+Neither BENCH-065 nor BENCH-066 is marked `CLOSED` in `VIP_ISSUES.md`; per
+this project's own status vocabulary, that requires the human tracker owner's
+sign-off, not a documentation update.
 
 ## Configuration
 
