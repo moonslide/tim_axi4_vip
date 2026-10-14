@@ -359,6 +359,22 @@ interface master_assertions (input                     aclk,
     $display("[%0t] X detected on ARVALID signal", $time);
   `endif
   
+  // Gate for the X-protocol checks below (BENCH-066).
+  //
+  // This used to be re-derived every aclk edge from the six wildcard
+  // config_db request flags, i.e. it followed the SEQUENCE's flag window,
+  // not the drive: open during the sequence's sleep when nothing was on the
+  // wire, and already closed by the time an item could have carried the
+  // request to the BFM. It is now the driver BFM's own ownership state (any
+  // of aw/w/ar/bready/rready_x_inject_active), so the checks are disabled
+  // for exactly the cycles this manager is deliberately driving X on this
+  // interface - and, per the request's assertion policy, not at all
+  // (KEEP_ARMED) when a test wants to see the named assertion fire.
+  // No config_db key is read here any more; a test that wants these checks
+  // off for another reason must say so through a request, not a flag.
+  bit x_inject_mode = 0;
+  always @(*) x_inject_mode = (x_drive_active === 1'b1) && (x_keep_armed !== 1'b1);
+  
   `ifndef DISABLE_X_ASSERTIONS
   // Assertion to check recovery after X injection
   property awvalid_recovers_from_x;
@@ -390,22 +406,6 @@ interface master_assertions (input                     aclk,
   X_INJECT_RREADY_COVER: cover property(detect_x_on_rready)
     $display("[%0t] X detected on RREADY signal", $time);
   `endif
-  
-  // Gate for the X-protocol checks below (BENCH-066).
-  //
-  // This used to be re-derived every aclk edge from the six wildcard
-  // config_db request flags, i.e. it followed the SEQUENCE's flag window,
-  // not the drive: open during the sequence's sleep when nothing was on the
-  // wire, and already closed by the time an item could have carried the
-  // request to the BFM. It is now the driver BFM's own ownership state (any
-  // of aw/w/ar/bready/rready_x_inject_active), so the checks are disabled
-  // for exactly the cycles this manager is deliberately driving X on this
-  // interface - and, per the request's assertion policy, not at all
-  // (KEEP_ARMED) when a test wants to see the named assertion fire.
-  // No config_db key is read here any more; a test that wants these checks
-  // off for another reason must say so through a request, not a flag.
-  bit x_inject_mode = 0;
-  always @(*) x_inject_mode = (x_drive_active === 1'b1) && (x_keep_armed !== 1'b1);
   
   `ifndef DISABLE_X_ASSERTIONS
   // Check no handshake during X on any valid signal

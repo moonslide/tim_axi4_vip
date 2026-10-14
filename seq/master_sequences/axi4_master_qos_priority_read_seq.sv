@@ -196,7 +196,7 @@ task axi4_master_qos_priority_read_seq::body();
   end
   
   // Set ARID after randomization to identify the master
-  req.arid = $sformatf("ARID_%0d", master_id);
+  req.arid = arid_e'(master_id);
   
   `uvm_info(get_type_name(), $sformatf("QoS Priority Read - Mode: %s, Slave: %0d, QoS: %0h, Address: 0x%016h", 
             bus_mode.name(), target_slave_id, req.arqos, req.araddr), UVM_MEDIUM)

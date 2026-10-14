@@ -197,7 +197,7 @@ task axi4_master_qos_priority_write_seq::body();
   end
   
   // Set AWID after randomization to identify the master
-  req.awid = $sformatf("AWID_%0d", master_id);
+  req.awid = awid_e'(master_id);
   
   `uvm_info(get_type_name(), $sformatf("QoS Priority Write - Mode: %s, Slave: %0d, QoS: %0h, Address: 0x%016h", 
             bus_mode.name(), target_slave_id, req.awqos, req.awaddr), UVM_MEDIUM)

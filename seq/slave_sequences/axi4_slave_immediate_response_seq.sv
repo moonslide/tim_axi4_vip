@@ -63,7 +63,7 @@ task axi4_slave_immediate_response_seq::generate_immediate_write_response();
   
   // Manual assignment for fastest response (avoid randomization overhead)
   req.bresp = WRITE_OKAY;
-  req.bid = fixed_response_id ? "BID_0" : $sformatf("BID_%0d", $urandom_range(0, 15));
+  req.bid = fixed_response_id ? bid_e'(0) : bid_e'($urandom_range(0, 15));
   req.buser = 16'h0;
   
   if(immediate_mode) begin
@@ -98,7 +98,7 @@ task axi4_slave_immediate_response_seq::generate_immediate_read_response();
   
   // Manual assignment for fastest response
   req.rresp = READ_OKAY;
-  req.rid = fixed_response_id ? "RID_0" : $sformatf("RID_%0d", $urandom_range(0, 15));
+  req.rid = fixed_response_id ? rid_e'(0) : rid_e'($urandom_range(0, 15));
   req.ruser = 16'h0;
   
   // Provide predictable data pattern
