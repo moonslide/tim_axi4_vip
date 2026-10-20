@@ -802,6 +802,27 @@ function void axi4_scoreboard::start_of_simulation_phase(uvm_phase phase);
               $sformatf("same-ID response-order checker ON; content adjudication %s (every subordinate in SLAVE_MEM_MODE: %0b)",
                         content_state, sb_sameid_mem_mode_all()), UVM_LOW)
   end
+
+  //Keyed-pairing identity masks vs the 64-bit tag book-keeping.
+  //sb_pair_note_identity()/sb_pair_key_report() hold the masked AxUSER tag in
+  //bit [63:0] and key sb_pair_tag_items by longint unsigned, so mask bits above
+  //bit 63 would silently drop out of the identity REPORT (the pairing key
+  //itself, sb_pair_key_match, compares the full width). Only possible with
+  //AXI_AWUSER_WIDTH/AXI_ARUSER_WIDTH > 64; the shipped widths are 32, where the
+  //loops below have no iterations and this can never fire. The masks cannot be
+  //wider than their USER field: they are declared with exactly that width
+  //(axi4_env_config), and the +SB_PAIR_*USER_ID_MASK plusargs are range-checked
+  //in axi4_env.
+  if(axi4_env_cfg_h.sb_keyed_pairing) begin
+    for(int b = 64; b < $bits(axi4_env_cfg_h.sb_pair_awuser_id_mask); b++)
+      if(axi4_env_cfg_h.sb_pair_awuser_id_mask[b])
+        `uvm_fatal("SB_PAIR_MASK_WIDTH", $sformatf("sb_pair_awuser_id_mask='h%0h sets bit %0d, but the identity tag book-keeping is 64 bits wide (AXI_AWUSER_WIDTH=%0d) - keep the identity field in AWUSER[63:0]",
+                                                   axi4_env_cfg_h.sb_pair_awuser_id_mask, b, `AXI_AWUSER_WIDTH))
+    for(int b = 64; b < $bits(axi4_env_cfg_h.sb_pair_aruser_id_mask); b++)
+      if(axi4_env_cfg_h.sb_pair_aruser_id_mask[b])
+        `uvm_fatal("SB_PAIR_MASK_WIDTH", $sformatf("sb_pair_aruser_id_mask='h%0h sets bit %0d, but the identity tag book-keeping is 64 bits wide (AXI_ARUSER_WIDTH=%0d) - keep the identity field in ARUSER[63:0]",
+                                                   axi4_env_cfg_h.sb_pair_aruser_id_mask, b, `AXI_ARUSER_WIDTH))
+  end
 endfunction : start_of_simulation_phase
 
 //--------------------------------------------------------------------------------------------

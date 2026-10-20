@@ -132,15 +132,24 @@ function void axi4_env::build_phase(uvm_phase phase);
   // exercised with and without the mask on the same build. Absent by default.
   //   +SB_PAIR_AWUSER_ID_MASK=<hex>   +SB_PAIR_ARUSER_ID_MASK=<hex>
   //-------------------------------------------------------
+  // Read wide first, so a value with bits above the USER width is refused
+  // instead of being silently truncated into a different mask.
   begin
     bit [`AXI_AWUSER_WIDTH-1:0] sb_pair_awuser_mask_override;
     bit [`AXI_ARUSER_WIDTH-1:0] sb_pair_aruser_mask_override;
-    if($value$plusargs("SB_PAIR_AWUSER_ID_MASK=%h", sb_pair_awuser_mask_override)) begin
+    bit [255:0]                 sb_pair_mask_raw;
+    if($value$plusargs("SB_PAIR_AWUSER_ID_MASK=%h", sb_pair_mask_raw)) begin
+      if((sb_pair_mask_raw >> `AXI_AWUSER_WIDTH) != '0)
+        `uvm_fatal("SB_PAIR_MASK_WIDTH", $sformatf("+SB_PAIR_AWUSER_ID_MASK=%0h does not fit AXI_AWUSER_WIDTH=%0d", sb_pair_mask_raw, `AXI_AWUSER_WIDTH))
+      sb_pair_awuser_mask_override = sb_pair_mask_raw[`AXI_AWUSER_WIDTH-1:0];
       `uvm_info(get_type_name(), $sformatf("+SB_PAIR_AWUSER_ID_MASK=%h overrides axi4_env_config::sb_pair_awuser_id_mask (was %h)",
                                            sb_pair_awuser_mask_override, axi4_env_cfg_h.sb_pair_awuser_id_mask), UVM_LOW)
       axi4_env_cfg_h.sb_pair_awuser_id_mask = sb_pair_awuser_mask_override;
     end
-    if($value$plusargs("SB_PAIR_ARUSER_ID_MASK=%h", sb_pair_aruser_mask_override)) begin
+    if($value$plusargs("SB_PAIR_ARUSER_ID_MASK=%h", sb_pair_mask_raw)) begin
+      if((sb_pair_mask_raw >> `AXI_ARUSER_WIDTH) != '0)
+        `uvm_fatal("SB_PAIR_MASK_WIDTH", $sformatf("+SB_PAIR_ARUSER_ID_MASK=%0h does not fit AXI_ARUSER_WIDTH=%0d", sb_pair_mask_raw, `AXI_ARUSER_WIDTH))
+      sb_pair_aruser_mask_override = sb_pair_mask_raw[`AXI_ARUSER_WIDTH-1:0];
       `uvm_info(get_type_name(), $sformatf("+SB_PAIR_ARUSER_ID_MASK=%h overrides axi4_env_config::sb_pair_aruser_id_mask (was %h)",
                                            sb_pair_aruser_mask_override, axi4_env_cfg_h.sb_pair_aruser_id_mask), UVM_LOW)
       axi4_env_cfg_h.sb_pair_aruser_id_mask = sb_pair_aruser_mask_override;

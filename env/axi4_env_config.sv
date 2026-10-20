@@ -159,6 +159,13 @@ class axi4_env_config extends uvm_object;
   //cannot be mapped back to a manager, and QoS is not forwarded.
   //Deliberately NOT rand: env_config is not randomized today, and these must
   //never be able to perturb a solver stream.
+  //WIDTH: each mask is exactly its USER field's width, so it always "fits";
+  //but a test that assigns a wider constant (e.g. 32'h0007_8000 into a build
+  //with AXI_AWUSER_WIDTH < 19) is truncated by SV assignment rules without a
+  //message -- keep test masks within the USER width. The plusarg overrides
+  //are range-checked (axi4_env, SB_PAIR_MASK_WIDTH fatal), and the scoreboard
+  //refuses, at start_of_simulation, mask bits above 63 (its tag book-keeping
+  //is 64 bits wide).
   bit [`AXI_AWUSER_WIDTH-1:0] sb_pair_awuser_id_mask = '0;
   bit [`AXI_ARUSER_WIDTH-1:0] sb_pair_aruser_id_mask = '0;
 
