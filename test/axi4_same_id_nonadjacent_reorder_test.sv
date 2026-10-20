@@ -93,6 +93,26 @@ class axi4_same_id_nonadjacent_reorder_test extends axi4_base_test;
     test_timeout = 2ms;
   endfunction : new
 
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+`ifdef BUS_MATRIX_FABRIC_IP
+    // Track-B (commercial fabric IP in the path). Same per-test scoreboard settings as the
+    // other non-native Track-B tests (testlists/axi4_trackb_nonnative.list; TRACKB_DEBUG_NOTES.md §6).
+    axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+    axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+    axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // ARQOS: EXPECTED DIFFERENCE, fabric has no egress QoS ports (hdl_top ties 0); AWQOS is never compared
+    axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // ARREGION only (measured forwarded by this fabric); AWREGION is never compared
+    axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+    axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
+    axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
+    // Measured (seeds 777/1): the fabric accepts M0's next AR only after the previous R
+    // has completed, whatever its ID, so two same-ID reads are never outstanding together
+    // and the same-ID order checker has nothing to adjudicate here (content_adjudicated=0).
+    // On Track-B this test is a consistency check of the 48 transfers, not an F2 test.
+    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 sameid_order=ON(nothing to adjudicate: fabric serialises M0 reads)", UVM_LOW)
+`endif
+  endfunction : build_phase
+
   virtual function void setup_axi4_slave_agent_cfg();
     // CONTROL EXPERIMENT. +SAMEID_INORDER_CONTROL leaves the slave in RESP_IN_ORDER,
     // i.e. same stimulus, same checker, no shuffling. It must report violations=0.
