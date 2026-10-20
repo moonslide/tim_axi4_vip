@@ -18,6 +18,7 @@ class axi4_user_signal_passthrough_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_user_signal_passthrough_test", uvm_component parent = null);
+  extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void setup_axi4_master_agent_cfg();
   extern virtual function void setup_axi4_slave_agent_cfg();
   extern virtual task run_phase(uvm_phase phase);
@@ -35,6 +36,27 @@ function axi4_user_signal_passthrough_test::new(string name = "axi4_user_signal_
                                                 uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Base-test build plus the Track-B scoreboard settings. AWUSER/ARUSER
+// passthrough is the purpose of this test and stays ON on Track-B.
+//--------------------------------------------------------------------------------------------
+function void axi4_user_signal_passthrough_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B (commercial fabric IP in the path). Ledger: see
+  // .claude/docs/error-records/20261020-trackb-user-qos-routing-sb-pairing-proposal.md §3
+  axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+  axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // EXPECTED DIFFERENCE: fabric has no egress QoS ports (hdl_top ties 0)
+  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // single sequencer, no cross-master collision; identity not needed
+  axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // single sequencer, no cross-master collision; identity not needed
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) axqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) axregion=ON axuser=ON awuser_id_mask=0 aruser_id_mask=0", UVM_LOW)
+`endif
+endfunction : build_phase
 
 //--------------------------------------------------------------------------------------------
 // Function: setup_axi4_master_agent_cfg
