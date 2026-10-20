@@ -72,6 +72,19 @@ function void axi4_user_based_qos_routing_test::build_phase(uvm_phase phase);
     axi4_env_cfg_h.no_of_slaves = override_slaves;
   end
   
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B (commercial fabric IP in the path). Ledger: see
+  // .claude/docs/error-records/20261020-trackb-user-qos-routing-sb-pairing-proposal.md §3
+  axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+  axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // EXPECTED DIFFERENCE: fabric has no egress QoS ports (hdl_top ties 0)
+  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.sb_pair_awuser_id_mask       = 32'h0007_8000;   // AWUSER[18:15] = master_id (axi4_master_user_based_qos_routing_seq)
+  axi4_env_cfg_h.sb_pair_aruser_id_mask       = 32'h0007_8000;   // ARUSER[18:15] = master_id (same sequence, read side)
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) axqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) axregion=ON axuser=ON awuser_id_mask=0x00078000 aruser_id_mask=0x00078000", UVM_LOW)
+`endif
+
   // Set number of masters and slaves based on configuration
   num_masters = axi4_env_cfg_h.no_of_masters;
   num_slaves = axi4_env_cfg_h.no_of_slaves;
