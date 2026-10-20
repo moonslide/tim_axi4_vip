@@ -156,7 +156,7 @@ task axi4_master_qos_user_boost_write_seq::body();
   end
   
   // Set AWID to identify the master
-  req.awid = awid_e'(master_id);
+  req.awid = awid_e'(master_id % (`AXI_ID_LAST + 1));
   
   `uvm_info(get_type_name(), $sformatf("QoS+USER Write - Mode: %s, Slave: %0d, Base QoS: %0h, USER Boost: %0s (value=%0h), Effective QoS: %0h, Address: 0x%016h", 
             bus_mode.name(), target_slave_id, base_qos_value, user_boost_enable ? "ENABLED" : "DISABLED", 

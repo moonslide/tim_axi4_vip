@@ -89,7 +89,7 @@ task axi4_master_qos_bid_race_write_seq::body();
   // AWID identifies the originating master; the scoreboard's
   // "bid returned to the WRONG manager" check (env/axi4_scoreboard.sv:2860)
   // is what catches the shared-queue defect.
-  req.awid = awid_e'(master_id);
+  req.awid = awid_e'(master_id % (`AXI_ID_LAST + 1));
 
   `uvm_info(get_type_name(), $sformatf(
             "QOS_BID_RACE write: master=%0d awid=%0d slave=%0d addr=0x%016h awlen=%0d",
