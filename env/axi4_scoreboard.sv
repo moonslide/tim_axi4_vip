@@ -598,6 +598,29 @@ class axi4_scoreboard extends uvm_scoreboard;
   axi4_slave_tx sb_slave_bresp_pool[$];
   axi4_slave_tx sb_slave_rdata_pool[$];
 
+  //Keyed-pairing observability (sb_keyed_pairing=1 only). Counted, never used
+  //to change a pairing decision.
+  //  sb_pair_id_keyed_cnt[0/1]   AW/AR master items whose AxUSER, under the
+  //                              identity mask, decodes to their own master
+  //                              port -- i.e. the identity term really carried
+  //                              the manager identity for that item
+  //  sb_pair_shape_only_cnt[0/1] AW/AR master items where it did not (e.g. a
+  //                              sequence that leaves AxUSER = 0); for those
+  //                              the key degenerates to address/shape
+  //  sb_pair_ambiguous_cnt[ch]   pairings where the pool held ANOTHER item that
+  //                              also satisfied the key but differed in a
+  //                              compared field: oldest-match may be crosswise
+  int sb_pair_id_keyed_cnt[2];
+  int sb_pair_shape_only_cnt[2];
+  int sb_pair_ambiguous_cnt[5];
+
+  extern virtual function bit  sb_pair_key_match(input sb_chan_e ch, input axi4_master_tx m_tx, input axi4_slave_tx cand);
+  extern virtual function bit  sb_pair_fields_differ(input sb_chan_e ch, input axi4_slave_tx a, input axi4_slave_tx b);
+  extern virtual function void sb_pair_check_ambiguous(input sb_chan_e ch, input axi4_master_tx m_tx, input int chosen,
+                                                       ref axi4_slave_tx pool[$]);
+  extern virtual function void sb_pair_note_identity(input bit is_read, input axi4_master_tx m_tx);
+  extern virtual function void sb_pair_key_report();
+
   extern virtual function bit sb_wdata_equal_under_strobe(input axi4_master_tx m_tx, input axi4_slave_tx s_tx);
   extern virtual task sb_match_slave_write_address(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
   extern virtual task sb_match_slave_write_data   (input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
@@ -905,8 +928,10 @@ task axi4_scoreboard::axi4_write_address();
     // a DECERR BID) surface as "bid returned to the WRONG manager".
     sb_outstanding_awid[axi4_master_tx_h1.sb_src_index][int'(axi4_master_tx_h1.awid)]++;
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_write_address_channel \n%s",axi4_master_tx_h1.sprint()),UVM_HIGH)
-    if(axi4_env_cfg_h.sb_keyed_pairing)
+    if(axi4_env_cfg_h.sb_keyed_pairing) begin
       sb_match_slave_write_address(axi4_master_tx_h1, axi4_slave_tx_h1);
+      sb_pair_note_identity(0, axi4_master_tx_h1);
+    end
     else
       axi4_slave_write_address_analysis_fifo.get(axi4_slave_tx_h1);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_write_address_channel \n%s",axi4_slave_tx_h1.sprint()),UVM_HIGH)
@@ -1028,8 +1053,10 @@ task axi4_scoreboard::axi4_read_address();
     sb_sameid_record_issue(axi4_master_tx_h4.sb_src_index, int'(axi4_master_tx_h4.arid),
                            longint'(axi4_master_tx_h4.araddr));
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_master_read_address_channel \n%s",axi4_master_tx_h4.sprint()),UVM_HIGH)
-    if(axi4_env_cfg_h.sb_keyed_pairing)
+    if(axi4_env_cfg_h.sb_keyed_pairing) begin
       sb_match_slave_read_address(axi4_master_tx_h4, axi4_slave_tx_h4);
+      sb_pair_note_identity(1, axi4_master_tx_h4);
+    end
     else
       axi4_slave_read_address_analysis_fifo.get(axi4_slave_tx_h4);
     `uvm_info(get_type_name(),$sformatf("scoreboard's axi4_slave_read_address_channel \n%s",axi4_slave_tx_h4.sprint()),UVM_HIGH)
@@ -1708,6 +1735,10 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   // fields legitimately differ). Neither of them may skip accounting.
   //--------------------------------------------------------------------------------------------
   sb_end_of_test_completeness_check();
+
+  // Which pairing key this run really used (keyed pairing only). Ahead of the
+  // mode guards for the same reason as the completeness gate.
+  sb_pair_key_report();
 
   if (all_slaves_passive) begin
     `uvm_info(get_type_name(), "Scoreboard master-vs-slave FIELD comparisons skipped - all slaves are PASSIVE. Completeness accounting (C1-C6) DID run above and is authoritative for this run.", UVM_MEDIUM);
@@ -3085,12 +3116,9 @@ task axi4_scoreboard::sb_match_slave_write_address(input axi4_master_tx m_tx, ou
   forever begin
     foreach(sb_slave_waddr_pool[i]) begin
       cand = sb_slave_waddr_pool[i];
-      if(cand.awaddr  == m_tx.awaddr  &&
-         cand.awlen   == m_tx.awlen   &&
-         cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst &&
-         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
+      if(sb_pair_key_match(SB_CH_AW, m_tx, cand)) begin
         s_tx = cand;
+        sb_pair_check_ambiguous(SB_CH_AW, m_tx, i, sb_slave_waddr_pool);
         sb_slave_waddr_pool.delete(i);
         return;
       end
@@ -3116,12 +3144,9 @@ task axi4_scoreboard::sb_match_slave_write_data(input axi4_master_tx m_tx, outpu
   forever begin
     foreach(sb_slave_wdata_pool[i]) begin
       cand = sb_slave_wdata_pool[i];
-      if(cand.awaddr  == m_tx.awaddr  &&
-         cand.awlen   == m_tx.awlen   &&
-         cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst &&
-         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
+      if(sb_pair_key_match(SB_CH_W, m_tx, cand)) begin
         s_tx = cand;
+        sb_pair_check_ambiguous(SB_CH_W, m_tx, i, sb_slave_wdata_pool);
         sb_slave_wdata_pool.delete(i);
         return;
       end
@@ -3139,12 +3164,9 @@ task axi4_scoreboard::sb_match_slave_read_address(input axi4_master_tx m_tx, out
   forever begin
     foreach(sb_slave_raddr_pool[i]) begin
       cand = sb_slave_raddr_pool[i];
-      if(cand.araddr  == m_tx.araddr  &&
-         cand.arlen   == m_tx.arlen   &&
-         cand.arsize  == m_tx.arsize  &&
-         cand.arburst == m_tx.arburst &&
-         (((cand.aruser ^ m_tx.aruser) & axi4_env_cfg_h.sb_pair_aruser_id_mask) == '0)) begin
+      if(sb_pair_key_match(SB_CH_AR, m_tx, cand)) begin
         s_tx = cand;
+        sb_pair_check_ambiguous(SB_CH_AR, m_tx, i, sb_slave_raddr_pool);
         sb_slave_raddr_pool.delete(i);
         return;
       end
@@ -3210,12 +3232,9 @@ task axi4_scoreboard::sb_match_slave_write_response(input axi4_master_tx m_tx, o
   forever begin
     foreach(sb_slave_bresp_pool[i]) begin
       cand = sb_slave_bresp_pool[i];
-      if(cand.awaddr  == m_tx.awaddr  &&
-         cand.awlen   == m_tx.awlen   &&
-         cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst &&
-         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
+      if(sb_pair_key_match(SB_CH_B, m_tx, cand)) begin
         s_tx = cand;
+        sb_pair_check_ambiguous(SB_CH_B, m_tx, i, sb_slave_bresp_pool);
         sb_slave_bresp_pool.delete(i);
         return;
       end
@@ -3247,12 +3266,9 @@ task axi4_scoreboard::sb_match_slave_read_data(input axi4_master_tx m_tx, output
   forever begin
     foreach(sb_slave_rdata_pool[i]) begin
       cand = sb_slave_rdata_pool[i];
-      if(cand.araddr  == m_tx.araddr  &&
-         cand.arlen   == m_tx.arlen   &&
-         cand.arsize  == m_tx.arsize  &&
-         cand.arburst == m_tx.arburst &&
-         (((cand.aruser ^ m_tx.aruser) & axi4_env_cfg_h.sb_pair_aruser_id_mask) == '0)) begin
+      if(sb_pair_key_match(SB_CH_R, m_tx, cand)) begin
         s_tx = cand;
+        sb_pair_check_ambiguous(SB_CH_R, m_tx, i, sb_slave_rdata_pool);
         sb_slave_rdata_pool.delete(i);
         return;
       end
@@ -3261,6 +3277,113 @@ task axi4_scoreboard::sb_match_slave_read_data(input axi4_master_tx m_tx, output
     sb_slave_rdata_pool.push_back(cand);
   end
 endtask : sb_match_slave_read_data
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_pair_key_match
+// The keyed-pairing key, in ONE place for all five matchers above: address,
+// len, size, burst, plus AxUSER equality under the per-test identity mask
+// (AWUSER for AW/W/B, ARUSER for AR/R). See the keyed-pairing block at the top
+// of the class for why each term is there.
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_pair_key_match(input sb_chan_e ch, input axi4_master_tx m_tx, input axi4_slave_tx cand);
+  if(ch == SB_CH_AR || ch == SB_CH_R)
+    return (cand.araddr  == m_tx.araddr  &&
+            cand.arlen   == m_tx.arlen   &&
+            cand.arsize  == m_tx.arsize  &&
+            cand.arburst == m_tx.arburst &&
+            (((cand.aruser ^ m_tx.aruser) & axi4_env_cfg_h.sb_pair_aruser_id_mask) == '0));
+  return (cand.awaddr  == m_tx.awaddr  &&
+          cand.awlen   == m_tx.awlen   &&
+          cand.awsize  == m_tx.awsize  &&
+          cand.awburst == m_tx.awburst &&
+          (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0));
+endfunction : sb_pair_key_match
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_pair_fields_differ
+// True when two slave-side items that BOTH satisfy the key would nevertheless
+// compare differently against the master item: AWUSER/AWCACHE/AWPROT/AWLOCK
+// (AW, B), the same plus WDATA/WSTRB (W), ARUSER/ARCACHE/ARPROT (AR, R).
+//--------------------------------------------------------------------------------------------
+function bit axi4_scoreboard::sb_pair_fields_differ(input sb_chan_e ch, input axi4_slave_tx a, input axi4_slave_tx b);
+  if(ch == SB_CH_AR || ch == SB_CH_R)
+    return (a.aruser != b.aruser || a.arcache != b.arcache || a.arprot != b.arprot);
+  if(a.awuser != b.awuser || a.awcache != b.awcache || a.awprot != b.awprot || a.awlock != b.awlock)
+    return 1;
+  if(ch == SB_CH_W)
+    return (a.wdata != b.wdata || a.wstrb != b.wstrb);
+  return 0;
+endfunction : sb_pair_fields_differ
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_pair_check_ambiguous
+// Observation only -- never changes which item is paired. Called with the
+// index of the candidate a matcher has just chosen; if the pool ALSO holds
+// another item that satisfies the same key but differs in a compared field,
+// oldest-match may have paired crosswise, and that is made visible here as a
+// counted SB_PAIR_AMBIGUOUS warning (one per pairing, however many rivals).
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_pair_check_ambiguous(input sb_chan_e ch, input axi4_master_tx m_tx, input int chosen,
+                                                       ref axi4_slave_tx pool[$]);
+  foreach(pool[j]) begin
+    if(j == chosen) continue;
+    if(sb_pair_key_match(ch, m_tx, pool[j]) && sb_pair_fields_differ(ch, pool[chosen], pool[j])) begin
+      sb_pair_ambiguous_cnt[ch]++;
+      if(ch == SB_CH_AR || ch == SB_CH_R)
+        `uvm_warning("SB_PAIR_AMBIGUOUS", $sformatf("%s: master_port=%0d araddr='h%0x arlen=%0d paired with slave item aruser='h%0x, but the pool also holds a same-key item with aruser='h%0x that differs in a compared field - oldest-match pairing may be crosswise",
+                                                    sb_chan_name(ch), m_tx.sb_src_index, m_tx.araddr, m_tx.arlen, pool[chosen].aruser, pool[j].aruser))
+      else
+        `uvm_warning("SB_PAIR_AMBIGUOUS", $sformatf("%s: master_port=%0d awaddr='h%0x awlen=%0d paired with slave item awuser='h%0x, but the pool also holds a same-key item with awuser='h%0x that differs in a compared field - oldest-match pairing may be crosswise",
+                                                    sb_chan_name(ch), m_tx.sb_src_index, m_tx.awaddr, m_tx.awlen, pool[chosen].awuser, pool[j].awuser))
+      return;
+    end
+  end
+endfunction : sb_pair_check_ambiguous
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_pair_note_identity
+// For each paired AW (is_read=0) / AR (is_read=1) master item, records whether
+// the identity term of the key actually carried this manager's identity:
+// (AxUSER & mask) >> lsb(mask) == the master port that issued it. A mask that
+// is set but never decodes to the issuing port is a test misconfiguration,
+// which sb_pair_key_report() turns into an error.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_pair_note_identity(input bit is_read, input axi4_master_tx m_tx);
+  // 64 bits: wide enough for either USER width without truncation.
+  bit [63:0] mask;
+  bit [63:0] user;
+  int lsb;
+  mask = is_read ? axi4_env_cfg_h.sb_pair_aruser_id_mask : axi4_env_cfg_h.sb_pair_awuser_id_mask;
+  user = is_read ? m_tx.aruser : m_tx.awuser;
+  if(mask == '0) return;
+  lsb = 0;
+  while(!mask[lsb]) lsb++;
+  if(longint'((user & mask) >> lsb) == longint'(m_tx.sb_src_index))
+    sb_pair_id_keyed_cnt[is_read]++;
+  else
+    sb_pair_shape_only_cnt[is_read]++;
+endfunction : sb_pair_note_identity
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_pair_key_report
+// One SB_PAIR_KEY line whenever keyed pairing is on, so every keyed run states
+// which key it really used. A declared identity mask that never once decoded
+// to the issuing port means the identity term was nominal -> UVM_ERROR.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_pair_key_report();
+  if(!axi4_env_cfg_h.sb_keyed_pairing) return;
+  `uvm_info("SB_PAIR_KEY", $sformatf("AW: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AW/W/B)=%0d/%0d/%0d | AR: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AR/R)=%0d/%0d",
+                                     axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_id_keyed_cnt[0], sb_pair_shape_only_cnt[0],
+                                     sb_pair_ambiguous_cnt[SB_CH_AW], sb_pair_ambiguous_cnt[SB_CH_W], sb_pair_ambiguous_cnt[SB_CH_B],
+                                     axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_id_keyed_cnt[1], sb_pair_shape_only_cnt[1],
+                                     sb_pair_ambiguous_cnt[SB_CH_AR], sb_pair_ambiguous_cnt[SB_CH_R]), UVM_LOW)
+  if(axi4_env_cfg_h.sb_pair_awuser_id_mask != '0 && sb_pair_id_keyed_cnt[0] == 0)
+    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_awuser_id_mask='h%0h is set but no write ever carried its own master port in those AWUSER bits (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
+                                               axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_shape_only_cnt[0]))
+  if(axi4_env_cfg_h.sb_pair_aruser_id_mask != '0 && sb_pair_id_keyed_cnt[1] == 0)
+    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_aruser_id_mask='h%0h is set but no read ever carried its own master port in those ARUSER bits (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
+                                               axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_shape_only_cnt[1]))
+endfunction : sb_pair_key_report
 
 //--------------------------------------------------------------------------------------------
 // Function: sb_chan_name
