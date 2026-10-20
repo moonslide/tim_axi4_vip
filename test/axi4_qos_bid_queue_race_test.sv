@@ -26,6 +26,7 @@ class axi4_qos_bid_queue_race_test extends axi4_qos_equal_priority_fairness_test
   axi4_virtual_qos_bid_queue_race_seq axi4_virtual_qos_bid_queue_race_seq_h;
 
   extern function new(string name = "axi4_qos_bid_queue_race_test", uvm_component parent = null);
+  extern virtual function void build_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_qos_bid_queue_race_test
@@ -34,6 +35,28 @@ function axi4_qos_bid_queue_race_test::new(string name = "axi4_qos_bid_queue_rac
                                            uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Parent configuration verbatim; only adds the Track-B scoreboard settings,
+// set here rather than in axi4_qos_equal_priority_fairness_test so the parent
+// is untouched.
+//--------------------------------------------------------------------------------------------
+function void axi4_qos_bid_queue_race_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B (commercial fabric IP in the path). Ledger: see
+  // .claude/docs/error-records/20261020-trackb-user-qos-routing-sb-pairing-proposal.md §3
+  axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+  axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // EXPECTED DIFFERENCE: fabric has no egress QoS ports (hdl_top ties 0)
+  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // masters target different slave bases; AxUSER=0 carries no identity
+  axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // masters target different slave bases; AxUSER=0 carries no identity
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) axqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) axregion=ON axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0", UVM_LOW)
+`endif
+endfunction : build_phase
 
 task axi4_qos_bid_queue_race_test::run_phase(uvm_phase phase);
 
