@@ -77,12 +77,12 @@ function void axi4_user_based_qos_routing_test::build_phase(uvm_phase phase);
   // .claude/docs/error-records/20261020-trackb-user-qos-routing-sb-pairing-proposal.md §3
   axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
   axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
-  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // EXPECTED DIFFERENCE: fabric has no egress QoS ports (hdl_top ties 0)
-  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // ARQOS: EXPECTED DIFFERENCE, fabric has no egress QoS ports (hdl_top ties 0); AWQOS is never compared
+  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // ARREGION only (measured forwarded by this fabric); AWREGION is never compared
   axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
   axi4_env_cfg_h.sb_pair_awuser_id_mask       = 32'h0007_8000;   // AWUSER[18:15] = master_id (axi4_master_user_based_qos_routing_seq)
   axi4_env_cfg_h.sb_pair_aruser_id_mask       = 32'h0007_8000;   // ARUSER[18:15] = master_id (same sequence, read side)
-  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) axqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) axregion=ON axuser=ON awuser_id_mask=0x00078000 aruser_id_mask=0x00078000", UVM_LOW)
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON awuser_id_mask=0x00078000 aruser_id_mask=0x00078000", UVM_LOW)
 `endif
 
   // Set number of masters and slaves based on configuration

@@ -3501,7 +3501,8 @@ endfunction : sb_pair_key_report
 // NOT performed -- one SB_CHECK_LEDGER line per disabled field plus one
 // summary line. Before this a disabled check fell into the MATCHED branch and
 // was counted as verified, so "0 errors" could not be told apart from "never
-// looked". Informational only: disabling a check is a declared test choice,
+// looked". Also lists the fields that are never compared at all (AWREGION,
+// AWQOS). Informational only: disabling a check is a declared test choice,
 // not a failure.
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::sb_check_ledger_report();
@@ -3525,7 +3526,13 @@ function void axi4_scoreboard::sb_check_ledger_report();
     else
       active = {active, (active == "") ? "" : ",", $sformatf("%s(verified=%0d)", row[i].f, row[i].verified)};
   end
-  `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s}", disabled, active), UVM_LOW)
+  // AWREGION and AWQOS have NO master-vs-slave comparison anywhere in this
+  // scoreboard, in any build, and no knob turns one on (arregion/arqos above
+  // are the read side only). Stated in every log so a test that switches
+  // axregion/axqos checks "on" is never read as having verified the write side.
+  `uvm_info("SB_CHECK_LEDGER", "awregion: NOT IMPLEMENTED (never compared)", UVM_LOW)
+  `uvm_info("SB_CHECK_LEDGER", "awqos: NOT IMPLEMENTED (never compared)", UVM_LOW)
+  `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s} not_implemented={awregion,awqos}", disabled, active), UVM_LOW)
 endfunction : sb_check_ledger_report
 
 //--------------------------------------------------------------------------------------------
