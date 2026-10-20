@@ -617,7 +617,11 @@ module hdl_top;
   // (top/axi4_fabric_ip_wrapper*.sv: m_{aw,ar,b,r}id are fixed [3:0], matching
   // the generated IP's ports), so the define is checked against the wrapper's
   // own port widths -- an independent source, not hdl_top against itself.
-  // $fatal, not `uvm_fatal: this runs at time 0, before UVM has started.
+  // $fatal on purpose -- NOT because UVM is unavailable (this module imports
+  // uvm_pkg and already uses `uvm_info, e.g. CLK_VERIFY / HDL_TOP above, and the
+  // UVM report path also works at time 0). A width mismatch is a build-
+  // configuration error, and $fatal ends the run regardless of any UVM report
+  // action, catcher or severity override a test or plusarg may install.
   initial begin
     if ($bits(u_fabric_ip.m_awid[0]) != `AXI_VID_WIDTH || $bits(u_fabric_ip.m_arid[0]) != `AXI_VID_WIDTH ||
         $bits(u_fabric_ip.m_bid[0])  != `AXI_VID_WIDTH || $bits(u_fabric_ip.m_rid[0])  != `AXI_VID_WIDTH) begin
