@@ -50,6 +50,12 @@ class axi4_master_same_id_nonadjacent_preload_seq extends axi4_master_nbk_base_s
   // payload-based check could not distinguish a reorder from an out-of-range read.
   // num_rounds=4 uses 24 pages, 0x1000 .. 0x18000 -- comfortably in range, and not
   // address 0 (the slave BFM treats 0x0 specially).
+  //
+  // That default is right for NONE mode ONLY. Under the BASE (4x4) map 0x1000 is the
+  // read-only Boot_ROM (every preload write refused), and under the ENHANCED map it
+  // is unmapped (every access DECERR, measured: no transaction reached a slave), so
+  // the order checker adjudicated nothing. A test running in another mode must set
+  // base_addr from base_addr_for_mode() below, for this sequence and the read one.
   bit [63:0] base_addr = 64'h0000_0000_0000_1000;
 
   //------------------------------------------------------------------------
@@ -57,6 +63,23 @@ class axi4_master_same_id_nonadjacent_preload_seq extends axi4_master_nbk_base_s
   // sequence, axi4_master_same_id_nonadjacent_read_seq, and the provisional
   // order probe inside axi4_same_id_nonadjacent_reorder_test.
   //------------------------------------------------------------------------
+  // Base of the page window per bus-matrix mode. Issuing master is port 0 (M0).
+  //   NONE     : 0x0000_0000_0000_1000 (unchanged default, slave 0 owns [0 : 0xFFFF_FFFF])
+  //   BASE 4x4 : 0x0000_0100_0000_1000, inside S0 DDR_Memory (R/W for M0..M3,
+  //              bm/axi4_bus_matrix_ref.sv configure_base_matrix)
+  //   ENHANCED : 0x0000_0008_0000_1000, inside S0 DDR Secure Kernel
+  //              (0x8_0000_0000 .. 0x8_3FFF_FFFF, claude.md address map). M0 is the
+  //              secure CPU and AxPROT=3'b000 (secure, privileged by this bench's AxPROT[0]=0 convention, data) is the access
+  //              the M0 -> S0 cell of the claude.md access matrix allows.
+  // 24 pages (num_rounds=4) end at base + 0x18000 in every mode, well inside each window.
+  static function bit [63:0] base_addr_for_mode(axi4_bus_matrix_ref::bus_matrix_mode_e mode);
+    case (mode)
+      axi4_bus_matrix_ref::BASE_BUS_MATRIX     : return 64'h0000_0100_0000_1000;
+      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX : return 64'h0000_0008_0000_1000;
+      default                                  : return 64'h0000_0000_0000_1000;
+    endcase
+  endfunction : base_addr_for_mode
+
   static function int unsigned slots_for_rounds(int unsigned rounds);
     return rounds * 6;
   endfunction : slots_for_rounds

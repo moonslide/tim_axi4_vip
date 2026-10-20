@@ -47,7 +47,8 @@
 class axi4_master_same_id_nonadjacent_read_seq extends axi4_master_nbk_base_seq;
   `uvm_object_utils(axi4_master_same_id_nonadjacent_read_seq)
 
-  // Keep these two in step with the preload sequence.
+  // Keep these two in step with the preload sequence. Outside NONE mode the test
+  // sets base_addr from axi4_master_same_id_nonadjacent_preload_seq::base_addr_for_mode().
   int unsigned num_rounds = 4;
   bit [63:0]   base_addr  = 64'h0000_0000_0000_1000;
 

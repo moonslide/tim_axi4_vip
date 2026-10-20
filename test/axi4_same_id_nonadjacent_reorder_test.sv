@@ -127,6 +127,7 @@ class axi4_same_id_nonadjacent_reorder_test extends axi4_base_test;
   endfunction : setup_axi4_slave_agent_cfg
 
   virtual task run_phase(uvm_phase phase);
+    bit [63:0] page_base_addr;
     phase.raise_objection(this);
 
     fork
@@ -137,8 +138,17 @@ class axi4_same_id_nonadjacent_reorder_test extends axi4_base_test;
               $sformatf("SAME-ID NON-ADJACENT REORDER phase 1/2: preloading %0d pages, one payload per SLOT",
                         axi4_master_same_id_nonadjacent_preload_seq::slots_for_rounds(num_rounds)),
               UVM_LOW)
+    // Page window per bus-matrix mode: NONE keeps the sequences' 0x1000 default, BASE and
+    // ENHANCED use an access-allowed window for master 0 (see base_addr_for_mode()).
+    page_base_addr =
+      axi4_master_same_id_nonadjacent_preload_seq::base_addr_for_mode(axi4_env_cfg_h.bus_matrix_mode);
+    `uvm_info(get_type_name(),
+              $sformatf("SAME-ID NON-ADJACENT REORDER page window: mode=%s base=0x%016h",
+                        axi4_env_cfg_h.bus_matrix_mode.name(), page_base_addr), UVM_LOW)
+
     preload_seq_h = axi4_master_same_id_nonadjacent_preload_seq::type_id::create("preload_seq_h");
     preload_seq_h.num_rounds = num_rounds;
+    preload_seq_h.base_addr  = page_base_addr;
     preload_seq_h.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0]);
     #(preload_drain_time);
 
@@ -148,6 +158,7 @@ class axi4_same_id_nonadjacent_reorder_test extends axi4_base_test;
                         num_rounds), UVM_LOW)
     same_id_read_seq_h = axi4_master_same_id_nonadjacent_read_seq::type_id::create("same_id_read_seq_h");
     same_id_read_seq_h.num_rounds = num_rounds;
+    same_id_read_seq_h.base_addr  = page_base_addr;
     same_id_read_seq_h.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_read_seqr_h_all[0]);
 
     #(resp_drain_time);
