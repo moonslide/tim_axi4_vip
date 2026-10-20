@@ -414,8 +414,8 @@ Commits `9dfaeac` (2026-10-14), `5e7b637` and `4b46d78` (2026-10-20).
   8-bit Track-B bus (`AXI_ID_WIDTH=8`) every ID was wrong — manager 0 drove
   `AWID` 48 (`0x30`) instead of 0. Replaced with typed casts (`awid_e'(..)` etc.).
   Evidence: Track-B `ENHANCED` `axi4_qos_region_routing_reset_backpressure_test`,
-  manager 0 `AWID` 48 → 0, `UVM_ERROR` 11 → 5; the remaining 5 are the known open
-  Track-B scoreboard-pairing item (`TRACKB_DEBUG_NOTES.md`).
+  manager 0 `AWID` 48 → 0, `UVM_ERROR` 11 → 5; the remaining 5 were the Track-B
+  scoreboard-pairing item, since fixed by `dacdf09` (see the Track-B subsection below).
 - **`x_inject_mode` declaration order (`9dfaeac`).** Moved above its first use in
   `assertions/master_assertions.sv`. VCS tolerates the forward reference inside a
   property, other tools do not; a repro confirmed the move is behavior-neutral in VCS.
@@ -452,17 +452,9 @@ are not used by any test and are compile-verified only.
 
 Open items:
 
-- Track-B QoS tests still end with scoreboard errors: region routing 5,
-  BID-queue race 8, user-based QoS routing 12. The analysis attributes the 12 to
-  the Track-B scoreboard running with the default 1:1 pairing
-  (`sb_keyed_pairing = 0`, passthrough checks on — `env/axi4_env_config.sv:114-140`;
-  `test/axi4_trackb_smoke_test.sv:176-180` overrides these) combined with
-  same-address writes from several managers, where the W-channel pairing key is
-  `awaddr` only (`env/axi4_scoreboard.sv:3095`). An independent adversarial
-  review upheld the attribution but noted that copying the smoke-test settings
-  only disables checks (ARQOS/AxREGION/AxUSER would lose their checks), so it is
-  not a fix. A fix proposal is in progress: per-test fixes with a stronger
-  pairing key, keeping AWUSER checking on where needed. No fix exists yet.
+- The Track-B QoS scoreboard errors listed here earlier (region routing 5,
+  BID-queue race 8, user-based QoS routing 12) are fixed by `dacdf09`; see
+  "Track-B scoreboard pairing and fabric ingress ID width" below.
 - `axi4_write_heavy_midburst_reset_rw_contention_test` `ENHANCED` failure (pre-existing, above).
 - 12 additional `ENHANCED` baseline-variant regression entries end with
   `UVM_ERROR : 1` identically on HEAD and after these changes — pre-existing,
@@ -471,7 +463,12 @@ Open items:
 - `axi4_qos_basic_priority_test` shows a Track-B read-channel hang (1800 s
   `TIMEOUT`, master BFM waiting for `arready`/`rid`) — a different signature
   from the scoreboard errors; not yet analysed (reported by the implementing
-  sessions, not re-run for this README update).
+  sessions, not re-run for this README update). `axi4_qos_equal_priority_fairness_test`
+  times out the same way on Track-B (seed 777, `timeout waiting for arready`).
+- `axi4_same_id_nonadjacent_reorder_test` fails on Track-B `ENHANCED`
+  (seeds 777 and 1: `UVM_ERROR : 24`, `SB_INCOMPLETE_*`, `TEST RESULT: FAIL`)
+  identically before and after the ingress-checker commits — pre-existing and
+  unrelated to them; it is in no Track-B list. Triage is in progress.
 - `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
   `% 16` on HEAD. A width-aware rewrite was tried and abandoned. Its
   `randomize() failed` at slot 16 of `axi4_same_id_nonadjacent_reorder_test` is
@@ -481,14 +478,72 @@ Open items:
   those two constraints and the failure reproduces identically on a fabric-less
   `AXI_ID_WIDTH=8` build. Relaxing `awid_c1` too would still not help on Track-B,
   whose fabric ingress AxID is 4-bit: slot 16 then stops at `IDW_INGRESS_TRUNC`
-  (AWID 0x10 would reach the fabric as 0x0). Ingress/egress ID width is tracked
-  as a separate proposal.
+  (AWID 0x10 would reach the fabric as 0x0). The ingress width is now guarded
+  by that checker (below); nothing was changed on the egress side.
   `axi4_master_same_id_nonadjacent_preload_seq.sv` keeps `s % 16` deliberately:
   16 is the number of IDs the Track-B fabric ingress can carry, not a free
   slot wrap.
 
 Landmine: in VCS, assigning a string (e.g. a `$sformatf` result) to an enum
 compiles and runs without any diagnostic — always use a typed cast.
+
+### Track-B scoreboard pairing and fabric ingress ID width
+
+Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee19`
+(6 commits after `dacdf09`), all 2026-10-20.
+
+- **Keyed pairing (`c18b6f3`..`dacdf09`).** The W-channel pairing key in
+  `env/axi4_scoreboard.sv` is now (`awaddr`, `awlen`, `awsize`, `awburst`)
+  instead of `awaddr` alone. An optional manager-identity term compares the
+  masked AxUSER on both sides for equality; the masks are
+  `sb_pair_awuser_id_mask`/`sb_pair_aruser_id_mask` in `env/axi4_env_config.sv`
+  (default 0 = off, plusargs `+SB_PAIR_AWUSER_ID_MASK`/`+SB_PAIR_ARUSER_ID_MASK`).
+  A disabled passthrough check is now counted as skipped, not verified, and
+  reported by an `SB_CHECK_LEDGER` line; `SB_PAIR_KEY` and `SB_PAIR_AMBIGUOUS`
+  report how pairing was decided. `user_based_qos_routing`,
+  `qos_region_routing_reset_backpressure`, `qos_bid_queue_race` and
+  `user_signal_passthrough` set their Track-B scoreboard settings under
+  `` `ifdef BUS_MATRIX_FABRIC_IP `` (only `user_based_qos_routing` sets an
+  identity mask, `32'h0007_8000`). `testlists/axi4_trackb_nonnative.list` runs
+  these four tests on Track-B `ENHANCED` with seeds 777, 1 and a random seed.
+- **What Track-B does not check.** For these tests the AWID/BID/ARID/RID and
+  ARQOS comparisons are off — the tests document them as expected differences
+  and `SB_CHECK_LEDGER` logs them as not performed — because the fabric
+  re-encodes AxID and has no egress QoS ports. **Track-B does not verify any
+  QoS behaviour.** AWREGION and AWQOS are not compared in any build; the
+  scoreboard has only ARREGION/ARQOS comparisons. The slave-BFM response-index
+  desync (affects BID/RID) is not ruled out.
+- **Fabric ingress AxID is 4 bits (`c53f58f`..`c8dee19`).** This is a property
+  of the delivered IP: the wrapper ports `m_awid`/`m_arid` in
+  `top/axi4_fabric_ip_wrapper*.sv` are `[3:0]`, while Track-B builds with
+  `AXI_ID_WIDTH=8` for the subordinate side. `top/hdl_top.sv` (under
+  `BUS_MATRIX_FABRIC_IP`) now `$fatal`s at time 0 if `AXI_VID_WIDTH` does not
+  match the ingress wiring (`:617-622`), and the `IDW_INGRESS_TRUNC`
+  `uvm_fatal` checker (`:748-761`) stops any valid AxID wider than 4 bits at
+  the truncation point. Track-B managers may use AxID 0..15 only, consistent
+  with the manager ID mapping above.
+
+Verification performed for these commits (reported by the implementing
+sessions; not re-run for this README update):
+
+| Check | Result |
+|---|---|
+| `testlists/axi4_trackb_nonnative.list` on `dacdf09`, requiring both `UVM_ERROR : 0` and `TEST RESULT: PASS` | 12/12 pass. Before (`3671fda`): user-based QoS routing 12/18/12, region routing 5, BID-queue race 8, user-signal passthrough 2 |
+| User-based QoS routing, seeds 2–11, identity mask on vs forced to 0 | On: 10/10 pass. Off: 5/10 fail with swapped AWUSER — the identity term is needed on real traffic |
+| 24 Track-B runs (the 4 tests, native 10×10 and 4×4 smoke tests, same-ID reorder), before vs after the ingress commits, same seeds | Identical logs; `IDW_INGRESS_TRUNC` never fires |
+| Ingress checker: scratch force of AWID `0x13` (and ARID `0x21`) on master 0 | Before: fabric sees `0x3` silently, run ends `UVM_ERROR : 3` with `TEST RESULT: PASS`. After: `UVM_FATAL` `IDW_INGRESS_TRUNC` at the first clock edge |
+| Time-0 check with `+define+AXI_VID_WIDTH=5` | `$fatal` at time 0 |
+| Iron-rule-2 sample (49 entries) + `run_fabric_smoke.sh` | 48/49 (sole failure the pre-existing `ENHANCED` one above); 3/3 |
+
+Not verified: AxID ≥ 16 anywhere on Track-B; the ingress checker was forced
+on master 0 only (other ports share the same generate body), and X-valued IDs
+are not caught by it; the cluster tests were not run on the 4×4 fabric; the
+user-based QoS routing read side issues from one port only, so its identity
+term is not exercised; `SB_PAIR_AMBIGUOUS` stayed 0 even on seeds that
+mispaired, so a zero count is not evidence of correct pairing.
+
+Still open: the items in the list above. Review follow-ups (among them the
+ledger wording for AWREGION/AWQOS) are in progress on a separate branch.
 
 ## Recent verification updates (2026-09-18)
 
