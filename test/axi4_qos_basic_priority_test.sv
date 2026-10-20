@@ -83,6 +83,19 @@ function void axi4_qos_basic_priority_test::build_phase(uvm_phase phase);
   `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
   `uvm_info(get_type_name(), "Test validates QoS priority-based arbitration", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
+
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B (commercial fabric IP in the path). Same per-test scoreboard settings as the
+  // other non-native Track-B tests (testlists/axi4_trackb_nonnative.list; TRACKB_DEBUG_NOTES.md §6).
+  axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+  axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+  axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // ARQOS: EXPECTED DIFFERENCE, fabric has no egress QoS ports (hdl_top ties 0); AWQOS is never compared
+  axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // ARREGION only (measured forwarded by this fabric); AWREGION is never compared
+  axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+  axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // stimulus carries no manager identity in AWUSER (AxUSER=0)
+  axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // stimulus carries no manager identity in ARUSER (AxUSER=0)
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 slave_read_qos=OFF(slaves ONLY_WRITE_QOS_MODE_ENABLE)", UVM_LOW)
+`endif
   
 endfunction : build_phase
 
