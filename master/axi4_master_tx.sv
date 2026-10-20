@@ -501,7 +501,9 @@ class axi4_master_tx extends uvm_sequence_item;
   //Constraint : awid_c1
   //Limit AWID values to valid range based on the ID width
   // Default constraint allows all 16 values (AWID_0 to AWID_15)
-  // Sequences should override this constraint for specific configurations
+  // 0..15 is also the Track-B fabric ingress limit (AXI_VID_WIDTH; delivered IP).
+  // Overriding beyond 15 on a BUS_MATRIX_FABRIC_IP build is caught by
+  // IDW_INGRESS_TRUNC in top/hdl_top.sv.
   constraint awid_c1 { 
     // By default, allow all valid AWID values
     // Specific tests/sequences should add constraints based on their configuration
@@ -511,7 +513,9 @@ class axi4_master_tx extends uvm_sequence_item;
   //Constraint : arid_c1
   //Limit ARID values to valid range based on the ID width
   // Default constraint allows all 16 values (ARID_0 to ARID_15)
-  // Sequences should override this constraint for specific configurations
+  // 0..15 is also the Track-B fabric ingress limit (AXI_VID_WIDTH; delivered IP).
+  // Overriding beyond 15 on a BUS_MATRIX_FABRIC_IP build is caught by
+  // IDW_INGRESS_TRUNC in top/hdl_top.sv.
   constraint arid_c1 { 
     // By default, allow all valid ARID values
     // Specific tests/sequences should add constraints based on their configuration
