@@ -3386,15 +3386,25 @@ endfunction : sb_pair_key_match
 // Function: sb_pair_fields_differ
 // True when two slave-side items that BOTH satisfy the key would nevertheless
 // compare differently against the master item: AWUSER/AWCACHE/AWPROT/AWLOCK
-// (AW, B), the same plus WDATA/WSTRB (W), ARUSER/ARCACHE/ARPROT (AR, R).
+// (AW, W, B), plus WDATA/WSTRB (W) or BRESP/BUSER (B); ARUSER/ARCACHE/ARPROT
+// (AR, R), plus RDATA/RRESP/RUSER (R). The response fields matter because
+// the B/R comparisons check them: two same-key responses that differ only
+// in BRESP or RDATA are exactly the crosswise pairing this warning is for.
 //--------------------------------------------------------------------------------------------
 function bit axi4_scoreboard::sb_pair_fields_differ(input sb_chan_e ch, input axi4_slave_tx a, input axi4_slave_tx b);
-  if(ch == SB_CH_AR || ch == SB_CH_R)
-    return (a.aruser != b.aruser || a.arcache != b.arcache || a.arprot != b.arprot);
+  if(ch == SB_CH_AR || ch == SB_CH_R) begin
+    if(a.aruser != b.aruser || a.arcache != b.arcache || a.arprot != b.arprot)
+      return 1;
+    if(ch == SB_CH_R)
+      return (a.rdata != b.rdata || a.rresp != b.rresp || a.ruser != b.ruser);
+    return 0;
+  end
   if(a.awuser != b.awuser || a.awcache != b.awcache || a.awprot != b.awprot || a.awlock != b.awlock)
     return 1;
   if(ch == SB_CH_W)
     return (a.wdata != b.wdata || a.wstrb != b.wstrb);
+  if(ch == SB_CH_B)
+    return (a.bresp != b.bresp || a.buser != b.buser);
   return 0;
 endfunction : sb_pair_fields_differ
 
