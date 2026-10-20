@@ -539,7 +539,9 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   `user_signal_passthrough` set their Track-B scoreboard settings under
   `` `ifdef BUS_MATRIX_FABRIC_IP `` (only `user_based_qos_routing` sets an
   identity mask, `32'h0007_8000`). `testlists/axi4_trackb_nonnative.list` runs
-  these four tests on Track-B `ENHANCED` with seeds 777, 1 and a random seed.
+  these four tests plus `qos_basic_priority`, `qos_equal_priority_fairness` and
+  `same_id_nonadjacent_reorder` (7 tests, 21 entries) on Track-B `ENHANCED` with
+  seeds 777, 1 and a random seed.
 - **What Track-B does not check.** For these tests the AWID/BID/ARID/RID and
   ARQOS comparisons are off — the tests document them as expected differences
   and `SB_CHECK_LEDGER` logs them as not performed — because the fabric
