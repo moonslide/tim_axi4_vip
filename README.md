@@ -471,10 +471,16 @@ Open items:
   from the scoreboard errors; not yet analysed (reported by the implementing
   sessions, not re-run for this README update).
 - `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
-  `% 16` on HEAD. A width-aware rewrite was tried and abandoned: it cannot help
-  while the Track-B ingress is 4-bit, and with it
-  `axi4_same_id_nonadjacent_reorder_test` failed `randomize() failed` at slot 16
-  on Track-B. Ingress/egress ID width is tracked as a separate proposal.
+  `% 16` on HEAD. A width-aware rewrite was tried and abandoned. Its
+  `randomize() failed` at slot 16 of `axi4_same_id_nonadjacent_reorder_test` is
+  caused by the VIP itself, not by the fabric: the `awid_c1` hard constraint
+  (`AWID_0..AWID_15`, `master/axi4_master_tx.sv`) contradicts the inline
+  `awid == AWID_16`. Re-measured 2026-10-20, the VCS solver report names exactly
+  those two constraints and the failure reproduces identically on a fabric-less
+  `AXI_ID_WIDTH=8` build. Relaxing `awid_c1` too would still not help on Track-B,
+  whose fabric ingress AxID is 4-bit: slot 16 then stops at `IDW_INGRESS_TRUNC`
+  (AWID 0x10 would reach the fabric as 0x0). Ingress/egress ID width is tracked
+  as a separate proposal.
   `axi4_master_same_id_nonadjacent_preload_seq.sv` keeps `s % 16` deliberately:
   16 is the number of IDs the Track-B fabric ingress can carry, not a free
   slot wrap.
