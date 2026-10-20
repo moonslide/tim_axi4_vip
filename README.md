@@ -426,11 +426,11 @@ Commits `9dfaeac` (2026-10-14), `5e7b637` and `4b46d78` (2026-10-20).
   `user_based_qos_routing`. On the default 4-bit bus this equals `% 16`. IDs ≥ 16
   are representable only where the whole ID path is wide — not in the Track-B
   fabric IP configuration: although Track-B builds with `AXI_ID_WIDTH=8`, the
-  fabric ingress AxID is 4 bits (`top/hdl_top.sv:694` drives
-  `nic_m_awid = awid[3:0]`, `:677` likewise `nic_m_arid = arid[3:0]`; the wire
-  is truncated, and a wider ID is now stopped by the `IDW_INGRESS_TRUNC`
-  `uvm_fatal` checker at `:748-761` instead of passing silently; BID/RID return
-  zero-extended at `:708`/`:718`), and
+  fabric ingress AxID is 4 bits (`top/hdl_top.sv:704` drives
+  `nic_m_awid` from ``awid[`AXI_VID_WIDTH-1:0]``, `:687` likewise `nic_m_arid`
+  from `arid`; the wire is truncated, and a wider ID is now stopped by the
+  `IDW_INGRESS_TRUNC` `uvm_fatal` checker at `:764-777` instead of passing
+  silently; BID/RID return zero-extended at `:718`/`:728`), and
   `master/axi4_master_tx.sv` `awid_c1` constrains AWID to `AWID_0`..`AWID_15`.
   No tested configuration has more than 10 managers, so manager ≥ 16 behavior
   is unexercised. Found by a review of `9dfaeac`: the raw `master_id` cast
@@ -499,7 +499,8 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   `sb_pair_awuser_id_mask`/`sb_pair_aruser_id_mask` in `env/axi4_env_config.sv`
   (default 0 = off, plusargs `+SB_PAIR_AWUSER_ID_MASK`/`+SB_PAIR_ARUSER_ID_MASK`).
   A disabled passthrough check is now counted as skipped, not verified, and
-  reported by an `SB_CHECK_LEDGER` line; `SB_PAIR_KEY` and `SB_PAIR_AMBIGUOUS`
+  reported by an `SB_CHECK_LEDGER` line (which also lists AWREGION and AWQOS as
+  `NOT IMPLEMENTED (never compared)`); `SB_PAIR_KEY` and `SB_PAIR_AMBIGUOUS`
   report how pairing was decided. `user_based_qos_routing`,
   `qos_region_routing_reset_backpressure`, `qos_bid_queue_race` and
   `user_signal_passthrough` set their Track-B scoreboard settings under
@@ -518,9 +519,9 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   `top/axi4_fabric_ip_wrapper*.sv` are `[3:0]`, while Track-B builds with
   `AXI_ID_WIDTH=8` for the subordinate side. `top/hdl_top.sv` (under
   `BUS_MATRIX_FABRIC_IP`) now `$fatal`s at time 0 if `AXI_VID_WIDTH` does not
-  match the ingress wiring (`:617-622`), and the `IDW_INGRESS_TRUNC`
-  `uvm_fatal` checker (`:748-761`) stops any valid AxID wider than 4 bits at
-  the truncation point. Track-B managers may use AxID 0..15 only, consistent
+  match the fabric wrapper's `m_awid`/`m_arid`/`m_bid`/`m_rid` port widths
+  (`:625-632`), and the `IDW_INGRESS_TRUNC` `uvm_fatal` checker (`:764-777`)
+  stops any valid AxID wider than 4 bits at the truncation point. Track-B managers may use AxID 0..15 only, consistent
   with the manager ID mapping above.
 
 Verification performed for these commits (reported by the implementing
@@ -532,7 +533,7 @@ sessions; not re-run for this README update):
 | User-based QoS routing, seeds 2–11, identity mask on vs forced to 0 | On: 10/10 pass. Off: 5/10 fail with swapped AWUSER — the identity term is needed on real traffic |
 | 24 Track-B runs (the 4 tests, native 10×10 and 4×4 smoke tests, same-ID reorder), before vs after the ingress commits, same seeds | Identical logs; `IDW_INGRESS_TRUNC` never fires |
 | Ingress checker: scratch force of AWID `0x13` (and ARID `0x21`) on master 0 | Before: fabric sees `0x3` silently, run ends `UVM_ERROR : 3` with `TEST RESULT: PASS`. After: `UVM_FATAL` `IDW_INGRESS_TRUNC` at the first clock edge |
-| Time-0 check with `+define+AXI_VID_WIDTH=5` | `$fatal` at time 0 |
+| Time-0 check with `+define+AXI_VID_WIDTH=5` | On the current check (wrapper port widths): elaboration `PCWM-W` warnings, then `$fatal` at time 0 |
 | Iron-rule-2 sample (49 entries) + `run_fabric_smoke.sh` | 48/49 (sole failure the pre-existing `ENHANCED` one above); 3/3 |
 
 Not verified: AxID ≥ 16 anywhere on Track-B; the ingress checker was forced
@@ -540,10 +541,15 @@ on master 0 only (other ports share the same generate body), and X-valued IDs
 are not caught by it; the cluster tests were not run on the 4×4 fabric; the
 user-based QoS routing read side issues from one port only, so its identity
 term is not exercised; `SB_PAIR_AMBIGUOUS` stayed 0 even on seeds that
-mispaired, so a zero count is not evidence of correct pairing.
+mispaired (measured before the B/R response fields were added to its
+comparison), so a zero count is not evidence of correct pairing.
 
-Still open: the items in the list above. Review follow-ups (among them the
-ledger wording for AWREGION/AWQOS) are in progress on a separate branch.
+Still open: the items in the list above. Code-review follow-ups were applied
+afterwards: the ledger states that AWREGION/AWQOS are never compared; the pair-key
+report no longer relies on a nested `foreach`; `SB_PAIR_AMBIGUOUS` also compares
+the B/R response fields; identity masks wider than the AxUSER width are refused
+(`SB_PAIR_MASK_WIDTH`); the ingress wiring follows `AXI_VID_WIDTH`. X-valued IDs
+remain outside the ingress checker's scope (documented in the code).
 
 ## Recent verification updates (2026-09-18)
 
