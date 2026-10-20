@@ -755,6 +755,12 @@ module hdl_top;
       // truncated by the awid/arid [`AXI_VID_WIDTH-1:0] assigns above and its BID/RID would come back as the
       // low bits only, which the master BFM cannot pair (bid==awid) -> hang or cross-pairing.
       // Fail at the source.
+      // X is OUT OF SCOPE here, deliberately: with `!= 0` an X/Z in the high ID bits makes the
+      // condition X, so the checker stays silent. `!== '0` was measured and rejected: the
+      // X_INJ_AWADDR witness test raises AWVALID before the BFM has ever driven AWID
+      // (still X), and on Track-B it then dies here at 370 ps ("AWID 0xxx") although no ID is
+      // too wide. X on the address/ID channel belongs to the X-injection checks, not to this
+      // width checker.
       always @(posedge master_if_gen[jn].master_intf.aclk) begin
         if (master_if_gen[jn].master_intf.awvalid === 1'b1 &&
             (master_if_gen[jn].master_intf.awid >> `AXI_VID_WIDTH) != 0)
