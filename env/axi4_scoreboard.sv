@@ -610,6 +610,14 @@ class axi4_scoreboard extends uvm_scoreboard;
   //  sb_pair_ambiguous_cnt[ch]   pairings where the pool held ANOTHER item that
   //                              also satisfied the key but differed in a
   //                              compared field: oldest-match may be crosswise
+  //Comparisons NOT performed because their passthrough knob is 0. Kept apart
+  //from the verified counters on purpose: a disabled check used to fall into
+  //the MATCHED branch and be counted as verified, so a log could not tell
+  //"checked and equal" from "never checked".
+  int sb_skipped_awid_count, sb_skipped_bid_count, sb_skipped_arid_count, sb_skipped_rid_count;
+  int sb_skipped_arqos_count, sb_skipped_arregion_count, sb_skipped_awuser_count, sb_skipped_aruser_count;
+  extern virtual function void sb_check_ledger_report();
+
   int sb_pair_id_keyed_cnt[2];
   int sb_pair_shape_only_cnt[2];
   int sb_pair_ambiguous_cnt[5];
@@ -1139,7 +1147,12 @@ endtask : axi4_read_data
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_master_tx_h1,input axi4_slave_tx axi4_slave_tx_h1);
 
-  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h1.awid == axi4_slave_tx_h1.awid))begin
+  // axid_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+    sb_skipped_awid_count++;
+  end
+  else if((axi4_master_tx_h1.awid == axi4_slave_tx_h1.awid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_awid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_AWID_MATCHED", $sformatf("Master AWID = 'h%0x and Slave AWID = 'h%0x",axi4_master_tx_h1.awid,axi4_slave_tx_h1.awid), UVM_HIGH);             
     byte_data_cmp_verified_awid_count++;
@@ -1238,7 +1251,12 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
   end
 
   // AWUSER signal comparison - Enhancement for USER signal integrity
-  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg || (axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser))begin
+  // axuser_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg) begin
+    sb_skipped_awuser_count++;
+  end
+  else if((axi4_master_tx_h1.awuser == axi4_slave_tx_h1.awuser))begin
     `uvm_info(get_type_name(),$sformatf("axi4_awuser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_AWUSER_MATCHED", $sformatf("Master awuser = 'h%0x and Slave awuser = 'h%0x",axi4_master_tx_h1.awuser,axi4_slave_tx_h1.awuser), UVM_HIGH);
     byte_data_cmp_verified_awuser_count++;
@@ -1342,7 +1360,12 @@ task axi4_scoreboard::axi4_write_response_comparision(input axi4_master_tx axi4_
   // Write data comparisons are handled separately in the write data phase
   `uvm_info(get_type_name(),$sformatf("Write response comparison - bid/bresp/buser only"),UVM_HIGH);
 
-  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid))begin
+  // axid_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+    sb_skipped_bid_count++;
+  end
+  else if((axi4_master_tx_h3.bid == axi4_slave_tx_h3.bid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_bid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_bid_MATCHED", $sformatf("Master bid = %0p and Slave bid = %0p",axi4_master_tx_h3.bid,axi4_slave_tx_h3.bid), UVM_HIGH);             
     byte_data_cmp_verified_bid_count++;
@@ -1414,7 +1437,12 @@ endtask : axi4_write_response_comparision
 task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_master_tx_h4,input axi4_slave_tx axi4_slave_tx_h4);
 
   
-  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h4.arid == axi4_slave_tx_h4.arid))begin
+  // axid_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+    sb_skipped_arid_count++;
+  end
+  else if((axi4_master_tx_h4.arid == axi4_slave_tx_h4.arid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arID_MATCHED", $sformatf("Master arID = 'h%0x and Slave arID = 'h%0x",axi4_master_tx_h4.arid,axi4_slave_tx_h4.arid), UVM_HIGH);             
     byte_data_cmp_verified_arid_count++;
@@ -1502,7 +1530,12 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     byte_data_cmp_failed_arprot_count++;
   end
 
-  if(!axi4_env_cfg_h.axregion_passthrough_chk_cfg || (axi4_master_tx_h4.arregion == axi4_slave_tx_h4.arregion))begin
+  // axregion_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axregion_passthrough_chk_cfg) begin
+    sb_skipped_arregion_count++;
+  end
+  else if((axi4_master_tx_h4.arregion == axi4_slave_tx_h4.arregion))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arregion from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arregion_MATCHED", $sformatf("Master arregion = 'h%0x and Slave arregion = 'h%0x",axi4_master_tx_h4.arregion,axi4_slave_tx_h4.arregion), UVM_HIGH);             
     byte_data_cmp_verified_arregion_count++;
@@ -1513,7 +1546,12 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
     byte_data_cmp_failed_arregion_count++;
   end
 
-  if(!axi4_env_cfg_h.axqos_passthrough_chk_cfg || (axi4_master_tx_h4.arqos == axi4_slave_tx_h4.arqos))begin
+  // axqos_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axqos_passthrough_chk_cfg) begin
+    sb_skipped_arqos_count++;
+  end
+  else if((axi4_master_tx_h4.arqos == axi4_slave_tx_h4.arqos))begin
     `uvm_info(get_type_name(),$sformatf("axi4_arqos from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_arqos_MATCHED", $sformatf("Master arqos = 'h%0x and Slave arqos = 'h%0x",axi4_master_tx_h4.arqos,axi4_slave_tx_h4.arqos), UVM_HIGH);             
     byte_data_cmp_verified_arqos_count++;
@@ -1535,7 +1573,12 @@ task axi4_scoreboard::axi4_read_address_comparision(input axi4_master_tx axi4_ma
   end
 
   // ARUSER signal comparison - Enhancement for USER signal integrity
-  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg || (axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser))begin
+  // axuser_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axuser_passthrough_chk_cfg) begin
+    sb_skipped_aruser_count++;
+  end
+  else if((axi4_master_tx_h4.aruser == axi4_slave_tx_h4.aruser))begin
     `uvm_info(get_type_name(),$sformatf("axi4_aruser from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_ARUSER_MATCHED", $sformatf("Master aruser = 'h%0x and Slave aruser = 'h%0x",axi4_master_tx_h4.aruser,axi4_slave_tx_h4.aruser), UVM_HIGH);
     byte_data_cmp_verified_aruser_count++;
@@ -1563,7 +1606,12 @@ task axi4_scoreboard::axi4_read_data_comparision(input axi4_master_tx axi4_maste
   validate_response_correctness(axi4_master_tx_h5, axi4_slave_tx_h5, 0); // 0 = read operation
   
   // Always validate RID regardless of error response
-  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg || (axi4_master_tx_h5.rid == axi4_slave_tx_h5.rid))begin
+  // axid_passthrough_chk_cfg=0: NOT compared -- counted as skipped, never as verified
+  // (see sb_check_ledger_report).
+  if(!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+    sb_skipped_rid_count++;
+  end
+  else if((axi4_master_tx_h5.rid == axi4_slave_tx_h5.rid))begin
     `uvm_info(get_type_name(),$sformatf("axi4_rid from master and slave is equal"),UVM_HIGH);
     `uvm_info("SB_rid_MATCHED", $sformatf("Master rid = %0p and Slave rid = %0p",axi4_master_tx_h5.rid,axi4_slave_tx_h5.rid), UVM_HIGH);             
     byte_data_cmp_verified_rid_count++;
@@ -1739,6 +1787,7 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   // Which pairing key this run really used (keyed pairing only). Ahead of the
   // mode guards for the same reason as the completeness gate.
   sb_pair_key_report();
+  sb_check_ledger_report();
 
   if (all_slaves_passive) begin
     `uvm_info(get_type_name(), "Scoreboard master-vs-slave FIELD comparisons skipped - all slaves are PASSIVE. Completeness accounting (C1-C6) DID run above and is authoritative for this run.", UVM_MEDIUM);
@@ -1766,7 +1815,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   // Write_Address_Channel comparision
   //-------------------------------------------------------
   if(axi4_env_cfg_h.write_read_mode_h == ONLY_WRITE_DATA || axi4_env_cfg_h.write_read_mode_h == WRITE_READ_DATA) begin
-    if ((byte_data_cmp_verified_awid_count != 0) && (byte_data_cmp_failed_awid_count == 0)) begin
+    if (!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_awid_count != 0) && (byte_data_cmp_failed_awid_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("awid count comparisions are succesful"),UVM_HIGH);
     end
     else begin
@@ -1948,7 +2001,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     //-------------------------------------------------------
 
 
-    if ((byte_data_cmp_verified_bid_count == 0) && (byte_data_cmp_failed_bid_count == 0)) begin
+    if (!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_bid_count == 0) && (byte_data_cmp_failed_bid_count == 0)) begin
       `uvm_info (get_type_name(), $sformatf ("bid count comparisons - no transactions processed"),UVM_MEDIUM);
     end
     else if ((byte_data_cmp_verified_bid_count != 0) && (byte_data_cmp_failed_bid_count == 0)) begin
@@ -2012,7 +2069,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
   // Read_Address_Channel comparision
   //-------------------------------------------------------
   if(axi4_env_cfg_h.write_read_mode_h == ONLY_READ_DATA || axi4_env_cfg_h.write_read_mode_h == WRITE_READ_DATA) begin
-    if ((byte_data_cmp_verified_arid_count != 0) && (byte_data_cmp_failed_arid_count == 0)) begin
+    if (!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_arid_count != 0) && (byte_data_cmp_failed_arid_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("arid count comparisions are successful"),UVM_HIGH);
     end
     else if ((byte_data_cmp_verified_arid_count == 0) && (byte_data_cmp_failed_arid_count == 0) && (valid_decerr_count > 0 || valid_slverr_count > 0) && (unexpected_error_count == 0)) begin
@@ -2132,7 +2193,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("arprot count comparisions are failed"));
     end
  
-    if ((byte_data_cmp_verified_arregion_count == 0) && (byte_data_cmp_failed_arregion_count == 0)) begin
+    if (!axi4_env_cfg_h.axregion_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_arregion_count == 0) && (byte_data_cmp_failed_arregion_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("arregion count comparisions - no transactions processed (likely all decode errors)"),UVM_LOW);
     end
     else if ((byte_data_cmp_verified_arregion_count != 0) && (byte_data_cmp_failed_arregion_count == 0)) begin
@@ -2146,7 +2211,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
       `uvm_error (get_type_name(), $sformatf ("arregion count comparisions are failed"));
     end
 
-    if ((byte_data_cmp_verified_arqos_count == 0) && (byte_data_cmp_failed_arqos_count == 0)) begin
+    if (!axi4_env_cfg_h.axqos_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_arqos_count == 0) && (byte_data_cmp_failed_arqos_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("arqos count comparisions - no transactions processed (likely all decode errors)"),UVM_LOW);
     end
     else if ((byte_data_cmp_verified_arqos_count != 0) && (byte_data_cmp_failed_arqos_count == 0)) begin
@@ -2176,7 +2245,11 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
     //-------------------------------------------------------
     // Read_Data_Channel comparision
     //-------------------------------------------------------
-    if ((byte_data_cmp_verified_rid_count == 0) && (byte_data_cmp_failed_rid_count == 0)) begin
+    if (!axi4_env_cfg_h.axid_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_rid_count == 0) && (byte_data_cmp_failed_rid_count == 0)) begin
 	    `uvm_info (get_type_name(), $sformatf ("rid count comparisions - no transactions processed (likely all decode errors)"),UVM_LOW);
     end
     else if ((byte_data_cmp_verified_rid_count != 0) && (byte_data_cmp_failed_rid_count == 0)) begin
@@ -3384,6 +3457,40 @@ function void axi4_scoreboard::sb_pair_key_report();
     `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_aruser_id_mask='h%0h is set but no read ever carried its own master port in those ARUSER bits (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
                                                axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_shape_only_cnt[1]))
 endfunction : sb_pair_key_report
+
+//--------------------------------------------------------------------------------------------
+// Function: sb_check_ledger_report
+// Says, in the log of every run, which master-vs-slave field checks are
+// switched OFF by a passthrough knob and how many comparisons were therefore
+// NOT performed -- one SB_CHECK_LEDGER line per disabled field plus one
+// summary line. Before this a disabled check fell into the MATCHED branch and
+// was counted as verified, so "0 errors" could not be told apart from "never
+// looked". Informational only: disabling a check is a declared test choice,
+// not a failure.
+//--------------------------------------------------------------------------------------------
+function void axi4_scoreboard::sb_check_ledger_report();
+  string disabled = "";
+  string active   = "";
+  struct { string f; string knob; bit on; int skipped; int verified; } row[$];
+  row.push_back('{"awid",     "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_awid_count,     byte_data_cmp_verified_awid_count});
+  row.push_back('{"bid",      "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_bid_count,      byte_data_cmp_verified_bid_count});
+  row.push_back('{"arid",     "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_arid_count,     byte_data_cmp_verified_arid_count});
+  row.push_back('{"rid",      "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_rid_count,      byte_data_cmp_verified_rid_count});
+  row.push_back('{"arqos",    "axqos_passthrough_chk_cfg",    axi4_env_cfg_h.axqos_passthrough_chk_cfg,    sb_skipped_arqos_count,    byte_data_cmp_verified_arqos_count});
+  row.push_back('{"arregion", "axregion_passthrough_chk_cfg", axi4_env_cfg_h.axregion_passthrough_chk_cfg, sb_skipped_arregion_count, byte_data_cmp_verified_arregion_count});
+  row.push_back('{"awuser",   "axuser_passthrough_chk_cfg",   axi4_env_cfg_h.axuser_passthrough_chk_cfg,   sb_skipped_awuser_count,   byte_data_cmp_verified_awuser_count});
+  row.push_back('{"aruser",   "axuser_passthrough_chk_cfg",   axi4_env_cfg_h.axuser_passthrough_chk_cfg,   sb_skipped_aruser_count,   byte_data_cmp_verified_aruser_count});
+  foreach(row[i]) begin
+    if(!row[i].on) begin
+      `uvm_info("SB_CHECK_LEDGER", $sformatf("%s: DISABLED by %s=0 - %0d comparisons NOT performed",
+                                             row[i].f, row[i].knob, row[i].skipped), UVM_LOW)
+      disabled = {disabled, (disabled == "") ? "" : ",", row[i].f};
+    end
+    else
+      active = {active, (active == "") ? "" : ",", $sformatf("%s(verified=%0d)", row[i].f, row[i].verified)};
+  end
+  `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s}", disabled, active), UVM_LOW)
+endfunction : sb_check_ledger_report
 
 //--------------------------------------------------------------------------------------------
 // Function: sb_chan_name
