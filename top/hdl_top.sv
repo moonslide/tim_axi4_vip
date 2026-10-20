@@ -739,6 +739,26 @@ module hdl_top;
       // VALID/READY input poisons the fabric arbiters and no egress request is ever
       // issued. Force X to 0 so the fabric only ever sees a clean handshake.
       assign nic_m_wvalid[jn] = (master_if_gen[jn].master_intf.wvalid === 1'b1);
+
+      // Fabric ingress AxID is AXI_VID_WIDTH bits (delivered IP, VIDWidth). AXI_ID_WIDTH=8 on
+      // Track-B is for the EGRESS/subordinate side only. A wider manager ID would be silently
+      // truncated by the awid/arid [3:0] assigns above and its BID/RID would come back as the
+      // low bits only, which the master BFM cannot pair (bid==awid) -> hang or cross-pairing.
+      // Fail at the source.
+      always @(posedge master_if_gen[jn].master_intf.aclk) begin
+        if (master_if_gen[jn].master_intf.awvalid === 1'b1 &&
+            (master_if_gen[jn].master_intf.awid >> `AXI_VID_WIDTH) != 0)
+          `uvm_fatal("IDW_INGRESS_TRUNC", $sformatf(
+            "master %0d AWID 0x%0h exceeds the fabric ingress AxID width (%0d bits): the fabric would see 0x%0h. Track-B managers may use AxID 0..%0d only (delivered IP limit)",
+            jn, master_if_gen[jn].master_intf.awid, `AXI_VID_WIDTH,
+            master_if_gen[jn].master_intf.awid[`AXI_VID_WIDTH-1:0], (1 << `AXI_VID_WIDTH) - 1))
+        if (master_if_gen[jn].master_intf.arvalid === 1'b1 &&
+            (master_if_gen[jn].master_intf.arid >> `AXI_VID_WIDTH) != 0)
+          `uvm_fatal("IDW_INGRESS_TRUNC", $sformatf(
+            "master %0d ARID 0x%0h exceeds the fabric ingress AxID width (%0d bits): the fabric would see 0x%0h. Track-B managers may use AxID 0..%0d only (delivered IP limit)",
+            jn, master_if_gen[jn].master_intf.arid, `AXI_VID_WIDTH,
+            master_if_gen[jn].master_intf.arid[`AXI_VID_WIDTH-1:0], (1 << `AXI_VID_WIDTH) - 1))
+      end
     end
 
     for (jn = 0; jn < `FABRIC_IP_PORTS; jn++) begin : nic_egress_connect
