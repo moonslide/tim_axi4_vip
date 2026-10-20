@@ -55,3 +55,7 @@ simv*
 CLAUDE.md
 AGENTS.md
 .mcp.json
+
+# SVWeave local state (source snapshots ~1.6 GB) and machine-specific root mappings
+.svweave/
+svweave.local.yaml
