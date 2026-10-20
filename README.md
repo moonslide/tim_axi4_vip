@@ -426,9 +426,11 @@ Commits `9dfaeac` (2026-10-14), `5e7b637` and `4b46d78` (2026-10-20).
   `user_based_qos_routing`. On the default 4-bit bus this equals `% 16`. IDs ≥ 16
   are representable only where the whole ID path is wide — not in the Track-B
   fabric IP configuration: although Track-B builds with `AXI_ID_WIDTH=8`, the
-  fabric ingress AxID is 4 bits (`top/hdl_top.sv:683` drives
-  `nic_m_awid = awid[3:0]`, `:666` likewise `nic_m_arid = arid[3:0]`, silently
-  truncating; BID/RID return zero-extended at `:697`/`:707`), and
+  fabric ingress AxID is 4 bits (`top/hdl_top.sv:694` drives
+  `nic_m_awid = awid[3:0]`, `:677` likewise `nic_m_arid = arid[3:0]`; the wire
+  is truncated, and a wider ID is now stopped by the `IDW_INGRESS_TRUNC`
+  `uvm_fatal` checker at `:748-761` instead of passing silently; BID/RID return
+  zero-extended at `:708`/`:718`), and
   `master/axi4_master_tx.sv` `awid_c1` constrains AWID to `AWID_0`..`AWID_15`.
   No tested configuration has more than 10 managers, so manager ≥ 16 behavior
   is unexercised. Found by a review of `9dfaeac`: the raw `master_id` cast
