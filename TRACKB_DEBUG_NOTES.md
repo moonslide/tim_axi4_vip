@@ -139,6 +139,32 @@ evidence about your change. Validate VIP changes with the Track-B *native*
 tests, and use the untouched-baseline-test control above before attributing any
 Track-B failure to a code change.
 
+**Update 2026-10-21 — non-native tests made to pass per test.** Since the
+2026-10-20 decision (§6 item 1), a baseline test is brought onto Track-B by
+settings inside `` `ifdef BUS_MATRIX_FABRIC_IP `` in that test only: keyed
+pairing on, AxID and ARQOS passthrough checks off, ARREGION/AxUSER checks on,
+and an AxUSER manager-identity mask where the stimulus carries one. The
+scoreboard pairing key was strengthened for this (W key = address + shape, `c18b6f3`;
+AxUSER manager-identity term, `85b851c`; both on main).
+Each run prints `SB_CHECK_LEDGER` lines naming every check that was off.
+Measured with `UVM_ERROR : 0` and `TEST RESULT: PASS` at seeds 777, 1 and one
+runner-random seed each, ENHANCED 10x10 fabric:
+
+| test | Track-B since |
+|---|---|
+| `axi4_user_based_qos_routing_test` | `dacdf09` |
+| `axi4_qos_region_routing_reset_backpressure_test` | `dacdf09` |
+| `axi4_qos_bid_queue_race_test` | `dacdf09` |
+| `axi4_user_signal_passthrough_test` | `dacdf09` |
+| `axi4_qos_basic_priority_test` | branch `exec/20261021-trackb-qos-reorder` |
+| `axi4_qos_equal_priority_fairness_test` | branch `exec/20261021-trackb-qos-reorder` |
+| `axi4_same_id_nonadjacent_reorder_test` | branch `exec/20261021-trackb-qos-reorder` (consistency check only, see the list header) |
+
+They are in `testlists/axi4_trackb_nonnative.list`. In none of them is any
+QoS behaviour verified on Track-B (the fabric has no egress QoS port), and
+AxID equality is replaced, not checked. The three tests in the table above
+this update have not been re-measured or converted.
+
 ### 4.3 The real fabric handles a 4KB-crossing burst cleanly
 
 `axi4_trackb_4k_boundary_test`, ENHANCED. Both pages inside one mapped region
@@ -242,13 +268,14 @@ the whole round had to be discarded.
 
 ## 6. Open items
 
-1. **Baseline tests fail on Track-B (§4.2).** Root cause not established. The
-   signature is scoreboard master/slave pairing, and `axi4_trackb_smoke_test`
-   already disables several 1:1 assumptions (`sb_keyed_pairing = 1`,
-   `axid/axqos/axregion/axuser` passthrough checks off) — the baseline tests do
-   not, and their addresses are not constrained to the fabric's map. Whether
-   they *should* be made to pass, or be declared out of scope for Track-B, is
-   undecided.
+1. **Baseline tests fail on Track-B (§4.2).** Decided 2026-10-20: non-native
+   tests are to be fixed to pass, one test at a time, with per-test settings
+   under `` `ifdef BUS_MATRIX_FABRIC_IP `` and a stronger scoreboard pairing key —
+   not declared out of scope, and never "fixed" only by switching checks off
+   (each run's `SB_CHECK_LEDGER` lines list what is off). Four tests pass on
+   Track-B at `dacdf09`, three more on branch `exec/20261021-trackb-qos-reorder`
+   (§4.2 update). Still open: the other baseline tests, including the three in
+   the §4.2 table, and the 4x4 fabric drop for all of them.
 2. **Crossing read times out on the direct-wiring build (§4.3)** while the real
    fabric handles it. VIP-side; not diagnosed.
 3. **No clocking blocks anywhere in the interfaces/BFMs.** Monitors read signals
