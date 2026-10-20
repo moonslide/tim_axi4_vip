@@ -568,7 +568,7 @@ module hdl_top;
   logic [`FABRIC_IP_PORTS-1:0][63:0] nic_m_araddr;
   logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_arburst;
   logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arcache;
-  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_arid;
+  logic [`FABRIC_IP_PORTS-1:0][`AXI_VID_WIDTH-1:0] nic_m_arid;
   logic [`FABRIC_IP_PORTS-1:0][7:0] nic_m_arlen;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_arlock;
   logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_arprot;
@@ -581,7 +581,7 @@ module hdl_top;
   logic [`FABRIC_IP_PORTS-1:0][63:0] nic_m_awaddr;
   logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_awburst;
   logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awcache;
-  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_awid;
+  logic [`FABRIC_IP_PORTS-1:0][`AXI_VID_WIDTH-1:0] nic_m_awid;
   logic [`FABRIC_IP_PORTS-1:0][7:0] nic_m_awlen;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_awlock;
   logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_awprot;
@@ -591,13 +591,13 @@ module hdl_top;
   logic [`FABRIC_IP_PORTS-1:0][2:0] nic_m_awsize;
   logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_awuser;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_awvalid;
-  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_bid;
+  logic [`FABRIC_IP_PORTS-1:0][`AXI_VID_WIDTH-1:0] nic_m_bid;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_bready;
   logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_bresp;
   logic [`FABRIC_IP_PORTS-1:0][15:0] nic_m_buser;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_bvalid;
   logic [`FABRIC_IP_PORTS-1:0][255:0] nic_m_rdata;
-  logic [`FABRIC_IP_PORTS-1:0][3:0] nic_m_rid;
+  logic [`FABRIC_IP_PORTS-1:0][`AXI_VID_WIDTH-1:0] nic_m_rid;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_rlast;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_rready;
   logic [`FABRIC_IP_PORTS-1:0][1:0] nic_m_rresp;
@@ -611,13 +611,19 @@ module hdl_top;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_wvalid;
 
   // AXI_VID_WIDTH (include/axi4_bus_config.svh) is the fabric's per-ingress AxID
-  // width (the delivered IP's VIDWidth); the IDW_INGRESS_TRUNC checker below
-  // relies on it. Catch the define and the actual ingress wiring drifting apart.
+  // width (the delivered IP's VIDWidth); the nic_m_{aw,ar,b,r}id vectors, the
+  // ingress truncation / BID-RID zero-extension below and the IDW_INGRESS_TRUNC
+  // checker all follow it. The one thing that does NOT follow it is the wrapper
+  // (top/axi4_fabric_ip_wrapper*.sv: m_{aw,ar,b,r}id are fixed [3:0], matching
+  // the generated IP's ports), so the define is checked against the wrapper's
+  // own port widths -- an independent source, not hdl_top against itself.
   // $fatal, not `uvm_fatal: this runs at time 0, before UVM has started.
   initial begin
-    if ($bits(nic_m_awid[0]) != `AXI_VID_WIDTH || $bits(nic_m_arid[0]) != `AXI_VID_WIDTH) begin
-      $fatal(1, "AXI_VID_WIDTH=%0d but the fabric ingress AxID is wired AWID %0d / ARID %0d bits wide -- they must match (include/axi4_bus_config.svh)",
-             `AXI_VID_WIDTH, $bits(nic_m_awid[0]), $bits(nic_m_arid[0]));
+    if ($bits(u_fabric_ip.m_awid[0]) != `AXI_VID_WIDTH || $bits(u_fabric_ip.m_arid[0]) != `AXI_VID_WIDTH ||
+        $bits(u_fabric_ip.m_bid[0])  != `AXI_VID_WIDTH || $bits(u_fabric_ip.m_rid[0])  != `AXI_VID_WIDTH) begin
+      $fatal(1, "AXI_VID_WIDTH=%0d but the fabric wrapper's ingress ID ports are AWID %0d / ARID %0d / BID %0d / RID %0d bits wide -- they must match (include/axi4_bus_config.svh, top/axi4_fabric_ip_wrapper*.sv)",
+             `AXI_VID_WIDTH, $bits(u_fabric_ip.m_awid[0]), $bits(u_fabric_ip.m_arid[0]),
+             $bits(u_fabric_ip.m_bid[0]), $bits(u_fabric_ip.m_rid[0]));
     end
   end
 
@@ -674,7 +680,7 @@ module hdl_top;
       assign nic_m_araddr[jn] = master_if_gen[jn].master_intf.araddr;
       assign nic_m_arburst[jn] = master_if_gen[jn].master_intf.arburst;
       assign nic_m_arcache[jn] = master_if_gen[jn].master_intf.arcache;
-      assign nic_m_arid[jn] = master_if_gen[jn].master_intf.arid[3:0]; // fabric ingress AxID is 4b (VIDWidth)
+      assign nic_m_arid[jn] = master_if_gen[jn].master_intf.arid[`AXI_VID_WIDTH-1:0]; // fabric ingress AxID is AXI_VID_WIDTH bits (VIDWidth)
       assign nic_m_arlen[jn] = master_if_gen[jn].master_intf.arlen;
       assign nic_m_arlock[jn] = master_if_gen[jn].master_intf.arlock[0];   // VIP awlock/arlock is AXI3-style [1:0]
       assign nic_m_arprot[jn] = master_if_gen[jn].master_intf.arprot;
@@ -691,7 +697,7 @@ module hdl_top;
       assign nic_m_awaddr[jn] = master_if_gen[jn].master_intf.awaddr;
       assign nic_m_awburst[jn] = master_if_gen[jn].master_intf.awburst;
       assign nic_m_awcache[jn] = master_if_gen[jn].master_intf.awcache;
-      assign nic_m_awid[jn] = master_if_gen[jn].master_intf.awid[3:0]; // fabric ingress AxID is 4b (VIDWidth)
+      assign nic_m_awid[jn] = master_if_gen[jn].master_intf.awid[`AXI_VID_WIDTH-1:0]; // fabric ingress AxID is AXI_VID_WIDTH bits (VIDWidth)
       assign nic_m_awlen[jn] = master_if_gen[jn].master_intf.awlen;
       assign nic_m_awlock[jn] = master_if_gen[jn].master_intf.awlock[0];   // VIP awlock/arlock is AXI3-style [1:0]
       assign nic_m_awprot[jn] = master_if_gen[jn].master_intf.awprot;
@@ -705,7 +711,7 @@ module hdl_top;
       // VALID/READY input poisons the fabric arbiters and no egress request is ever
       // issued. Force X to 0 so the fabric only ever sees a clean handshake.
       assign nic_m_awvalid[jn] = (master_if_gen[jn].master_intf.awvalid === 1'b1);
-      assign master_if_gen[jn].master_intf.bid = {{(`AXI_ID_WIDTH-4){1'b0}}, nic_m_bid[jn]};
+      assign master_if_gen[jn].master_intf.bid = {{(`AXI_ID_WIDTH-`AXI_VID_WIDTH){1'b0}}, nic_m_bid[jn]};
       // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
       // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
       // VALID/READY input poisons the fabric arbiters and no egress request is ever
@@ -715,7 +721,7 @@ module hdl_top;
       assign master_if_gen[jn].master_intf.buser = nic_m_buser[jn];
       assign master_if_gen[jn].master_intf.bvalid = nic_m_bvalid[jn];
       assign master_if_gen[jn].master_intf.rdata = nic_m_rdata[jn];
-      assign master_if_gen[jn].master_intf.rid = {{(`AXI_ID_WIDTH-4){1'b0}}, nic_m_rid[jn]};
+      assign master_if_gen[jn].master_intf.rid = {{(`AXI_ID_WIDTH-`AXI_VID_WIDTH){1'b0}}, nic_m_rid[jn]};
       assign master_if_gen[jn].master_intf.rlast = nic_m_rlast[jn];
       // X-safe: an uninitialised VIP master interface drives X, and the VIP's own
       // slave BFM tolerates that (it waits with `=== 0`). Real RTL does not: X on a
@@ -742,7 +748,7 @@ module hdl_top;
 
       // Fabric ingress AxID is AXI_VID_WIDTH bits (delivered IP, VIDWidth). AXI_ID_WIDTH=8 on
       // Track-B is for the EGRESS/subordinate side only. A wider manager ID would be silently
-      // truncated by the awid/arid [3:0] assigns above and its BID/RID would come back as the
+      // truncated by the awid/arid [`AXI_VID_WIDTH-1:0] assigns above and its BID/RID would come back as the
       // low bits only, which the master BFM cannot pair (bid==awid) -> hang or cross-pairing.
       // Fail at the source.
       always @(posedge master_if_gen[jn].master_intf.aclk) begin
