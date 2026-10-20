@@ -47,6 +47,19 @@ class axi4_qos_region_routing_reset_backpressure_test extends axi4_base_test;
       axi4_env_cfg_h.no_of_slaves = override_slaves;
     end
     
+`ifdef BUS_MATRIX_FABRIC_IP
+    // Track-B (commercial fabric IP in the path). Ledger: see
+    // .claude/docs/error-records/20261020-trackb-user-qos-routing-sb-pairing-proposal.md §3
+    axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+    axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+    axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // EXPECTED DIFFERENCE: fabric has no egress QoS ports (hdl_top ties 0)
+    axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // measured forwarded by this fabric
+    axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+    axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // stimulus carries no manager identity in AWUSER
+    axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // stimulus carries no manager identity in ARUSER
+    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) axqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) axregion=ON axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0", UVM_LOW)
+`endif
+
     `uvm_info(get_type_name(), "QoS region routing reset backpressure test build phase", UVM_LOW)
     `uvm_info(get_type_name(), $sformatf("Configured with Masters: %0d, Slaves: %0d", 
               axi4_env_cfg_h.no_of_masters, axi4_env_cfg_h.no_of_slaves), UVM_LOW)
