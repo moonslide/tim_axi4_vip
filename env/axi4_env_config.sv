@@ -151,7 +151,9 @@ class axi4_env_config extends uvm_object;
   //The scoreboard reports, per AW/AR item, whether its tag was private to its
   //own master port (id_keyed: the term really separated that manager) or
   //shared with other ports (shape_only), and raises SB_PAIR_KEY_UNUSED if a
-  //mask is set but no item ever carried a port-private tag.
+  //mask is set, two or more ports issued items, and no item ever carried a
+  //port-private tag. With a single issuing port the term is reported NOT
+  //EXERCISED: nothing to separate, no evidence either way, no error.
   //Why AxUSER: it is the only field that crosses the fabric unchanged on both
   //sides AND can carry identity -- egress AxID is re-encoded by the fabric and
   //cannot be mapped back to a manager, and QoS is not forwarded.

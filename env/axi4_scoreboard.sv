@@ -612,6 +612,10 @@ class axi4_scoreboard extends uvm_scoreboard;
   //                                             several ports (e.g. all leave
   //                                             AxUSER = 0); for those the key
   //                                             degenerates to address/shape
+  //                                single_port = items on a channel where
+  //                                             fewer than two ports issued
+  //                                             anything: nothing to separate,
+  //                                             so NOT counted as evidence
   //                              The tag VALUE is never compared with the port
   //                              number: any stable per-manager tag counts.
   //  sb_pair_ambiguous_cnt[ch]   pairings where the pool held ANOTHER item that
@@ -3441,34 +3445,53 @@ endfunction : sb_pair_note_identity
 //--------------------------------------------------------------------------------------------
 // Function: sb_pair_key_report
 // One SB_PAIR_KEY line whenever keyed pairing is on, so every keyed run states
-// which key it really used. A declared identity mask under which NO item ever
-// carried a tag private to its own master port means the identity term never
-// separated any manager -- it was nominal -> UVM_ERROR.
+// which key it really used and whether the identity term was exercised. A
+// declared identity mask on a channel where two or more ports issued items but
+// NO item carried a tag private to its own port means the identity term never
+// separated any manager -- it was nominal -> UVM_ERROR. A channel with a single
+// issuing port is reported as NOT EXERCISED (no error, no evidence).
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::sb_pair_key_report();
-  int sb_pair_id_keyed_cnt[2];
-  int sb_pair_shape_only_cnt[2];
-  int n;
+  int    sb_pair_id_keyed_cnt[2];
+  int    sb_pair_shape_only_cnt[2];
+  int    sb_pair_single_port_cnt[2];
+  int    ports_seen[2][int];
+  int    n;
+  string verdict[2];
+  string chn[2] = '{"AW", "AR"};
+  bit [63:0] mask[2];
   if(!axi4_env_cfg_h.sb_keyed_pairing) return;
+  mask[0] = axi4_env_cfg_h.sb_pair_awuser_id_mask;
+  mask[1] = axi4_env_cfg_h.sb_pair_aruser_id_mask;
   for(int r = 0; r < 2; r++) begin
+    foreach(sb_pair_tag_items[r][tag])
+      foreach(sb_pair_tag_items[r][tag][port]) ports_seen[r][port] = 1;
     foreach(sb_pair_tag_items[r][tag]) begin
       n = 0;
       foreach(sb_pair_tag_items[r][tag][port]) n += sb_pair_tag_items[r][tag][port];
-      if(sb_pair_tag_items[r][tag].num() == 1) sb_pair_id_keyed_cnt[r]   += n;
-      else                                     sb_pair_shape_only_cnt[r] += n;
+      // With fewer than two issuing ports there was nothing to separate: a
+      // lone port's tag is trivially "private", which proves nothing.
+      if(ports_seen[r].num() < 2)                   sb_pair_single_port_cnt[r] += n;
+      else if(sb_pair_tag_items[r][tag].num() == 1) sb_pair_id_keyed_cnt[r]    += n;
+      else                                          sb_pair_shape_only_cnt[r]  += n;
     end
+    if(mask[r] == '0)                 verdict[r] = "off";
+    else if(ports_seen[r].num() < 2)  verdict[r] = "NOT EXERCISED (fewer than 2 issuing ports)";
+    else if(sb_pair_id_keyed_cnt[r])  verdict[r] = "exercised";
+    else                              verdict[r] = "UNUSED";
   end
-  `uvm_info("SB_PAIR_KEY", $sformatf("AW: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AW/W/B)=%0d/%0d/%0d | AR: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AR/R)=%0d/%0d",
-                                     axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_id_keyed_cnt[0], sb_pair_shape_only_cnt[0],
+  `uvm_info("SB_PAIR_KEY", $sformatf("AW: mask='h%0h ports=%0d id_keyed=%0d shape_only=%0d single_port=%0d identity=%s ambiguous(AW/W/B)=%0d/%0d/%0d | AR: mask='h%0h ports=%0d id_keyed=%0d shape_only=%0d single_port=%0d identity=%s ambiguous(AR/R)=%0d/%0d",
+                                     mask[0], ports_seen[0].num(), sb_pair_id_keyed_cnt[0], sb_pair_shape_only_cnt[0], sb_pair_single_port_cnt[0], verdict[0],
                                      sb_pair_ambiguous_cnt[SB_CH_AW], sb_pair_ambiguous_cnt[SB_CH_W], sb_pair_ambiguous_cnt[SB_CH_B],
-                                     axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_id_keyed_cnt[1], sb_pair_shape_only_cnt[1],
+                                     mask[1], ports_seen[1].num(), sb_pair_id_keyed_cnt[1], sb_pair_shape_only_cnt[1], sb_pair_single_port_cnt[1], verdict[1],
                                      sb_pair_ambiguous_cnt[SB_CH_AR], sb_pair_ambiguous_cnt[SB_CH_R]), UVM_LOW)
-  if(axi4_env_cfg_h.sb_pair_awuser_id_mask != '0 && sb_pair_id_keyed_cnt[0] == 0)
-    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_awuser_id_mask='h%0h is set but no write ever carried a tag in those AWUSER bits that is private to its master port (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
-                                               axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_shape_only_cnt[0]))
-  if(axi4_env_cfg_h.sb_pair_aruser_id_mask != '0 && sb_pair_id_keyed_cnt[1] == 0)
-    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_aruser_id_mask='h%0h is set but no read ever carried a tag in those ARUSER bits that is private to its master port (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
-                                               axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_shape_only_cnt[1]))
+  // Error only where the identity term HAD something to separate (two or more
+  // issuing ports) and never did. A single-port channel is reported above as
+  // NOT EXERCISED -- stated, not counted as evidence, not an error.
+  for(int r = 0; r < 2; r++)
+    if(verdict[r] == "UNUSED")
+      `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("%s identity mask='h%0h is set and %0d master ports issued items, but no item carried a tag private to its own port (shape_only=%0d) - the identity term never separated any manager; fix the test's mask",
+                                                 chn[r], mask[r], ports_seen[r].num(), sb_pair_shape_only_cnt[r]))
 endfunction : sb_pair_key_report
 
 //--------------------------------------------------------------------------------------------
