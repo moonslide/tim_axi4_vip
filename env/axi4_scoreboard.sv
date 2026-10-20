@@ -3457,24 +3457,38 @@ function void axi4_scoreboard::sb_pair_key_report();
   int    sb_pair_single_port_cnt[2];
   int    ports_seen[2][int];
   int    n;
+  longint unsigned tag;
+  int    port;
   string verdict[2];
   string chn[2] = '{"AW", "AR"};
   bit [63:0] mask[2];
   if(!axi4_env_cfg_h.sb_keyed_pairing) return;
   mask[0] = axi4_env_cfg_h.sb_pair_awuser_id_mask;
   mask[1] = axi4_env_cfg_h.sb_pair_aruser_id_mask;
+  // Explicit first()/next() walks, NOT foreach(sb_pair_tag_items[r][tag]):
+  // identifiers inside foreach brackets are new loop variables (IEEE 1800
+  // 12.7.3), so that form may iterate BOTH channels under every r and sum
+  // or double the counts on a strict simulator. Here r is only ever the
+  // outer loop's channel index.
   for(int r = 0; r < 2; r++) begin
-    foreach(sb_pair_tag_items[r][tag])
-      foreach(sb_pair_tag_items[r][tag][port]) ports_seen[r][port] = 1;
-    foreach(sb_pair_tag_items[r][tag]) begin
+    // Pass 1: every port that issued on this channel.
+    if(sb_pair_tag_items[r].first(tag)) do begin
+      if(sb_pair_tag_items[r][tag].first(port)) do
+        ports_seen[r][port] = 1;
+      while(sb_pair_tag_items[r][tag].next(port));
+    end while(sb_pair_tag_items[r].next(tag));
+    // Pass 2: classify each tag's items (needs the complete port set).
+    if(sb_pair_tag_items[r].first(tag)) do begin
       n = 0;
-      foreach(sb_pair_tag_items[r][tag][port]) n += sb_pair_tag_items[r][tag][port];
+      if(sb_pair_tag_items[r][tag].first(port)) do
+        n += sb_pair_tag_items[r][tag][port];
+      while(sb_pair_tag_items[r][tag].next(port));
       // With fewer than two issuing ports there was nothing to separate: a
       // lone port's tag is trivially "private", which proves nothing.
       if(ports_seen[r].num() < 2)                   sb_pair_single_port_cnt[r] += n;
       else if(sb_pair_tag_items[r][tag].num() == 1) sb_pair_id_keyed_cnt[r]    += n;
       else                                          sb_pair_shape_only_cnt[r]  += n;
-    end
+    end while(sb_pair_tag_items[r].next(tag));
     if(mask[r] == '0)                 verdict[r] = "off";
     else if(ports_seen[r].num() < 2)  verdict[r] = "NOT EXERCISED (fewer than 2 issuing ports)";
     else if(sb_pair_id_keyed_cnt[r])  verdict[r] = "exercised";
