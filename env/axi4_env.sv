@@ -125,6 +125,28 @@ function void axi4_env::build_phase(uvm_phase phase);
     end
   end
 
+  //-------------------------------------------------------
+  // Command-line override for the keyed-pairing manager-identity masks
+  // (axi4_env_config::sb_pair_awuser_id_mask / sb_pair_aruser_id_mask).
+  // Normally set per test; the plusargs exist so the identity key can be
+  // exercised with and without the mask on the same build. Absent by default.
+  //   +SB_PAIR_AWUSER_ID_MASK=<hex>   +SB_PAIR_ARUSER_ID_MASK=<hex>
+  //-------------------------------------------------------
+  begin
+    bit [`AXI_AWUSER_WIDTH-1:0] sb_pair_awuser_mask_override;
+    bit [`AXI_ARUSER_WIDTH-1:0] sb_pair_aruser_mask_override;
+    if($value$plusargs("SB_PAIR_AWUSER_ID_MASK=%h", sb_pair_awuser_mask_override)) begin
+      `uvm_info(get_type_name(), $sformatf("+SB_PAIR_AWUSER_ID_MASK=%h overrides axi4_env_config::sb_pair_awuser_id_mask (was %h)",
+                                           sb_pair_awuser_mask_override, axi4_env_cfg_h.sb_pair_awuser_id_mask), UVM_LOW)
+      axi4_env_cfg_h.sb_pair_awuser_id_mask = sb_pair_awuser_mask_override;
+    end
+    if($value$plusargs("SB_PAIR_ARUSER_ID_MASK=%h", sb_pair_aruser_mask_override)) begin
+      `uvm_info(get_type_name(), $sformatf("+SB_PAIR_ARUSER_ID_MASK=%h overrides axi4_env_config::sb_pair_aruser_id_mask (was %h)",
+                                           sb_pair_aruser_mask_override, axi4_env_cfg_h.sb_pair_aruser_id_mask), UVM_LOW)
+      axi4_env_cfg_h.sb_pair_aruser_id_mask = sb_pair_aruser_mask_override;
+    end
+  end
+
   axi4_master_agent_cfg_h = new[axi4_env_cfg_h.no_of_masters];
   foreach(axi4_master_agent_cfg_h[i]) begin
     if(!uvm_config_db#(axi4_master_agent_config)::get(this,"",

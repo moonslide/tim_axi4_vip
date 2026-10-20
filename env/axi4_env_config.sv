@@ -139,6 +139,20 @@ class axi4_env_config extends uvm_object;
   //does not carry it.
   bit axuser_passthrough_chk_cfg = 1;
 
+  //Variable: sb_pair_awuser_id_mask / sb_pair_aruser_id_mask
+  //Manager-identity term of the keyed pairing key (only read when
+  //sb_keyed_pairing = 1). A slave-side transaction may pair with a master-side
+  //one only if their AWUSER (AW/W/B) or ARUSER (AR/R) are EQUAL under this
+  //mask. Set it to the bits where the test's stimulus places the manager
+  //identity; 0 = not used (key is the address/shape key alone).
+  //Why AxUSER: it is the only field that crosses the fabric unchanged on both
+  //sides AND can carry identity -- egress AxID is re-encoded by the fabric and
+  //cannot be mapped back to a manager, and QoS is not forwarded.
+  //Deliberately NOT rand: env_config is not randomized today, and these must
+  //never be able to perturb a solver stream.
+  bit [`AXI_AWUSER_WIDTH-1:0] sb_pair_awuser_id_mask = '0;
+  bit [`AXI_ARUSER_WIDTH-1:0] sb_pair_aruser_id_mask = '0;
+
   // Variable: bus_matrix_mode
   // Bus matrix reference model mode: BASE_BUS_MATRIX (4x4), BUS_ENHANCED_MATRIX (10x10), NONE
   // Import the enum type from bus matrix package
