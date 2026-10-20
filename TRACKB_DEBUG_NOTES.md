@@ -180,6 +180,19 @@ TRACK-B RESET TEST FAILED (UVM_ERROR 0 -> 27, UVM_FATAL 0)
 i.e. the `report_phase` verdict really does see errors raised after `run_phase`
 ended. A `run_phase` verdict cannot, and cannot see `UVM_FATAL` at all.
 
+### 4.5 Manager AxID is 0..15 at the fabric ingress (measured 2026-10-20)
+
+Both delivered fabrics have a 4-bit ingress AxID (VIDWidth 4, `AXI_VID_WIDTH`);
+`AXI_ID_WIDTH=8` (10x10) / `6` (4x4) is the egress width the slave agents must
+echo, not a manager-side width. `top/hdl_top.sv` used to drop the upper bits
+silently: a forced master-0 AWID 0x13 reached the fabric as 0x3, never paired,
+and `axi4_trackb_smoke_test` ended with `UVM_ERROR : 3` while still printing
+`TEST RESULT: PASS`. The ingress now stops such a run with
+`UVM_FATAL [IDW_INGRESS_TRUNC] master 0 AWID 0x13 ... the fabric would see 0x3`
+at the first offending AWVALID/ARVALID. No Track-B test in the tree issues an
+AxID >= 16 (24 runs identical before/after). Details: `.claude/docs/known-landmines.md`
+#59 (local institution file, not in git).
+
 ---
 
 ## 5. Iron rule 2 — the baseline regression sample
