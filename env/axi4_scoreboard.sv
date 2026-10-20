@@ -3085,14 +3085,23 @@ endtask : sb_match_slave_write_address
 
 //--------------------------------------------------------------------------------------------
 // Task: sb_match_slave_write_data
-// Write data carries the burst's address, so the same key works here.
+// THE KEY: (awaddr, awlen, awsize, awburst) -- identical to the AW key in
+// sb_match_slave_write_address above. The write-data packet is a COMBINED
+// AW+W packet on both sides, so the full shape is available here.
+// It used to be awaddr ONLY. Two in-flight writes from different managers to
+// the same address with different lengths then paired a 1-beat burst with a
+// 4-beat one (measured: Track-B axi4_user_based_qos_routing_test seed 1,
+// "Master awlen = 'h0 and Slave awlen = 'h3", wstrb 1 beat vs 4 beats).
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::sb_match_slave_write_data(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
   axi4_slave_tx cand;
   forever begin
     foreach(sb_slave_wdata_pool[i]) begin
       cand = sb_slave_wdata_pool[i];
-      if(cand.awaddr == m_tx.awaddr) begin
+      if(cand.awaddr  == m_tx.awaddr  &&
+         cand.awlen   == m_tx.awlen   &&
+         cand.awsize  == m_tx.awsize  &&
+         cand.awburst == m_tx.awburst) begin
         s_tx = cand;
         sb_slave_wdata_pool.delete(i);
         return;
