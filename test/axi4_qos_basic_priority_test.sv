@@ -221,6 +221,17 @@ function void axi4_qos_basic_priority_test::setup_axi4_slave_agent_cfg();
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
     // Enable memory mode for proper data handling
     axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].read_data_mode = SLAVE_MEM_MODE;
+`ifdef BUS_MATRIX_FABRIC_IP
+    // Track-B: read-side QoS mode OFF in the slaves; write-side QoS mode unchanged.
+    // In READ QoS mode the slave proxy holds its FIRST read until a SECOND AR has
+    // reached the same slave (slave/axi4_slave_driver_proxy.sv, `wait(qos_read_queue.size>=2)`).
+    // The fabric delivers one AR per slave in this test, so that wait never ends: no R
+    // is returned and the managers time out on arready. AXI never promises a second
+    // AR at the same subordinate.
+    // The VIP gate is left unchanged; with the fabric's QoS tied to 0 at the
+    // subordinates, read-QoS ordering has nothing to order on Track-B anyway.
+    axi4_env_cfg_h.axi4_slave_agent_cfg_h[i].qos_mode_type = ONLY_WRITE_QOS_MODE_ENABLE;
+`endif
   end
 endfunction : setup_axi4_slave_agent_cfg
 
