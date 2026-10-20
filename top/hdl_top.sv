@@ -610,6 +610,17 @@ module hdl_top;
   logic [`FABRIC_IP_PORTS-1:0][31:0] nic_m_wuser;
   logic [`FABRIC_IP_PORTS-1:0]      nic_m_wvalid;
 
+  // AXI_VID_WIDTH (include/axi4_bus_config.svh) is the fabric's per-ingress AxID
+  // width (the delivered IP's VIDWidth); the IDW_INGRESS_TRUNC checker below
+  // relies on it. Catch the define and the actual ingress wiring drifting apart.
+  // $fatal, not `uvm_fatal: this runs at time 0, before UVM has started.
+  initial begin
+    if ($bits(nic_m_awid[0]) != `AXI_VID_WIDTH || $bits(nic_m_arid[0]) != `AXI_VID_WIDTH) begin
+      $fatal(1, "AXI_VID_WIDTH=%0d but the fabric ingress AxID is wired AWID %0d / ARID %0d bits wide -- they must match (include/axi4_bus_config.svh)",
+             `AXI_VID_WIDTH, $bits(nic_m_awid[0]), $bits(nic_m_arid[0]));
+    end
+  end
+
   // ---- egress vectors: fabric AXI4_Master<N> -> VIP slave agents ----
   logic [`FABRIC_IP_PORTS-1:0][63:0] nic_s_araddr;
   logic [`FABRIC_IP_PORTS-1:0][1:0] nic_s_arburst;
