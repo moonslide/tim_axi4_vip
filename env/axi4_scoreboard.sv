@@ -238,6 +238,21 @@ class axi4_scoreboard extends uvm_scoreboard;
   // match wins, which is what AXI's same-ID ordering rule guarantees and is in
   // any case the only defensible choice when two entries are indistinguishable
   // in every field being compared.
+  //
+  // Manager identity (axi4_env_config::sb_pair_awuser_id_mask /
+  // sb_pair_aruser_id_mask). The address/shape key carries NO source identity,
+  // so two managers writing the same address with the same shape through one
+  // egress port are indistinguishable to it, and oldest-match then pairs A's
+  // master item with B's slave item (measured on Track-B: AWUSER/awcache/wdata
+  // "mismatches" that were really a swapped pair). When a test's stimulus puts
+  // the manager identity into AxUSER it declares those bits in the mask, and a
+  // candidate must then also be EQUAL to the master item under that mask.
+  // Equality on both sides (rather than "slave-side decoded id == master
+  // port") is deliberate: AxUSER crosses the fabric unchanged, so a correct
+  // pair always satisfies it, and a test may mix in sequences that leave
+  // AxUSER = 0. AxID cannot serve as the identity: the fabric re-encodes it and
+  // the egress AxID cannot be mapped back to a manager (known-landmines 27).
+  // A mask of 0 (the default) leaves the key exactly as described above.
   //-------------------------------------------------------
   axi4_slave_tx sb_slave_waddr_pool[$];
   axi4_slave_tx sb_slave_wdata_pool[$];
@@ -3061,7 +3076,8 @@ endfunction : backdoor_read_verify
 //--------------------------------------------------------------------------------------------
 // Task: sb_match_slave_write_address
 // Returns the oldest pooled slave write-address transaction whose address key
-// matches m_tx, pulling more from the analysis fifo until one turns up.
+// (and AWUSER under sb_pair_awuser_id_mask) matches m_tx, pulling more from
+// the analysis fifo until one turns up.
 //--------------------------------------------------------------------------------------------
 task axi4_scoreboard::sb_match_slave_write_address(input axi4_master_tx m_tx, output axi4_slave_tx s_tx);
   axi4_slave_tx cand;
@@ -3072,7 +3088,8 @@ task axi4_scoreboard::sb_match_slave_write_address(input axi4_master_tx m_tx, ou
       if(cand.awaddr  == m_tx.awaddr  &&
          cand.awlen   == m_tx.awlen   &&
          cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst) begin
+         cand.awburst == m_tx.awburst &&
+         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
         s_tx = cand;
         sb_slave_waddr_pool.delete(i);
         return;
@@ -3085,7 +3102,8 @@ endtask : sb_match_slave_write_address
 
 //--------------------------------------------------------------------------------------------
 // Task: sb_match_slave_write_data
-// THE KEY: (awaddr, awlen, awsize, awburst) -- identical to the AW key in
+// THE KEY: (awaddr, awlen, awsize, awburst) plus AWUSER under
+// sb_pair_awuser_id_mask -- identical to the AW key in
 // sb_match_slave_write_address above. The write-data packet is a COMBINED
 // AW+W packet on both sides, so the full shape is available here.
 // It used to be awaddr ONLY. Two in-flight writes from different managers to
@@ -3101,7 +3119,8 @@ task axi4_scoreboard::sb_match_slave_write_data(input axi4_master_tx m_tx, outpu
       if(cand.awaddr  == m_tx.awaddr  &&
          cand.awlen   == m_tx.awlen   &&
          cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst) begin
+         cand.awburst == m_tx.awburst &&
+         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
         s_tx = cand;
         sb_slave_wdata_pool.delete(i);
         return;
@@ -3123,7 +3142,8 @@ task axi4_scoreboard::sb_match_slave_read_address(input axi4_master_tx m_tx, out
       if(cand.araddr  == m_tx.araddr  &&
          cand.arlen   == m_tx.arlen   &&
          cand.arsize  == m_tx.arsize  &&
-         cand.arburst == m_tx.arburst) begin
+         cand.arburst == m_tx.arburst &&
+         (((cand.aruser ^ m_tx.aruser) & axi4_env_cfg_h.sb_pair_aruser_id_mask) == '0)) begin
         s_tx = cand;
         sb_slave_raddr_pool.delete(i);
         return;
@@ -3137,8 +3157,9 @@ endtask : sb_match_slave_read_address
 //--------------------------------------------------------------------------------------------
 // Task: sb_match_slave_write_response          (FINDING 5 -- B is no longer positional)
 //
-// THE KEY: (awaddr, awlen, awsize, awburst) -- the same key the AW channel
-// uses -- taken oldest-match-first.
+// THE KEY: (awaddr, awlen, awsize, awburst) plus AWUSER under
+// sb_pair_awuser_id_mask -- the same key the AW channel uses -- taken
+// oldest-match-first.
 //
 // Why that key and not something more obvious:
 //  * NOT arrival order. Both fifos are fed by EVERY agent (env/axi4_env.sv
@@ -3169,10 +3190,15 @@ endtask : sb_match_slave_read_address
 // of the comparison even though B itself carries no address.
 //
 // Ambiguity policy: two in-flight writes from different managers to the SAME
-// address with the same shape are indistinguishable in every field this
-// scoreboard compares, so oldest-match-wins is both AXI's same-id ordering
-// rule and the only defensible choice. If the two are genuinely swapped the
-// comparison result is identical either way.
+// address with the same shape are NOT in general indistinguishable -- they
+// can differ in AWUSER, AWCACHE, AWPROT, write data, BRESP. With the shape key
+// alone oldest-match-wins then pairs them crosswise and reports those fields
+// as mismatches (an earlier version of this comment claimed the comparison
+// result was identical either way; the Track-B user-based QoS routing test is
+// a measured counter-example). The cure is the manager-identity term of the
+// key (sb_pair_awuser_id_mask, see the keyed-pairing block at the top of the
+// class). Without it, oldest-match is only correct when the two writes really
+// are identical in every compared field.
 //
 // Blocking policy: if no match ever arrives this task stays parked in the
 // get() below. That is deliberate -- the parked item is recorded in
@@ -3187,7 +3213,8 @@ task axi4_scoreboard::sb_match_slave_write_response(input axi4_master_tx m_tx, o
       if(cand.awaddr  == m_tx.awaddr  &&
          cand.awlen   == m_tx.awlen   &&
          cand.awsize  == m_tx.awsize  &&
-         cand.awburst == m_tx.awburst) begin
+         cand.awburst == m_tx.awburst &&
+         (((cand.awuser ^ m_tx.awuser) & axi4_env_cfg_h.sb_pair_awuser_id_mask) == '0)) begin
         s_tx = cand;
         sb_slave_bresp_pool.delete(i);
         return;
@@ -3201,7 +3228,8 @@ endtask : sb_match_slave_write_response
 //--------------------------------------------------------------------------------------------
 // Task: sb_match_slave_read_data               (FINDING 5 -- R is no longer positional)
 //
-// THE KEY: (araddr, arlen, arsize, arburst), oldest match first -- the read
+// THE KEY: (araddr, arlen, arsize, arburst) plus ARUSER under
+// sb_pair_aruser_id_mask, oldest match first -- the read
 // mirror of sb_match_slave_write_response above; the same reasoning applies
 // verbatim (RID is remapped, sb_src_index is two namespaces, the address is
 // invariant across the interconnect).
@@ -3222,7 +3250,8 @@ task axi4_scoreboard::sb_match_slave_read_data(input axi4_master_tx m_tx, output
       if(cand.araddr  == m_tx.araddr  &&
          cand.arlen   == m_tx.arlen   &&
          cand.arsize  == m_tx.arsize  &&
-         cand.arburst == m_tx.arburst) begin
+         cand.arburst == m_tx.arburst &&
+         (((cand.aruser ^ m_tx.aruser) & axi4_env_cfg_h.sb_pair_aruser_id_mask) == '0)) begin
         s_tx = cand;
         sb_slave_rdata_pool.delete(i);
         return;
