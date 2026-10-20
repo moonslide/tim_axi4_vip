@@ -128,15 +128,21 @@ class axi4_env_config extends uvm_object;
   bit axqos_passthrough_chk_cfg = 1;
 
   //Variable: axregion_passthrough_chk_cfg
-  //1 = require slave-side AxREGION to equal the master-side value. An
-  //interconnect generates REGION from its own address decode, so set to 0
-  //with a DUT.
+  //1 = require slave-side ARREGION to equal the master-side value (AWREGION is
+  //never compared by the scoreboard). An interconnect MAY generate REGION from
+  //its own address decode; then set this to 0. The Track-B fabric IP
+  //configuration in this bench forwards it: ARREGION compared equal on every
+  //Track-B non-native run (testlists/axi4_trackb_nonnative.list, 2026-10-20/21),
+  //so those tests keep this at 1.
   bit axregion_passthrough_chk_cfg = 1;
 
   //Variable: axuser_passthrough_chk_cfg
   //1 = require slave-side AxUSER to equal the master-side value. USER
   //propagation is fabric-configuration dependent; set to 0 with a DUT that
-  //does not carry it.
+  //does not carry it. The Track-B fabric IP configuration in this bench carries
+  //AWUSER and ARUSER: compared equal on every Track-B non-native run, including
+  //the non-zero patterns of axi4_user_signal_passthrough_test and
+  //axi4_user_based_qos_routing_test (2026-10-20/21).
   bit axuser_passthrough_chk_cfg = 1;
 
   //Variable: sb_pair_awuser_id_mask / sb_pair_aruser_id_mask

@@ -171,8 +171,12 @@ class axi4_trackb_smoke_test extends axi4_base_test;
     //  * AxID is remapped by the fabric ({ingress-port, original-id}); what
     //    remains checkable, and now IS checked, is that each manager gets its
     //    own BID/RID back
-    //  * the generated fabric has QoS ports on the ingress side only, and
-    //    drives REGION/USER from its own decode, so those cannot pass through
+    //  * the generated fabric has QoS ports on the ingress side only, so QoS
+    //    cannot pass through
+    //  * REGION and USER are switched off here too. That is this test's choice,
+    //    not a fabric limit: the fabric forwards ARREGION, AWUSER and ARUSER
+    //    (compared equal on the Track-B non-native tests, 2026-10-20/21), and
+    //    those tests keep both checks on. AWREGION is never compared.
     axi4_env_cfg_h.sb_keyed_pairing             = 1;
     axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;
     axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;
