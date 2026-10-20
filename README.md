@@ -34,6 +34,7 @@ optional commercial-fabric DUT path.
 - [Checking and coverage](#checking-and-coverage)
 - [Bus-matrix reference modes](#bus-matrix-reference-modes)
 - [Feature status](#feature-status)
+- [Recent verification updates (2026-10-20)](#recent-verification-updates-2026-10-20)
 - [Recent verification updates (2026-09-18)](#recent-verification-updates-2026-09-18)
 - [Configuration](#configuration)
 - [Prerequisites](#prerequisites)
@@ -395,6 +396,65 @@ protocol sign-off or current regression closure.
 | Reset/clock | Global and per-interface reset/clock-control machinery | Reset/frequency checkers are optional and default off |
 | X/error injection | Directed stimulus, selected assertion paths, coverage | Expected-error tests require careful verdict interpretation |
 | Track-B | Project wrappers for local commercial 4×4 and 10×10 fabrics | Licensed RTL is local-only; standard regression runner is baseline-only |
+
+## Recent verification updates (2026-10-20)
+
+### ID enum assignment and QoS-sequence ID mapping
+
+Commits `9dfaeac` (2026-10-14), `5e7b637` and `4b46d78` (2026-10-20).
+
+- **String-to-enum ID assignment (`9dfaeac`).** Five sites assigned a string
+  such as `$sformatf("ARID_%0d", id)` to an ID enum (`awid_e`/`arid_e`/`bid_e`/`rid_e`
+  in `pkg/axi4_globals_pkg.sv`: `bit [15:0]`, named range over `` `AXI_ID_LAST ``):
+  `axi4_master_qos_priority_read_seq.sv`, `axi4_master_qos_priority_write_seq.sv`,
+  `axi4_master_qos_user_boost_write_seq.sv` (`seq/master_sequences/`) and the
+  BID and RID sites of `seq/slave_sequences/axi4_slave_immediate_response_seq.sv`.
+  VCS accepts this silently and packs the ASCII bytes into the vector. On the
+  4-bit baseline bus IDs 0–9 happened to come out right and 10–15 wrong; on the
+  8-bit Track-B bus (`AXI_ID_WIDTH=8`) every ID was wrong — manager 0 drove
+  `AWID` 48 (`0x30`) instead of 0. Replaced with typed casts (`awid_e'(..)` etc.).
+  Evidence: Track-B `ENHANCED` `axi4_qos_region_routing_reset_backpressure_test`,
+  manager 0 `AWID` 48 → 0, `UVM_ERROR` 11 → 5; the remaining 5 are the known open
+  Track-B scoreboard-pairing item (`TRACKB_DEBUG_NOTES.md`).
+- **`x_inject_mode` declaration order (`9dfaeac`).** Moved above its first use in
+  `assertions/master_assertions.sv`. VCS tolerates the forward reference inside a
+  property, other tools do not; a repro confirmed the move is behavior-neutral in VCS.
+- **QoS manager ID mapping (`5e7b637`, `4b46d78`).** Manager QoS sequences now set
+  the ID as `` master_id % (`AXI_ID_LAST + 1) `` — `qos_priority_read`,
+  `qos_priority_write`, `qos_user_boost_write`, `qos_bid_race_write`,
+  `qos_write_only`, `qos_read_only`, and both AW and AR in
+  `user_based_qos_routing`. Identical to `% 16` on the default 4-bit bus; on a
+  wider bus (Track-B 8-bit) managers ≥ 16 keep unique IDs, and only a bus too
+  narrow to represent them wraps (a physical limit; the scoreboard infers the
+  manager from the ID number modulo). Found by a review of `9dfaeac`: the raw
+  `master_id` cast bypassed ID mapping for `BUS_MATRIX_64X64`.
+
+Verification performed for these commits (reported by the implementing session;
+not re-run for this README update):
+
+| Check | Result |
+|---|---|
+| Compile: baseline, Track-B, `BUS_MATRIX_64X64` | Clean. 64×64 is compile-only — not functionally simulated |
+| All `qos` regression entries, `NONE`/`4x4`/`ENHANCED` (31 entries), requiring both `UVM_ERROR : 0` and `TEST RESULT: PASS` | 31/31 pass |
+| Iron-rule-2 sample (28 tests) + OOO family | 48/49; sole failure `axi4_write_heavy_midburst_reset_rw_contention_test` (`ENHANCED`) fails identically on the pre-change HEAD — pre-existing |
+| `run_fabric_smoke.sh` | 3/3 |
+
+Not verified: manager index ≥ 16 behavior (no tested configuration exceeds 10
+managers); `axi4_master_qos_write_only_seq` and `axi4_master_qos_read_only_seq`
+are not used by any test and are compile-verified only.
+
+Open items:
+
+- Track-B QoS tests still end with scoreboard errors: region routing 5,
+  BID-queue race 8, user-based QoS routing 12. The 12 are under analysis; their
+  cause is not established.
+- `axi4_write_heavy_midburst_reset_rw_contention_test` `ENHANCED` failure (pre-existing, above).
+- `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
+  `% 16` on HEAD, capping those helpers at 16 IDs; a patch is in progress and
+  not yet committed.
+
+Landmine: in VCS, assigning a string (e.g. a `$sformatf` result) to an enum
+compiles and runs without any diagnostic — always use a typed cast.
 
 ## Recent verification updates (2026-09-18)
 
