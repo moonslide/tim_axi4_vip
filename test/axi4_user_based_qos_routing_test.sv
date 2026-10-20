@@ -81,7 +81,10 @@ function void axi4_user_based_qos_routing_test::build_phase(uvm_phase phase);
   axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // ARREGION only (measured forwarded by this fabric); AWREGION is never compared
   axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
   axi4_env_cfg_h.sb_pair_awuser_id_mask       = 32'h0007_8000;   // AWUSER[18:15] = master_id (axi4_master_user_based_qos_routing_seq)
-  axi4_env_cfg_h.sb_pair_aruser_id_mask       = 32'h0007_8000;   // ARUSER[18:15] = master_id (same sequence, read side)
+  // Nominal, AR never exercised: the virtual sequence starts the routing sequence on WRITE
+  // sequencers only; the only reads come from standard_read_seq_h (axi4_master_qos_priority_read_seq)
+  // on master port 0, so the AR identity term has one issuing port (SB_PAIR_KEY: NOT EXERCISED).
+  axi4_env_cfg_h.sb_pair_aruser_id_mask       = 32'h0007_8000;
   `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON awuser_id_mask=0x00078000 aruser_id_mask=0x00078000", UVM_LOW)
 `endif
 
