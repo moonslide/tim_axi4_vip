@@ -73,7 +73,7 @@ task axi4_master_qos_read_only_seq::body();
     if(!req.randomize() with {
       req.tx_type == READ;
       req.araddr == calculate_slave_address(slave_id) + (i * 'h1000) + (master_id * 'h100);
-      req.arid == arid_e'(master_id % 16);
+      req.arid == arid_e'(master_id % (`AXI_ID_LAST + 1));
       req.arlen == 0;  // Force single-beat transactions only
       req.arsize == READ_8_BYTES;
       req.arburst == READ_INCR;

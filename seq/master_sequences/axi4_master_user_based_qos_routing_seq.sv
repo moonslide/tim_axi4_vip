@@ -250,7 +250,7 @@ task axi4_master_user_based_qos_routing_seq::generate_routing_transaction(int te
     `uvm_do_with(req, {
       req.tx_type == WRITE;
       req.awaddr == base_addr + (test_idx * 'h600);
-      req.awid == awid_e'(master_id % 16);
+      req.awid == awid_e'(master_id % (`AXI_ID_LAST + 1));
       req.awlen == burst_len;
       req.awsize == WRITE_8_BYTES;
       req.awburst == WRITE_INCR;
@@ -271,7 +271,7 @@ task axi4_master_user_based_qos_routing_seq::generate_routing_transaction(int te
     `uvm_do_with(req, {
       req.tx_type == READ;
       req.araddr == base_addr + (test_idx * 'h600) + 'h7000; // Offset for reads
-      req.arid == arid_e'(master_id % 16);
+      req.arid == arid_e'(master_id % (`AXI_ID_LAST + 1));
       req.arlen == burst_len;
       req.arsize == READ_8_BYTES;
       req.arburst == READ_INCR;

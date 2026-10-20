@@ -73,7 +73,7 @@ task axi4_master_qos_write_only_seq::body();
     if(!req.randomize() with {
       req.tx_type == WRITE;
       req.awaddr == calculate_slave_address(slave_id) + (i * 'h1000) + (master_id * 'h100);
-      req.awid == awid_e'(master_id % 16);
+      req.awid == awid_e'(master_id % (`AXI_ID_LAST + 1));
       req.awlen == 0;  // Force single-beat transactions only
       req.awsize == WRITE_8_BYTES;
       req.awburst == WRITE_INCR;
