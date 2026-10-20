@@ -600,13 +600,20 @@ class axi4_scoreboard extends uvm_scoreboard;
 
   //Keyed-pairing observability (sb_keyed_pairing=1 only). Counted, never used
   //to change a pairing decision.
-  //  sb_pair_id_keyed_cnt[0/1]   AW/AR master items whose AxUSER, under the
-  //                              identity mask, decodes to their own master
-  //                              port -- i.e. the identity term really carried
-  //                              the manager identity for that item
-  //  sb_pair_shape_only_cnt[0/1] AW/AR master items where it did not (e.g. a
-  //                              sequence that leaves AxUSER = 0); for those
-  //                              the key degenerates to address/shape
+  //  sb_pair_tag_items[0/1][tag][port]  AW/AR master items, by masked
+  //                              identity tag and issuing master port. Filled
+  //                              per item, classified at end of test by
+  //                              sb_pair_key_report():
+  //                                id_keyed   = items whose tag is used by
+  //                                             exactly ONE master port, i.e.
+  //                                             the identity term really
+  //                                             separates that manager
+  //                                shape_only = items whose tag is shared by
+  //                                             several ports (e.g. all leave
+  //                                             AxUSER = 0); for those the key
+  //                                             degenerates to address/shape
+  //                              The tag VALUE is never compared with the port
+  //                              number: any stable per-manager tag counts.
   //  sb_pair_ambiguous_cnt[ch]   pairings where the pool held ANOTHER item that
   //                              also satisfied the key but differed in a
   //                              compared field: oldest-match may be crosswise
@@ -618,8 +625,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int sb_skipped_arqos_count, sb_skipped_arregion_count, sb_skipped_awuser_count, sb_skipped_aruser_count;
   extern virtual function void sb_check_ledger_report();
 
-  int sb_pair_id_keyed_cnt[2];
-  int sb_pair_shape_only_cnt[2];
+  int sb_pair_tag_items[2][longint unsigned][int];
   int sb_pair_ambiguous_cnt[5];
 
   extern virtual function bit  sb_pair_key_match(input sb_chan_e ch, input axi4_master_tx m_tx, input axi4_slave_tx cand);
@@ -3415,46 +3421,53 @@ endfunction : sb_pair_check_ambiguous
 
 //--------------------------------------------------------------------------------------------
 // Function: sb_pair_note_identity
-// For each paired AW (is_read=0) / AR (is_read=1) master item, records whether
-// the identity term of the key actually carried this manager's identity:
-// (AxUSER & mask) >> lsb(mask) == the master port that issued it. A mask that
-// is set but never decodes to the issuing port is a test misconfiguration,
-// which sb_pair_key_report() turns into an error.
+// For each paired AW (is_read=0) / AR (is_read=1) master item, records its
+// masked identity tag (AxUSER & mask) against the master port that issued it.
+// Whether the tag actually separated managers is decided at end of test by
+// sb_pair_key_report(). Deliberately NOT "tag == port number": the pairing key
+// only needs the two sides equal under the mask, so any stable per-manager
+// tag (0xA, 0xB, ...) is a valid identity.
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::sb_pair_note_identity(input bit is_read, input axi4_master_tx m_tx);
   // 64 bits: wide enough for either USER width without truncation.
   bit [63:0] mask;
   bit [63:0] user;
-  int lsb;
   mask = is_read ? axi4_env_cfg_h.sb_pair_aruser_id_mask : axi4_env_cfg_h.sb_pair_awuser_id_mask;
   user = is_read ? m_tx.aruser : m_tx.awuser;
   if(mask == '0) return;
-  lsb = 0;
-  while(!mask[lsb]) lsb++;
-  if(longint'((user & mask) >> lsb) == longint'(m_tx.sb_src_index))
-    sb_pair_id_keyed_cnt[is_read]++;
-  else
-    sb_pair_shape_only_cnt[is_read]++;
+  sb_pair_tag_items[is_read][user & mask][m_tx.sb_src_index]++;
 endfunction : sb_pair_note_identity
 
 //--------------------------------------------------------------------------------------------
 // Function: sb_pair_key_report
 // One SB_PAIR_KEY line whenever keyed pairing is on, so every keyed run states
-// which key it really used. A declared identity mask that never once decoded
-// to the issuing port means the identity term was nominal -> UVM_ERROR.
+// which key it really used. A declared identity mask under which NO item ever
+// carried a tag private to its own master port means the identity term never
+// separated any manager -- it was nominal -> UVM_ERROR.
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::sb_pair_key_report();
+  int sb_pair_id_keyed_cnt[2];
+  int sb_pair_shape_only_cnt[2];
+  int n;
   if(!axi4_env_cfg_h.sb_keyed_pairing) return;
+  for(int r = 0; r < 2; r++) begin
+    foreach(sb_pair_tag_items[r][tag]) begin
+      n = 0;
+      foreach(sb_pair_tag_items[r][tag][port]) n += sb_pair_tag_items[r][tag][port];
+      if(sb_pair_tag_items[r][tag].num() == 1) sb_pair_id_keyed_cnt[r]   += n;
+      else                                     sb_pair_shape_only_cnt[r] += n;
+    end
+  end
   `uvm_info("SB_PAIR_KEY", $sformatf("AW: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AW/W/B)=%0d/%0d/%0d | AR: mask='h%0h id_keyed=%0d shape_only=%0d ambiguous(AR/R)=%0d/%0d",
                                      axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_id_keyed_cnt[0], sb_pair_shape_only_cnt[0],
                                      sb_pair_ambiguous_cnt[SB_CH_AW], sb_pair_ambiguous_cnt[SB_CH_W], sb_pair_ambiguous_cnt[SB_CH_B],
                                      axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_id_keyed_cnt[1], sb_pair_shape_only_cnt[1],
                                      sb_pair_ambiguous_cnt[SB_CH_AR], sb_pair_ambiguous_cnt[SB_CH_R]), UVM_LOW)
   if(axi4_env_cfg_h.sb_pair_awuser_id_mask != '0 && sb_pair_id_keyed_cnt[0] == 0)
-    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_awuser_id_mask='h%0h is set but no write ever carried its own master port in those AWUSER bits (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
+    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_awuser_id_mask='h%0h is set but no write ever carried a tag in those AWUSER bits that is private to its master port (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
                                                axi4_env_cfg_h.sb_pair_awuser_id_mask, sb_pair_shape_only_cnt[0]))
   if(axi4_env_cfg_h.sb_pair_aruser_id_mask != '0 && sb_pair_id_keyed_cnt[1] == 0)
-    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_aruser_id_mask='h%0h is set but no read ever carried its own master port in those ARUSER bits (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
+    `uvm_error("SB_PAIR_KEY_UNUSED", $sformatf("sb_pair_aruser_id_mask='h%0h is set but no read ever carried a tag in those ARUSER bits that is private to its master port (shape_only=%0d) - the identity term of the key was nominal; fix the test's mask",
                                                axi4_env_cfg_h.sb_pair_aruser_id_mask, sb_pair_shape_only_cnt[1]))
 endfunction : sb_pair_key_report
 

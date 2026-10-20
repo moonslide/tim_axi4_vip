@@ -145,16 +145,13 @@ class axi4_env_config extends uvm_object;
   //one only if their AWUSER (AW/W/B) or ARUSER (AR/R) are EQUAL under this
   //mask. Set it to the bits where the test's stimulus places the manager
   //identity; 0 = not used (key is the address/shape key alone).
-  //CONTRACT: the masked field must hold the issuing MASTER PORT INDEX,
-  //right-aligned at the mask's lowest set bit (e.g. AWUSER[18:15] = port with
-  //mask 32'h0007_8000). The pairing itself only needs the two sides to be
-  //equal, but the scoreboard proves the identity term was really used by
-  //checking (AxUSER & mask) >> lsb == master port, and raises
-  //SB_PAIR_KEY_UNUSED if that never holds. A tag scheme that does not encode
-  //the port number (e.g. arbitrary per-manager constants) therefore needs that
-  //check extended first. Known weakness of the same check: a port-0 item whose
-  //identity bits are all 0 counts as identity-keyed even when the stimulus
-  //encodes nothing.
+  //CONTRACT: the masked field must be a stable per-manager tag -- any value,
+  //it need NOT equal the master port number (e.g. AWUSER[18:15] = master_id
+  //with mask 32'h0007_8000, or arbitrary constants 0xA / 0xB per manager).
+  //The scoreboard reports, per AW/AR item, whether its tag was private to its
+  //own master port (id_keyed: the term really separated that manager) or
+  //shared with other ports (shape_only), and raises SB_PAIR_KEY_UNUSED if a
+  //mask is set but no item ever carried a port-private tag.
   //Why AxUSER: it is the only field that crosses the fabric unchanged on both
   //sides AND can carry identity -- egress AxID is re-encoded by the fabric and
   //cannot be mapped back to a manager, and QoS is not forwarded.
