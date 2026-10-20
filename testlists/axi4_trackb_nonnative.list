@@ -28,8 +28,14 @@
 # testlists/axi4_transfers_regression.list would recompile the fabric for
 # every entry of the default regression.
 #
-# Excluded on purpose: axi4_qos_basic_priority_test hangs on Track-B in the read
-# channel (different signature, separate record) and would burn the full -t.
+# axi4_qos_basic_priority_test and axi4_qos_equal_priority_fairness_test also set
+# their slaves to ONLY_WRITE_QOS_MODE_ENABLE on Track-B: in read-QoS mode the slave
+# holds its first read until a second AR reaches the same slave, the fabric
+# delivers one per slave, and the run hung on arready.
+# axi4_same_id_nonadjacent_reorder_test on Track-B is a consistency check only: the
+# fabric accepts master 0's next AR only after the previous R, so no two same-ID
+# reads are outstanding together and its same-ID order checker adjudicates nothing
+# (summary line content_adjudicated=0). Its F2 coverage comes from the baseline build.
 # Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
 # fabric ingress AxID is 4 bits).
 
@@ -48,3 +54,15 @@ axi4_qos_bid_queue_race_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+D
 axi4_user_signal_passthrough_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_user_signal_passthrough_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_user_signal_passthrough_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_qos_basic_priority_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_basic_priority_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_basic_priority_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_qos_equal_priority_fairness_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_equal_priority_fairness_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_equal_priority_fairness_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_same_id_nonadjacent_reorder_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_same_id_nonadjacent_reorder_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_same_id_nonadjacent_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
