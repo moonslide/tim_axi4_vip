@@ -1,0 +1,50 @@
+# Track-B NON-NATIVE regression list (commercial fabric IP DUT, ENHANCED 10x10).
+#
+# Tests written for the 1:1 baseline that have been made to pass on Track-B by
+# PER-TEST scoreboard settings inside `ifdef BUS_MATRIX_FABRIC_IP in each test
+# (keyed pairing on, AxID/QoS passthrough checks off, REGION/USER checks on,
+# optional AxUSER manager-identity mask). Every run's log states what is off:
+# grep SB_CHECK_LEDGER and SB_PAIR_KEY. In particular NO QoS behaviour is
+# verified on Track-B: the fabric has no egress QoS ports, so the QoS
+# passthrough check is off and nothing replaces it.
+#
+# HOW TO RUN (from sim/synopsys_sim/):
+#   python3 axi4_regression.py --lsf --test-list ../../testlists/axi4_trackb_nonnative.list -p 12 -t 1800
+#
+# What the runner can and cannot do for Track-B (axi4_regression.py, measured):
+#   * CAN: its compile line is fixed to `-f ../axi4_compile.f`, but command_add
+#     is appended after it, so the fabric RTL list, the wrapper and the Track-B
+#     defines are added per entry (below). Each job compiles the fabric itself.
+#   * CANNOT: select a different compile file list, share one Track-B build
+#     across jobs, or run concurrently with another axi4_regression.py in the
+#     same tree (shared sim/run_folder_* pool, known-landmines 36).
+#   * Log names are the entry names, so one test can appear only once per list
+#     under the same name. The runner strips a trailing _<digits> to form
+#     +UVM_TESTNAME (the same rule run_cnt uses), so _777 / _1 are naming
+#     suffixes only; the bare entry runs with a runner-generated random seed
+#     (recorded in the job script and the results file).
+#
+# NOT the default list: Track-B needs a different build, and mixing it into
+# testlists/axi4_transfers_regression.list would recompile the fabric for
+# every entry of the default regression.
+#
+# Excluded on purpose: axi4_qos_basic_priority_test hangs on Track-B in the read
+# channel (different signature, separate record) and would burn the full -t.
+# Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
+# fabric ingress AxID is 4 bits).
+
+axi4_user_based_qos_routing_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_user_based_qos_routing_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_user_based_qos_routing_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_qos_region_routing_reset_backpressure_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_region_routing_reset_backpressure_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_region_routing_reset_backpressure_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_qos_bid_queue_race_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_bid_queue_race_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_qos_bid_queue_race_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_user_signal_passthrough_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_user_signal_passthrough_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_user_signal_passthrough_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
