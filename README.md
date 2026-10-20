@@ -456,19 +456,52 @@ Open items:
   BID-queue race 8, user-based QoS routing 12) are fixed by `dacdf09`; see
   "Track-B scoreboard pairing and fabric ingress ID width" below.
 - `axi4_write_heavy_midburst_reset_rw_contention_test` `ENHANCED` failure (pre-existing, above).
-- 12 additional `ENHANCED` baseline-variant regression entries end with
-  `UVM_ERROR : 1` identically on HEAD and after these changes — pre-existing,
-  in addition to the one above (reported by the implementing sessions, not
-  re-run for this README update).
-- `axi4_qos_basic_priority_test` shows a Track-B read-channel hang (1800 s
-  `TIMEOUT`, master BFM waiting for `arready`/`rid`) — a different signature
-  from the scoreboard errors; not yet analysed (reported by the implementing
-  sessions, not re-run for this README update). `axi4_qos_equal_priority_fairness_test`
-  times out the same way on Track-B (seed 777, `timeout waiting for arready`).
-- `axi4_same_id_nonadjacent_reorder_test` fails on Track-B `ENHANCED`
-  (seeds 777 and 1: `UVM_ERROR : 24`, `SB_INCOMPLETE_*`, `TEST RESULT: FAIL`)
-  identically before and after the ingress-checker commits — pre-existing and
-  unrelated to them; it is in no Track-B list. Triage is in progress.
+- More baseline-variant entries end with `UVM_ERROR : 1`, the single error
+  being `TEST RESULT: FAIL - Acceptance criteria not met`; all are pre-existing.
+  An earlier version of this README said 12. No log set found on disk supports
+  that number, so the total is unconfirmed. Logs exist for at least these:
+  the `+SB_KEYED_PAIRING=1` `ENHANCED` variants of `axi4_blocking_write_read_test`,
+  `axi4_cross_id_write_reorder_test`, `axi4_id_multiple_writes_different_awid_test`
+  and `axi4_non_blocking_write_read_response_out_of_order_test`;
+  `axi4_qos_bid_queue_race_test` `4x4` (seeds 777 and 1); and
+  `axi4_cross_id_read_reorder_test` / `axi4_cross_id_write_reorder_test` `ENHANCED`
+  (seeds 777 and 1, identical on `914a580` and after the T1/T2/T3 changes below).
+  In the two cross-ID `ENHANCED` runs every response is an error response, which
+  points at the same cause as T3 below (a base address outside the `ENHANCED`
+  map); not fixed or confirmed.
+- **T1/T2 — Track-B hang in `axi4_qos_basic_priority_test` and
+  `axi4_qos_equal_priority_fairness_test`: fixed per test.** In read-QoS mode the
+  VIP slave holds its first read until a second AR reaches the same slave; the
+  fabric delivers one AR per slave in these tests, so no R was returned and the
+  managers timed out on `arready`. Under `` `ifdef BUS_MATRIX_FABRIC_IP `` only,
+  each test now sets its slaves to `ONLY_WRITE_QOS_MODE_ENABLE` (read-side QoS
+  off, write-side unchanged) and applies the same Track-B scoreboard settings as
+  the four non-native Track-B tests fixed in `dacdf09`. The VIP and the baseline
+  build are unchanged. Disabled on Track-B: AWID/BID/ARID/RID and ARQOS
+  equality, and the slaves' read-QoS ordering — so no QoS behaviour is verified on Track-B. AxUSER is 0 in this
+  stimulus, so the AxUSER check there is weak. Measured: `UVM_ERROR : 0` and
+  `TEST RESULT: PASS` at seeds 777, 1 and one random seed each; the hang ended
+  with the slave mode change alone, before the scoreboard settings were added.
+  The VIP gate itself still deadlocks behind any interconnect that throttles
+  ARs; that is not fixed.
+- **T3 — `axi4_same_id_nonadjacent_reorder_test`: address fixed by mode.** Its
+  page window was `0x1000` in every mode, which is the read-only Boot_ROM in
+  `4x4` (every preload write refused) and unmapped in `ENHANCED` (every access
+  an error response), so outside `NONE` the same-ID order checker adjudicated
+  nothing (`content_adjudicated=0`; `4x4` and `ENHANCED` baseline ended `UVM_ERROR : 1`, Track-B `UVM_ERROR : 24`).
+  `NONE` keeps `0x1000`; `4x4` uses `0x0000_0100_0000_1000` (S0 DDR_Memory) and
+  `ENHANCED` `0x0000_0008_0000_1000` (S0 DDR Secure Kernel, M0, AxPROT `000`).
+  Baseline `NONE`/`4x4`/`ENHANCED`, seeds 777 and 1: `UVM_ERROR : 0`, `PASS`,
+  `content_adjudicated` 12 and 17. On Track-B all 48 transfers now reach the
+  subordinate and, with the same Track-B scoreboard settings, the test passes at
+  seeds 777, 1 and one random seed — but there it is only a consistency check:
+  the fabric accepts master 0's next AR only after the previous R completes, so
+  two same-ID reads are never outstanding together and the checker has nothing
+  to adjudicate (`content_adjudicated=0`). Its same-ID ordering coverage comes
+  from the baseline build only.
+- All three are in `testlists/axi4_trackb_nonnative.list`. Not verified: the
+  `4x4` fabric drop for them, why the fabric admits only one read at a time
+  (no fabric-boundary probe was run), and IDs ≥ 16.
 - `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
   `% 16` on HEAD. A width-aware rewrite was tried and abandoned. Its
   `randomize() failed` at slot 16 of `axi4_same_id_nonadjacent_reorder_test` is
