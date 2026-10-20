@@ -423,11 +423,16 @@ Commits `9dfaeac` (2026-10-14), `5e7b637` and `4b46d78` (2026-10-20).
   the ID as `` master_id % (`AXI_ID_LAST + 1) `` — `qos_priority_read`,
   `qos_priority_write`, `qos_user_boost_write`, `qos_bid_race_write`,
   `qos_write_only`, `qos_read_only`, and both AW and AR in
-  `user_based_qos_routing`. Identical to `% 16` on the default 4-bit bus; on a
-  wider bus (Track-B 8-bit) managers ≥ 16 keep unique IDs, and only a bus too
-  narrow to represent them wraps (a physical limit; the scoreboard infers the
-  manager from the ID number modulo). Found by a review of `9dfaeac`: the raw
-  `master_id` cast bypassed ID mapping for `BUS_MATRIX_64X64`.
+  `user_based_qos_routing`. On the default 4-bit bus this equals `% 16`. IDs ≥ 16
+  are representable only where the whole ID path is wide — not in the Track-B
+  fabric IP configuration: although Track-B builds with `AXI_ID_WIDTH=8`, the
+  fabric ingress AxID is 4 bits (`top/hdl_top.sv:683` drives
+  `nic_m_awid = awid[3:0]`, `:666` likewise `nic_m_arid = arid[3:0]`, silently
+  truncating; BID/RID return zero-extended at `:697`/`:707`), and
+  `master/axi4_master_tx.sv` `awid_c1` constrains AWID to `AWID_0`..`AWID_15`.
+  No tested configuration has more than 10 managers, so manager ≥ 16 behavior
+  is unexercised. Found by a review of `9dfaeac`: the raw `master_id` cast
+  bypassed ID mapping for `BUS_MATRIX_64X64`.
 
 Verification performed for these commits (reported by the implementing session;
 not re-run for this README update):
@@ -446,12 +451,33 @@ are not used by any test and are compile-verified only.
 Open items:
 
 - Track-B QoS tests still end with scoreboard errors: region routing 5,
-  BID-queue race 8, user-based QoS routing 12. The 12 are under analysis; their
-  cause is not established.
+  BID-queue race 8, user-based QoS routing 12. The analysis attributes the 12 to
+  the Track-B scoreboard running with the default 1:1 pairing
+  (`sb_keyed_pairing = 0`, passthrough checks on — `env/axi4_env_config.sv:114-140`;
+  `test/axi4_trackb_smoke_test.sv:176-180` overrides these) combined with
+  same-address writes from several managers, where the W-channel pairing key is
+  `awaddr` only (`env/axi4_scoreboard.sv:3095`). An independent adversarial
+  review upheld the attribution but noted that copying the smoke-test settings
+  only disables checks (ARQOS/AxREGION/AxUSER would lose their checks), so it is
+  not a fix. A fix proposal is in progress: per-test fixes with a stronger
+  pairing key, keeping AWUSER checking on where needed. No fix exists yet.
 - `axi4_write_heavy_midburst_reset_rw_contention_test` `ENHANCED` failure (pre-existing, above).
+- 12 additional `ENHANCED` baseline-variant regression entries end with
+  `UVM_ERROR : 1` identically on HEAD and after these changes — pre-existing,
+  in addition to the one above (reported by the implementing sessions, not
+  re-run for this README update).
+- `axi4_qos_basic_priority_test` shows a Track-B read-channel hang (1800 s
+  `TIMEOUT`, master BFM waiting for `arready`/`rid`) — a different signature
+  from the scoreboard errors; not yet analysed (reported by the implementing
+  sessions, not re-run for this README update).
 - `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
-  `% 16` on HEAD, capping those helpers at 16 IDs; a patch is in progress and
-  not yet committed.
+  `% 16` on HEAD. A width-aware rewrite was tried and abandoned: it cannot help
+  while the Track-B ingress is 4-bit, and with it
+  `axi4_same_id_nonadjacent_reorder_test` failed `randomize() failed` at slot 16
+  on Track-B. Ingress/egress ID width is tracked as a separate proposal.
+  `axi4_master_same_id_nonadjacent_preload_seq.sv` keeps `s % 16` deliberately:
+  16 is the number of IDs the Track-B fabric ingress can carry, not a free
+  slot wrap.
 
 Landmine: in VCS, assigning a string (e.g. a `$sformatf` result) to an enum
 compiles and runs without any diagnostic — always use a typed cast.
