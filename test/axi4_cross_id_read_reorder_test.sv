@@ -74,11 +74,12 @@ class axi4_cross_id_read_reorder_test extends axi4_base_test;
     axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
     axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
     axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
-    // Measured (seeds 777/1, 2026-10-21): the R bursts came back in issue order through the fabric, so the
-    // cross-ID read reorder this test exists to provoke does not happen on Track-B. Here it is
+    // Observed (seeds 777, 1 and runner-random seeds, 2026-10-21): the R bursts came back in issue
+    // order through the fabric; cause not probed. So the cross-ID read reorder this test exists
+    // to provoke was not seen on Track-B. Here it is
     // a consistency check of the 8 transfers (keyed pairing, completeness, routing), not a
     // reorder test; its reorder coverage comes from the baseline build.
-    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 reorder=NOT-PROVOKED(fabric returns M0 read responses in issue order)", UVM_LOW)
+    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 reorder=NOT-PROVOKED(M0 read responses observed in issue order at seeds 777/1/random; cause not probed)", UVM_LOW)
 `endif
   endfunction : build_phase
 

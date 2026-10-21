@@ -37,9 +37,9 @@
 # reads are outstanding together and its same-ID order checker adjudicates nothing
 # (summary line content_adjudicated=0). Its F2 coverage comes from the baseline build.
 # axi4_cross_id_read_reorder_test and axi4_cross_id_write_reorder_test on Track-B are
-# consistency checks only, for the same reason: the fabric returned master 0's R bursts and
-# B responses in issue order (seeds 777/1), so the cross-ID reorder they exist to provoke
-# does not happen. Their reorder coverage comes from the baseline build.
+# consistency checks only: master 0's R bursts and B responses were observed in issue order
+# at seeds 777, 1 and runner-random seeds (cause not probed), so the cross-ID reorder they
+# exist to provoke was not seen. Their reorder coverage comes from the baseline build.
 # Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
 # fabric ingress AxID is 4 bits).
 
