@@ -268,6 +268,7 @@ package axi4_test_pkg;
   `include "axi4_qos_rd_hold_single_read_test.sv"
   `include "axi4_qos_rd_priority_order_test.sv"
   `include "axi4_qos_rd_bypass_bound_test.sv"
+  `include "axi4_qos_wr_aw_order_test.sv"
 
 endpackage : axi4_test_pkg
 

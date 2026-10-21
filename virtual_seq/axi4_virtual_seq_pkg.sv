@@ -151,6 +151,7 @@ package axi4_virtual_seq_pkg;
   `include "axi4_virtual_qos_bid_queue_race_seq.sv"
   // QoS-control tests: tagged reads from master 0 (read-QoS arbitration)
   `include "axi4_virtual_qos_rd_tagged_seq.sv"
+  `include "axi4_virtual_qos_wr_tagged_seq.sv"
   `include "axi4_virtual_qos_saturation_stress_seq.sv"
   `include "axi4_virtual_qos_starvation_prevention_seq.sv"
   `include "axi4_virtual_user_signal_passthrough_seq.sv"

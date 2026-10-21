@@ -3,6 +3,8 @@
 # Covers the QoS control knobs added to the agents:
 #   * manager AxQOS value policy  - axi4_master_agent_config::awqos_src / arqos_src
 #                                   (axi4_qos_src_policy_test)
+#   * manager write-QoS arbitration point - wr_qos_arb_point (EXPERIMENTAL
+#                                   WR_QOS_ARB_AT_AW; axi4_qos_wr_aw_order_test)
 #   * subordinate read-QoS arbiter - axi4_slave_agent_config::rd_qos_hold_min /
 #                                   rd_qos_hold_scope / rd_qos_hold_tmo_clk /
 #                                   rd_qos_max_bypass, +AXI4_QOS_HOLD_TMO, and the
@@ -24,6 +26,8 @@
 #   axi4_qos_rd_priority_order_test command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_ORDER_LEGACY"
 #   axi4_qos_rd_priority_order_test command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_ORDER_QOS_OFF"
 #   axi4_qos_rd_bypass_bound_test   command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_NO_BYPASS_BOUND"
+#   axi4_qos_wr_aw_order_test       command_add="+BUS_MATRIX_MODE=NONE +QOS_WR_AW_LEGACY"
+#       (default write-QoS arbiter: W bursts out of AW order, QOS_WR_ORDER errors)
 #
 # The runner strips a trailing _<digits> to form +UVM_TESTNAME, so the suffixes
 # below only make the entry (and log) names unique.
@@ -40,3 +44,6 @@ axi4_qos_rd_priority_order_test_2 seed=2 command_add=+BUS_MATRIX_MODE=NONE
 
 axi4_qos_rd_bypass_bound_test_1 seed=1 command_add=+BUS_MATRIX_MODE=NONE
 axi4_qos_rd_bypass_bound_test_2 seed=2 command_add=+BUS_MATRIX_MODE=NONE
+
+axi4_qos_wr_aw_order_test_1 seed=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_wr_aw_order_test_2 seed=2 command_add=+BUS_MATRIX_MODE=NONE

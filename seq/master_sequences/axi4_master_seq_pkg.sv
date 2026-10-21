@@ -167,6 +167,7 @@ package axi4_master_seq_pkg;
   `include "axi4_master_qos_priority_read_seq.sv"
   // QoS-control tests: single read with caller-chosen ARQOS and ARID
   `include "axi4_master_qos_tagged_read_seq.sv"
+  `include "axi4_master_qos_tagged_write_seq.sv"
   
   // TODO: Future QoS/USER sequences to be implemented
   // `include "axi4_master_qos_basic_priority_order_seq.sv"
