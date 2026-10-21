@@ -62,6 +62,26 @@ class axi4_cross_id_read_reorder_test extends axi4_base_test;
     test_timeout = 500us;
   endfunction : new
 
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+`ifdef BUS_MATRIX_FABRIC_IP
+    // Track-B (commercial fabric IP in the path). Same per-test scoreboard settings as the
+    // other non-native Track-B tests (testlists/axi4_trackb_nonnative.list; TRACKB_DEBUG_NOTES.md §6).
+    axi4_env_cfg_h.sb_keyed_pairing             = 1;   // arbiter reorders; positional pairing invalid
+    axi4_env_cfg_h.axid_passthrough_chk_cfg     = 0;   // fabric re-encodes AxID (landmine 12a/27); replaced by sb_outstanding_a?id + validate_response_correctness
+    axi4_env_cfg_h.axqos_passthrough_chk_cfg    = 0;   // ARQOS: EXPECTED DIFFERENCE, fabric has no egress QoS ports (hdl_top ties 0); AWQOS is never compared
+    axi4_env_cfg_h.axregion_passthrough_chk_cfg = 1;   // ARREGION only (measured forwarded by this fabric); AWREGION is never compared
+    axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
+    axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
+    axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
+    // Measured (seeds 777/1, 2026-10-21): the R bursts came back in issue order through the fabric, so the
+    // cross-ID read reorder this test exists to provoke does not happen on Track-B. Here it is
+    // a consistency check of the 8 transfers (keyed pairing, completeness, routing), not a
+    // reorder test; its reorder coverage comes from the baseline build.
+    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 reorder=NOT-PROVOKED(fabric returns M0 read responses in issue order)", UVM_LOW)
+`endif
+  endfunction : build_phase
+
   virtual function void setup_axi4_slave_agent_cfg();
     super.setup_axi4_slave_agent_cfg();
     foreach (axi4_env_cfg_h.axi4_slave_agent_cfg_h[i]) begin

@@ -36,6 +36,10 @@
 # fabric accepts master 0's next AR only after the previous R, so no two same-ID
 # reads are outstanding together and its same-ID order checker adjudicates nothing
 # (summary line content_adjudicated=0). Its F2 coverage comes from the baseline build.
+# axi4_cross_id_read_reorder_test and axi4_cross_id_write_reorder_test on Track-B are
+# consistency checks only, for the same reason: the fabric returned master 0's R bursts and
+# B responses in issue order (seeds 777/1), so the cross-ID reorder they exist to provoke
+# does not happen. Their reorder coverage comes from the baseline build.
 # Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
 # fabric ingress AxID is 4 bits).
 
@@ -66,3 +70,11 @@ axi4_qos_equal_priority_fairness_test command_add="+define+BUS_MATRIX_FABRIC_IP 
 axi4_same_id_nonadjacent_reorder_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_same_id_nonadjacent_reorder_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_same_id_nonadjacent_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_cross_id_read_reorder_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_cross_id_read_reorder_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_cross_id_read_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_cross_id_write_reorder_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_cross_id_write_reorder_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_cross_id_write_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
