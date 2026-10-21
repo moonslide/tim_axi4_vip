@@ -358,18 +358,32 @@ endfunction
 
 function int axi4_performance_metrics::pending_write_count();
   int count = 0;
+  int id;
+  // The inner walk is an explicit first()/next() over THIS src's IDs, NOT
+  // foreach(pending_writes[src][id]): identifiers inside foreach brackets are new
+  // loop variables (IEEE 1800 12.7.3), so on a strict simulator that inner form
+  // re-iterates every src under each outer src and multiplies the count, which
+  // feeds the deadlock/livelock verdict in detect_deadlock_livelock().
   foreach (pending_writes[src]) begin
-    foreach (pending_writes[src][id])
+    if (pending_writes[src].first(id)) do
       count += pending_writes[src][id].size();
+    while (pending_writes[src].next(id));
   end
   return count;
 endfunction
 
 function int axi4_performance_metrics::pending_read_count();
   int count = 0;
+  int id;
+  // The inner walk is an explicit first()/next() over THIS src's IDs, NOT
+  // foreach(pending_reads[src][id]): identifiers inside foreach brackets are new
+  // loop variables (IEEE 1800 12.7.3), so on a strict simulator that inner form
+  // re-iterates every src under each outer src and multiplies the count, which
+  // feeds the deadlock/livelock verdict in detect_deadlock_livelock().
   foreach (pending_reads[src]) begin
-    foreach (pending_reads[src][id])
+    if (pending_reads[src].first(id)) do
       count += pending_reads[src][id].size();
+    while (pending_reads[src].next(id));
   end
   return count;
 endfunction
@@ -470,13 +484,22 @@ endtask
 function void axi4_performance_metrics::flush_pending_on_reset(int src_index);
   int dropped_w = 0;
   int dropped_r = 0;
+  int id;
 
+  // Explicit first()/next() walks over THIS port's IDs, NOT
+  // foreach(pending_writes[src_index][id]): identifiers inside foreach brackets
+  // are new loop variables (IEEE 1800 12.7.3), so on a strict simulator that form
+  // iterates every port, not src_index, and over-counts dropped_w/dropped_r.
   if (pending_writes.exists(src_index)) begin
-    foreach (pending_writes[src_index][id]) dropped_w += pending_writes[src_index][id].size();
+    if (pending_writes[src_index].first(id)) do
+      dropped_w += pending_writes[src_index][id].size();
+    while (pending_writes[src_index].next(id));
     pending_writes.delete(src_index);
   end
   if (pending_reads.exists(src_index)) begin
-    foreach (pending_reads[src_index][id]) dropped_r += pending_reads[src_index][id].size();
+    if (pending_reads[src_index].first(id)) do
+      dropped_r += pending_reads[src_index][id].size();
+    while (pending_reads[src_index].next(id));
     pending_reads.delete(src_index);
   end
 
