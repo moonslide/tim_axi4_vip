@@ -168,6 +168,14 @@ axi4_cross_id_read_reorder_test run_cnt=3
 # the reorder permutation is chosen at random, so extra seeds widen the window.
 #------------------------------------------------------------------------------------
 axi4_same_id_nonadjacent_reorder_test run_cnt=3
+# The same test under the BASE (4x4) and ENHANCED maps, where it takes its mode-dependent
+# page window (axi4_master_same_id_nonadjacent_preload_seq::base_addr_for_mode()). The
+# runner names a run_cnt=1 entry after the entry itself, and three entries of one test
+# would all log to <test>.log and overwrite each other; a _<digits> suffix is stripped back
+# to the test name for +UVM_TESTNAME (the run_cnt rule), so _44 / _1010 keep each name
+# unique and clear of the _1.._3 that run_cnt=3 above produces.
+axi4_same_id_nonadjacent_reorder_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_same_id_nonadjacent_reorder_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_refused_write_shadow_test
 
 #------------------------------------------------------------------------------------
