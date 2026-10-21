@@ -18,7 +18,7 @@ later should hold to the same standard.
 | | baseline | Track-B |
 |---|---|---|
 | file list | `sim/axi4_compile.f` | `sim/axi4_compile_fabric_ip.f` (10x10) / `sim/axi4_compile_fabric_ip_4x4.f` (4x4) |
-| interconnect | **none** — masters wired 1:1 to slaves | real fabric RTL, `top/hdl_top.sv:817` `u_fabric_ip` |
+| interconnect | **none** — masters wired 1:1 to slaves | real fabric RTL, `top/hdl_top.sv:864` `u_fabric_ip` |
 | who decides responses | `bm/axi4_bus_matrix_ref.sv` — a `uvm_component` **reference model** in the env | the fabric's own decoder and arbiters |
 | reset | 1 asserted edge | 16 asserted edges + 8 idle (`top/hdl_top.sv:291`) |
 
@@ -156,14 +156,17 @@ runner-random seed each, ENHANCED 10x10 fabric:
 | `axi4_qos_region_routing_reset_backpressure_test` | `dacdf09` |
 | `axi4_qos_bid_queue_race_test` | `dacdf09` |
 | `axi4_user_signal_passthrough_test` | `dacdf09` |
-| `axi4_qos_basic_priority_test` | branch `exec/20261021-trackb-qos-reorder` |
-| `axi4_qos_equal_priority_fairness_test` | branch `exec/20261021-trackb-qos-reorder` |
-| `axi4_same_id_nonadjacent_reorder_test` | branch `exec/20261021-trackb-qos-reorder` (consistency check only, see the list header) |
+| `axi4_qos_basic_priority_test` | `c371735` + `7afce97` |
+| `axi4_qos_equal_priority_fairness_test` | `66c1fdf` + `b0867bb` |
+| `axi4_same_id_nonadjacent_reorder_test` | `f8b4c68` + `207e54d` (consistency check only: master 0's next AR is observed held off at the fabric ingress until the previous R completes, so no two same-ID reads are outstanding; cause not probed) |
 
-They are in `testlists/axi4_trackb_nonnative.list`. In none of them is any
+They are in `testlists/axi4_trackb_nonnative.list` (the last three added by
+`49d872e`; all of the commits above are on main). In none of them is any
 QoS behaviour verified on Track-B (the fabric has no egress QoS port), and
-AxID equality is replaced, not checked. The three tests in the table above
-this update have not been re-measured or converted.
+AxID equality is replaced, not checked. `axi4_non_blocking_write_read_test`,
+`axi4_id_multiple_writes_different_awid_test` and
+`axi4_blocking_cross_write_read_test` (the first §4.2 table) have not been
+re-measured or converted.
 
 ### 4.3 The real fabric handles a 4KB-crossing burst cleanly
 
@@ -273,17 +276,22 @@ the whole round had to be discarded.
    under `` `ifdef BUS_MATRIX_FABRIC_IP `` and a stronger scoreboard pairing key —
    not declared out of scope, and never "fixed" only by switching checks off
    (each run's `SB_CHECK_LEDGER` lines list what is off). Four tests pass on
-   Track-B at `dacdf09`, three more on branch `exec/20261021-trackb-qos-reorder`
-   (§4.2 update). Still open: the other baseline tests, including the three in
-   the §4.2 table, and the 4x4 fabric drop for all of them.
+   Track-B at `dacdf09`, three more by `c371735` through `49d872e`, all on main
+   (§4.2 update). Still open: the other baseline tests, including
+   `axi4_non_blocking_write_read_test`, `axi4_id_multiple_writes_different_awid_test`
+   and `axi4_blocking_cross_write_read_test`, and the 4x4 fabric drop for all of them.
 2. **Crossing read times out on the direct-wiring build (§4.3)** while the real
    fabric handles it. VIP-side; not diagnosed.
-3. **No clocking blocks anywhere in the interfaces/BFMs.** Monitors read signals
-   at the active clock edge, so correct sampling currently depends on the
-   drivers happening to use non-blocking assignment. AMBA A3.2.1 defines the
+3. **Clocking blocks — monitors done, interfaces/drivers not.** Originally: no
+   clocking blocks anywhere in the interfaces/BFMs, so monitor sampling depended
+   on the drivers happening to use non-blocking assignment. AMBA A3.2.1 defines the
    transfer at the rising edge where VALID and READY are both high, meaning the
    value that met setup *before* that edge; the robust idiom is a clocking block
-   with `default input #1step`. Applies to every channel, both monitors.
+   with `default input #1step`. **Update (checked 2026-10-21 against main):**
+   both monitor BFMs now sample through `clocking mon_cb` with
+   `default input #1step` (`agent/master_agent_bfm/axi4_master_monitor_bfm.sv:155`,
+   `agent/slave_agent_bfm/axi4_slave_monitor_bfm.sv:155`; added by `68e835c`,
+   2026-08-13). `axi4_if` and the driver BFMs still declare no clocking block.
 4. **4x4 Track-B drop is far less exercised than 10x10.** Only
    `axi4_trackb_4x4_smoke_test` targets it, and `run_fabric_smoke.sh` does not
    cover it at all.
