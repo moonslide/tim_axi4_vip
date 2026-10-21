@@ -77,6 +77,14 @@ class axi4_slave_agent_config extends uvm_object;
   //Variable: rd_qos_hold_scope
   //QOS_HOLD_FIRST: hold only before the first response (legacy).
   //QOS_HOLD_EACH : hold before every response.
+  //KNOWN LIMITATION (not changed this round): the read-QoS
+  //arbitration ignores ARID. Two queued reads with the SAME ARID can therefore
+  //be returned out of issue order, which AXI4 forbids (A5.3: same-ID read
+  //responses in order). Measured with the defaults: axi4_qos_basic_priority_test
+  //(every read ARID 0) reports reordered=4 on slave 0. QOS_HOLD_EACH makes it
+  //more likely (a bigger pool before every choice). Keep reads that may be
+  //reordered on distinct ARIDs. qos_rd_arb_chk re-derives the SAME rule, so it
+  //is not an independent oracle for this.
   qos_hold_scope_e rd_qos_hold_scope = QOS_HOLD_FIRST;
 
   //Variable: rd_qos_hold_tmo_clk
@@ -93,8 +101,10 @@ class axi4_slave_agent_config extends uvm_object;
   int rd_qos_max_bypass = 0;
 
   //Variable: qos_rd_arb_chk
-  //1 = re-derive every read-QoS choice with an independent reference and
-  //report a mismatch as UVM_ERROR (self-check of the arbiter above).
+  //1 = re-derive every read-QoS choice with a separately written reference of
+  //the same rule and report a mismatch as UVM_ERROR (self-check of the
+  //arbiter's implementation, not of the rule: it does not catch the same-ARID
+  //reordering described at rd_qos_hold_scope).
   bit qos_rd_arb_chk = 0;
 
   //Variable: qos_rd_expect_reorder_min

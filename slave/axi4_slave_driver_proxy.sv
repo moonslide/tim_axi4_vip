@@ -376,6 +376,10 @@ endtask : rd_qos_hold
 //    1. rd_qos_max_bypass > 0 and some read overtaken >= that many times:
 //       the OLDEST such read.
 //    2. otherwise the highest ARQOS; among equals the OLDEST.
+//  Like the arbiter it checks, it ignores ARID: same-ARID reads may be
+//  reordered (AXI4 A5.3 violation, known limitation - see
+//  axi4_slave_agent_config::rd_qos_hold_scope). Being the same rule written a
+//  second way, it checks the implementation, not the rule.
 //--------------------------------------------------------------------------------------------
 function int axi4_slave_driver_proxy::rd_qos_reference_pick();
   int best_qos = -1;
@@ -1204,6 +1208,10 @@ task axi4_slave_driver_proxy::axi4_read_task();
            end
          end
        end
+       // Highest ARQOS, oldest among equals. ARID is NOT considered, so a
+       // younger read can overtake an older read with the SAME ARID (AXI4 A5.3
+       // violation; known limitation, see axi4_slave_agent_config::
+       // rd_qos_hold_scope). QOS_HOLD_EACH widens the pool and so the exposure.
        if(!rd_forced) begin
          qos_value_check_1 = qos_read_queue[0];
          for(int i=0;i<qos_read_queue.size();i++) begin
