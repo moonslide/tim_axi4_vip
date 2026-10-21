@@ -5,6 +5,34 @@
 import axi4_bus_matrix_pkg::*;
 
 //--------------------------------------------------------------------------------------------
+// Class: axi4_slave_qos_arb_cov
+//  Functional coverage of one subordinate's read-QoS arbitration choices.
+//  Instantiated by axi4_slave_driver_proxy only when that subordinate has read
+//  QoS enabled (see qos_rd_arb_cov_h), one sample per choice.
+//  hold_end: 0 = no hold before this choice, 1 = hold ended because the pool
+//  reached rd_qos_hold_min, 2 = hold ended by rd_qos_hold_tmo_clk.
+//--------------------------------------------------------------------------------------------
+class axi4_slave_qos_arb_cov;
+  covergroup qos_rd_arb_cg with function sample(int pool_size, bit winner_is_oldest, int qos_delta,
+                                                int hold_end, bit forced_by_bypass);
+    option.per_instance = 1;
+    cp_pool_size : coverpoint pool_size        { bins one = {1}; bins two = {2}; bins three_four = {[3:4]}; bins five_plus = {[5:$]}; }
+    cp_order     : coverpoint winner_is_oldest { bins bypass = {0}; bins in_order = {1}; }
+    cp_qos_delta : coverpoint qos_delta        { bins zero = {0}; bins d1_3 = {[1:3]}; bins d4_7 = {[4:7]}; bins d8_15 = {[8:15]}; }
+    cp_hold_end  : coverpoint hold_end         { bins none = {0}; bins min_met = {1}; bins tmo = {2}; }
+    cp_forced    : coverpoint forced_by_bypass { bins no = {0}; bins yes = {1}; }
+    x_pool_order : cross cp_pool_size, cp_order {
+      ignore_bins one_is_always_in_order = binsof(cp_pool_size.one) && binsof(cp_order.bypass);
+    }
+  endgroup : qos_rd_arb_cg
+
+  function new(string inst_name);
+    qos_rd_arb_cg = new();
+    qos_rd_arb_cg.set_inst_name(inst_name);
+  endfunction : new
+endclass : axi4_slave_qos_arb_cov
+
+//--------------------------------------------------------------------------------------------
 // Class: axi4_slave_driver_proxy
 // This is the proxy driver on the HVL side
 // It receives the transactions and converts them to task calls for the HDL driver
@@ -128,20 +156,10 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   int  qos_rd_forced_bypass, qos_rd_max_bypass_seen, qos_rd_arb_chk_cnt, qos_rd_arb_chk_err;
   int  qos_wr_picks, qos_wr_max_pool;
 
-  // Covergroup: what each read-QoS choice looked like. Sampled once per choice,
-  // only while this subordinate's read QoS is enabled.
-  covergroup qos_rd_arb_cg with function sample(int pool_size, bit winner_is_oldest, int qos_delta,
-                                                qos_hold_end_e hold_end, bit forced_by_bypass);
-    option.per_instance = 1;
-    cp_pool_size : coverpoint pool_size        { bins one = {1}; bins two = {2}; bins three_four = {[3:4]}; bins five_plus = {[5:$]}; }
-    cp_order     : coverpoint winner_is_oldest { bins bypass = {0}; bins in_order = {1}; }
-    cp_qos_delta : coverpoint qos_delta        { bins zero = {0}; bins d1_3 = {[1:3]}; bins d4_7 = {[4:7]}; bins d8_15 = {[8:15]}; }
-    cp_hold_end  : coverpoint hold_end         { bins none = {QOS_HOLD_END_NONE}; bins min_met = {QOS_HOLD_END_MIN}; bins tmo = {QOS_HOLD_END_TMO}; }
-    cp_forced    : coverpoint forced_by_bypass { bins no = {0}; bins yes = {1}; }
-    x_pool_order : cross cp_pool_size, cp_order {
-      ignore_bins one_is_always_in_order = binsof(cp_pool_size.one) && binsof(cp_order.bypass);
-    }
-  endgroup : qos_rd_arb_cg
+  // Coverage of the read-QoS choices: created in end_of_elaboration_phase ONLY
+  // for a subordinate whose read QoS is enabled, so a run without read QoS has
+  // no instance and its coverage database and scores are exactly as before.
+  axi4_slave_qos_arb_cov qos_rd_arb_cov_h;
   
   // Exclusive Access Monitor - per AMBA AXI4 specification
   typedef struct {
@@ -212,7 +230,6 @@ function axi4_slave_driver_proxy::new(string name = "axi4_slave_driver_proxy",
   semaphore_write_key                       = new(1);
   semaphore_rsp_write_key                   = new(1);
   semaphore_read_key                        = new(1);
-  qos_rd_arb_cg                             = new();
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
@@ -279,6 +296,7 @@ function void axi4_slave_driver_proxy::end_of_elaboration_phase(uvm_phase phase)
        rd_qos_hold_tmo_eff <= 0)
       `uvm_fatal("QOS_HOLD",$sformatf("slave %0d rd_qos_hold_scope=QOS_HOLD_EACH with rd_qos_hold_min=%0d needs rd_qos_hold_tmo_clk > 0 (or +AXI4_QOS_HOLD_TMO): the last read would wait forever",
                                       axi4_slave_agent_cfg_h.slave_id,axi4_slave_agent_cfg_h.rd_qos_hold_min))
+    qos_rd_arb_cov_h = new({get_full_name(), ".qos_rd_arb_cg"});
     if(rd_qos_hold_tmo_eff != axi4_slave_agent_cfg_h.rd_qos_hold_tmo_clk)
       `uvm_info("QOS_HOLD",$sformatf("slave %0d read-QoS hold bound %0d clk from +AXI4_QOS_HOLD_TMO",
                                      axi4_slave_agent_cfg_h.slave_id,rd_qos_hold_tmo_eff),UVM_LOW)
@@ -1223,7 +1241,8 @@ task axi4_slave_driver_proxy::axi4_read_task();
              qos_rd_max_bypass_seen = rd_qos_bypass_cnt[qos_read_queue[i]];
          end
          if(rd_qos_bypass_cnt.exists(qos_read_queue[read_queue_index])) rd_qos_bypass_cnt.delete(qos_read_queue[read_queue_index]);
-         qos_rd_arb_cg.sample(pool_n, oldest, (delta < 0) ? 0 : delta, rd_hold_end, rd_forced);
+         if(qos_rd_arb_cov_h != null)
+           qos_rd_arb_cov_h.qos_rd_arb_cg.sample(pool_n, oldest, (delta < 0) ? 0 : delta, int'(rd_hold_end), rd_forced);
          `uvm_info("QOS_ARB",$sformatf("s%0d RD pick pool[%0d]/%0d arid=0x%0h arqos=%0h oldest_arqos=%0h %s%s hold_end=%s",
                    axi4_slave_agent_cfg_h.slave_id, read_queue_index, pool_n, qos_read_queue[read_queue_index].arid,
                    qos_read_queue[read_queue_index].arqos, qos_read_queue[pool_n-1].arqos,
