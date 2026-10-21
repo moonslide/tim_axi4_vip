@@ -101,6 +101,47 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   int            queue_index;
   bit            qos_wait_enable = 1'b1;
   int            read_queue_index;
+
+  // ---------------------------------------------------------------------------
+  // Read-QoS arbiter: knobs, bookkeeping and statistics.
+  //
+  // The knobs live in axi4_slave_agent_config (rd_qos_hold_min / _scope /
+  // _tmo_clk, rd_qos_max_bypass, qos_rd_arb_chk, qos_rd_expect_*); every
+  // default reproduces the arbiter exactly as it was before they existed. The
+  // bookkeeping below is integer state only -- no object is created and no
+  // random number is drawn, so turning QoS on or off changes nothing else.
+  //
+  // rd_qos_hold_tmo_eff : rd_qos_hold_tmo_clk, or +AXI4_QOS_HOLD_TMO=<clk> for a
+  //                       subordinate left at 0. 0 = hold without limit.
+  // rd_qos_watch_clk    : +AXI4_QOS_HOLD_WATCH=<clk>; 0 = off. Diagnostic only:
+  //                       one QOS_HOLD_STALL warning per subordinate when a hold
+  //                       lasts that long, behaviour unchanged.
+  // rd_qos_bypass_cnt   : per queued read, how many younger reads were served
+  //                       ahead of it (keyed by the queued object).
+  // ---------------------------------------------------------------------------
+  typedef enum bit [1:0] {QOS_HOLD_END_NONE, QOS_HOLD_END_MIN, QOS_HOLD_END_TMO} qos_hold_end_e;
+  int  rd_qos_hold_tmo_eff;
+  int  rd_qos_watch_clk;
+  bit  rd_qos_watch_fired;
+  int  rd_qos_bypass_cnt[axi4_slave_tx];
+  int  qos_rd_picks, qos_rd_with_choice, qos_rd_reordered, qos_rd_hold_tmo;
+  int  qos_rd_forced_bypass, qos_rd_max_bypass_seen, qos_rd_arb_chk_cnt, qos_rd_arb_chk_err;
+  int  qos_wr_picks, qos_wr_max_pool;
+
+  // Covergroup: what each read-QoS choice looked like. Sampled once per choice,
+  // only while this subordinate's read QoS is enabled.
+  covergroup qos_rd_arb_cg with function sample(int pool_size, bit winner_is_oldest, int qos_delta,
+                                                qos_hold_end_e hold_end, bit forced_by_bypass);
+    option.per_instance = 1;
+    cp_pool_size : coverpoint pool_size        { bins one = {1}; bins two = {2}; bins three_four = {[3:4]}; bins five_plus = {[5:$]}; }
+    cp_order     : coverpoint winner_is_oldest { bins bypass = {0}; bins in_order = {1}; }
+    cp_qos_delta : coverpoint qos_delta        { bins zero = {0}; bins d1_3 = {[1:3]}; bins d4_7 = {[4:7]}; bins d8_15 = {[8:15]}; }
+    cp_hold_end  : coverpoint hold_end         { bins none = {QOS_HOLD_END_NONE}; bins min_met = {QOS_HOLD_END_MIN}; bins tmo = {QOS_HOLD_END_TMO}; }
+    cp_forced    : coverpoint forced_by_bypass { bins no = {0}; bins yes = {1}; }
+    x_pool_order : cross cp_pool_size, cp_order {
+      ignore_bins one_is_always_in_order = binsof(cp_pool_size.one) && binsof(cp_order.bypass);
+    }
+  endgroup : qos_rd_arb_cg
   
   // Exclusive Access Monitor - per AMBA AXI4 specification
   typedef struct {
@@ -123,6 +164,11 @@ class axi4_slave_driver_proxy extends uvm_driver#(axi4_slave_tx);
   extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
+  extern virtual function void report_phase(uvm_phase phase);
+  extern virtual function bit rd_qos_enabled();
+  extern virtual function bit wr_qos_enabled();
+  extern virtual task rd_qos_hold(output qos_hold_end_e how);
+  extern virtual function int rd_qos_reference_pick();
   extern virtual task axi4_write_task();
   extern virtual task axi4_read_task();
   extern virtual task task_memory_write(input axi4_slave_tx struct_write_packet);
@@ -166,6 +212,7 @@ function axi4_slave_driver_proxy::new(string name = "axi4_slave_driver_proxy",
   semaphore_write_key                       = new(1);
   semaphore_rsp_write_key                   = new(1);
   semaphore_read_key                        = new(1);
+  qos_rd_arb_cg                             = new();
 endfunction : new
 
 //--------------------------------------------------------------------------------------------
@@ -217,7 +264,136 @@ function void axi4_slave_driver_proxy::end_of_elaboration_phase(uvm_phase phase)
     `uvm_info("slave_driver_proxy", "SLAVE_MEM_MODE: Setting completed_initial_txn=1 (reads independent of writes)", UVM_HIGH)
   end
   axi4_slave_drv_bfm_h.axi4_slave_drv_proxy_h= this;
+
+  // Read-QoS hold bound: the config value, else the global opt-in plusarg.
+  rd_qos_hold_tmo_eff = axi4_slave_agent_cfg_h.rd_qos_hold_tmo_clk;
+  if(rd_qos_hold_tmo_eff == 0) void'($value$plusargs("AXI4_QOS_HOLD_TMO=%d", rd_qos_hold_tmo_eff));
+  if(!$value$plusargs("AXI4_QOS_HOLD_WATCH=%d", rd_qos_watch_clk)) rd_qos_watch_clk = 0;
+  if(rd_qos_enabled()) begin
+    if(axi4_slave_agent_cfg_h.rd_qos_hold_min < 1)
+      `uvm_fatal("QOS_HOLD",$sformatf("slave %0d rd_qos_hold_min=%0d - must be >= 1",
+                                      axi4_slave_agent_cfg_h.slave_id,axi4_slave_agent_cfg_h.rd_qos_hold_min))
+    // Holding before EVERY response without a bound cannot finish: the last
+    // read of the run is always alone in the pool.
+    if(axi4_slave_agent_cfg_h.rd_qos_hold_scope == QOS_HOLD_EACH && axi4_slave_agent_cfg_h.rd_qos_hold_min > 1 &&
+       rd_qos_hold_tmo_eff <= 0)
+      `uvm_fatal("QOS_HOLD",$sformatf("slave %0d rd_qos_hold_scope=QOS_HOLD_EACH with rd_qos_hold_min=%0d needs rd_qos_hold_tmo_clk > 0 (or +AXI4_QOS_HOLD_TMO): the last read would wait forever",
+                                      axi4_slave_agent_cfg_h.slave_id,axi4_slave_agent_cfg_h.rd_qos_hold_min))
+    if(rd_qos_hold_tmo_eff != axi4_slave_agent_cfg_h.rd_qos_hold_tmo_clk)
+      `uvm_info("QOS_HOLD",$sformatf("slave %0d read-QoS hold bound %0d clk from +AXI4_QOS_HOLD_TMO",
+                                     axi4_slave_agent_cfg_h.slave_id,rd_qos_hold_tmo_eff),UVM_LOW)
+  end
 endfunction  : end_of_elaboration_phase
+
+//--------------------------------------------------------------------------------------------
+// Functions: rd_qos_enabled / wr_qos_enabled
+//  Whether this subordinate's read / write QoS arbitration is on.
+//--------------------------------------------------------------------------------------------
+function bit axi4_slave_driver_proxy::rd_qos_enabled();
+  return (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_READ_QOS_MODE_ENABLE) ||
+         (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE);
+endfunction : rd_qos_enabled
+
+function bit axi4_slave_driver_proxy::wr_qos_enabled();
+  return (axi4_slave_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
+         (axi4_slave_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE);
+endfunction : wr_qos_enabled
+
+//--------------------------------------------------------------------------------------------
+// Task: rd_qos_hold
+//  Holds the next R response until the read-QoS pool has rd_qos_hold_min
+//  entries, or -- when a bound is set -- until rd_qos_hold_tmo_eff aclk cycles
+//  have passed since the pool became non-empty, whichever comes first.
+//
+//  Unbounded and unwatched (the default) it is exactly the original
+//  `wait(qos_read_queue.size>=2)`: no fork, no clock, same scheduling. The
+//  bounded/watched form runs its timers inside an isolating fork, so the
+//  `disable fork` that retires the losers cannot reach any other thread of
+//  this proxy.
+//--------------------------------------------------------------------------------------------
+task axi4_slave_driver_proxy::rd_qos_hold(output qos_hold_end_e how);
+  int  min_n = axi4_slave_agent_cfg_h.rd_qos_hold_min;
+  bit  timed_out = 0;
+
+  if(rd_qos_hold_tmo_eff <= 0 && rd_qos_watch_clk <= 0) begin
+    wait(qos_read_queue.size() >= min_n);
+    how = QOS_HOLD_END_MIN;
+    return;
+  end
+
+  fork
+    begin : rd_qos_hold_isolate
+      fork
+        wait(qos_read_queue.size() >= min_n);
+        begin : rd_qos_hold_tmo
+          if(rd_qos_hold_tmo_eff > 0) begin
+            wait(qos_read_queue.size() > 0);
+            repeat(rd_qos_hold_tmo_eff) @(posedge axi4_slave_drv_bfm_h.aclk);
+            timed_out = 1;
+          end
+          else wait(1'b0);
+        end
+        begin : rd_qos_hold_watch
+          if(rd_qos_watch_clk > 0) begin
+            repeat(rd_qos_watch_clk) @(posedge axi4_slave_drv_bfm_h.aclk);
+            if(!rd_qos_watch_fired)
+              `uvm_warning("QOS_HOLD_STALL",$sformatf("slave %0d read-QoS hold still waiting after %0d clk: pool=%0d hold_min=%0d tmo_clk=%0d (diagnostic only; +AXI4_QOS_HOLD_TMO or rd_qos_hold_tmo_clk bounds the hold)",
+                                                      axi4_slave_agent_cfg_h.slave_id,rd_qos_watch_clk,qos_read_queue.size(),min_n,rd_qos_hold_tmo_eff))
+            rd_qos_watch_fired = 1;
+          end
+          wait(1'b0);
+        end
+      join_any
+      disable fork;
+    end : rd_qos_hold_isolate
+  join
+
+  how = (qos_read_queue.size() >= min_n) ? QOS_HOLD_END_MIN : (timed_out ? QOS_HOLD_END_TMO : QOS_HOLD_END_MIN);
+endtask : rd_qos_hold
+
+//--------------------------------------------------------------------------------------------
+// Function: rd_qos_reference_pick
+//  Independent re-derivation of the read-QoS choice rule, used only by the
+//  qos_rd_arb_chk self-check. Pool order: index 0 = newest, last = oldest.
+//    1. rd_qos_max_bypass > 0 and some read overtaken >= that many times:
+//       the OLDEST such read.
+//    2. otherwise the highest ARQOS; among equals the OLDEST.
+//--------------------------------------------------------------------------------------------
+function int axi4_slave_driver_proxy::rd_qos_reference_pick();
+  int best_qos = -1;
+  if(axi4_slave_agent_cfg_h.rd_qos_max_bypass > 0)
+    for(int i = qos_read_queue.size()-1; i >= 0; i--)
+      if(rd_qos_bypass_cnt.exists(qos_read_queue[i]) &&
+         rd_qos_bypass_cnt[qos_read_queue[i]] >= axi4_slave_agent_cfg_h.rd_qos_max_bypass)
+        return i;
+  foreach(qos_read_queue[i]) if(int'(qos_read_queue[i].arqos) > best_qos) best_qos = qos_read_queue[i].arqos;
+  for(int i = qos_read_queue.size()-1; i >= 0; i--)
+    if(int'(qos_read_queue[i].arqos) == best_qos) return i;
+  return -1;
+endfunction : rd_qos_reference_pick
+
+//--------------------------------------------------------------------------------------------
+// Function: report_phase
+//  QOS_ARB_STATS: whether the subordinate's QoS arbiters ever had a choice to
+//  make, and what they chose. Printed only when this subordinate has a QoS mode
+//  enabled. Also evaluates the read-QoS expectations a test declared.
+//--------------------------------------------------------------------------------------------
+function void axi4_slave_driver_proxy::report_phase(uvm_phase phase);
+  super.report_phase(phase);
+  if(axi4_slave_agent_cfg_h.qos_mode_type == QOS_MODE_DISABLE) return;
+  `uvm_info("QOS_ARB_STATS",$sformatf("QOS_ARB_STATS s%0d rd: picks=%0d with_choice=%0d reordered=%0d hold_tmo=%0d forced_bypass=%0d max_bypass_seen=%0d | wr: picks=%0d max_pool=%0d",
+            axi4_slave_agent_cfg_h.slave_id, qos_rd_picks, qos_rd_with_choice, qos_rd_reordered, qos_rd_hold_tmo,
+            qos_rd_forced_bypass, qos_rd_max_bypass_seen, qos_wr_picks, qos_wr_max_pool),UVM_LOW)
+  if(axi4_slave_agent_cfg_h.qos_rd_arb_chk)
+    `uvm_info("QOS_ARB_CHK",$sformatf("slave %0d read-QoS choices re-derived=%0d mismatches=%0d",
+              axi4_slave_agent_cfg_h.slave_id, qos_rd_arb_chk_cnt, qos_rd_arb_chk_err),UVM_LOW)
+  if(axi4_slave_agent_cfg_h.qos_rd_expect_reorder_min >= 0 && qos_rd_reordered < axi4_slave_agent_cfg_h.qos_rd_expect_reorder_min)
+    `uvm_error("QOS_ARB_EXPECT",$sformatf("slave %0d: expected at least %0d read-QoS choices that overtook an older read, saw %0d (picks=%0d with_choice=%0d)",
+               axi4_slave_agent_cfg_h.slave_id, axi4_slave_agent_cfg_h.qos_rd_expect_reorder_min, qos_rd_reordered, qos_rd_picks, qos_rd_with_choice))
+  if(axi4_slave_agent_cfg_h.qos_rd_expect_bypass_max >= 0 && qos_rd_max_bypass_seen > axi4_slave_agent_cfg_h.qos_rd_expect_bypass_max)
+    `uvm_error("QOS_ARB_EXPECT",$sformatf("slave %0d: a queued read was overtaken %0d times, expected at most %0d",
+               axi4_slave_agent_cfg_h.slave_id, qos_rd_max_bypass_seen, axi4_slave_agent_cfg_h.qos_rd_expect_bypass_max))
+endfunction : report_phase
 
 
 //--------------------------------------------------------------------------------------------
@@ -401,6 +577,9 @@ task axi4_slave_driver_proxy::axi4_write_task();
         // `queue_index` is also a class member, so a stale value from a previous
         // response survived into this one; seed it here instead.
         wait(qos_queue.size() > 0);
+        // Statistics only: how much choice the write-response arbiter had.
+        qos_wr_picks++;
+        if(qos_queue.size() > qos_wr_max_pool) qos_wr_max_pool = qos_queue.size();
         queue_index       = 0;
         qos_value_check_1 = qos_queue[0];
         for(int i=0;i<qos_queue.size();i++) begin
@@ -955,6 +1134,8 @@ task axi4_slave_driver_proxy::axi4_read_task();
      axi4_slave_tx              local_slave_addr_chk_tx;
      axi4_slave_tx              qos_value_check_1;
      axi4_slave_tx              packet;
+     qos_hold_end_e             rd_hold_end;
+     bit                        rd_forced;
     axi4_read_transfer_char_s  struct_read_packet;
     axi4_transfer_cfg_s        struct_cfg;
     int                        total_bytes;
@@ -977,8 +1158,12 @@ task axi4_slave_driver_proxy::axi4_read_task();
          // Skip wait in SLAVE_MEM_MODE - reads are independent of writes
          `uvm_info("slave_driver_proxy", "SLAVE_MEM_MODE: Skipping write completion wait for read", UVM_HIGH)
        end
-       if(qos_wait_enable) begin
-         wait(qos_read_queue.size>=2);
+       // Hold to let a pool build up: before the first response only
+       // (QOS_HOLD_FIRST, the original behaviour) or before every response
+       // (QOS_HOLD_EACH). See rd_qos_hold() for the bound and the watchdog.
+       rd_hold_end = QOS_HOLD_END_NONE;
+       if(qos_wait_enable || axi4_slave_agent_cfg_h.rd_qos_hold_scope == QOS_HOLD_EACH) begin
+         rd_qos_hold(rd_hold_end);
        end
        qos_wait_enable = 1'b0;
        // Same defect as the QoS write response branch: after the first read
@@ -988,12 +1173,61 @@ task axi4_slave_driver_proxy::axi4_read_task();
        // seed it rather than inheriting a stale index from the previous read.
        wait(qos_read_queue.size() > 0);
        read_queue_index  = 0;
-       qos_value_check_1 = qos_read_queue[0];
-       for(int i=0;i<qos_read_queue.size();i++) begin
-         if(qos_read_queue[i].arqos >= qos_value_check_1.arqos) begin
-           qos_value_check_1 = qos_read_queue[i];
-           read_queue_index = i;
+       rd_forced         = 1'b0;
+       // Starvation bound: a read already overtaken rd_qos_max_bypass times is
+       // served now, oldest such read first. Off (0) by default.
+       if(axi4_slave_agent_cfg_h.rd_qos_max_bypass > 0) begin
+         for(int i = qos_read_queue.size()-1; i >= 0; i--) begin
+           if(rd_qos_bypass_cnt.exists(qos_read_queue[i]) &&
+              rd_qos_bypass_cnt[qos_read_queue[i]] >= axi4_slave_agent_cfg_h.rd_qos_max_bypass) begin
+             read_queue_index = i;
+             rd_forced        = 1'b1;
+             break;
+           end
          end
+       end
+       if(!rd_forced) begin
+         qos_value_check_1 = qos_read_queue[0];
+         for(int i=0;i<qos_read_queue.size();i++) begin
+           if(qos_read_queue[i].arqos >= qos_value_check_1.arqos) begin
+             qos_value_check_1 = qos_read_queue[i];
+             read_queue_index = i;
+           end
+         end
+       end
+       // Bookkeeping for this choice (integer state only).
+       begin
+         int pool_n = qos_read_queue.size();
+         bit oldest = (read_queue_index == pool_n-1);
+         int delta  = int'(qos_read_queue[read_queue_index].arqos) - int'(qos_read_queue[pool_n-1].arqos);
+         if(axi4_slave_agent_cfg_h.qos_rd_arb_chk) begin
+           int ref_idx = rd_qos_reference_pick();
+           qos_rd_arb_chk_cnt++;
+           if(ref_idx != read_queue_index) begin
+             qos_rd_arb_chk_err++;
+             `uvm_error("QOS_ARB_CHK",$sformatf("slave %0d read-QoS chose pool[%0d] (arid=0x%0h arqos=%0h) but the rule selects pool[%0d] (pool=%0d, 0=newest)",
+                        axi4_slave_agent_cfg_h.slave_id, read_queue_index, qos_read_queue[read_queue_index].arid,
+                        qos_read_queue[read_queue_index].arqos, ref_idx, pool_n))
+           end
+         end
+         qos_rd_picks++;
+         if(pool_n > 1)                         qos_rd_with_choice++;
+         if(!oldest)                            qos_rd_reordered++;
+         if(rd_forced)                          qos_rd_forced_bypass++;
+         if(rd_hold_end == QOS_HOLD_END_TMO)    qos_rd_hold_tmo++;
+         // every queued read older than the one served has just been overtaken
+         for(int i = read_queue_index+1; i < pool_n; i++) begin
+           if(rd_qos_bypass_cnt.exists(qos_read_queue[i])) rd_qos_bypass_cnt[qos_read_queue[i]]++;
+           else                                            rd_qos_bypass_cnt[qos_read_queue[i]] = 1;
+           if(rd_qos_bypass_cnt[qos_read_queue[i]] > qos_rd_max_bypass_seen)
+             qos_rd_max_bypass_seen = rd_qos_bypass_cnt[qos_read_queue[i]];
+         end
+         if(rd_qos_bypass_cnt.exists(qos_read_queue[read_queue_index])) rd_qos_bypass_cnt.delete(qos_read_queue[read_queue_index]);
+         qos_rd_arb_cg.sample(pool_n, oldest, (delta < 0) ? 0 : delta, rd_hold_end, rd_forced);
+         `uvm_info("QOS_ARB",$sformatf("s%0d RD pick pool[%0d]/%0d arid=0x%0h arqos=%0h oldest_arqos=%0h %s%s hold_end=%s",
+                   axi4_slave_agent_cfg_h.slave_id, read_queue_index, pool_n, qos_read_queue[read_queue_index].arid,
+                   qos_read_queue[read_queue_index].arqos, qos_read_queue[pool_n-1].arqos,
+                   oldest ? "in_order" : "BYPASS", rd_forced ? " FORCED" : "", rd_hold_end.name()),UVM_HIGH)
        end
        //Getting the data from read data fifo
        //axi4_slave_read_data_in_fifo_h.get(local_slave_rdata_tx);
