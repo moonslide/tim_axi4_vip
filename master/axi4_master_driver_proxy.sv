@@ -134,6 +134,15 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
 
   axi4_master_tx qos_queue[$];
 
+  // ---- Agent-level AxQOS value policy (axi4_master_agent_config::awqos_src /
+  // arqos_src). One private generator per channel, used only by AXQOS_SRC_SPAN.
+  // It is plain integer state, not $urandom and not an object: neither this
+  // thread's random stream nor any object's is touched, so a test that does not
+  // select SPAN runs exactly as before, and one that does keeps every other
+  // random decision it would have made. Seeded in end_of_elaboration_phase from
+  // the run seed and the master id.
+  bit [31:0] qos_span_state[2];   // [0] = AR, [1] = AW
+  int        qos_src_applied[2];  // requests whose AxQOS the policy set
 
   write_read_data_mode_e write_read_mode_h;
 
@@ -144,6 +153,8 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   extern function new(string name = "axi4_master_driver_proxy", uvm_component parent = null);
   extern virtual function void build_phase(uvm_phase phase);
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
+  extern virtual function void start_of_simulation_phase(uvm_phase phase);
+  extern virtual function bit [3:0] qos_src_value(bit is_write, bit [3:0] seq_value);
   extern virtual function void configure_outstanding_credits();
   extern virtual task run_phase(uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
@@ -205,9 +216,70 @@ endfunction : build_phase
 //  phase - uvm phase
 //--------------------------------------------------------------------------------------------
 function void axi4_master_driver_proxy::end_of_elaboration_phase(uvm_phase phase);
+  int run_seed;
   super.end_of_elaboration_phase(phase);
   axi4_master_drv_bfm_h.axi4_master_drv_proxy_h = this;
+
+  // AxQOS value policy: reject an empty span instead of silently swapping it.
+  if(axi4_master_agent_cfg_h.awqos_src == AXQOS_SRC_SPAN &&
+     axi4_master_agent_cfg_h.awqos_span_lo > axi4_master_agent_cfg_h.awqos_span_hi)
+    `uvm_fatal("QOS_SRC",$sformatf("master %0d awqos_span_lo=%0h > awqos_span_hi=%0h",axi4_master_agent_cfg_h.master_id,
+                                   axi4_master_agent_cfg_h.awqos_span_lo,axi4_master_agent_cfg_h.awqos_span_hi))
+  if(axi4_master_agent_cfg_h.arqos_src == AXQOS_SRC_SPAN &&
+     axi4_master_agent_cfg_h.arqos_span_lo > axi4_master_agent_cfg_h.arqos_span_hi)
+    `uvm_fatal("QOS_SRC",$sformatf("master %0d arqos_span_lo=%0h > arqos_span_hi=%0h",axi4_master_agent_cfg_h.master_id,
+                                   axi4_master_agent_cfg_h.arqos_span_lo,axi4_master_agent_cfg_h.arqos_span_hi))
+  // Seed the private span generators: different per master and per channel,
+  // and different per run seed so a seed sweep sweeps the values too. A
+  // plusarg read does not consume any random number.
+  if(!$value$plusargs("ntb_random_seed=%d",run_seed)) run_seed = 1;
+  qos_span_state[0] = (run_seed * 32'h9E37_79B9) ^ (axi4_master_agent_cfg_h.master_id * 32'h85EB_CA6B) ^ 32'h0000_A5A5;
+  qos_span_state[1] = (run_seed * 32'h9E37_79B9) ^ (axi4_master_agent_cfg_h.master_id * 32'h85EB_CA6B) ^ 32'h5A5A_0000;
+  foreach(qos_span_state[i]) if(qos_span_state[i] == 0) qos_span_state[i] = 32'h1;
 endfunction : end_of_elaboration_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: start_of_simulation_phase
+//  States the agent's AxQOS value policy once, and only when it is not the
+//  default (so the log of a test that does not use it is unchanged).
+//--------------------------------------------------------------------------------------------
+function void axi4_master_driver_proxy::start_of_simulation_phase(uvm_phase phase);
+  super.start_of_simulation_phase(phase);
+  if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ || axi4_master_agent_cfg_h.arqos_src != AXQOS_SRC_SEQ)
+    `uvm_info("QOS_SRC",$sformatf("QOS_SRC m%0d aw=%s(const=%0h span=%0h..%0h) ar=%s(const=%0h span=%0h..%0h)",
+              axi4_master_agent_cfg_h.master_id,
+              axi4_master_agent_cfg_h.awqos_src.name(),axi4_master_agent_cfg_h.awqos_const,
+              axi4_master_agent_cfg_h.awqos_span_lo,axi4_master_agent_cfg_h.awqos_span_hi,
+              axi4_master_agent_cfg_h.arqos_src.name(),axi4_master_agent_cfg_h.arqos_const,
+              axi4_master_agent_cfg_h.arqos_span_lo,axi4_master_agent_cfg_h.arqos_span_hi),UVM_LOW)
+endfunction : start_of_simulation_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: qos_src_value
+//  The AxQOS value the agent policy assigns to one request. Called only when the
+//  channel's policy is not AXQOS_SRC_SEQ. is_write selects AW (1) or AR (0).
+//--------------------------------------------------------------------------------------------
+function bit [3:0] axi4_master_driver_proxy::qos_src_value(bit is_write, bit [3:0] seq_value);
+  axqos_src_e src   = is_write ? axi4_master_agent_cfg_h.awqos_src     : axi4_master_agent_cfg_h.arqos_src;
+  bit [3:0]   cval  = is_write ? axi4_master_agent_cfg_h.awqos_const   : axi4_master_agent_cfg_h.arqos_const;
+  bit [3:0]   lo    = is_write ? axi4_master_agent_cfg_h.awqos_span_lo : axi4_master_agent_cfg_h.arqos_span_lo;
+  bit [3:0]   hi    = is_write ? axi4_master_agent_cfg_h.awqos_span_hi : axi4_master_agent_cfg_h.arqos_span_hi;
+  bit [31:0]  x;
+  case(src)
+    AXQOS_SRC_CONST : return cval;
+    AXQOS_SRC_ZERO  : return 4'h0;
+    AXQOS_SRC_SPAN  : begin
+      // xorshift32 step on this channel's private state
+      x = qos_span_state[is_write];
+      x = x ^ (x << 13);
+      x = x ^ (x >> 17);
+      x = x ^ (x << 5);
+      qos_span_state[is_write] = x;
+      return lo + (x % (int'(hi) - int'(lo) + 1));
+    end
+    default         : return seq_value;
+  endcase
+endfunction : qos_src_value
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase
@@ -321,6 +393,9 @@ function void axi4_master_driver_proxy::report_phase(uvm_phase phase);
                                      wr_data_inflight_max,wr_resp_inflight_max,rd_data_inflight_max,
                                      wr_wire_outstanding_max,rd_wire_outstanding_max,
                                      wr_fifo_used_max,wr_resp_fifo_used_max,rd_fifo_used_max),UVM_LOW)
+  if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ || axi4_master_agent_cfg_h.arqos_src != AXQOS_SRC_SEQ)
+    `uvm_info("QOS_SRC",$sformatf("QOS_SRC_STATS m%0d aw_applied=%0d ar_applied=%0d",
+              axi4_master_agent_cfg_h.master_id, qos_src_applied[1], qos_src_applied[0]),UVM_LOW)
 endfunction : report_phase
 
 task axi4_master_driver_proxy::run_phase(uvm_phase phase);
@@ -460,6 +535,17 @@ task axi4_master_driver_proxy::axi4_write_task();
     axi4_write_transfer_char_s struct_write_packet;
 
     axi_write_seq_item_port.get_next_item(req_wr);
+
+    // Agent AxQOS value policy. Written back into the item itself, before any
+    // conversion, so every later view of this request (wire, monitor,
+    // scoreboard, the write-QoS arbitration below) carries the same value.
+    if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin
+      bit [3:0] seq_awqos = req_wr.awqos;
+      req_wr.awqos = qos_src_value(1'b1,seq_awqos);
+      qos_src_applied[1]++;
+      `uvm_info("QOS_SRC",$sformatf("awid=0x%0h awqos %0h -> %0h (%s)",req_wr.awid,seq_awqos,req_wr.awqos,
+                                    axi4_master_agent_cfg_h.awqos_src.name()),UVM_HIGH)
+    end
     `uvm_info(get_type_name(),$sformatf("WRITE_TASK::Before Sending_req_write_packet = \n%s",req_wr.sprint()),UVM_HIGH); 
 
     // BENCH-066: transaction-attached X injection (AWVALID/AWADDR/WDATA/BREADY),
@@ -933,6 +1019,12 @@ task axi4_master_driver_proxy::axi4_read_task();
     axi4_transfer_cfg_s       struct_cfg;
 
     axi_read_seq_item_port.get_next_item(req_rd);
+
+    // Agent AxQOS value policy - see the write task.
+    if(axi4_master_agent_cfg_h.arqos_src != AXQOS_SRC_SEQ) begin
+      req_rd.arqos = qos_src_value(1'b0,req_rd.arqos);
+      qos_src_applied[0]++;
+    end
     `uvm_info(get_type_name(),$sformatf("READ_TASK:: Before Sending_req_read_packet = \n %s",req_rd.sprint()),UVM_NONE); 
 
     // BENCH-066: transaction-attached X injection (ARVALID/RREADY), run to
