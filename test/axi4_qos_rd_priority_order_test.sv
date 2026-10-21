@@ -21,8 +21,10 @@
 //                           the first response, until 2 reads). FAIL half: the
 //                           pool is too small after the first choice, so the
 //                           R order is not F,7,3,1.
-//    +QOS_RD_ORDER_QOS_OFF: slave 0 read QoS disabled - responses in order,
-//                           every check must fail (negative check).
+//    +QOS_RD_ORDER_QOS_OFF: slave 0 read QoS disabled - responses in issue
+//                           order, the R-order check must fail (negative
+//                           check; the arbiter checks are not evaluated with
+//                           read QoS off).
 //--------------------------------------------------------------------------------------------
 class axi4_qos_rd_priority_order_test extends axi4_qos_rd_arb_base_test;
   `uvm_component_utils(axi4_qos_rd_priority_order_test)
