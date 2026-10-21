@@ -16,13 +16,16 @@
 //
 //    manager | AW policy           | AR policy
 //    m0      | CONST 0xC           | ZERO
-//    m1      | SPAN  0x2..0x5      | CONST 0x7
+//    m1      | SPAN  0x6..0x9      | CONST 0x7
 //    m2      | ZERO                | SPAN  0x9..0xB
 //    m3      | SEQ (expects 0x4)   | SEQ (expects 0x4)
 //
 //  Verdict (check_phase): per manager and channel, at least one handshake was
-//  seen and every value obeys the policy; a SPAN channel with 3+ handshakes
-//  must also show 2+ distinct values. The scoreboard's ARQOS compare
+//  seen and every value obeys the policy. Every non-SEQ policy here excludes
+//  the sequence's own 0x4 (both SPAN ranges too), so a policy that was not
+//  applied cannot pass. A SPAN channel is not required to show more than one
+//  value: a uniform draw may legitimately repeat (the distinct count is
+//  reported). The scoreboard's ARQOS compare
 //  (axqos_passthrough_chk_cfg) independently confirms the subordinates saw the
 //  same ARQOS. (AWQOS is compared only with awqos_chk_cfg / +AXI4_AWQOS_CHK:
 //  the slave monitor does not sample AWQOS yet.)
@@ -70,8 +73,8 @@ function void axi4_qos_src_policy_test::setup_axi4_master_agent_cfg();
   axi4_env_cfg_h.axi4_master_agent_cfg_h[0].awqos_const   = 4'hC;
   axi4_env_cfg_h.axi4_master_agent_cfg_h[0].arqos_src     = AXQOS_SRC_ZERO;
   axi4_env_cfg_h.axi4_master_agent_cfg_h[1].awqos_src     = AXQOS_SRC_SPAN;
-  axi4_env_cfg_h.axi4_master_agent_cfg_h[1].awqos_span_lo = 4'h2;
-  axi4_env_cfg_h.axi4_master_agent_cfg_h[1].awqos_span_hi = 4'h5;
+  axi4_env_cfg_h.axi4_master_agent_cfg_h[1].awqos_span_lo = 4'h6;
+  axi4_env_cfg_h.axi4_master_agent_cfg_h[1].awqos_span_hi = 4'h9;
   axi4_env_cfg_h.axi4_master_agent_cfg_h[1].arqos_src     = AXQOS_SRC_CONST;
   axi4_env_cfg_h.axi4_master_agent_cfg_h[1].arqos_const   = 4'h7;
   axi4_env_cfg_h.axi4_master_agent_cfg_h[2].awqos_src     = AXQOS_SRC_ZERO;
@@ -105,9 +108,6 @@ function void axi4_qos_src_policy_test::check_channel(int m, string ch, axqos_sr
   if(bad > 0)
     `uvm_error("QOS_SRC_POLICY", $sformatf("m%0d %s %s (const=%0h span=%0h..%0h): %0d of %0d handshakes broke the policy, observed %p",
                                            m, ch, src.name(), cval, lo, hi, bad, q.size(), q))
-  else if(src == AXQOS_SRC_SPAN && q.size() >= 3 && axi4_qos_ctrl_observer::distinct(q) < 2)
-    `uvm_error("QOS_SRC_POLICY", $sformatf("m%0d %s SPAN %0h..%0h: %0d handshakes all carried one value %p - not spread",
-                                           m, ch, lo, hi, q.size(), q))
   else
     `uvm_info("QOS_SRC_POLICY", $sformatf("m%0d %s %s: %0d handshakes, %0d distinct value(s), all obey the policy %p",
                                           m, ch, src.name(), q.size(), axi4_qos_ctrl_observer::distinct(q), q), UVM_LOW)
