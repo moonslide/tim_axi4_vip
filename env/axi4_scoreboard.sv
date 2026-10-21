@@ -790,6 +790,8 @@ function void axi4_scoreboard::start_of_simulation_phase(uvm_phase phase);
 
   //AWQOS compare on/off, resolved once (env cfg is bound by now).
   sb_awqos_chk_on = $test$plusargs("AXI4_AWQOS_CHK") || axi4_env_cfg_h.awqos_chk_cfg;
+  if(sb_awqos_chk_on && axi4_env_cfg_h.axqos_passthrough_chk_cfg)
+    `uvm_warning("SB_AWQOS_CHK", "AWQOS compare enabled (awqos_chk_cfg / +AXI4_AWQOS_CHK), but the slave monitor does not sample AWQOS: the slave-side value is always 0, so every write with AWQOS != 0 will be counted as an awqos FAILURE")
 
   //Same-ID CONTENT mechanism: decide ONCE whether it can mean anything at all
   //in this run, instead of re-scanning every slave agent config on every written
