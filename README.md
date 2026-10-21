@@ -495,13 +495,16 @@ Open items:
   `content_adjudicated` 12 and 17. On Track-B all 48 transfers now reach the
   subordinate and, with the same Track-B scoreboard settings, the test passes at
   seeds 777, 1 and one random seed — but there it is only a consistency check:
-  the fabric accepts master 0's next AR only after the previous R completes, so
-  two same-ID reads are never outstanding together and the checker has nothing
-  to adjudicate (`content_adjudicated=0`). Its same-ID ordering coverage comes
-  from the baseline build only.
+  at the fabric ingress, master 0's next AR is observed to be held off
+  (`ARREADY` low) until the previous R completes, so two same-ID reads are never
+  outstanding together and the checker has nothing to adjudicate
+  (`content_adjudicated=0`). The cause — a fabric acceptance rule or downstream
+  backpressure — was not probed. Its same-ID ordering coverage comes from the
+  baseline build only.
 - All three are in `testlists/axi4_trackb_nonnative.list`. Not verified: the
-  `4x4` fabric drop for them, why the fabric admits only one read at a time
-  (no fabric-boundary probe was run), and IDs ≥ 16.
+  `4x4` fabric drop for them, why only one read is in flight at a time on
+  Track-B (observed at the fabric ingress; no fabric-boundary probe was run, so
+  fabric rule vs downstream backpressure is open), and IDs ≥ 16.
 - `GET_AWID_ENUM`/`GET_ARID_ENUM` in `include/axi4_bus_config.svh` still map
   `% 16` on HEAD. A width-aware rewrite was tried and abandoned. Its
   `randomize() failed` at slot 16 of `axi4_same_id_nonadjacent_reorder_test` is
@@ -912,6 +915,22 @@ vcs -full64 -lca -kdb -sverilog +v2k -debug_access+all \
 Track-B must use the fabric-specific file list; adding only a fabric define to
 the baseline list does not compile the licensed RTL.
 
+**QoS on Track-B: nothing is verified.** The fabric takes `AWQOS`/`ARQOS` on its
+ingress ports only and forwards no QoS downstream; `top/hdl_top.sv:825-826` ties
+the subordinate-side `awqos`/`arqos` to 0. Accordingly, the non-native Track-B
+tests (`testlists/axi4_trackb_nonnative.list`) switch the `ARQOS` passthrough
+check off (logged as not performed in `SB_CHECK_LEDGER`), and `AWQOS` is never
+compared in any build. In addition, `axi4_qos_basic_priority_test` and
+`axi4_qos_equal_priority_fairness_test` (T1/T2 under
+[Recent verification updates (2026-10-20)](#recent-verification-updates-2026-10-20)) put their slaves in
+`ONLY_WRITE_QOS_MODE_ENABLE` under `` `ifdef BUS_MATRIX_FABRIC_IP ``, so slave
+read-QoS ordering is disabled on Track-B (`axi4_qos_bid_queue_race_test`
+inherits that setting and issues no reads). A Track-B PASS on a test with "qos"
+in its name is therefore evidence about routing, pairing and data, not about
+QoS arbitration or ordering. QoS-mode stimulus and checks run only on the
+baseline build, whose reference model itself implements no QoS arbitration
+(see [Known limitations](#known-limitations)).
+
 ### 10×10 fabric
 
 ```bash
@@ -1195,7 +1214,8 @@ tops, then assertions. `sim/axi4_compile.f` is the executable source of truth.
 | Baseline direct wiring | It cannot prove N×M routing or arbitration; use a real interconnect DUT for those behaviors |
 | Two-bit `AWLOCK`/`ARLOCK` pins | The interface declares AXI3-style `[1:0]` pins while class semantics are one-bit AXI4; Track-B uses bit 0 |
 | Plain interface | `axi4_if` defines no modports or interface-level clocking blocks; monitor BFMs have their own sampling clocking blocks |
-| ID stimulus range | Track-B pins/enums can carry up to 8-bit IDs, but default initiator constraints/helpers generate IDs 0–15 |
+| ID stimulus range | Track-B builds with 8-bit (10×10) / 6-bit (4×4) subordinate-side IDs, but the fabric ingress AxID is 4 bits: managers may use 0–15 only, and a wider valid AxID stops the run at `IDW_INGRESS_TRUNC`. Default initiator constraints/helpers generate IDs 0–15 |
+| Track-B QoS | No QoS behaviour is verified on Track-B: the fabric forwards no QoS, the ARQOS check is off in the non-native tests, and slave read-QoS ordering is disabled in the two QoS tests that run there (see [Track-B](#track-b-commercial-fabric-as-dut)) |
 | Assertion scope | AW/AR stable/known payload sets omit QoS, REGION, and USER; there are no comprehensive SVA rules for all burst/4-KiB/WLAST/WSTRB/same-ID cases |
 | READY timeout wording | The property uses unbounded `##[1:$]`; the reported finite ready-delay configuration is not wired into the assertions |
 | Same-ID closure | Read-side adjudication is selective and write-side same-ID ordering is not fully adjudicated by the end checker |
@@ -1270,7 +1290,7 @@ They are the compact audit trail for the highest-impact statements above:
 | Claim | Executable/source evidence |
 |---|---|
 | HVL entry and UVM test selection | `top/hvl_top.sv:4-19` |
-| HDL interfaces, BFM instances, direct and fabric paths | `top/hdl_top.sv:500-559,550-970` |
+| HDL interfaces, BFM instances, direct and fabric paths | `top/hdl_top.sv:520-546` (interfaces, BFMs), `:559-954` (fabric path), `:955-1017` (direct path) — re-read 2026-10-21 |
 | Active baseline compile order | `sim/axi4_compile.f:15-34` |
 | Five-channel pin set | `intf/axi4_interface/axi4_if.sv:14-67` |
 | Width and USER defaults | `pkg/axi4_globals_pkg.sv:25-80`; `include/axi4_bus_config.svh:71-97,156-188` |
