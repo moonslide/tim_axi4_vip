@@ -94,7 +94,8 @@ interface slave_assertions (input                     aclk,
   property if_write_address_channel_signals_are_stable;
     @(posedge aclk) disable iff (!aresetn)
     (awvalid==1 && awready==0) |=> ($stable(awid) && $stable(awaddr) && $stable(awlen) && $stable(awsize) && 
-                                    $stable(awburst) && $stable(awlock) && $stable(awcache) && $stable(awprot));
+                                    $stable(awburst) && $stable(awlock) && $stable(awcache) && $stable(awprot) &&
+                                    $stable(awqos));
   endproperty : if_write_address_channel_signals_are_stable
   AXI_WA_STABLE_SIGNALS_CHECK: assert property (if_write_address_channel_signals_are_stable);
  
@@ -103,7 +104,8 @@ interface slave_assertions (input                     aclk,
   property if_write_address_channel_signals_are_unknown;
     @(posedge aclk) disable iff (!aresetn)
     (awvalid==1) |-> (!($isunknown(awid)) && !($isunknown(awaddr)) && !($isunknown(awlen)) && !($isunknown(awsize))
-                     && !($isunknown(awburst)) && !($isunknown(awlock)) && !($isunknown(awcache)) && !($isunknown(awprot)));
+                     && !($isunknown(awburst)) && !($isunknown(awlock)) && !($isunknown(awcache)) && !($isunknown(awprot))
+                     && !($isunknown(awqos)));
   endproperty : if_write_address_channel_signals_are_unknown
   AXI_WA_UNKNOWN_SIGNALS_CHECK: assert property (if_write_address_channel_signals_are_unknown);
 
@@ -209,7 +211,8 @@ interface slave_assertions (input                     aclk,
   property if_read_address_channel_signals_are_stable;
     @(posedge aclk) disable iff (!aresetn)
     (arvalid==1 && arready==0) |=> ($stable(arid) && $stable(araddr) && $stable(arlen) && $stable(arsize) && 
-                                    $stable(arburst) && $stable(arlock) && $stable(arcache) && $stable(arprot));
+                                    $stable(arburst) && $stable(arlock) && $stable(arcache) && $stable(arprot) &&
+                                    $stable(arqos));
   endproperty : if_read_address_channel_signals_are_stable
   AXI_RA_STABLE_SIGNALS_CHECK: assert property (if_read_address_channel_signals_are_stable);
  
@@ -218,7 +221,8 @@ interface slave_assertions (input                     aclk,
   property if_read_address_channel_signals_are_unknown;
     @(posedge aclk) disable iff (!aresetn)
     (arvalid==1) |-> (!($isunknown(arid)) && !($isunknown(araddr)) && !($isunknown(arlen)) && !($isunknown(arsize))
-                     && !($isunknown(arburst)) && !($isunknown(arlock)) && !($isunknown(arcache)) && !($isunknown(arprot)));
+                     && !($isunknown(arburst)) && !($isunknown(arlock)) && !($isunknown(arcache)) && !($isunknown(arprot))
+                     && !($isunknown(arqos)));
   endproperty : if_read_address_channel_signals_are_unknown
   AXI_RA_UNKNOWN_SIGNALS_CHECK: assert property (if_read_address_channel_signals_are_unknown);
 
