@@ -6,10 +6,14 @@
 //
 // AXI_ooo.md F1 (Phase 1) directed repro.
 //
-// Reuses axi4_qos_equal_priority_fairness_test's configuration verbatim (all masters
-// and all slaves in WRITE_READ_QOS_MODE_ENABLE, slaves in SLAVE_MEM_MODE) and only
-// replaces the stimulus with a burst-length-skewed one, so the ONLY difference from
-// a known-passing QoS test is the completion ORDER across master-slave pairs.
+// Reuses axi4_qos_equal_priority_fairness_test's configuration verbatim (inherited via
+// `extends`: all masters in WRITE_READ_QOS_MODE_ENABLE; all slaves in
+// WRITE_READ_QOS_MODE_ENABLE and SLAVE_MEM_MODE) and only replaces the stimulus with a
+// burst-length-skewed one, so the ONLY difference from a known-passing QoS test is the
+// completion ORDER across master-slave pairs.
+// Track-B (`ifdef BUS_MATRIX_FABRIC_IP): the inherited setup_axi4_slave_agent_cfg puts
+// the slaves in ONLY_WRITE_QOS_MODE_ENABLE instead (read-side QoS mode OFF; see the
+// parent's comment). This test's masters issue no reads, so that read-QoS path is unused.
 //
 // What it proves: `awid_queue_for_qos` is a single package-scope queue
 // (pkg/axi4_globals_pkg.sv:309) pushed by every master driver proxy and popped
@@ -38,7 +42,8 @@ endfunction : new
 
 //--------------------------------------------------------------------------------------------
 // Function: build_phase
-// Parent configuration verbatim; only adds the Track-B scoreboard settings,
+// Parent configuration verbatim (on Track-B that includes the parent's slave
+// ONLY_WRITE_QOS_MODE_ENABLE override); only adds the Track-B scoreboard settings,
 // set here rather than in axi4_qos_equal_priority_fairness_test so the parent
 // is untouched.
 //--------------------------------------------------------------------------------------------
@@ -54,7 +59,7 @@ function void axi4_qos_bid_queue_race_test::build_phase(uvm_phase phase);
   axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
   axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // masters target different slave bases; AxUSER=0 carries no identity
   axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // masters target different slave bases; AxUSER=0 carries no identity
-  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON(0 comparisons: this test issues no reads) awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0", UVM_LOW)
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON(0 comparisons: this test issues no reads) awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 slave_read_qos=OFF(inherited: slaves ONLY_WRITE_QOS_MODE_ENABLE; unused, this test issues no reads)", UVM_LOW)
 `endif
 endfunction : build_phase
 
