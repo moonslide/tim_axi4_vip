@@ -38,8 +38,32 @@ class axi4_master_cross_id_write_reorder_seq extends axi4_master_nbk_base_seq;
 
   // Base of the address window. Same DDR-range base the existing out-of-order
   // tests use (seq/master_sequences/axi4_master_write_nbk_write_read_response_
-  // out_of_order_seq.sv:96-103), which is known to decode in this bench.
+  // out_of_order_seq.sv:96-103). It decodes under the BASE (4x4) map only; a test
+  // running in another bus-matrix mode sets base_addr from base_addr_for_mode().
   bit [63:0] base_addr = 64'h0000_0100_0000_1000;
+
+  //------------------------------------------------------------------------
+  // Base of the page window per bus-matrix mode. Issuing master is port 0 (M0).
+  //   NONE     : 0x0000_0100_0000_1000, the historical default, kept unchanged so
+  //              NONE-mode stimulus is identical to before. Note it is OUTSIDE
+  //              slave 0's NONE range [0 : 0xFFFF_FFFF] (test/axi4_base_test.sv),
+  //              so SLAVE_MEM_MODE reads there return generated data, not what was
+  //              written (see axi4_master_same_id_nonadjacent_preload_seq).
+  //   BASE 4x4 : 0x0000_0100_0000_1000, inside S0 DDR_Memory (R/W for M0..M3,
+  //              bm/axi4_bus_matrix_ref.sv configure_base_matrix).
+  //   ENHANCED : 0x0000_0008_0000_1000, inside S0 DDR Secure Kernel
+  //              (0x8_0000_0000 .. 0x8_3FFF_FFFF, claude.md address map). M0 is the
+  //              secure CPU and AxPROT=3'b000 is the access the M0 -> S0 cell of the
+  //              claude.md access matrix allows. The 4x4 base is unmapped there and
+  //              every access was answered DECERR.
+  // 8 pages (num_ids=8) end at base + 0x8000 in every mode, well inside each window.
+  //------------------------------------------------------------------------
+  static function bit [63:0] base_addr_for_mode(axi4_bus_matrix_ref::bus_matrix_mode_e mode);
+    case (mode)
+      axi4_bus_matrix_ref::BUS_ENHANCED_MATRIX : return 64'h0000_0008_0000_1000;
+      default                                  : return 64'h0000_0100_0000_1000;
+    endcase
+  endfunction : base_addr_for_mode
 
   //------------------------------------------------------------------------
   // The address and data maps are STATIC and live here so the read-side

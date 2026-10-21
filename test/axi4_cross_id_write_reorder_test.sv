@@ -80,6 +80,7 @@ class axi4_cross_id_write_reorder_test extends axi4_base_test;
   endfunction : setup_axi4_slave_agent_cfg
 
   virtual task run_phase(uvm_phase phase);
+    bit [63:0] page_base_addr;
     phase.raise_objection(this);
 
     fork
@@ -89,9 +90,18 @@ class axi4_cross_id_write_reorder_test extends axi4_base_test;
     `uvm_info(get_type_name(),
               $sformatf("CROSS-ID WRITE REORDER: %0d outstanding writes, distinct AWID/address/payload each",
                         num_ids), UVM_LOW)
+    // Page window per bus-matrix mode: NONE and 4x4 keep the sequence's
+    // 0x0000_0100_0000_1000 default, ENHANCED uses an access-allowed window for
+    // master 0 (see axi4_master_cross_id_write_reorder_seq::base_addr_for_mode()).
+    page_base_addr =
+      axi4_master_cross_id_write_reorder_seq::base_addr_for_mode(axi4_env_cfg_h.bus_matrix_mode);
+    `uvm_info(get_type_name(),
+              $sformatf("CROSS-ID WRITE REORDER page window: mode=%s base=0x%016h",
+                        axi4_env_cfg_h.bus_matrix_mode.name(), page_base_addr), UVM_LOW)
 
     cross_id_write_seq_h = axi4_master_cross_id_write_reorder_seq::type_id::create("cross_id_write_seq_h");
-    cross_id_write_seq_h.num_ids = num_ids;
+    cross_id_write_seq_h.num_ids   = num_ids;
+    cross_id_write_seq_h.base_addr = page_base_addr;
     cross_id_write_seq_h.start(axi4_env_h.axi4_virtual_seqr_h.axi4_master_write_seqr_h_all[0]);
 
     // Let every reordered B response arrive and be scored before ending.
