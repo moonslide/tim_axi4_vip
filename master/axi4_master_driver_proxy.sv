@@ -168,6 +168,7 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   extern virtual function void configure_outstanding_credits();
   extern virtual task run_phase(uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
+  extern virtual function void check_phase(uvm_phase phase);
   extern virtual task axi4_write_task();
   extern virtual task axi4_read_task();
   extern virtual task dispatch_x_inject(axi4_master_tx item, bit is_write);
@@ -514,6 +515,20 @@ function void axi4_master_driver_proxy::report_phase(uvm_phase phase);
     `uvm_info("QOS_SRC",$sformatf("QOS_SRC_STATS m%0d aw_applied=%0d ar_applied=%0d",
               axi4_master_agent_cfg_h.master_id, qos_src_applied[1], qos_src_applied[0]),UVM_LOW)
 endfunction : report_phase
+
+//--------------------------------------------------------------------------------------------
+// Function: check_phase
+//  At AW-issue write-QoS arbitration a write is completed towards its sequence
+//  (item_done) when it enters wr_aw_pool, before its AW is issued. A write still
+//  in the pool when the run ends was therefore accepted from a sequence but
+//  never put on the wire: an error, not a silent loss.
+//--------------------------------------------------------------------------------------------
+function void axi4_master_driver_proxy::check_phase(uvm_phase phase);
+  super.check_phase(phase);
+  if(wr_aw_pool.size() > 0)
+    `uvm_error("QOS_WR_AW",$sformatf("m%0d: %0d write(s) accepted into the AW-issue QoS pool were never issued (first awid=0x%0h awaddr=0x%0h) - the run ended before they reached the wire",
+               axi4_master_agent_cfg_h.master_id, wr_aw_pool.size(), wr_aw_pool[0].awid, wr_aw_pool[0].awaddr))
+endfunction : check_phase
 
 task axi4_master_driver_proxy::run_phase(uvm_phase phase);
 

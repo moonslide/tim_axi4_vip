@@ -103,8 +103,18 @@ class axi4_master_agent_config extends uvm_object;
   //it enters the pool, i.e. before its AW is issued) and issues the highest
   //AWQOS first, oldest first among equals. Before choosing it waits up to
   //wr_qos_aw_window_clk aclk cycles for the pool to reach wr_qos_aw_pool_min.
-  //+AXI4_WR_QOS_ARB=AW selects WR_QOS_ARB_AT_AW for every manager from the
+  //+AXI4_WR_QOS_ARB=AW selects WR_QOS_ARB_AT_AW for ALL managers from the
   //command line (evaluation aid; the default stays WR_QOS_ARB_AT_WDATA).
+  //
+  //WR_QOS_ARB_AT_AW is EXPERIMENTAL until it has broader regression coverage
+  //(one directed test: axi4_qos_wr_aw_order_test). Consequences a sequence can
+  //see:
+  //  * finish_item() returns when the write enters the pool, i.e. BEFORE its AW
+  //    is issued - a BLOCKING_WRITE is no longer blocking for the sequence, and
+  //    response fields (BRESP...) are not written back into the sequence's item
+  //    (the pool drives a copy).
+  //  * a write still pooled when the run ends is a QOS_WR_AW UVM_ERROR
+  //    (check_phase), never a silent loss.
   wr_qos_arb_point_e wr_qos_arb_point     = WR_QOS_ARB_AT_WDATA;
   int                wr_qos_aw_pool_min   = 2;
   int                wr_qos_aw_window_clk = 16;
