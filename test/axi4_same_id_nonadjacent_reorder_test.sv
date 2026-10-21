@@ -105,11 +105,13 @@ class axi4_same_id_nonadjacent_reorder_test extends axi4_base_test;
     axi4_env_cfg_h.axuser_passthrough_chk_cfg   = 1;   // measured forwarded by this fabric
     axi4_env_cfg_h.sb_pair_awuser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
     axi4_env_cfg_h.sb_pair_aruser_id_mask       = '0;  // one issuing manager (port 0); AxUSER=0 carries no identity
-    // Measured (seeds 777/1): the fabric accepts M0's next AR only after the previous R
-    // has completed, whatever its ID, so two same-ID reads are never outstanding together
-    // and the same-ID order checker has nothing to adjudicate here (content_adjudicated=0).
+    // Observed at the fabric ingress (seeds 777/1): M0's next AR is not accepted (ARREADY
+    // withheld) until the previous R has completed, whatever its ID, so two same-ID reads
+    // are never outstanding together and the same-ID order checker has nothing to
+    // adjudicate here (content_adjudicated=0). Cause NOT probed: a fabric acceptance rule
+    // and downstream backpressure were not told apart (no fabric-boundary probe was run).
     // On Track-B this test is a consistency check of the 48 transfers, not an F2 test.
-    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 sameid_order=ON(nothing to adjudicate: fabric serialises M0 reads)", UVM_LOW)
+    `uvm_info(get_type_name(), "Track-B scoreboard ledger: keyed=1 axid=OFF(re-encoded) arqos=OFF(not forwarded; no QoS behaviour is verified on Track-B) awqos=never-compared arregion=ON awregion=never-compared axuser=ON(weak: stimulus AxUSER=0) awuser_id_mask=0 aruser_id_mask=0 sameid_order=ON(nothing to adjudicate: M0 reads serialised at the fabric ingress; cause not probed)", UVM_LOW)
 `endif
   endfunction : build_phase
 
