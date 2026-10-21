@@ -821,7 +821,7 @@ Directed tests: `testlists/axi4_qos_control.list` (FAIL halves listed in its hea
 |---|---|---|
 | `awqos_src` / `arqos_src` (master cfg) | `AXQOS_SRC_SEQ` | AxQOS value source per channel: sequence value, `CONST` (`<ch>qos_const`), `SPAN` (uniform in `<ch>qos_span_lo..hi`, private generator), `ZERO` (a manager without QoS). Applied by the driver proxy and written back into the item |
 | `wr_qos_arb_point` (master cfg) | `WR_QOS_ARB_AT_WDATA` | Where write QoS (`qos_mode_type` with write QoS) arbitrates. The default picks the highest AWQOS in the W-data phase after AWs were issued in order: with distinct AWIDs this sends W bursts out of AW order (measured: `axi4_qos_wr_aw_order_test +QOS_WR_AW_LEGACY`). `WR_QOS_ARB_AT_AW` is **experimental**: QoS picks the next AW and W follows AW order, but `finish_item()` returns before the AW is issued (a `BLOCKING_WRITE` no longer blocks the sequence). `+AXI4_WR_QOS_ARB=AW` selects it for all managers |
-| `wr_qos_aw_pool_min` / `wr_qos_aw_window_clk` (master cfg) | 2 / 16 | AT_AW only: pool size to wait for, and the bound of that wait in aclk |
+| `wr_qos_aw_pool_min` / `wr_qos_aw_window_clk` / `wr_qos_aw_pool_max` (master cfg) | 2 / 16 / 16 | AT_AW only: pool size to wait for, the bound of that wait in aclk, and the most writes held in the pool |
 | `rd_qos_hold_min` (slave cfg) | 2 | Read-QoS pool size the arbiter waits for before choosing |
 | `rd_qos_hold_scope` (slave cfg) | `QOS_HOLD_FIRST` | Hold before the first response only, or `QOS_HOLD_EACH` before every response (needs a hold bound) |
 | `rd_qos_hold_tmo_clk` (slave cfg) | 0 (no bound) | Once a read is queued, wait at most N aclk; `+AXI4_QOS_HOLD_TMO=<N>` applies N to every slave left at 0 |

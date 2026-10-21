@@ -239,9 +239,10 @@ function void axi4_master_driver_proxy::end_of_elaboration_phase(uvm_phase phase
       axi4_master_agent_cfg_h.wr_qos_arb_point = WR_QOS_ARB_AT_AW;
   end
   if(wr_qos_at_aw()) begin
-    if(axi4_master_agent_cfg_h.wr_qos_aw_pool_min < 1 || axi4_master_agent_cfg_h.wr_qos_aw_window_clk < 0)
-      `uvm_fatal("QOS_WR_AW",$sformatf("master %0d wr_qos_aw_pool_min=%0d (>=1) wr_qos_aw_window_clk=%0d (>=0)",axi4_master_agent_cfg_h.master_id,
-                                       axi4_master_agent_cfg_h.wr_qos_aw_pool_min,axi4_master_agent_cfg_h.wr_qos_aw_window_clk))
+    if(axi4_master_agent_cfg_h.wr_qos_aw_pool_min < 1 || axi4_master_agent_cfg_h.wr_qos_aw_window_clk < 0 ||
+       axi4_master_agent_cfg_h.wr_qos_aw_pool_max < axi4_master_agent_cfg_h.wr_qos_aw_pool_min)
+      `uvm_fatal("QOS_WR_AW",$sformatf("master %0d wr_qos_aw_pool_min=%0d (>=1) wr_qos_aw_window_clk=%0d (>=0) wr_qos_aw_pool_max=%0d (>=pool_min)",axi4_master_agent_cfg_h.master_id,
+                                       axi4_master_agent_cfg_h.wr_qos_aw_pool_min,axi4_master_agent_cfg_h.wr_qos_aw_window_clk,axi4_master_agent_cfg_h.wr_qos_aw_pool_max))
     `uvm_info("QOS_WR_AW",$sformatf("master %0d write QoS arbitrates at AW issue (pool_min=%0d window_clk=%0d); W follows AW order",
               axi4_master_agent_cfg_h.master_id,axi4_master_agent_cfg_h.wr_qos_aw_pool_min,axi4_master_agent_cfg_h.wr_qos_aw_window_clk),UVM_LOW)
   end
@@ -331,14 +332,17 @@ endfunction : wr_w_qos_mode
 
 //--------------------------------------------------------------------------------------------
 // Task: wr_aw_pool_collect
-//  Moves every write the sequencer has ready RIGHT NOW into wr_aw_pool. Each is
+//  Moves the writes the sequencer has ready RIGHT NOW into wr_aw_pool, up to
+//  wr_qos_aw_pool_max entries in the pool. Each is
 //  completed towards its sequence (item_done) as it enters the pool, and the
 //  pool keeps a copy, so a sequence that re-randomises its item cannot change a
 //  write that is still waiting to be issued.
 //--------------------------------------------------------------------------------------------
 task axi4_master_driver_proxy::wr_aw_pool_collect();
   axi4_master_tx t, c;
-  forever begin
+  // Bounded by wr_qos_aw_pool_max: try_next_item() only waits delta cycles, so
+  // an unbounded loop against a zero-time producer would never return.
+  while(wr_aw_pool.size() < axi4_master_agent_cfg_h.wr_qos_aw_pool_max) begin
     axi_write_seq_item_port.try_next_item(t);
     if(t == null) break;
     if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin

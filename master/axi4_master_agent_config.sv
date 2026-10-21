@@ -118,6 +118,11 @@ class axi4_master_agent_config extends uvm_object;
   wr_qos_arb_point_e wr_qos_arb_point     = WR_QOS_ARB_AT_WDATA;
   int                wr_qos_aw_pool_min   = 2;
   int                wr_qos_aw_window_clk = 16;
+  //wr_qos_aw_pool_max bounds the pool: the proxy stops taking writes off the
+  //sequencer once this many are waiting, so a sequence that supplies writes
+  //back to back in zero time cannot keep the proxy collecting forever (no AW
+  //would ever be issued and simulation time would not advance).
+  int                wr_qos_aw_pool_max   = 16;
 
   // Variable: error_inject
   // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
@@ -202,7 +207,7 @@ function void axi4_master_agent_config::do_print(uvm_printer printer);
   if(awqos_src != AXQOS_SRC_SEQ)
     printer.print_string("awqos_src",$sformatf("%s const=%0h span=[%0h:%0h]",awqos_src.name(),awqos_const,awqos_span_lo,awqos_span_hi));
   if(wr_qos_arb_point != WR_QOS_ARB_AT_WDATA)
-    printer.print_string("wr_qos_arb_point",$sformatf("%s pool_min=%0d window_clk=%0d",wr_qos_arb_point.name(),wr_qos_aw_pool_min,wr_qos_aw_window_clk));
+    printer.print_string("wr_qos_arb_point",$sformatf("%s pool_min=%0d window_clk=%0d pool_max=%0d",wr_qos_arb_point.name(),wr_qos_aw_pool_min,wr_qos_aw_window_clk,wr_qos_aw_pool_max));
   if(arqos_src != AXQOS_SRC_SEQ)
     printer.print_string("arqos_src",$sformatf("%s const=%0h span=[%0h:%0h]",arqos_src.name(),arqos_const,arqos_span_lo,arqos_span_hi));
 
