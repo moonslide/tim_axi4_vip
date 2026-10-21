@@ -102,6 +102,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_verified_awlock_count;
   int byte_data_cmp_verified_awprot_count;
   int byte_data_cmp_verified_awuser_count;
+  int byte_data_cmp_verified_awqos_count;
 
   int byte_data_cmp_verified_wdata_count;
   int byte_data_cmp_verified_wstrb_count;
@@ -147,6 +148,7 @@ class axi4_scoreboard extends uvm_scoreboard;
   int byte_data_cmp_failed_awlock_count;
   int byte_data_cmp_failed_awprot_count;
   int byte_data_cmp_failed_awuser_count;
+  int byte_data_cmp_failed_awqos_count;
 
   int byte_data_cmp_failed_wdata_count;
   int byte_data_cmp_failed_wstrb_count;
@@ -627,6 +629,9 @@ class axi4_scoreboard extends uvm_scoreboard;
   //"checked and equal" from "never checked".
   int sb_skipped_awid_count, sb_skipped_bid_count, sb_skipped_arid_count, sb_skipped_rid_count;
   int sb_skipped_arqos_count, sb_skipped_arregion_count, sb_skipped_awuser_count, sb_skipped_aruser_count;
+  int sb_skipped_awqos_count;
+  //AWQOS compare enabled (env cfg awqos_chk_cfg or +AXI4_AWQOS_CHK); set in start_of_simulation_phase.
+  bit sb_awqos_chk_on;
   extern virtual function void sb_check_ledger_report();
 
   int sb_pair_tag_items[2][longint unsigned][int];
@@ -782,6 +787,9 @@ endfunction  : end_of_elaboration_phase
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::start_of_simulation_phase(uvm_phase phase);
   super.start_of_simulation_phase(phase);
+
+  //AWQOS compare on/off, resolved once (env cfg is bound by now).
+  sb_awqos_chk_on = $test$plusargs("AXI4_AWQOS_CHK") || axi4_env_cfg_h.awqos_chk_cfg;
 
   //Same-ID CONTENT mechanism: decide ONCE whether it can mean anything at all
   //in this run, instead of re-scanning every slave agent config on every written
@@ -1258,6 +1266,30 @@ task axi4_scoreboard::axi4_write_address_comparision(input axi4_master_tx axi4_m
     `uvm_info(get_type_name(),$sformatf("axi4_awcache from master and slave is  not equal"),UVM_HIGH);
     `uvm_info("SB_awcache_NOT_MATCHED", $sformatf("Master awcache = 'h%0x and Slave awcache = 'h%0x",axi4_master_tx_h1.awcache,axi4_slave_tx_h1.awcache), UVM_HIGH);             
     byte_data_cmp_failed_awcache_count++;
+  end
+
+  // AWQOS master-vs-slave compare, the write-side twin of the ARQOS compare in
+  // the read-address path, under the same knob (axqos_passthrough_chk_cfg names
+  // AxQOS, both channels). Valid wherever the subordinate sees the manager's
+  // AWQOS unchanged -- 1:1 direct wiring. With an interconnect that does not
+  // forward QoS (the Track-B fabric ties egress QoS to 0) the knob is 0 and the
+  // comparison is counted as skipped, never as verified (sb_check_ledger_report).
+  // Only when sb_awqos_chk_on: the slave monitor does not sample AWQOS yet
+  // (see axi4_env_config::awqos_chk_cfg), so by default nothing is counted.
+  if(!sb_awqos_chk_on) begin
+    // not compared, not counted
+  end
+  else if(!axi4_env_cfg_h.axqos_passthrough_chk_cfg) begin
+    sb_skipped_awqos_count++;
+  end
+  else if(axi4_master_tx_h1.awqos == axi4_slave_tx_h1.awqos) begin
+    `uvm_info("SB_awqos_MATCHED", $sformatf("Master awqos = 'h%0x and Slave awqos = 'h%0x",axi4_master_tx_h1.awqos,axi4_slave_tx_h1.awqos), UVM_HIGH);
+    byte_data_cmp_verified_awqos_count++;
+  end
+  else begin
+    `uvm_info("SB_awqos_NOT_MATCHED", $sformatf("Master awqos = 'h%0x and Slave awqos = 'h%0x (awid master='h%0x slave='h%0x)",
+              axi4_master_tx_h1.awqos,axi4_slave_tx_h1.awqos,axi4_master_tx_h1.awid,axi4_slave_tx_h1.awid), UVM_MEDIUM);
+    byte_data_cmp_failed_awqos_count++;
   end
 
   if(axi4_master_tx_h1.awprot == axi4_slave_tx_h1.awprot)begin
@@ -1914,6 +1946,21 @@ function void axi4_scoreboard::check_phase(uvm_phase phase);
 	    `uvm_info (get_type_name(), $sformatf ("byte_data_cmp_failed_awcache_count : %0d", 
                                               byte_data_cmp_failed_awcache_count),UVM_HIGH);
       `uvm_error (get_type_name(), $sformatf ("awcache count comparisions are failed"));
+    end
+
+    if (!sb_awqos_chk_on || !axi4_env_cfg_h.axqos_passthrough_chk_cfg) begin
+      // Disabled: no comparison was performed. Stated once, by
+      // sb_check_ledger_report(); not an error and not a pass.
+    end
+    else if ((byte_data_cmp_verified_awqos_count == 0) && (byte_data_cmp_failed_awqos_count == 0)) begin
+      `uvm_info (get_type_name(), $sformatf ("awqos count comparisions - no transactions processed"),UVM_HIGH);
+    end
+    else if (byte_data_cmp_failed_awqos_count == 0) begin
+      `uvm_info (get_type_name(), $sformatf ("awqos count comparisions are succesful (%0d)",byte_data_cmp_verified_awqos_count),UVM_HIGH);
+    end
+    else begin
+      `uvm_error (get_type_name(), $sformatf ("awqos count comparisions are failed: failed=%0d verified=%0d",
+                                              byte_data_cmp_failed_awqos_count, byte_data_cmp_verified_awqos_count));
     end
     
     if ((byte_data_cmp_verified_awlock_count != 0) && (byte_data_cmp_failed_awlock_count == 0)) begin
@@ -3546,9 +3593,9 @@ endfunction : sb_pair_key_report
 // NOT performed -- one SB_CHECK_LEDGER line per disabled field plus one
 // summary line. Before this a disabled check fell into the MATCHED branch and
 // was counted as verified, so "0 errors" could not be told apart from "never
-// looked". Also lists the fields that are never compared at all (AWREGION,
-// AWQOS). Informational only: disabling a check is a declared test choice,
-// not a failure.
+// looked". Also lists the fields that are not compared at all (AWREGION;
+// AWQOS unless awqos_chk_cfg / +AXI4_AWQOS_CHK). Informational only: disabling
+// a check is a declared test choice, not a failure.
 //--------------------------------------------------------------------------------------------
 function void axi4_scoreboard::sb_check_ledger_report();
   string disabled = "";
@@ -3559,6 +3606,8 @@ function void axi4_scoreboard::sb_check_ledger_report();
   row.push_back('{"arid",     "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_arid_count,     byte_data_cmp_verified_arid_count});
   row.push_back('{"rid",      "axid_passthrough_chk_cfg",     axi4_env_cfg_h.axid_passthrough_chk_cfg,     sb_skipped_rid_count,      byte_data_cmp_verified_rid_count});
   row.push_back('{"arqos",    "axqos_passthrough_chk_cfg",    axi4_env_cfg_h.axqos_passthrough_chk_cfg,    sb_skipped_arqos_count,    byte_data_cmp_verified_arqos_count});
+  if(sb_awqos_chk_on)
+    row.push_back('{"awqos",    "axqos_passthrough_chk_cfg",    axi4_env_cfg_h.axqos_passthrough_chk_cfg,    sb_skipped_awqos_count,    byte_data_cmp_verified_awqos_count});
   row.push_back('{"arregion", "axregion_passthrough_chk_cfg", axi4_env_cfg_h.axregion_passthrough_chk_cfg, sb_skipped_arregion_count, byte_data_cmp_verified_arregion_count});
   row.push_back('{"awuser",   "axuser_passthrough_chk_cfg",   axi4_env_cfg_h.axuser_passthrough_chk_cfg,   sb_skipped_awuser_count,   byte_data_cmp_verified_awuser_count});
   row.push_back('{"aruser",   "axuser_passthrough_chk_cfg",   axi4_env_cfg_h.axuser_passthrough_chk_cfg,   sb_skipped_aruser_count,   byte_data_cmp_verified_aruser_count});
@@ -3571,13 +3620,19 @@ function void axi4_scoreboard::sb_check_ledger_report();
     else
       active = {active, (active == "") ? "" : ",", $sformatf("%s(verified=%0d)", row[i].f, row[i].verified)};
   end
-  // AWREGION and AWQOS have NO master-vs-slave comparison anywhere in this
-  // scoreboard, in any build, and no knob turns one on (arregion/arqos above
-  // are the read side only). Stated in every log so a test that switches
-  // axregion/axqos checks "on" is never read as having verified the write side.
+  // AWREGION has NO master-vs-slave comparison anywhere in this scoreboard, in
+  // any build, and no knob turns one on (arregion above is the read side only).
+  // AWQOS is compared only when sb_awqos_chk_on (row above); otherwise it is
+  // reported as not compared, with the reason. Stated in every log so a test
+  // that switches axregion/axqos checks "on" is never read as having verified
+  // the write side.
   `uvm_info("SB_CHECK_LEDGER", "awregion: NOT IMPLEMENTED (never compared)", UVM_LOW)
-  `uvm_info("SB_CHECK_LEDGER", "awqos: NOT IMPLEMENTED (never compared)", UVM_LOW)
-  `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s} not_implemented={awregion,awqos}", disabled, active), UVM_LOW)
+  if(sb_awqos_chk_on)
+    `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s} not_implemented={awregion}", disabled, active), UVM_LOW)
+  else begin
+    `uvm_info("SB_CHECK_LEDGER", "awqos: NOT COMPARED (the slave monitor does not sample AWQOS; awqos_chk_cfg=1 or +AXI4_AWQOS_CHK compares it)", UVM_LOW)
+    `uvm_info("SB_CHECK_LEDGER", $sformatf("disabled={%s} active={%s} not_implemented={awregion,awqos}", disabled, active), UVM_LOW)
+  end
 endfunction : sb_check_ledger_report
 
 //--------------------------------------------------------------------------------------------
