@@ -144,6 +144,12 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   bit [31:0] qos_span_state[2];   // [0] = AR, [1] = AW
   int        qos_src_applied[2];  // requests whose AxQOS the policy set
 
+  // ---- Write-QoS arbitration at AW issue (wr_qos_arb_point = WR_QOS_ARB_AT_AW).
+  // wr_aw_pool holds writes taken off the sequencer but not yet issued, oldest
+  // first. Unused (empty) at the default WR_QOS_ARB_AT_WDATA.
+  axi4_master_tx wr_aw_pool[$];
+  int            wr_aw_picks, wr_aw_with_choice, wr_aw_reordered, wr_aw_max_pool;
+
   write_read_data_mode_e write_read_mode_h;
 
   
@@ -155,6 +161,10 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   extern virtual function void end_of_elaboration_phase(uvm_phase phase);
   extern virtual function void start_of_simulation_phase(uvm_phase phase);
   extern virtual function bit [3:0] qos_src_value(bit is_write, bit [3:0] seq_value);
+  extern virtual function qos_mode_e wr_w_qos_mode();
+  extern virtual function bit wr_qos_at_aw();
+  extern virtual task wr_aw_pool_collect();
+  extern virtual task wr_aw_pool_select(output axi4_master_tx sel);
   extern virtual function void configure_outstanding_credits();
   extern virtual task run_phase(uvm_phase phase);
   extern virtual function void report_phase(uvm_phase phase);
@@ -220,6 +230,21 @@ function void axi4_master_driver_proxy::end_of_elaboration_phase(uvm_phase phase
   super.end_of_elaboration_phase(phase);
   axi4_master_drv_bfm_h.axi4_master_drv_proxy_h = this;
 
+  // Evaluation aid: +AXI4_WR_QOS_ARB=AW moves write-QoS arbitration to AW issue
+  // for every manager without editing a test.
+  begin
+    string arb_s;
+    if($value$plusargs("AXI4_WR_QOS_ARB=%s", arb_s) && (arb_s == "AW" || arb_s == "aw"))
+      axi4_master_agent_cfg_h.wr_qos_arb_point = WR_QOS_ARB_AT_AW;
+  end
+  if(wr_qos_at_aw()) begin
+    if(axi4_master_agent_cfg_h.wr_qos_aw_pool_min < 1 || axi4_master_agent_cfg_h.wr_qos_aw_window_clk < 0)
+      `uvm_fatal("QOS_WR_AW",$sformatf("master %0d wr_qos_aw_pool_min=%0d (>=1) wr_qos_aw_window_clk=%0d (>=0)",axi4_master_agent_cfg_h.master_id,
+                                       axi4_master_agent_cfg_h.wr_qos_aw_pool_min,axi4_master_agent_cfg_h.wr_qos_aw_window_clk))
+    `uvm_info("QOS_WR_AW",$sformatf("master %0d write QoS arbitrates at AW issue (pool_min=%0d window_clk=%0d); W follows AW order",
+              axi4_master_agent_cfg_h.master_id,axi4_master_agent_cfg_h.wr_qos_aw_pool_min,axi4_master_agent_cfg_h.wr_qos_aw_window_clk),UVM_LOW)
+  end
+
   // AxQOS value policy: reject an empty span instead of silently swapping it.
   if(axi4_master_agent_cfg_h.awqos_src == AXQOS_SRC_SPAN &&
      axi4_master_agent_cfg_h.awqos_span_lo > axi4_master_agent_cfg_h.awqos_span_hi)
@@ -280,6 +305,95 @@ function bit [3:0] axi4_master_driver_proxy::qos_src_value(bit is_write, bit [3:
     default         : return seq_value;
   endcase
 endfunction : qos_src_value
+
+//--------------------------------------------------------------------------------------------
+// Function: wr_qos_at_aw
+//  1 when this manager's write QoS is enabled AND arbitrates at AW issue.
+//--------------------------------------------------------------------------------------------
+function bit axi4_master_driver_proxy::wr_qos_at_aw();
+  return ((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
+          (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) &&
+         (axi4_master_agent_cfg_h.wr_qos_arb_point == WR_QOS_ARB_AT_AW);
+endfunction : wr_qos_at_aw
+
+//--------------------------------------------------------------------------------------------
+// Function: wr_w_qos_mode
+//  The QoS mode the W-data-phase arbitration below acts on: the agent's
+//  qos_mode_type at the default WR_QOS_ARB_AT_WDATA (so every expression that
+//  used to read qos_mode_type evaluates exactly as before), QOS_MODE_DISABLE
+//  when write QoS is decided at AW issue instead -- W then follows AW order.
+//--------------------------------------------------------------------------------------------
+function qos_mode_e axi4_master_driver_proxy::wr_w_qos_mode();
+  return (axi4_master_agent_cfg_h.wr_qos_arb_point == WR_QOS_ARB_AT_AW) ? QOS_MODE_DISABLE
+                                                                         : axi4_master_agent_cfg_h.qos_mode_type;
+endfunction : wr_w_qos_mode
+
+//--------------------------------------------------------------------------------------------
+// Task: wr_aw_pool_collect
+//  Moves every write the sequencer has ready RIGHT NOW into wr_aw_pool. Each is
+//  completed towards its sequence (item_done) as it enters the pool, and the
+//  pool keeps a copy, so a sequence that re-randomises its item cannot change a
+//  write that is still waiting to be issued.
+//--------------------------------------------------------------------------------------------
+task axi4_master_driver_proxy::wr_aw_pool_collect();
+  axi4_master_tx t, c;
+  forever begin
+    axi_write_seq_item_port.try_next_item(t);
+    if(t == null) break;
+    if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin
+      t.awqos = qos_src_value(1'b1,t.awqos);
+      qos_src_applied[1]++;
+    end
+    $cast(c, t.clone());
+    axi_write_seq_item_port.item_done();
+    wr_aw_pool.push_back(c);
+    if(wr_aw_pool.size() > wr_aw_max_pool) wr_aw_max_pool = wr_aw_pool.size();
+  end
+endtask : wr_aw_pool_collect
+
+//--------------------------------------------------------------------------------------------
+// Task: wr_aw_pool_select
+//  Write-QoS arbitration at AW issue. Blocks until at least one write is
+//  pending, then waits up to wr_qos_aw_window_clk aclk cycles for the pool to
+//  reach wr_qos_aw_pool_min, then returns (and removes) the highest-AWQOS
+//  write, the oldest among equals. Same-AWID writes are additionally kept in
+//  order: a write is only eligible if no OLDER pooled write has its AWID.
+//--------------------------------------------------------------------------------------------
+task axi4_master_driver_proxy::wr_aw_pool_select(output axi4_master_tx sel);
+  axi4_master_tx t, c;
+  int            idx;
+  bit            eligible;
+  if(wr_aw_pool.size() == 0) begin
+    axi_write_seq_item_port.get_next_item(t);
+    if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin
+      t.awqos = qos_src_value(1'b1,t.awqos);
+      qos_src_applied[1]++;
+    end
+    $cast(c, t.clone());
+    axi_write_seq_item_port.item_done();
+    wr_aw_pool.push_back(c);
+    if(wr_aw_pool.size() > wr_aw_max_pool) wr_aw_max_pool = wr_aw_pool.size();
+  end
+  wr_aw_pool_collect();
+  for(int n = 0; n < axi4_master_agent_cfg_h.wr_qos_aw_window_clk &&
+                 wr_aw_pool.size() < axi4_master_agent_cfg_h.wr_qos_aw_pool_min; n++) begin
+    @(posedge axi4_master_drv_bfm_h.aclk);
+    wr_aw_pool_collect();
+  end
+  idx = -1;
+  foreach(wr_aw_pool[i]) begin
+    eligible = 1'b1;
+    for(int j = 0; j < i; j++) if(wr_aw_pool[j].awid == wr_aw_pool[i].awid) eligible = 1'b0;
+    if(eligible && (idx < 0 || wr_aw_pool[i].awqos > wr_aw_pool[idx].awqos)) idx = i;
+  end
+  sel = wr_aw_pool[idx];
+  wr_aw_pool.delete(idx);
+  wr_aw_picks++;
+  if(wr_aw_pool.size() > 0) wr_aw_with_choice++;
+  if(idx != 0)              wr_aw_reordered++;
+  `uvm_info("QOS_WR_AW",$sformatf("m%0d AW pick pool[%0d] awid=0x%0h awqos=%0h (pool before pick=%0d)",
+            axi4_master_agent_cfg_h.master_id, idx, sel.awid, sel.awqos, wr_aw_pool.size()+1),UVM_HIGH)
+endtask : wr_aw_pool_select
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase
@@ -357,8 +471,8 @@ function void axi4_master_driver_proxy::configure_outstanding_credits();
   end
 
   if(axi4_master_agent_cfg_h != null &&
-     ((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
-      (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) &&
+     ((wr_w_qos_mode() == ONLY_WRITE_QOS_MODE_ENABLE) ||
+      (wr_w_qos_mode() == WRITE_READ_QOS_MODE_ENABLE)) &&
      outstanding_write_credits > 1) begin
     `uvm_info("AXI4_CREDIT",$sformatf("write QoS arbitration is enabled (%s) and is not re-entrant - write outstanding depth pinned to 1 (requested %0d)",
                                        axi4_master_agent_cfg_h.qos_mode_type.name(),outstanding_write_credits),UVM_LOW)
@@ -393,6 +507,9 @@ function void axi4_master_driver_proxy::report_phase(uvm_phase phase);
                                      wr_data_inflight_max,wr_resp_inflight_max,rd_data_inflight_max,
                                      wr_wire_outstanding_max,rd_wire_outstanding_max,
                                      wr_fifo_used_max,wr_resp_fifo_used_max,rd_fifo_used_max),UVM_LOW)
+  if(wr_qos_at_aw())
+    `uvm_info("QOS_WR_AW",$sformatf("QOS_WR_AW_STATS m%0d picks=%0d with_choice=%0d reordered=%0d max_pool=%0d left_in_pool=%0d",
+              axi4_master_agent_cfg_h.master_id, wr_aw_picks, wr_aw_with_choice, wr_aw_reordered, wr_aw_max_pool, wr_aw_pool.size()),UVM_LOW)
   if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ || axi4_master_agent_cfg_h.arqos_src != AXQOS_SRC_SEQ)
     `uvm_info("QOS_SRC",$sformatf("QOS_SRC_STATS m%0d aw_applied=%0d ar_applied=%0d",
               axi4_master_agent_cfg_h.master_id, qos_src_applied[1], qos_src_applied[0]),UVM_LOW)
@@ -534,12 +651,15 @@ task axi4_master_driver_proxy::axi4_write_task();
     axi4_transfer_cfg_s        struct_cfg;
     axi4_write_transfer_char_s struct_write_packet;
 
-    axi_write_seq_item_port.get_next_item(req_wr);
+    // Write QoS decided at AW issue: the next write is the pool's choice (it has
+    // already been item_done()'d and had its AxQOS policy applied).
+    if(wr_qos_at_aw()) wr_aw_pool_select(req_wr);
+    else               axi_write_seq_item_port.get_next_item(req_wr);
 
     // Agent AxQOS value policy. Written back into the item itself, before any
     // conversion, so every later view of this request (wire, monitor,
     // scoreboard, the write-QoS arbitration below) carries the same value.
-    if(axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin
+    if(!wr_qos_at_aw() && axi4_master_agent_cfg_h.awqos_src != AXQOS_SRC_SEQ) begin
       bit [3:0] seq_awqos = req_wr.awqos;
       req_wr.awqos = qos_src_value(1'b1,seq_awqos);
       qos_src_applied[1]++;
@@ -650,7 +770,11 @@ task axi4_master_driver_proxy::axi4_write_task();
           `uvm_info(get_type_name(),$sformatf("WRITE_ADDRESS_THREAD::Received_req_write_packet = \n %s",
                                                req_wr.sprint()),UVM_MEDIUM);
 
-          if((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) || (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE)) begin
+          // At AW-issue arbitration the W path runs as with QoS off, but the
+          // package-scope awid_queue_for_qos must still get one entry per write:
+          // a subordinate with write QoS on drains one per response.
+          if(wr_qos_at_aw()) awid_queue_for_qos.push_back(req_wr.awid);
+          if((wr_w_qos_mode() == ONLY_WRITE_QOS_MODE_ENABLE) || (wr_w_qos_mode() == WRITE_READ_QOS_MODE_ENABLE)) begin
             qos_queue.push_front(req_wr);
             if(qos_queue.size>1) begin
               qualifer_for_initial_txn = 0;
@@ -706,14 +830,14 @@ task axi4_master_driver_proxy::axi4_write_task();
           `uvm_info(get_type_name(),$sformatf("WRITE_DATA_THREAD::Checking fifo size = %0d",
                                                axi4_master_write_fifo_h.size()),UVM_FULL); 
 
-          if((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
-            (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE) &&
+          if((wr_w_qos_mode() == ONLY_WRITE_QOS_MODE_ENABLE) ||
+            (wr_w_qos_mode() == WRITE_READ_QOS_MODE_ENABLE) &&
             one_time_check == 1) begin
             wait( qualifer_for_initial_txn == 0);
             one_time_check = 0;
           end
-          if(((axi4_master_agent_cfg_h.qos_mode_type == ONLY_WRITE_QOS_MODE_ENABLE) ||
-            (axi4_master_agent_cfg_h.qos_mode_type == WRITE_READ_QOS_MODE_ENABLE))) begin
+          if(((wr_w_qos_mode() == ONLY_WRITE_QOS_MODE_ENABLE) ||
+            (wr_w_qos_mode() == WRITE_READ_QOS_MODE_ENABLE))) begin
             if(qos_wait_enable) begin
               wait(qos_queue.size>=2);
             end
@@ -815,8 +939,8 @@ task axi4_master_driver_proxy::axi4_write_task();
           //that would surface far away as wrong write data. Everything between
           //here and the BFM call below is zero-time. Skipped under QoS, which
           //re-orders which packet a data thread drives on purpose.
-          if((axi4_master_agent_cfg_h.qos_mode_type != ONLY_WRITE_QOS_MODE_ENABLE) &&
-             (axi4_master_agent_cfg_h.qos_mode_type != WRITE_READ_QOS_MODE_ENABLE)) begin
+          if((wr_w_qos_mode() != ONLY_WRITE_QOS_MODE_ENABLE) &&
+             (wr_w_qos_mode() != WRITE_READ_QOS_MODE_ENABLE)) begin
             if(wr_ticket != wr_data_ticket_next) begin
               `uvm_error("AXI4_CREDIT",$sformatf("W burst out of AW order: this burst is ticket %0d but ticket %0d has not driven yet (AXI4 A3.4.1 - no WID, write data must follow address order)",
                                                   wr_ticket,wr_data_ticket_next))
@@ -1002,7 +1126,8 @@ task axi4_master_driver_proxy::axi4_write_task();
 
     wait_for_wr_addr = 1;
 
-    axi_write_seq_item_port.item_done();
+    // At AW-issue arbitration the item was completed when it entered the pool.
+    if(!wr_qos_at_aw()) axi_write_seq_item_port.item_done();
   end
 endtask : axi4_write_task
 
