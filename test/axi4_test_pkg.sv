@@ -260,6 +260,15 @@ package axi4_test_pkg;
   // AXI_ooo.md F3/F4 (Phase 4 / P4.1): outstanding-depth knob made live.
   `include "axi4_outstanding_depth_test.sv"
 
+  // QoS control (agent AxQOS value policy, subordinate read-QoS arbiter knobs).
+  // Must follow axi4_qos_basic_priority_test / _equal_priority_fairness_test.
+  `include "axi4_qos_ctrl_observer.sv"
+  `include "axi4_qos_src_policy_test.sv"
+  `include "axi4_qos_rd_arb_base_test.sv"
+  `include "axi4_qos_rd_hold_single_read_test.sv"
+  `include "axi4_qos_rd_priority_order_test.sv"
+  `include "axi4_qos_rd_bypass_bound_test.sv"
+
 endpackage : axi4_test_pkg
 
 `endif

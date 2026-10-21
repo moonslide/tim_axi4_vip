@@ -1,0 +1,42 @@
+# QoS-control regression list (baseline build, 1:1 direct wiring).
+#
+# Covers the QoS control knobs added to the agents:
+#   * manager AxQOS value policy  - axi4_master_agent_config::awqos_src / arqos_src
+#                                   (axi4_qos_src_policy_test)
+#   * subordinate read-QoS arbiter - axi4_slave_agent_config::rd_qos_hold_min /
+#                                   rd_qos_hold_scope / rd_qos_hold_tmo_clk /
+#                                   rd_qos_max_bypass, +AXI4_QOS_HOLD_TMO, and the
+#                                   checks qos_rd_arb_chk / qos_rd_expect_*
+#                                   (axi4_qos_rd_hold_single_read_test,
+#                                    axi4_qos_rd_priority_order_test,
+#                                    axi4_qos_rd_bypass_bound_test)
+# Each run must show UVM_ERROR : 0 AND TEST RESULT: PASS in its own log, and the
+# per-subordinate QOS_ARB_STATS line says what the read arbiter actually chose.
+#
+# HOW TO RUN (from sim/synopsys_sim/):
+#   python3 axi4_regression.py --lsf --test-list ../../testlists/axi4_qos_control.list -p 12 -t 1800
+#
+# NOT in this list on purpose - the FAIL halves / negative checks. Each must FAIL
+# (UVM_ERROR > 0); run them by hand or from a scratch list:
+#   axi4_qos_src_policy_test        command_add="+BUS_MATRIX_MODE=4x4 +QOS_SRC_POLICY_NEG"
+#   axi4_qos_rd_hold_single_read_test command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_HOLD_NO_TMO"
+#       (legacy unbounded hold: QOS_RD_TIMEOUT; add +AXI4_QOS_HOLD_WATCH=500 to see QOS_HOLD_STALL)
+#   axi4_qos_rd_priority_order_test command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_ORDER_LEGACY"
+#   axi4_qos_rd_priority_order_test command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_ORDER_QOS_OFF"
+#   axi4_qos_rd_bypass_bound_test   command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_NO_BYPASS_BOUND"
+#
+# The runner strips a trailing _<digits> to form +UVM_TESTNAME, so the suffixes
+# below only make the entry (and log) names unique.
+
+axi4_qos_src_policy_test_1 seed=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_src_policy_test_2 seed=2 command_add=+BUS_MATRIX_MODE=4x4
+axi4_qos_src_policy_test_3 seed=3 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+axi4_qos_rd_hold_single_read_test_1 seed=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_rd_hold_single_read_test_2 seed=2 command_add="+BUS_MATRIX_MODE=NONE +QOS_RD_HOLD_NO_TMO +AXI4_QOS_HOLD_TMO=32"
+
+axi4_qos_rd_priority_order_test_1 seed=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_rd_priority_order_test_2 seed=2 command_add=+BUS_MATRIX_MODE=NONE
+
+axi4_qos_rd_bypass_bound_test_1 seed=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_qos_rd_bypass_bound_test_2 seed=2 command_add=+BUS_MATRIX_MODE=NONE
