@@ -113,8 +113,8 @@ class axi4_master_agent_config extends uvm_object;
   //    is issued - a BLOCKING_WRITE is no longer blocking for the sequence, and
   //    response fields (BRESP...) are not written back into the sequence's item
   //    (the pool drives a copy).
-  //  * a write still pooled when the run ends is a QOS_WR_AW UVM_ERROR
-  //    (check_phase), never a silent loss.
+  //  * a write still pooled, or selected but not through its AW phase, when
+  //    the run ends is a QOS_WR_AW UVM_ERROR (check_phase), never a silent loss.
   wr_qos_arb_point_e wr_qos_arb_point     = WR_QOS_ARB_AT_WDATA;
   int                wr_qos_aw_pool_min   = 2;
   int                wr_qos_aw_window_clk = 16;

@@ -148,6 +148,10 @@ class axi4_master_driver_proxy extends uvm_driver#(axi4_master_tx);
   // wr_aw_pool holds writes taken off the sequencer but not yet issued, oldest
   // first. Unused (empty) at the default WR_QOS_ARB_AT_WDATA.
   axi4_master_tx wr_aw_pool[$];
+  // The write taken out of the pool for issue, until this loop iteration is
+  // done with it (its AW handshake for a non-blocking write). Not null at the
+  // end of the run = an accepted write that never reached the wire.
+  axi4_master_tx wr_aw_selected_h;
   int            wr_aw_picks, wr_aw_with_choice, wr_aw_reordered, wr_aw_max_pool;
 
   write_read_data_mode_e write_read_mode_h;
@@ -393,6 +397,7 @@ task axi4_master_driver_proxy::wr_aw_pool_select(output axi4_master_tx sel);
   end
   sel = wr_aw_pool[idx];
   wr_aw_pool.delete(idx);
+  wr_aw_selected_h = sel;
   wr_aw_picks++;
   if(wr_aw_pool.size() > 0) wr_aw_with_choice++;
   if(idx != 0)              wr_aw_reordered++;
@@ -524,11 +529,15 @@ endfunction : report_phase
 // Function: check_phase
 //  At AW-issue write-QoS arbitration a write is completed towards its sequence
 //  (item_done) when it enters wr_aw_pool, before its AW is issued. A write still
-//  in the pool when the run ends was therefore accepted from a sequence but
-//  never put on the wire: an error, not a silent loss.
+//  in the pool, or selected but not through its AW phase, when the run ends was
+//  therefore accepted from a sequence but never put on the wire: an error, not
+//  a silent loss.
 //--------------------------------------------------------------------------------------------
 function void axi4_master_driver_proxy::check_phase(uvm_phase phase);
   super.check_phase(phase);
+  if(wr_aw_selected_h != null)
+    `uvm_error("QOS_WR_AW",$sformatf("m%0d: the write selected for issue (awid=0x%0h awaddr=0x%0h) had not completed its AW phase when the run ended - accepted from its sequence but not put on the wire",
+               axi4_master_agent_cfg_h.master_id, wr_aw_selected_h.awid, wr_aw_selected_h.awaddr))
   if(wr_aw_pool.size() > 0)
     `uvm_error("QOS_WR_AW",$sformatf("m%0d: %0d write(s) accepted into the AW-issue QoS pool were never issued (first awid=0x%0h awaddr=0x%0h) - the run ended before they reached the wire",
                axi4_master_agent_cfg_h.master_id, wr_aw_pool.size(), wr_aw_pool[0].awid, wr_aw_pool[0].awaddr))
@@ -1145,8 +1154,10 @@ task axi4_master_driver_proxy::axi4_write_task();
 
     wait_for_wr_addr = 1;
 
-    // At AW-issue arbitration the item was completed when it entered the pool.
+    // At AW-issue arbitration the item was completed when it entered the pool;
+    // its AW has now been issued (non-blocking) or the whole write is done.
     if(!wr_qos_at_aw()) axi_write_seq_item_port.item_done();
+    else                wr_aw_selected_h = null;
   end
 endtask : axi4_write_task
 
