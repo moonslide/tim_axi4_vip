@@ -76,6 +76,39 @@ class axi4_master_agent_config extends uvm_object;
   //Used to set the qos mode
   qos_mode_e qos_mode_type;
 
+  //Variables : awqos_src / arqos_src and their parameters
+  //Agent-level AxQOS value policy, per channel (see axqos_src_e). Independent
+  //of qos_mode_type, which selects the manager's write-QoS arbitration.
+  //  AXQOS_SRC_SEQ   (default) - the sequence item's own value, untouched
+  //  AXQOS_SRC_CONST - <ch>qos_const on every request
+  //  AXQOS_SRC_SPAN  - uniform in [<ch>qos_span_lo : <ch>qos_span_hi] (both
+  //                    ends included), drawn from a generator private to the
+  //                    driver proxy so no other random stream moves
+  //  AXQOS_SRC_ZERO  - 0 on every request (a manager with no QoS signal)
+  //Not rand: the agent config is never randomised, and a rand field would
+  //still change what the solver consumes for any test that does.
+  axqos_src_e awqos_src     = AXQOS_SRC_SEQ;
+  bit [3:0]   awqos_const   = 4'h0;
+  bit [3:0]   awqos_span_lo = 4'h0;
+  bit [3:0]   awqos_span_hi = 4'hF;
+  axqos_src_e arqos_src     = AXQOS_SRC_SEQ;
+  bit [3:0]   arqos_const   = 4'h0;
+  bit [3:0]   arqos_span_lo = 4'h0;
+  bit [3:0]   arqos_span_hi = 4'hF;
+
+  //Variables : wr_qos_arb_point / wr_qos_aw_pool_min / wr_qos_aw_window_clk
+  //Where write-QoS arbitration happens (see wr_qos_arb_point_e); used only when
+  //qos_mode_type enables write QoS. With WR_QOS_ARB_AT_AW the driver proxy takes
+  //pending writes off the sequencer into a pool (each one is item_done()'d when
+  //it enters the pool, i.e. before its AW is issued) and issues the highest
+  //AWQOS first, oldest first among equals. Before choosing it waits up to
+  //wr_qos_aw_window_clk aclk cycles for the pool to reach wr_qos_aw_pool_min.
+  //+AXI4_WR_QOS_ARB=AW selects WR_QOS_ARB_AT_AW for every manager from the
+  //command line (evaluation aid; the default stays WR_QOS_ARB_AT_WDATA).
+  wr_qos_arb_point_e wr_qos_arb_point     = WR_QOS_ARB_AT_WDATA;
+  int                wr_qos_aw_pool_min   = 2;
+  int                wr_qos_aw_window_clk = 16;
+
   // Variable: error_inject
   // Enable error injection mode - converts UVM_ERROR to UVM_WARNING for expected errors
   bit error_inject = 0;
@@ -154,6 +187,14 @@ function void axi4_master_agent_config::do_print(uvm_printer printer);
                                    $bits(master_max_addr_range_array[i]),UVM_HEX);
   end
   printer.print_string ("QoS_mode",qos_mode_type.name());
+  // Printed only when not at the default, so a config dump of an existing test
+  // is unchanged.
+  if(awqos_src != AXQOS_SRC_SEQ)
+    printer.print_string("awqos_src",$sformatf("%s const=%0h span=[%0h:%0h]",awqos_src.name(),awqos_const,awqos_span_lo,awqos_span_hi));
+  if(wr_qos_arb_point != WR_QOS_ARB_AT_WDATA)
+    printer.print_string("wr_qos_arb_point",$sformatf("%s pool_min=%0d window_clk=%0d",wr_qos_arb_point.name(),wr_qos_aw_pool_min,wr_qos_aw_window_clk));
+  if(arqos_src != AXQOS_SRC_SEQ)
+    printer.print_string("arqos_src",$sformatf("%s const=%0h span=[%0h:%0h]",arqos_src.name(),arqos_const,arqos_span_lo,arqos_span_hi));
 
   printer.print_field("wait_count_write_address_channel",wait_count_write_address_channel,
                        $bits(wait_count_write_address_channel),UVM_DEC);

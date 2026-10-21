@@ -324,6 +324,45 @@ package axi4_globals_pkg;
     ONLY_WRITE_QOS_MODE_ENABLE  = 2'b11
   } qos_mode_e;
 
+  //Enum : axqos_src_e
+  //Where a manager agent takes the AxQOS value it drives from, per channel
+  //(axi4_master_agent_config::awqos_src / arqos_src). Applied by the master
+  //driver proxy after get_next_item(); the value is written back into the
+  //sequence item, so sequence, monitor and scoreboard all see the same value.
+  //AXQOS_SRC_SEQ is the default and leaves the sequence item untouched.
+  typedef enum bit [1:0] {
+    AXQOS_SRC_SEQ   = 2'd0,  // whatever the sequence item carries (legacy)
+    AXQOS_SRC_CONST = 2'd1,  // every request uses <ch>qos_const
+    AXQOS_SRC_SPAN  = 2'd2,  // uniform in [<ch>qos_span_lo : <ch>qos_span_hi]
+    AXQOS_SRC_ZERO  = 2'd3   // a manager without a QoS signal: always 0
+  } axqos_src_e;
+
+  //Enum : wr_qos_arb_point_e
+  //Where a manager with write QoS enabled (qos_mode_type ONLY_WRITE / WRITE_READ)
+  //applies its AWQOS priority (axi4_master_agent_config::wr_qos_arb_point).
+  //  WR_QOS_ARB_AT_WDATA (default, legacy): AWs are issued in the order the
+  //    sequencer delivers them; the W-data thread then picks the queued write
+  //    with the highest AWQOS. AXI4 has no WID, so when the highest-AWQOS write
+  //    is not the oldest issued AW, its W burst goes out ahead of an older AW's
+  //    and the subordinate pairs the data with the wrong address (A3.4.1).
+  //    Same-AWID writes are kept in order, so stimulus with one AWID per
+  //    manager never shows it.
+  //  WR_QOS_ARB_AT_AW: the manager collects pending writes and lets AWQOS
+  //    decide which AW is issued next; W bursts then follow AW order exactly as
+  //    with QoS off. Protocol-correct; an option until a human flips the default.
+  typedef enum bit {
+    WR_QOS_ARB_AT_WDATA = 1'b0,
+    WR_QOS_ARB_AT_AW    = 1'b1
+  } wr_qos_arb_point_e;
+
+  //Enum : qos_hold_scope_e
+  //When the subordinate read-QoS arbiter holds R responses back to let a pool
+  //of reads build up (axi4_slave_agent_config::rd_qos_hold_scope).
+  typedef enum bit {
+    QOS_HOLD_FIRST = 1'b0,   // hold only before the first response (legacy)
+    QOS_HOLD_EACH  = 1'b1    // hold before every response
+  } qos_hold_scope_e;
+
   //Used to store the awid for Qos mode
   awid_e awid_queue_for_qos[$];
 

@@ -62,7 +62,51 @@ class axi4_slave_agent_config extends uvm_object;
 
   //Used to set the qos mode
   qos_mode_e qos_mode_type;
-  
+
+  //-------------------------------------------------------
+  // Read-QoS arbiter knobs (used only when qos_mode_type enables read QoS).
+  // Every default reproduces the arbiter as it was before these knobs existed:
+  // hold the FIRST response until two reads are queued, wait for that without
+  // limit, then always serve the highest ARQOS (oldest first among equals).
+  //-------------------------------------------------------
+
+  //Variable: rd_qos_hold_min
+  //Pool size the arbiter waits for before choosing. 1 = never hold.
+  int rd_qos_hold_min = 2;
+
+  //Variable: rd_qos_hold_scope
+  //QOS_HOLD_FIRST: hold only before the first response (legacy).
+  //QOS_HOLD_EACH : hold before every response.
+  qos_hold_scope_e rd_qos_hold_scope = QOS_HOLD_FIRST;
+
+  //Variable: rd_qos_hold_tmo_clk
+  //0 = hold without limit (legacy). N > 0 = once at least one read is queued,
+  //wait at most N aclk cycles for the pool to reach rd_qos_hold_min, then
+  //choose from whatever is queued. A topology that only ever delivers one read
+  //at a time to this subordinate needs this, or the first read waits forever.
+  //The plusarg +AXI4_QOS_HOLD_TMO=<N> applies N to every subordinate left at 0.
+  int rd_qos_hold_tmo_clk = 0;
+
+  //Variable: rd_qos_max_bypass
+  //0 = no bound (legacy). N > 0 = a queued read that has been overtaken by N
+  //younger reads is served next, whatever its ARQOS (starvation bound).
+  int rd_qos_max_bypass = 0;
+
+  //Variable: qos_rd_arb_chk
+  //1 = re-derive every read-QoS choice with an independent reference and
+  //report a mismatch as UVM_ERROR (self-check of the arbiter above).
+  bit qos_rd_arb_chk = 0;
+
+  //Variable: qos_rd_expect_reorder_min
+  //-1 = no expectation. N >= 0 = report_phase requires at least N read-QoS
+  //choices that served a read other than the oldest queued one.
+  int qos_rd_expect_reorder_min = -1;
+
+  //Variable: qos_rd_expect_bypass_max
+  //-1 = no expectation. N >= 0 = report_phase requires that no queued read was
+  //overtaken more than N times.
+  int qos_rd_expect_bypass_max = -1;
+
   //Variable: reset_test_mode
   //When set, slave driver doesn't wait for sequences (for reset testing)
   bit reset_test_mode = 0;
@@ -125,6 +169,14 @@ function void axi4_slave_agent_config::do_print(uvm_printer printer);
   printer.print_field ("max_address",  max_address,  $bits(max_address),  UVM_HEX);
   printer.print_string ("slave_response_type",   slave_response_mode.name());
   printer.print_string ("QoS mode",   qos_mode_type.name());
+  // Read-QoS arbiter knobs: printed only when not at the default, so a config
+  // dump of an existing test is unchanged.
+  if(rd_qos_hold_min != 2 || rd_qos_hold_scope != QOS_HOLD_FIRST || rd_qos_hold_tmo_clk != 0 || rd_qos_max_bypass != 0)
+    printer.print_string("rd_qos_hold",$sformatf("min=%0d scope=%s tmo_clk=%0d max_bypass=%0d",
+                                                 rd_qos_hold_min,rd_qos_hold_scope.name(),rd_qos_hold_tmo_clk,rd_qos_max_bypass));
+  if(qos_rd_arb_chk || qos_rd_expect_reorder_min >= 0 || qos_rd_expect_bypass_max >= 0)
+    printer.print_string("qos_rd_checks",$sformatf("arb_chk=%0d expect_reorder_min=%0d expect_bypass_max=%0d",
+                                                   qos_rd_arb_chk,qos_rd_expect_reorder_min,qos_rd_expect_bypass_max));
   printer.print_field ("minimum_transactions",  minimum_transactions,  $bits(minimum_transactions),  UVM_HEX);
   printer.print_field ("maximum_transactions",  maximum_transactions,  $bits(maximum_transactions),  UVM_HEX);
   printer.print_string ("read_data_mode", read_data_mode.name());  

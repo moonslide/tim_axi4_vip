@@ -127,6 +127,17 @@ class axi4_env_config extends uvm_object;
   //generated fabric has QoS ports on the ingress side only. Set to 0 with a DUT.
   bit axqos_passthrough_chk_cfg = 1;
 
+  //Variable: awqos_chk_cfg
+  //1 = the scoreboard also compares AWQOS master-vs-slave (under
+  //axqos_passthrough_chk_cfg, like ARQOS). 0 by default because the slave
+  //monitor BFM does not sample AWQOS yet (its write-address task copies every
+  //AW field except AWQOS/AWREGION into the packet), so the slave-side value is
+  //always 0 and the compare would fail on any non-zero AWQOS. Fixing that
+  //sampling moves the slave QoS coverage, which is held fixed this round; see
+  //the QoS-control execution record. +AXI4_AWQOS_CHK turns the compare on
+  //from the command line.
+  bit awqos_chk_cfg = 0;
+
   //Variable: axregion_passthrough_chk_cfg
   //1 = require slave-side ARREGION to equal the master-side value (AWREGION is
   //never compared by the scoreboard). An interconnect MAY generate REGION from
