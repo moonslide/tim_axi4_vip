@@ -157,6 +157,13 @@ axi4_non_blocking_write_read_response_out_of_order_test run_cnt=2
 #------------------------------------------------------------------------------------
 axi4_cross_id_write_reorder_test run_cnt=3
 axi4_cross_id_read_reorder_test run_cnt=3
+# The same two under the BASE (4x4) and ENHANCED maps (page window from
+# axi4_master_cross_id_write_reorder_seq::base_addr_for_mode()). Named _44 / _1010 for the
+# reason given at the same-ID entries below: unique log names, suffix stripped for +UVM_TESTNAME.
+axi4_cross_id_write_reorder_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_cross_id_write_reorder_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_cross_id_read_reorder_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_cross_id_read_reorder_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
 # Same-ID Non-Adjacent Reorder Test (AXI_ooo.md F2)
