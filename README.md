@@ -463,12 +463,24 @@ Open items:
   the `+SB_KEYED_PAIRING=1` `ENHANCED` variants of `axi4_blocking_write_read_test`,
   `axi4_cross_id_write_reorder_test`, `axi4_id_multiple_writes_different_awid_test`
   and `axi4_non_blocking_write_read_response_out_of_order_test`;
-  `axi4_qos_bid_queue_race_test` `4x4` (seeds 777 and 1); and
-  `axi4_cross_id_read_reorder_test` / `axi4_cross_id_write_reorder_test` `ENHANCED`
-  (seeds 777 and 1, identical on `914a580` and after the T1/T2/T3 changes below).
-  In the two cross-ID `ENHANCED` runs every response is an error response, which
-  points at the same cause as T3 below (a base address outside the `ENHANCED`
-  map); not fixed or confirmed.
+  `axi4_qos_bid_queue_race_test` `4x4` (seeds 777 and 1). The keyed `ENHANCED`
+  variant of `axi4_cross_id_write_reorder_test` has not been re-measured since
+  the cross-ID address fix in the next item.
+- **Cross-ID reorder tests in `ENHANCED`: fixed (`a7469f1`).**
+  `axi4_cross_id_read_reorder_test` and `axi4_cross_id_write_reorder_test` used
+  the fixed base `0x0000_0100_0000_1000`, which only the `4x4` map decodes. In
+  `ENHANCED` every access was answered DECERR ("Master 0 write to
+  unmapped/illegal address"), and the runs ended `UVM_ERROR : 1` /
+  `TEST RESULT: FAIL - Acceptance criteria not met` at seeds 777 and 1.
+  `axi4_master_cross_id_write_reorder_seq::base_addr_for_mode()` now gives
+  `ENHANCED` `0x0000_0008_0000_1000` (S0 DDR Secure Kernel, master 0 with
+  AxPROT=000). Every other mode keeps the old base, so `NONE` and `4x4`
+  stimulus is unchanged. Same seeds after the fix: `ENHANCED` `UVM_ERROR : 0` /
+  `TEST RESULT: PASS`, 8/8 matched on every channel used, no DECERR. Two limits:
+  the write test's B responses were observed in issue order in every mode,
+  before and after (seeds 777 and 1; cause not probed), so its cross-ID write
+  reorder is not provoked; and on Track-B both tests are consistency checks
+  only (see the Track-B list below).
 - **T1/T2 — Track-B hang in `axi4_qos_basic_priority_test` and
   `axi4_qos_equal_priority_fairness_test`: fixed per test.** In read-QoS mode the
   VIP slave holds its first read until a second AR reaches the same slave; the
@@ -543,8 +555,11 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   `` `ifdef BUS_MATRIX_FABRIC_IP `` (only `user_based_qos_routing` sets an
   identity mask, `32'h0007_8000`). `testlists/axi4_trackb_nonnative.list` runs
   these four tests plus `qos_basic_priority`, `qos_equal_priority_fairness` and
-  `same_id_nonadjacent_reorder` (7 tests, 21 entries) on Track-B `ENHANCED` with
-  seeds 777, 1 and a random seed.
+  `same_id_nonadjacent_reorder`, and since `d66a7ad` `cross_id_read_reorder` and
+  `cross_id_write_reorder` (9 tests, 27 entries) on Track-B `ENHANCED` with
+  seeds 777, 1 and a random seed. The two cross-ID tests are consistency checks
+  only there: master 0's R bursts and B responses were observed in issue order
+  (cause not probed), so the reorder they target was not seen.
 - **What Track-B does not check.** For these tests the AWID/BID/ARID/RID and
   ARQOS comparisons are off — the tests document them as expected differences
   and `SB_CHECK_LEDGER` logs them as not performed — because the fabric

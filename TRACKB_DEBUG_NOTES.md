@@ -159,9 +159,14 @@ runner-random seed each, ENHANCED 10x10 fabric:
 | `axi4_qos_basic_priority_test` | `c371735` + `7afce97` |
 | `axi4_qos_equal_priority_fairness_test` | `66c1fdf` + `b0867bb` |
 | `axi4_same_id_nonadjacent_reorder_test` | `f8b4c68` + `207e54d` (consistency check only: master 0's next AR is observed held off at the fabric ingress until the previous R completes, so no two same-ID reads are outstanding; cause not probed) |
+| `axi4_cross_id_read_reorder_test` | `a7469f1` + `d66a7ad` (consistency check only: master 0's R bursts were observed in issue order at seeds 777, 1 and random, cause not probed, so the cross-ID reorder was not provoked; `content_adjudicated=0` because all 8 ARIDs differ) |
+| `axi4_cross_id_write_reorder_test` | `a7469f1` + `d66a7ad` (consistency check only: B responses were observed in issue order at seeds 777, 1 and random, cause not probed, so the cross-ID reorder was not provoked; the test issues no reads, `content_adjudicated=0`) |
 
-They are in `testlists/axi4_trackb_nonnative.list` (the last three added by
-`49d872e`; all of the commits above are on main). In none of them is any
+They are in `testlists/axi4_trackb_nonnative.list` (`49d872e` added the
+qos_basic_priority, qos_equal_priority_fairness and same_id rows, `d66a7ad`
+the two cross-ID rows). `a7469f1` and `d66a7ad` are on branch
+`exec/20261021-e1-crossid-perf-t3reg`, not yet on main; the other commits
+above are on main. In none of them is any
 QoS behaviour verified on Track-B (the fabric has no egress QoS port), and
 AxID equality is replaced, not checked. `axi4_non_blocking_write_read_test`,
 `axi4_id_multiple_writes_different_awid_test` and
