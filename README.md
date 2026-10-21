@@ -547,8 +547,10 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   `sb_pair_awuser_id_mask`/`sb_pair_aruser_id_mask` in `env/axi4_env_config.sv`
   (default 0 = off, plusargs `+SB_PAIR_AWUSER_ID_MASK`/`+SB_PAIR_ARUSER_ID_MASK`).
   A disabled passthrough check is now counted as skipped, not verified, and
-  reported by an `SB_CHECK_LEDGER` line (which also lists AWREGION and AWQOS as
-  `NOT IMPLEMENTED (never compared)`); `SB_PAIR_KEY` and `SB_PAIR_AMBIGUOUS`
+  reported by an `SB_CHECK_LEDGER` line (which also lists AWREGION as
+  `NOT IMPLEMENTED (never compared)` and, unless the AWQOS compare is enabled,
+  AWQOS as `NOT COMPARED (the slave monitor does not sample AWQOS; ...)` — see
+  [QoS control knobs](#qos-control-knobs)); `SB_PAIR_KEY` and `SB_PAIR_AMBIGUOUS`
   report how pairing was decided. `user_based_qos_routing`,
   `qos_region_routing_reset_backpressure`, `qos_bid_queue_race` and
   `user_signal_passthrough` set their Track-B scoreboard settings under
@@ -564,8 +566,10 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   ARQOS comparisons are off — the tests document them as expected differences
   and `SB_CHECK_LEDGER` logs them as not performed — because the fabric
   re-encodes AxID and has no egress QoS ports. **Track-B does not verify any
-  QoS behaviour.** AWREGION and AWQOS are not compared in any build; the
-  scoreboard has only ARREGION/ARQOS comparisons. The slave-BFM response-index
+  QoS behaviour.** AWREGION is not compared in any build. AWQOS is compared
+  only when `awqos_chk_cfg`/`+AXI4_AWQOS_CHK` enables it, which is not usable
+  yet (the slave monitor never samples AWQOS); the default ledger reports it as
+  not compared. The slave-BFM response-index
   desync (affects BID/RID) is not ruled out.
 - **Fabric ingress AxID is 4 bits (`c53f58f`..`c8dee19`).** This is a property
   of the delivered IP: the wrapper ports `m_awid`/`m_arid` in
@@ -598,7 +602,7 @@ mispaired (measured before the B/R response fields were added to its
 comparison), so a zero count is not evidence of correct pairing.
 
 Still open: the items in the list above. Code-review follow-ups were applied
-afterwards: the ledger states that AWREGION/AWQOS are never compared; the pair-key
+afterwards: the ledger states that AWREGION is never compared and AWQOS is not compared (with the reason); the pair-key
 report no longer relies on a nested `foreach`; `SB_PAIR_AMBIGUOUS` also compares
 the B/R response fields; identity masks wider than the AxUSER width are refused
 (`SB_PAIR_MASK_WIDTH`); the ingress wiring follows `AXI_VID_WIDTH`. X-valued IDs
@@ -805,6 +809,40 @@ The scoreboard's `disable_end_of_test_checks` control is a UVM config-db field,
 not a recognized bare plusarg. Tests that set it waive all completeness checks;
 such a PASS does not establish that every transaction was accounted for.
 
+### QoS control knobs
+
+All knobs are non-random config fields whose defaults reproduce the behaviour
+from before they existed; a test sets them in its `setup_axi4_master_agent_cfg()`
+/ `setup_axi4_slave_agent_cfg()` override, e.g.
+`axi4_env_cfg_h.axi4_master_agent_cfg_h[0].awqos_src = AXQOS_SRC_CONST;`.
+Directed tests: `testlists/axi4_qos_control.list` (FAIL halves listed in its header).
+
+| Knob (where) | Default | Meaning |
+|---|---|---|
+| `awqos_src` / `arqos_src` (master cfg) | `AXQOS_SRC_SEQ` | AxQOS value source per channel: sequence value, `CONST` (`<ch>qos_const`), `SPAN` (uniform in `<ch>qos_span_lo..hi`, private generator), `ZERO` (a manager without QoS). Applied by the driver proxy and written back into the item |
+| `wr_qos_arb_point` (master cfg) | `WR_QOS_ARB_AT_WDATA` | Where write QoS (`qos_mode_type` with write QoS) arbitrates. The default picks the highest AWQOS in the W-data phase after AWs were issued in order: with distinct AWIDs this sends W bursts out of AW order (measured: `axi4_qos_wr_aw_order_test +QOS_WR_AW_LEGACY`). `WR_QOS_ARB_AT_AW` is **experimental**: QoS picks the next AW and W follows AW order, but `finish_item()` returns before the AW is issued (a `BLOCKING_WRITE` no longer blocks the sequence). `+AXI4_WR_QOS_ARB=AW` selects it for all managers |
+| `wr_qos_aw_pool_min` / `wr_qos_aw_window_clk` (master cfg) | 2 / 16 | AT_AW only: pool size to wait for, and the bound of that wait in aclk |
+| `rd_qos_hold_min` (slave cfg) | 2 | Read-QoS pool size the arbiter waits for before choosing |
+| `rd_qos_hold_scope` (slave cfg) | `QOS_HOLD_FIRST` | Hold before the first response only, or `QOS_HOLD_EACH` before every response (needs a hold bound) |
+| `rd_qos_hold_tmo_clk` (slave cfg) | 0 (no bound) | Once a read is queued, wait at most N aclk; `+AXI4_QOS_HOLD_TMO=<N>` applies N to every slave left at 0 |
+| `rd_qos_max_bypass` (slave cfg) | 0 (no bound) | A queued read overtaken N times is served next |
+| `qos_rd_arb_chk`, `qos_rd_expect_reorder_min`, `qos_rd_expect_bypass_max` (slave cfg) | 0, -1, -1 | Arbiter self-check (same rule written twice, not an independent oracle) and report-phase expectations |
+| `awqos_chk_cfg` (env cfg) / `+AXI4_AWQOS_CHK` | 0 | AWQOS master-vs-slave compare. Not usable on the 1:1 baseline yet: the slave monitor never samples AWQOS, so any AWQOS != 0 fails; enabling it prints an `SB_AWQOS_CHK` warning |
+| `+AXI4_QOS_HOLD_WATCH=<N>` | off | Diagnostic only: one `QOS_HOLD_STALL` warning per slave whose read-QoS hold lasts N aclk |
+
+Each slave with a QoS mode on prints `QOS_ARB_STATS` in report_phase (read
+picks / choices / reorders / hold timeouts / forced bypasses; write-response
+picks and pool size — the write pool is always 1, so B is never actually
+arbitrated by AWQOS). A slave with read QoS on also instantiates the
+`qos_rd_arb_cg` covergroup; runs without read QoS have no instance.
+
+Known limitations: the read-QoS arbiter ignores ARID, so same-ARID reads can be
+returned out of order (AXI4 A5.3) — keep reorderable reads on distinct ARIDs
+(`axi4_qos_basic_priority_test`: every read ARID 0, yet slave 0 reports `reordered=4`).
+On Track-B these knobs verify no QoS behaviour: the fabric forwards no QoS, the
+QoS compares are off, and the slaves in the two QoS tests there keep read QoS
+disabled.
+
 ## Prerequisites
 
 The supported live flow is:
@@ -934,8 +972,8 @@ the baseline list does not compile the licensed RTL.
 ingress ports only and forwards no QoS downstream; `top/hdl_top.sv:825-826` ties
 the subordinate-side `awqos`/`arqos` to 0. Accordingly, the non-native Track-B
 tests (`testlists/axi4_trackb_nonnative.list`) switch the `ARQOS` passthrough
-check off (logged as not performed in `SB_CHECK_LEDGER`), and `AWQOS` is never
-compared in any build. In addition, `axi4_qos_basic_priority_test` and
+check off (logged as not performed in `SB_CHECK_LEDGER`), and `AWQOS` is not
+compared by default in any build (see [QoS control knobs](#qos-control-knobs)). In addition, `axi4_qos_basic_priority_test` and
 `axi4_qos_equal_priority_fairness_test` (T1/T2 under
 [Recent verification updates (2026-10-20)](#recent-verification-updates-2026-10-20)) put their slaves in
 `ONLY_WRITE_QOS_MODE_ENABLE` under `` `ifdef BUS_MATRIX_FABRIC_IP ``, so slave
@@ -1231,7 +1269,7 @@ tops, then assertions. `sim/axi4_compile.f` is the executable source of truth.
 | Plain interface | `axi4_if` defines no modports or interface-level clocking blocks; monitor BFMs have their own sampling clocking blocks |
 | ID stimulus range | Track-B builds with 8-bit (10×10) / 6-bit (4×4) subordinate-side IDs, but the fabric ingress AxID is 4 bits: managers may use 0–15 only, and a wider valid AxID stops the run at `IDW_INGRESS_TRUNC`. Default initiator constraints/helpers generate IDs 0–15 |
 | Track-B QoS | No QoS behaviour is verified on Track-B: the fabric forwards no QoS, the ARQOS check is off in the non-native tests, and slave read-QoS ordering is disabled in the two QoS tests that run there (see [Track-B](#track-b-commercial-fabric-as-dut)) |
-| Assertion scope | AW/AR stable/known payload sets omit QoS, REGION, and USER; there are no comprehensive SVA rules for all burst/4-KiB/WLAST/WSTRB/same-ID cases |
+| Assertion scope | AW/AR stable/known payload sets include AxQOS but omit REGION and USER; there are no comprehensive SVA rules for all burst/4-KiB/WLAST/WSTRB/same-ID cases |
 | READY timeout wording | The property uses unbounded `##[1:$]`; the reported finite ready-delay configuration is not wired into the assertions |
 | Same-ID closure | Read-side adjudication is selective and write-side same-ID ordering is not fully adjudicated by the end checker |
 | Content checking defaults | Independent write-to-read memory content checking is not universally enabled; direct-side equality can compare observations of the same wire |
