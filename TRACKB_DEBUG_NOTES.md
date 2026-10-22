@@ -1,7 +1,7 @@
 # TRACKB_DEBUG_NOTES
 
-Track-B = the VIP driven against the **real commercial fabric IP** (ARM CoreLink
-NIC-400 class, delivered under `ext/`) instead of the 1:1 direct wiring in
+Track-B = the VIP driven against the **real commercial fabric IP** (licensed
+third-party RTL, delivered under `ext/`) instead of the 1:1 direct wiring in
 `hdl_top`. This file is the reference `CLAUDE.md` points at from three places:
 the key-documents list, the publish-policy allow-list, and iron rule 2.
 
@@ -27,7 +27,7 @@ run as if it exercised an interconnect. On a baseline build **it does not**:
 `+BUS_MATRIX_MODE` only selects which address map the *reference model* scores
 against. `bm/axi4_bus_matrix_ref.sv:4` is `class axi4_bus_matrix_ref extends
 uvm_component`. Verified 2026-08-12: `sim/axi4_compile.f` contains no
-`BUS_MATRIX_FABRIC_IP`, no `ext/` path and no `nic400` reference, and
+`BUS_MATRIX_FABRIC_IP` and no `ext/` path (so no file of the commercial fabric IP), and
 `BUS_MATRIX_FABRIC_IP` appears in only the two fabric file lists above.
 
 So a message like `Address 0x... unmapped/illegal - returning READ_DECERR` in a
@@ -288,7 +288,7 @@ the whole round had to be discarded.
    fabric handles it. VIP-side; not diagnosed.
 3. **Clocking blocks — monitors done, interfaces/drivers not.** Originally: no
    clocking blocks anywhere in the interfaces/BFMs, so monitor sampling depended
-   on the drivers happening to use non-blocking assignment. AMBA A3.2.1 defines the
+   on the drivers happening to use non-blocking assignment. AXI spec §A3.2.1 defines the
    transfer at the rising edge where VALID and READY are both high, meaning the
    value that met setup *before* that edge; the robust idiom is a clocking block
    with `default input #1step`. **Update (checked 2026-10-21 against main):**
