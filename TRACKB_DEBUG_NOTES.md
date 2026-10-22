@@ -279,11 +279,49 @@ the whole round had to be discarded.
    tests are to be fixed to pass, one test at a time, with per-test settings
    under `` `ifdef BUS_MATRIX_FABRIC_IP `` and a stronger scoreboard pairing key —
    not declared out of scope, and never "fixed" only by switching checks off
-   (each run's `SB_CHECK_LEDGER` lines list what is off). Four tests pass on
-   Track-B at `dacdf09`, three more by `c371735` through `49d872e`, all on main
-   (§4.2 update). Still open: the other baseline tests, including
+   (each run's `SB_CHECK_LEDGER` lines list what is off).
+   **Converted so far: 9 tests**, all in `testlists/axi4_trackb_nonnative.list`
+   (9 tests × 3 seeds — 777, 1, one runner-random — = 27 entries; ENHANCED 10x10
+   fabric only). Every commit below is on main (checked with
+   `git merge-base --is-ancestor <hash> main`, 2026-10-22):
+   * Shared scoreboard pairing key: W key = address + shape `c18b6f3`, AxUSER
+     manager-identity term `85b851c`, single-port channels reported NOT EXERCISED
+     instead of keyed `dacdf09`; ledger states AWREGION/AWQOS are never compared
+     `d9edf3a`.
+   * Per-test Track-B settings, list added at `e6dc8de` (12 entries):
+     `axi4_user_based_qos_routing_test` `3d15991` (ARUSER identity mask nominal,
+     no AR exercised: `bf265a0`), `axi4_qos_region_routing_reset_backpressure_test`
+     `19df9ba`, `axi4_qos_bid_queue_race_test` `b08ccc1` (inherits slave
+     `ONLY_WRITE_QOS_MODE_ENABLE` on Track-B, comment/ledger only: `788410e`),
+     `axi4_user_signal_passthrough_test` `c4cf9e3`.
+   * T1/T2/T3 (labels as in README.md "Recent verification updates (2026-10-20)"),
+     list rows added at `49d872e` (21 entries): T1 `axi4_qos_basic_priority_test`
+     `c371735` (slaves write-side QoS only, ends the `arready` hang) + `7afce97`
+     (scoreboard settings); T2 `axi4_qos_equal_priority_fairness_test` `66c1fdf` +
+     `b0867bb`, same split; T3 `axi4_same_id_nonadjacent_reorder_test` `f8b4c68`
+     (page window by bus-matrix mode) + `207e54d` (scoreboard settings) —
+     consistency check only on Track-B (`content_adjudicated=0`; master 0's next
+     AR is held off at the fabric ingress until the previous R completes; cause
+     not probed).
+   * Cross-ID pair `axi4_cross_id_read_reorder_test` /
+     `axi4_cross_id_write_reorder_test`: `a7469f1` (ENHANCED page window — the old
+     base was unmapped there, every access DECERR), `d66a7ad` (per-test Track-B
+     settings, list 21 → 27 entries), `7ab064e` (comments and list header: in-order
+     responses observed, cause not probed). **Status: consistency checks only.**
+     At seeds 777, 1 and runner-random the fabric returned master 0's R bursts
+     and B responses in issue order (cause not probed), so neither cross-ID
+     reorder was provoked on Track-B. The write side has never been provoked in
+     any build: its B responses were in issue order on the baseline too (README.md,
+     cross-ID item of the same 2026-10-20 update). `content_adjudicated=0` in both:
+     the read test's 8 ARIDs all differ, and the write test issues no reads.
+     Whatever reorder coverage the pair has comes from the baseline build (list
+     header).
+   Still open: the other baseline tests, including
    `axi4_non_blocking_write_read_test`, `axi4_id_multiple_writes_different_awid_test`
-   and `axi4_blocking_cross_write_read_test`, and the 4x4 fabric drop for all of them.
+   and `axi4_blocking_cross_write_read_test`; the 4x4 fabric drop for all nine
+   converted tests and the rest; why the fabric holds off master 0's next same-ID
+   AR (T3) and answers the cross-ID pair in issue order (no fabric-boundary probe
+   run); AxID ≥ 16.
 2. **Crossing read times out on the direct-wiring build (§4.3)** while the real
    fabric handles it. VIP-side; not diagnosed.
 3. **Clocking blocks — monitors done, interfaces/drivers not.** Originally: no
