@@ -47,6 +47,11 @@ endfunction : new
 task axi4_virtual_id_multiple_writes_different_awid_seq::body();
   bit verify_result;
   bit all_tests_passed = 1;
+  // Masters that exist in this topology. +BUS_MATRIX_MODE=NONE builds 1 master,
+  // so axi4_master_write_seqr_h_all (sized by env connect_phase to no_of_masters)
+  // has 1 entry and the sequencers for masters 1..3 do not exist. Only masters
+  // below this count are started; with >= 4 masters the behaviour is unchanged.
+  int n_masters;
   
   // Get scoreboard handle for potential verification
   if(!uvm_config_db#(axi4_scoreboard)::get(null, "*", "axi4_scoreboard_h", axi4_scoreboard_h)) begin
@@ -63,25 +68,39 @@ task axi4_virtual_id_multiple_writes_different_awid_seq::body();
     axi4_master_seq_h[i].master_id = i;  // Set master ID
   end
   
-  `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting all 4 masters concurrently for complex out-of-order scenarios", UVM_LOW);
+  n_masters = p_sequencer.axi4_master_write_seqr_h_all.size();
+  if (n_masters == 0)
+    `uvm_fatal(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: no master write sequencer exists - nothing to start")
+  if (n_masters >= 4)
+    `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting all 4 masters concurrently for complex out-of-order scenarios", UVM_LOW)
+  else
+    `uvm_info(get_type_name(), $sformatf("ID_MULTIPLE_WRITES_DIFFERENT_AWID: only %0d master(s) in this topology - starting master(s) 0..%0d, skipping the rest", n_masters, n_masters-1), UVM_LOW)
   
   // Start all 4 master sequences concurrently - creates complex different AWID scenarios
   fork
     begin : master_0_cpu_core_a
-      `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 0 (CPU_Core_A) - Access: S0(DDR), S2(Peripheral), S3(HW_Fuse-RO)", UVM_LOW);
-      axi4_master_seq_h[0].start(p_sequencer.axi4_master_write_seqr_h_all[0]);
+      if (n_masters > 0) begin
+        `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 0 (CPU_Core_A) - Access: S0(DDR), S2(Peripheral), S3(HW_Fuse-RO)", UVM_LOW);
+        axi4_master_seq_h[0].start(p_sequencer.axi4_master_write_seqr_h_all[0]);
+      end
     end
     begin : master_1_cpu_core_b
-      `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 1 (CPU_Core_B) - Access: S0(DDR), S2(Peripheral)", UVM_LOW);
-      axi4_master_seq_h[1].start(p_sequencer.axi4_master_write_seqr_h_all[1]);
+      if (n_masters > 1) begin
+        `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 1 (CPU_Core_B) - Access: S0(DDR), S2(Peripheral)", UVM_LOW);
+        axi4_master_seq_h[1].start(p_sequencer.axi4_master_write_seqr_h_all[1]);
+      end
     end
     begin : master_2_dma_controller
-      `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 2 (DMA_Controller) - Access: S0(DDR), S2(Peripheral)", UVM_LOW);
-      axi4_master_seq_h[2].start(p_sequencer.axi4_master_write_seqr_h_all[2]);
+      if (n_masters > 2) begin
+        `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 2 (DMA_Controller) - Access: S0(DDR), S2(Peripheral)", UVM_LOW);
+        axi4_master_seq_h[2].start(p_sequencer.axi4_master_write_seqr_h_all[2]);
+      end
     end
     begin : master_3_gpu
-      `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 3 (GPU) - Access: S0(DDR), S3(HW_Fuse-RO)", UVM_LOW);
-      axi4_master_seq_h[3].start(p_sequencer.axi4_master_write_seqr_h_all[3]);
+      if (n_masters > 3) begin
+        `uvm_info(get_type_name(), "ID_MULTIPLE_WRITES_DIFFERENT_AWID: Starting Master 3 (GPU) - Access: S0(DDR), S3(HW_Fuse-RO)", UVM_LOW);
+        axi4_master_seq_h[3].start(p_sequencer.axi4_master_write_seqr_h_all[3]);
+      end
     end
   join
   
