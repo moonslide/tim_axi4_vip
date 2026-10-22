@@ -1362,7 +1362,7 @@ parameter bit [63:0] DEFAULT_SLAVE_SIZE = 64'h0000_0000_1000_0000;</code></pre>
 endfunction</code></pre>
                 
                 <h3>QoS Arbitration</h3>
-                <p>Enhanced matrix mode implements Quality of Service arbitration:</p>
+                <p>The bus matrix reference model does not arbitrate by QoS. QoS handling is on the VIP side: AWQOS/ARQOS value stimulus and slave read-side priority selection by ARQOS; write-side QoS arbitration is not effectively exercised in the default (legacy) mode. The levels below are a usage convention for choosing stimulus values, not a behaviour the VIP enforces or checks. Optional knobs and their limits: README.md "QoS control knobs".</p>
                 
                 <div class="code-header">QoS Priority Levels</div>
                 <ul>
@@ -3513,7 +3513,7 @@ endproperty</code></pre>
                 </div>
                 
                 <h3>Quality of Service (QoS)</h3>
-                <p>The VIP implements comprehensive QoS arbitration and priority handling:</p>
+                <p>The VIP provides AWQOS/ARQOS value stimulus and slave read-side priority selection. Write-side QoS arbitration is not effectively exercised in the default (legacy) mode, the AWQOS master-vs-slave compare is off by default, and Track-B verifies no QoS behaviour. The priority classes and latency targets below are an illustrative usage convention that the VIP does not check; the test example is illustrative, and the coverage table at the end of this section records intent, not checked results (the older QoS tests do not check service order). Optional knobs and their limits: README.md "QoS control knobs".</p>
                 
                 <h4>QoS Priority Levels</h4>
                 <table>
