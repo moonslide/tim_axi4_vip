@@ -612,6 +612,33 @@ the B/R response fields; identity masks wider than the AxUSER width are refused
 (`SB_PAIR_MASK_WIDTH`); the ingress wiring follows `AXI_VID_WIDTH`. X-valued IDs
 remain outside the ingress checker's scope (documented in the code).
 
+### Legal address window for the generic write/read tests (4x4 / ENHANCED)
+
+The shared `bk_`/`nbk_` write and read sequences randomize addresses without any
+address constraint, so in the 4x4 and ENHANCED bus modes the address falls outside every
+slave window and the response is DECERR; NONE passes only because its decoder maps every
+address to slave 0. `test/axi4_legal_addr_window.sv` adds a test-layer window (a static
+helper plus an `axi4_master_tx` subclass installed as a factory override only outside
+NONE) and `axi4_blocking_write_read_test`, `axi4_non_blocking_write_read_test` and
+`axi4_write_read_test` opt in (commits `9003a66`..`4e0ce3b`; list entries `_44` / `_1010`
+in `ece7537`). Shared sequences, `axi4_master_tx` and the BFMs are untouched.
+`axi4_width_config_test` extends `axi4_write_read_test` and therefore opts in as well; it
+is registered for NONE only. The window is a single static: it supports one master per run.
+
+Verification performed (reported by the implementing session; not re-run for this
+README update):
+
+| Check | Result |
+|---|---|
+| 3 tests × {4x4, ENHANCED} × seeds {1, 777}, `main` before vs branch after | Before: 12/12 `UVM_ERROR : 1`, `TEST RESULT: FAIL`, 291–895 unmapped-address lines each. After: 12/12 `UVM_ERROR : 0` and `TEST RESULT: PASS`, Protocol Issues 0. Total writes/reads identical before and after (2/3, 1/3, 10/6), so traffic did not shrink |
+| Traffic reaches a slave | Scoreboard `bid`/`rid` returned counts equal the transaction counts; decode lines only for slave 0 (4x4) or slave 2 (ENHANCED) after the first boot-ROM scan. ENHANCED reads are answered by the bus-matrix path (see the code comment), not from slave memory |
+| NONE byte-identical | Same build run twice: 40 pairs, 0 differing lines. `main` vs branch: 20 tests × 2 seeds, 40/40 identical after normalising paths, dates, CPU time and line numbers (unnormalised, only the `uvm_info` line number in the three edited files differs) |
+| Negative checks | No `ADDR_WINDOW` line in NONE; tests that did not opt in (exhaustive random reads, slave bresp-X inject, stall detector idle) are log-identical in 4x4/ENHANCED; temporarily moving the window to an unmapped hole sends the three tests back to FAIL |
+| Iron rule 2 | p3r sample block (25 list items) before vs after identical; `run_fabric_smoke.sh` 3/3; Track-B list 33/33; SVWeave 45 errors / 4 warnings unchanged |
+
+Not verified: the Track-B native tests; Track-B before-fix numbers; seeds other than 1
+and 777 (the six new list entries were run once each with the runner's random seed).
+
 ## Recent verification updates (2026-09-18)
 
 Two maintainer-queue defects (`VIP_ISSUES.md`) were implemented, directed-test

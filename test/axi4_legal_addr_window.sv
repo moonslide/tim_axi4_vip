@@ -107,6 +107,13 @@ endclass : axi4_legal_addr_window
 class axi4_master_tx_legal_window extends axi4_master_tx;
   `uvm_object_utils(axi4_master_tx_legal_window)
 
+  // One window for the whole run: these statics are shared by every instance, so
+  // enable() supports ONE master per run. A second enable() for another master would
+  // silently replace this window for all masters.
+  // ENHANCED note: on the 1:1 direct wiring the M0 -> S2 window is not inside the memory
+  // range of slave agent 0 (S0), so the slave answers through the bus-matrix path and the
+  // read data is not read back from slave memory; the scoreboard still pairs and compares
+  // the data seen on the wires. 4x4 reads do come from slave memory.
   static bit [ADDRESS_WIDTH-1:0] win_lo;
   static bit [ADDRESS_WIDTH-1:0] win_hi;
 

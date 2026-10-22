@@ -35,7 +35,8 @@ endfunction : new
 
 //--------------------------------------------------------------------------------------------
 // Function: build_phase
-// Configure assertion timeouts for blocking operations
+// Outside NONE, constrain the generic write/read addresses to a legal window of the
+// selected bus mode (the shared sequences randomize addresses without any constraint).
 //
 // Parameters:
 //  phase - uvm phase
