@@ -164,9 +164,8 @@ runner-random seed each, ENHANCED 10x10 fabric:
 
 They are in `testlists/axi4_trackb_nonnative.list` (`49d872e` added the
 qos_basic_priority, qos_equal_priority_fairness and same_id rows, `d66a7ad`
-the two cross-ID rows). `a7469f1` and `d66a7ad` are on branch
-`exec/20261021-e1-crossid-perf-t3reg`, not yet on main; the other commits
-above are on main. In none of them is any
+the two cross-ID rows). All the commits above (including
+`a7469f1` and `d66a7ad`) are on main. In none of them is any
 QoS behaviour verified on Track-B (the fabric has no egress QoS port), and
 AxID equality is replaced, not checked. `axi4_non_blocking_write_read_test`,
 `axi4_id_multiple_writes_different_awid_test` and
