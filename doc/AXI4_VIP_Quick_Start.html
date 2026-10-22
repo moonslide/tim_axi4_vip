@@ -85,31 +85,30 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1 class="title">AXI4 VIP Quick Start Guide</h1>
 </header>
 <h1 id="axi4-vip-quick-start-guide">AXI4 VIP Quick Start Guide</h1>
-<p>Get up and running in 5 minutes with the advanced 10x10 bus matrix! ✅ <strong>100% Pass Rate Verified</strong></p>
+<p>Get up and running in 5 minutes with the 10x10 bus matrix. Where this page and <code>README.md</code> disagree, <code>README.md</code> and the live <code>sim/synopsys_sim/Makefile</code> win.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <p>✓ Linux system<br />
-✓ Synopsys VCS 2024.09+<br />
-✓ Python 3.6+<br />
-✓ UVM 1.2</p>
+✓ Synopsys VCS W-2024.09-SP1 (registered installation)<br />
+✓ Python 3 (standard library only)<br />
+✓ UVM 1.2 (VCS built-in, <code>-ntb_opts uvm-1.2</code>)</p>
 <h2 id="quick-setup">Quick Setup</h2>
 <h3 id="clone-repository">1. Clone Repository</h3>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="fu">git</span> clone https://github.com/your-org/axi4_vip.git</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="bu">cd</span> axi4_vip</a></code></pre></div>
-<h3 id="configure-bus-matrix-optional">2. Configure Bus Matrix (Optional)</h3>
-<pre class="systemverilog"><code>// Edit include/axi4_bus_config.svh for enhanced mode
-`define NUM_MASTERS 10          // Enhanced 10x10 matrix
-`define NUM_SLAVES 10
-`define BUS_MATRIX_10X10        // Enable enhanced features
-`define RUN_10X10_CONFIG 
-`define ID_MAP_BITS 16
-`define ENABLE_PERFORMANCE_METRICS  // Real-time KPI monitoring</code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="fu">git</span> clone <span class="op">&lt;</span>repository-url<span class="op">&gt;</span> tim_axi4_vip</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="bu">cd</span> tim_axi4_vip</a></code></pre></div>
+<h3 id="select-the-bus-matrix-optional">2. Select the Bus Matrix (Optional)</h3>
+<pre class="systemverilog"><code>// include/axi4_bus_config.svh derives the sizes from a compile define -- do not edit it.
+//   +define+BUS_MATRIX_10X10  -&gt; NUM_MASTERS 10, NUM_SLAVES 10, ID_MAP_BITS 10
+//   (no define)               -&gt; NUM_MASTERS 4,  NUM_SLAVES 4,  ID_MAP_BITS 4
+// The runtime reference map is chosen separately: +BUS_MATRIX_MODE=NONE|4x4|ENHANCED
+// The performance-metrics module is always built in; there is no define to enable it.</code></pre>
 <h3 id="run-test">3. Run Test</h3>
 <div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="bu">cd</span> sim/synopsys_sim</a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="fu">make</span> TEST=axi4_write_read_test</a></code></pre></div>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="fu">make</span> sim test=axi4_write_read_test SEED=12345 FSDB_DUMP=0</a></code></pre></div>
+<p>The Make variable is lowercase <code>test</code>; <code>make sim</code> deletes <code>simv*</code>, <code>csrc*</code>, FSDB and <code>*.log</code> in the current directory first.</p>
 <h3 id="run-regression">4. Run Regression</h3>
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="ex">python3</span> axi4_regression.py \</a>
 <a class="sourceLine" id="cb4-2" data-line-number="2">  --test-list axi4_transfers_regression.list --cov --lsf</a></code></pre></div>
-<p>🎉 <strong>Expected Result</strong>: 100% PASS (All 135 tests pass - 117 standard + 18 performance KPI tests)</p>
+<p>🎉 <strong>Expected Result</strong>: every run’s own log shows <code>UVM_ERROR : 0</code> <strong>and</strong> <code>TEST RESULT: PASS</code>. The runner’s summary alone is not a verdict (it does not require <code>TEST RESULT: PASS</code>). The default list <code>testlists/axi4_transfers_regression.list</code> (<code>sim/synopsys_sim/axi4_transfers_regression.list</code> is a symlink to it) has 340 entries / 199 distinct entry names / 193 distinct test classes, 800 runs with <code>run_cnt</code> expanded, counted on commit <code>4c555f6</code>. The last recorded full run (794 runs, 2026-09-20/21, README.md “Full-regression confirmation”) was 794/794 functional passes; the entries added since were not part of it.</p>
 <h2 id="common-commands">Common Commands</h2>
 <table>
 <colgroup>
@@ -125,19 +124,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <tbody>
 <tr class="odd">
 <td>Single test</td>
-<td><code>make TEST=&lt;name&gt;</code></td>
+<td><code>make sim test=&lt;name&gt; SEED=&lt;n&gt; FSDB_DUMP=0</code></td>
 </tr>
 <tr class="even">
 <td>With waves</td>
-<td><code>make TEST=&lt;name&gt; WAVES=1</code></td>
+<td><code>make sim test=&lt;name&gt;</code> (<code>FSDB_DUMP</code> defaults to 1)</td>
 </tr>
 <tr class="odd">
 <td>Enhanced test</td>
-<td><code>make TEST=&lt;name&gt; DEFINES=&quot;+define+BUS_MATRIX_10X10 +define+RUN_10X10_CONFIG&quot;</code></td>
+<td><code>make sim test=&lt;name&gt; COMMAND_ADD='+define+BUS_MATRIX_10X10 +BUS_MATRIX_MODE=ENHANCED'</code></td>
 </tr>
 <tr class="even">
 <td>Performance KPI test</td>
-<td><code>make TEST=axi4_saturation_midburst_reset_qos_boundary_test DEFINES=&quot;+define+BUS_MATRIX_10X10&quot;</code></td>
+<td><code>make sim test=axi4_saturation_midburst_reset_qos_boundary_test COMMAND_ADD='+define+BUS_MATRIX_10X10 +BUS_MATRIX_MODE=ENHANCED'</code></td>
 </tr>
 <tr class="odd">
 <td>Clean build</td>
@@ -152,58 +151,57 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <td>Add <code>--lsf --cov</code></td>
 </tr>
 <tr class="even">
-<td>KPI report</td>
-<td><code>python3 scripts/generate_kpi_report.py --dir regression_result_*</code></td>
-</tr>
-<tr class="odd">
 <td>Failed tests only</td>
-<td><code>python3 axi4_regression.py --test-list regression_result_*/no_pass.list</code></td>
+<td><code>python3 axi4_regression.py --test-list regression_result_&lt;timestamp&gt;/no_pass_list</code></td>
 </tr>
 </tbody>
 </table>
 <h2 id="pro-tips">Pro Tips</h2>
-<p>💡 Always include <code>axi4_bus_config.svh</code><br />
+<p>💡 Pass the topology explicitly; the Makefile’s test-name auto-detection is unreliable<br />
 💡 Use scalable ID macros<br />
-💡 Check <code>*/logs/no_pass_logs/</code> for errors<br />
-💡 Run <code>make clean</code> when changing config<br />
+💡 Check <code>regression_result_&lt;timestamp&gt;/logs/no_pass_logs/</code> for errors<br />
+💡 Any compile define change needs a full recompile<br />
 💡 Use <code>--lsf --cov</code> for parallel execution<br />
-💡 All tests should pass - if not, check troubleshooting guide</p>
-<h2 id="features-v2.8">⚡ Features (v2.8 - All Fixes Applied)</h2>
-<p>🚀 <strong>Advanced Edition</strong> - High performance and visibility:</p>
+💡 Read each run’s own log for both pass gates before reporting a PASS</p>
+<h2 id="features">⚡ Features</h2>
 <ul>
-<li>✅ <strong>10x10 Bus Matrix</strong>: Advanced 10-master × 10-slave configuration</li>
-<li>✅ <strong>Real-Time Performance KPIs</strong>: 6 comprehensive metrics with live monitoring</li>
-<li>✅ <strong>135 Test Suite</strong>: 117 standard + 18 performance KPI tests<br />
-</li>
+<li>✅ <strong>10x10 Bus Matrix</strong>: 10-master × 10-slave configuration</li>
+<li>✅ <strong>Performance KPIs</strong>: 6 metrics printed by <code>axi4_performance_metrics</code> in report_phase</li>
+<li>✅ <strong>Test Suite</strong>: 231 test classes in <code>test/</code> (9 of them base classes); the default regression list runs 193 of them (see Expected Result), including 6 performance KPI tests × 3 bus modes = 18 entries</li>
 <li>✅ <strong>Performance Metrics Module</strong>: Built-in <code>axi4_performance_metrics.sv</code></li>
-<li>✅ <strong>QoS &amp; USER Signals</strong>: Full support with 16-level priority arbitration</li>
-<li>✅ <strong>3 Bus Matrix Modes</strong>: NONE (1×1), BASE (4×4), ENHANCED (10×10)</li>
+<li>✅ <strong>QoS Support</strong>: AWQOS/ARQOS value stimulus and slave read-side priority selection; write-side QoS arbitration is not effectively exercised in the default (legacy) mode, the AWQOS master-vs-slave compare is off by default, and Track-B verifies no QoS behaviour. Optional knobs and their limits: README.md “QoS control knobs”</li>
+<li>✅ <strong>USER Signals</strong>: 8 USER signal tests for security tagging and transaction tracing</li>
+<li>✅ <strong>3 Bus Matrix Modes</strong>: NONE (1×1), BASE (4×4), ENHANCED (10×10) — on the baseline build these select the reference model’s address map; there is no interconnect in that build</li>
+<li>✅ <strong>Security Features</strong>: AxPROT-dependent privilege/security access rules in the ENHANCED reference map</li>
+<li>✅ <strong>Track-B</strong>: the same VIP against a licensed commercial fabric IP (4×4 and 10×10), built from its own file lists; see “Track-B” below</li>
 </ul>
-<p><strong>Key Performance Indicators</strong>: - 📊 Throughput (GB/s) - 📈 Latency Distribution (p50/p95/p99) - 🔄 Retry Rate (&lt; 5%) - ⚡ Reset Recovery Time (&lt; 100 cycles) - 🛡️ Error Isolation Rate (&gt; 99%) - ⚖️ Arbitration Fairness (&gt; 0.9)</p>
+<p><strong>Key Performance Indicators</strong> (printed values; no threshold is applied to them): - 📊 Throughput (GB/s) - 📈 Latency Distribution (p50/p95/p99) - 🔄 Retry Rate - ⚡ Reset Recovery Time - 🛡️ Issue Isolation Rate - ⚖️ Arbitration Fairness</p>
+<p>The metrics verdict (<code>TEST RESULT</code>) checks only: protocol issues = 0, no deadlock, no livelock.</p>
+<h2 id="track-b">Track-B</h2>
+<p>Track-B replaces the 1:1 direct wiring with the commercial fabric IP. Its RTL is licensed, local-only and never committed or uploaded (README.md “Licensed-IP boundary”). Build it with <code>-f ../../sim/axi4_compile_fabric_ip.f</code> (10×10) or <code>-f ../../sim/axi4_compile_fabric_ip_4x4.f</code> plus <code>+define+FABRIC_IP_4X4</code> (4×4) and the Track-B defines; full commands: README.md “Track-B: commercial fabric as DUT”. <code>axi4_regression.py</code> compiles the baseline file list; <code>testlists/axi4_trackb_nonnative.list</code> adds the fabric per entry through <code>command_add</code>. <code>bash ../run_fabric_smoke.sh</code> (from <code>sim/synopsys_sim/</code>) exercises the 10×10 fabric without the VIP. Evidence and open items: <code>TRACKB_DEBUG_NOTES.md</code>.</p>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <h3 id="if-tests-fail">If Tests Fail:</h3>
 <ol type="1">
-<li><strong>Update to v2.8</strong> - All 21 regression failures resolved</li>
-<li><strong>Check log files</strong>: <code>regression_result_*/logs/no_pass_logs/</code></li>
-<li><strong>Run with debug</strong>: <code>+UVM_VERBOSITY=UVM_HIGH +define+SLAVE_DRIVER_DEBUG</code></li>
-<li><strong>Enable KPI monitoring</strong>: <code>+define+ENABLE_PERFORMANCE_METRICS</code></li>
+<li><strong>Read the first error</strong>: <code>UVM_ERROR</code>/<code>UVM_FATAL</code> in the run’s own log</li>
+<li><strong>Check log files</strong>: <code>regression_result_&lt;timestamp&gt;/logs/no_pass_logs/</code></li>
+<li><strong>Run with debug</strong>: <code>+UVM_VERBOSITY=UVM_HIGH</code>; slave-driver messages carry the report ID <code>SLAVE_DRIVER_DEBUG</code> (a message ID, not a define)</li>
+<li><strong>Check the metrics banner</strong>: <code>TEST RESULT:</code> in the same log</li>
 </ol>
 <h3 id="enhanced-mode-debugging">Enhanced Mode Debugging:</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="co"># Check enhanced configuration</span></a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="fu">grep</span> <span class="st">&quot;BUS_MATRIX_10X10&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="co"># Check the bound topology (TEST_CONFIG summary; some lines need +UVM_VERBOSITY=UVM_MEDIUM)</span></a>
+<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="fu">grep</span> -E <span class="st">&quot;TEST_CONFIG|BUS_MATRIX_MODE&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a>
 <a class="sourceLine" id="cb5-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb5-4" data-line-number="4"><span class="co"># Monitor performance KPIs</span></a>
-<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="fu">grep</span> <span class="st">&quot;KPI:&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log <span class="kw">|</span> <span class="fu">grep</span> -E <span class="st">&quot;Throughput|Latency|Retry|Fairness&quot;</span></a>
+<a class="sourceLine" id="cb5-4" data-line-number="4"><span class="co"># Performance KPIs (report_phase)</span></a>
+<a class="sourceLine" id="cb5-5" data-line-number="5"><span class="fu">grep</span> -A 30 <span class="st">&quot;KEY PERFORMANCE INDICATORS&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a>
 <a class="sourceLine" id="cb5-6" data-line-number="6"></a>
-<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="co"># Verify bus matrix connections</span></a>
-<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="fu">grep</span> <span class="st">&quot;Master\[.*\] -&gt; Slave\[.*\]&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a>
+<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="co"># Pass gates</span></a>
+<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="fu">grep</span> -E <span class="st">&quot;TEST RESULT:|UVM_(ERROR|FATAL) *:&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a>
 <a class="sourceLine" id="cb5-9" data-line-number="9"></a>
-<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="co"># Check QoS arbitration</span></a>
+<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="co"># QoS values printed by the QoS sequences (stimulus only, not an arbitration check)</span></a>
 <a class="sourceLine" id="cb5-11" data-line-number="11"><span class="fu">grep</span> <span class="st">&quot;QoS Priority&quot;</span> <span class="op">&lt;</span>test<span class="op">&gt;</span>.log</a></code></pre></div>
 <h2 id="need-help">Need Help?</h2>
-<p>📚 Full Guide: <code>doc/AXI4_VIP_User_Guide.html</code><br />
-📧 Support: axi4_vip_support@company.com<br />
-🐛 Issues: GitHub Issues page<br />
-✅ <strong>Status</strong>: v2.8 - All 135 tests passing (100% pass rate) with real-time KPI monitoring</p>
+<p>📚 Full reference: <code>README.md</code> (authoritative); <code>doc/AXI4_VIP_User_Guide.html</code><br />
+🐛 Track-B evidence and open items: <code>TRACKB_DEBUG_NOTES.md</code><br />
+✅ <strong>Status</strong>: counts above taken on commit <code>4c555f6</code> (2026-10-22); pass status per README.md “Full-regression confirmation”</p>
 </body>
 </html>
