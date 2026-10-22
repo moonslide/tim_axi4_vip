@@ -567,7 +567,8 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   and `SB_CHECK_LEDGER` logs them as not performed — because the fabric
   re-encodes AxID and has no egress QoS ports. **Track-B does not verify any
   QoS behaviour.** AWREGION is not compared in any build. AWQOS is compared
-  only when `awqos_chk_cfg`/`+AXI4_AWQOS_CHK` enables it, which is not usable
+  only when `awqos_chk_cfg`/`+AXI4_AWQOS_CHK` enables it (and
+  `axqos_passthrough_chk_cfg` is 1, its default), which is not usable
   yet (the slave monitor never samples AWQOS); the default ledger reports it as
   not compared. The slave-BFM response-index
   desync (affects BID/RID) is not ruled out.
@@ -827,7 +828,7 @@ Directed tests: `testlists/axi4_qos_control.list` (FAIL halves listed in its hea
 | `rd_qos_hold_tmo_clk` (slave cfg) | 0 (no bound) | Once a read is queued, wait at most N aclk; `+AXI4_QOS_HOLD_TMO=<N>` applies N to every slave left at 0 |
 | `rd_qos_max_bypass` (slave cfg) | 0 (no bound) | A queued read overtaken N times is served next |
 | `qos_rd_arb_chk`, `qos_rd_expect_reorder_min`, `qos_rd_expect_bypass_max` (slave cfg) | 0, -1, -1 | Arbiter self-check (same rule written twice, not an independent oracle) and report-phase expectations |
-| `awqos_chk_cfg` (env cfg) / `+AXI4_AWQOS_CHK` | 0 | AWQOS master-vs-slave compare. Not usable on the 1:1 baseline yet: the slave monitor never samples AWQOS, so any AWQOS != 0 fails; enabling it prints an `SB_AWQOS_CHK` warning |
+| `awqos_chk_cfg` (env cfg) / `+AXI4_AWQOS_CHK` | 0 | AWQOS master-vs-slave compare (also requires `axqos_passthrough_chk_cfg` = 1, its default). Not usable on the 1:1 baseline yet: the slave monitor never samples AWQOS, so any AWQOS != 0 fails; enabling it prints an `SB_AWQOS_CHK` warning |
 | `+AXI4_QOS_HOLD_WATCH=<N>` | off | Diagnostic only: one `QOS_HOLD_STALL` warning per slave whose read-QoS hold lasts N aclk |
 
 Each slave with a QoS mode on prints `QOS_ARB_STATS` in report_phase (read
