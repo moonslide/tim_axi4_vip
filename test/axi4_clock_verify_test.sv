@@ -1,3 +1,9 @@
+// RETIRED / NOT COMPILED: not included in axi4_test_pkg.sv and listed in no
+// test list. It references hdl_top.* from a class, which does not compile
+// inside the test package (Error-[SV-LCM-HRP], trial include 2026-10-22).
+// The global clk_freq_scale knob it sets IS read by top/hdl_top.sv; per-
+// interface clocks are not involved. Added in cf730eb; never compiled or run.
+
 `ifndef AXI4_CLOCK_VERIFY_TEST_INCLUDED_
 `define AXI4_CLOCK_VERIFY_TEST_INCLUDED_
 

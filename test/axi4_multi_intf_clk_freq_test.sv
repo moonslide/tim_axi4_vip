@@ -1,3 +1,10 @@
+// RETIRED / NOT COMPILED: not included in axi4_test_pkg.sv; needs per-interface
+// clock support in hdl_top that does not exist (clk_freq_intf_id and
+// multi_interface_mode are read nowhere outside test/). Listed in no test
+// list, so +UVM_TESTNAME=axi4_multi_intf_clk_freq_test ends in UVM_FATAL
+// INVTST. A trial include (2026-10-22) compiled; it has never been run.
+// Added in cf730eb.
+
 `ifndef AXI4_MULTI_INTF_CLK_FREQ_TEST_INCLUDED_
 `define AXI4_MULTI_INTF_CLK_FREQ_TEST_INCLUDED_
 

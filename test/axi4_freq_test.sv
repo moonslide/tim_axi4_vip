@@ -1,3 +1,8 @@
+// RETIRED / NOT COMPILED: not included in axi4_test_pkg.sv and listed in no
+// test list, so +UVM_TESTNAME=axi4_freq_test ends in UVM_FATAL INVTST. It only
+// uses the global clk_freq_scale knob, which top/hdl_top.sv does read; a trial
+// include (2026-10-22) compiled, but it has never been run. Added in cf730eb.
+
 `ifndef AXI4_FREQ_TEST_INCLUDED_
 `define AXI4_FREQ_TEST_INCLUDED_
 

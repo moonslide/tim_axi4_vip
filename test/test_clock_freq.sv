@@ -1,3 +1,7 @@
+// RETIRED / NOT COMPILED: standalone module, not a UVM test. Not included in
+// axi4_test_pkg.sv, not in any compile file list (sim/*.f), instantiated by
+// nothing. Added in cf730eb; never compiled or run.
+
 // Simple standalone program to verify clock frequency changes
 module test_clock_freq;
   

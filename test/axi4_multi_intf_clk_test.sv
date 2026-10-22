@@ -1,3 +1,10 @@
+// RETIRED / NOT COMPILED: not included in axi4_test_pkg.sv; needs per-interface
+// clock support in hdl_top that does not exist (the master_N_*/slave_N_* clock
+// config_db keys are read nowhere outside test/). It also references hdl_top.*
+// from a class, which does not compile inside the test package
+// (Error-[SV-LCM-HRP], trial include 2026-10-22). Listed in no test list.
+// Added in cf730eb; never compiled or run.
+
 `ifndef AXI4_MULTI_INTF_CLK_TEST_INCLUDED_
 `define AXI4_MULTI_INTF_CLK_TEST_INCLUDED_
 

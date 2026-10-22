@@ -184,13 +184,14 @@ axi4_saturation_midburst_reset_qos_boundary_test,Reset,Mid-burst reset with QoS,
 axi4_write_heavy_midburst_reset_rw_contention_test,Reset,Mid-burst reset during RW contention,ALL,VAR,VAR,15ms,No,No,PASS
 axi4_stress_reset_test_simplified,Reset,Simplified stress reset test,ALL,VAR,VAR,15ms,No,No,PASS
 # Clock and Frequency Tests
-axi4_clock_freq_verify_test,Clock,Clock frequency verification,ALL,VAR,VAR,5ms,No,No,PASS
-axi4_clock_monitor_test,Clock,Clock monitoring and checking,ALL,VAR,VAR,5ms,No,No,PASS
-axi4_clock_verify_test,Clock,Clock signal verification,ALL,VAR,VAR,5ms,No,No,PASS
-axi4_freq_test,Clock,Frequency test scenarios,ALL,VAR,VAR,5ms,No,No,PASS
-axi4_multi_intf_clk_freq_test,Clock,Multi-interface clock frequency,ALL,VAR,VAR,10ms,No,No,PASS
-axi4_multi_intf_clk_test,Clock,Multi-interface clock verification,ALL,VAR,VAR,10ms,No,No,PASS
-test_clock_freq,Clock,Clock frequency test utility,ALL,VAR,VAR,5ms,No,No,PASS
+# RETIRED 2026-10-22: the 7 rows below were marked PASS but none was ever compiled or run - all were added in cf730eb and none was ever included in test/axi4_test_pkg.sv or a compile file list or any test list (+UVM_TESTNAME=<name> ends in UVM_FATAL INVTST). Files kept in test/ with a RETIRED header; each row says what blocks it (axi4_freq_test and axi4_multi_intf_clk_freq_test compiled in a trial include but were never run).
+axi4_clock_freq_verify_test,Clock,Clock frequency verification,ALL,VAR,VAR,5ms,No,No,RETIRED (not compiled into the test package; hdl_top.* reference from a class does not compile there - never run)
+axi4_clock_monitor_test,Clock,Clock monitoring and checking,ALL,VAR,VAR,5ms,No,No,RETIRED (not compiled into the test package; hdl_top.* reference from a class does not compile there - never run)
+axi4_clock_verify_test,Clock,Clock signal verification,ALL,VAR,VAR,5ms,No,No,RETIRED (not compiled into the test package; hdl_top.* reference from a class does not compile there - never run)
+axi4_freq_test,Clock,Frequency test scenarios,ALL,VAR,VAR,5ms,No,No,RETIRED (not compiled into the test package; listed in no test list - never run)
+axi4_multi_intf_clk_freq_test,Clock,Multi-interface clock frequency,ALL,VAR,VAR,10ms,No,No,RETIRED (not compiled into the test package; no per-interface clock support - never run)
+axi4_multi_intf_clk_test,Clock,Multi-interface clock verification,ALL,VAR,VAR,10ms,No,No,RETIRED (not compiled into the test package; no per-interface clock support - never run)
+test_clock_freq,Clock,Clock frequency test utility,ALL,VAR,VAR,5ms,No,No,RETIRED (standalone module in no compile file list; not a UVM test - never run)
 # Outstanding / Out-of-Order / same-ID work - tests added 2026-08-04..05 (AXI_ooo.md Phases 0-4, AXI_data_integrity.md)
 axi4_cross_id_read_reorder_test,Ordering,Cross-ID read response reorder - monitor RID-keyed join (codex_review.md Finding 5),NONE,4,4,10ms,No,No,PASS-BUT-VACUOUS (AXI_data_integrity.md F9: its base address is outside slave 0's NONE-mode decode range so the reads never reach memory)
 axi4_cross_id_write_reorder_test,Ordering,Cross-ID write response reorder - monitor BID-keyed join (codex_review.md Finding 5),NONE,4,4,10ms,No,No,PASS-BUT-VACUOUS (AXI_ooo.md F7: measured BIDs came back in exact issue order - the write fork join leaves nothing to reorder)
