@@ -4,7 +4,11 @@
 //--------------------------------------------------------------------------------------------
 // Class: axi4_virtual_qos_equal_priority_fairness_seq
 // Virtual sequence for testing fairness when transactions have equal QoS priority
-// Generates multiple transactions with the same QoS value and verifies fair arbitration
+// Generates multiple transactions with the same QoS value. It does not verify fair
+// arbitration: the arbitration-fairness index is only printed by the performance
+// metrics (no threshold), nothing checks the service order, and the write side is
+// vacuous (one AWID per manager, slave B pool 1 deep) -- see
+// axi4_qos_equal_priority_fairness_test.
 //--------------------------------------------------------------------------------------------
 class axi4_virtual_qos_equal_priority_fairness_seq extends axi4_virtual_base_seq;
   `uvm_object_utils(axi4_virtual_qos_equal_priority_fairness_seq)
