@@ -27,6 +27,17 @@ class axi4_stall_detector_reset_test extends axi4_stall_detector_base_test;
   // Enough back-to-back issues that some are still unanswered when we look.
   int num_writes = 20;
 
+  // The flush check needs at least this many writes outstanding when the reset
+  // is injected; fewer is a test-setup failure (see run_phase).
+  int min_backlog = 1;
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B only (see run_phase): the backlog to wait briefly for, how briefly,
+  // and how long to wait for min_backlog at most. All in master 0 aclk cycles.
+  int trackb_backlog_target = 2;
+  int trackb_target_wait    = 10;
+  int trackb_min_wait       = 20000;
+`endif
+
   extern function new(string name = "axi4_stall_detector_reset_test", uvm_component parent = null);
   extern virtual function void setup_axi4_env_cfg();
   extern virtual task run_phase(uvm_phase phase);
@@ -85,12 +96,45 @@ task axi4_stall_detector_reset_test::run_phase(uvm_phase phase);
   end
 
   pending_before = metrics().pending_write_count() + metrics().pending_read_count();
+`ifdef BUS_MATRIX_FABRIC_IP
+  // Track-B: the fabric does not let master 0's AWs run ahead the way the
+  // baseline slave does, so the issue loop ends with a small backlog -- measured
+  // 2026-10-22 on 8 seeds: 1 write outstanding here (baseline: 16), and 2 one aclk
+  // cycle later, when the last write's AW is accepted (start() returns when the
+  // driver takes the item, before its AW). Cause not probed. Nothing guarantees
+  // the 1 for every seed, so instead of a seed-dependent fatal the rule is explicit:
+  //   1. wait up to trackb_target_wait cycles for trackb_backlog_target writes;
+  //   2. if fewer than min_backlog remain, wait up to trackb_min_wait cycles for
+  //      the next AW;
+  //   3. below min_backlog after that, fail (the fatal below).
+  // The waits are short next to a burst (B returns every ~1.5-5ns here, at a 20ps
+  // aclk), so step 1 does not let the backlog drain. The baseline never waits: it
+  // already has 16 here.
+  if(pending_before < trackb_backlog_target) begin
+    int cycles = 0;
+    `uvm_info(get_type_name(),
+              $sformatf("Track-B backlog: %0d outstanding after the issue loop; waiting up to %0d aclk cycles for %0d (minimum %0d)",
+                        pending_before, trackb_target_wait, trackb_backlog_target, min_backlog), UVM_LOW)
+    while(pending_before < trackb_backlog_target && cycles < trackb_target_wait) begin
+      @(posedge axi4_env_h.axi4_master_agent_h[0].axi4_master_drv_proxy_h.axi4_master_drv_bfm_h.aclk);
+      cycles++;
+      pending_before = metrics().pending_write_count() + metrics().pending_read_count();
+    end
+    while(pending_before < min_backlog && cycles < trackb_target_wait + trackb_min_wait) begin
+      @(posedge axi4_env_h.axi4_master_agent_h[0].axi4_master_drv_proxy_h.axi4_master_drv_bfm_h.aclk);
+      cycles++;
+      pending_before = metrics().pending_write_count() + metrics().pending_read_count();
+    end
+    `uvm_info(get_type_name(),
+              $sformatf("Track-B backlog: %0d outstanding after %0d aclk cycle(s)", pending_before, cycles), UVM_LOW)
+  end
+`endif
   `uvm_info(get_type_name(),
             $sformatf("Outstanding immediately before reset: %0d", pending_before), UVM_LOW)
 
   // The whole test rests on this. Without a backlog there is nothing for the
   // reset to discard and a missing flush would look identical to a working one.
-  if(pending_before == 0)
+  if(pending_before < min_backlog)
     `uvm_fatal(get_type_name(),
                "No transactions were outstanding before the reset - the flush check would pass vacuously, so this is a test-setup failure, not a pass")
 
