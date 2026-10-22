@@ -53,6 +53,11 @@ function void axi4_stall_detector_reset_test::setup_axi4_env_cfg();
   // own concern (it subscribes to the same event). This test is about the
   // metrics component, so keep the run focused.
   axi4_env_cfg_h.has_scoreboard = 0;
+`ifdef BUS_MATRIX_FABRIC_IP
+  // super printed the Track-B scoreboard ledger before the line above turned
+  // the scoreboard off; say so, so the log does not claim checks that never run.
+  `uvm_info(get_type_name(), "Track-B scoreboard ledger (final): scoreboard=OFF (has_scoreboard=0 in this test) - none of the per-check settings in the ledger line above are exercised", UVM_LOW)
+`endif
 endfunction : setup_axi4_env_cfg
 
 task axi4_stall_detector_reset_test::run_phase(uvm_phase phase);
