@@ -72,7 +72,7 @@ python3 axi4_regression.py \
 - ✅ **Real-Time Performance KPIs**: 6 comprehensive metrics with live monitoring
 - ✅ **141 Test Suite**: 123 standard + 18 performance KPI tests (21 fixed in v2.8)
 - ✅ **Performance Metrics Module**: Built-in `axi4_performance_metrics.sv`
-- ✅ **QoS Support**: 18 QoS tests with full AWQOS/ARQOS priority arbitration
+- ✅ **QoS Support**: AWQOS/ARQOS value stimulus and slave read-side priority selection; write-side QoS arbitration is not effectively exercised in the default (legacy) mode, the AWQOS master-vs-slave compare is off by default, and Track-B verifies no QoS behaviour. Optional knobs and their limits: README.md "QoS control knobs"
 - ✅ **USER Signals**: 8 USER signal tests for security tagging and transaction tracing
 - ✅ **3 Bus Matrix Modes**: NONE (1×1), BASE (4×4), ENHANCED (10×10)
 - ✅ **Security Features**: AxPROT privilege/security access control verification
@@ -104,7 +104,7 @@ grep "KPI:" <test>.log | grep -E "Throughput|Latency|Retry|Fairness"
 # Verify bus matrix connections
 grep "Master\[.*\] -> Slave\[.*\]" <test>.log
 
-# Check QoS arbitration
+# QoS values printed by the QoS sequences (stimulus only, not an arbitration check)
 grep "QoS Priority" <test>.log
 ```
 
