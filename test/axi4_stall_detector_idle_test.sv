@@ -35,8 +35,13 @@ endfunction : new
 
 task axi4_stall_detector_idle_test::run_phase(uvm_phase phase);
   axi4_master_write_seq  write_seq;
+  axi4_stall_detector_write_seq win_write_seq;
   axi4_slave_bk_write_seq slave_write_seq;
   time idle_window;
+  bit [63:0] addr_lo, addr_hi;
+  bit        prot_fixed;
+  bit [2:0]  prot_val;
+  bit        use_window;
 
   phase.raise_objection(this);
 
@@ -62,7 +67,25 @@ task axi4_stall_detector_idle_test::run_phase(uvm_phase phase);
   join_none
 
   `uvm_info(get_type_name(), "Idle window over - issuing one ordinary write", UVM_LOW)
-  write_seq = axi4_master_write_seq::type_id::create("post_idle_write_seq");
+  // NONE keeps the shared sequence (unchanged stimulus); 4x4 / ENHANCED write
+  // inside master 0's legal window (see master0_write_window()).
+  use_window = master0_write_window(addr_lo, addr_hi, prot_fixed, prot_val);
+  if(use_window) begin
+    win_write_seq = axi4_stall_detector_write_seq::type_id::create("post_idle_write_seq");
+    win_write_seq.addr_lo    = addr_lo;
+    win_write_seq.addr_hi    = addr_hi;
+    win_write_seq.prot_fixed = prot_fixed;
+    win_write_seq.prot_val   = prot_val;
+    write_seq = win_write_seq;
+  end else begin
+    write_seq = axi4_master_write_seq::type_id::create("post_idle_write_seq");
+  end
+  `uvm_info(get_type_name(),
+            $sformatf("Write address window: mode=%s %s", axi4_env_cfg_h.bus_matrix_mode.name(),
+                      use_window ?
+                        $sformatf("start 0x%016h..0x%016h awprot=%s", addr_lo, addr_hi,
+                                  prot_fixed ? $sformatf("%03b", prot_val) : "random") :
+                        "unconstrained (NONE decodes every address to slave 0)"), UVM_LOW)
   write_seq.start(axi4_env_h.axi4_master_agent_h[0].axi4_master_write_seqr_h);
 
   // Give the detector several more polls to misfire in.
