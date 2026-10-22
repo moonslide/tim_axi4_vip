@@ -42,12 +42,14 @@
 # exist to provoke was not seen. Their reorder coverage comes from the baseline build.
 # axi4_stall_detector_idle_test and axi4_stall_detector_reset_test write inside S0 with
 # AxPROT 000 (master0_write_window()). On Track-B the reset test is a weak flush check:
-# only 1 write was outstanding immediately before the reset (baseline: 16), because 18 of
-# its 20 writes had already completed (seeds 1, 777, 351485697 and one runner-random
-# seed; cause not probed). The
-# flush is still checked (the metrics discarded 2 writes and nothing stayed queued), but
-# the backlog the test describes is not built there. The reset test runs with the
-# scoreboard off, as it does on the baseline.
+# when its 20-write issue loop ends, 18 writes have completed, 1 is outstanding and the
+# last is still in the master driver (baseline: 16 outstanding); cause not probed. The
+# test waits up to 10 aclk cycles for a backlog of 2 (it needs at least 1; see the test),
+# so the log shows "Outstanding immediately before reset: 2" and the metrics report
+# "discarded 2 outstanding write(s)", against 16 and 17 on the baseline (measured
+# 2026-10-22, seeds 1, 777, 351485697, 2, 3, 12345, 99999, 424242). The flush is
+# checked (nothing stays queued), but the backlog the test describes is not built there.
+# The reset test runs with the scoreboard off, as it does on the baseline.
 # Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
 # fabric ingress AxID is 4 bits).
 
