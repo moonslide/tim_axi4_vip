@@ -14,7 +14,7 @@ import uvm_pkg::*;
 //--------------------------------------------------------------------------------------------
 // NOTE on the ID ports below: they MUST follow `AXI_ID_WIDTH, exactly like
 // axi4_if does. Hard-coded [3:0] against an `AXI_ID_WIDTH-wide interface meant
-// that on the Track-B/NIC-400 build (AXI_ID_WIDTH=8) the upper ID bits never
+// that on the Track-B (commercial fabric IP) build (AXI_ID_WIDTH=8) the upper ID bits never
 // reached the checkers: the $stable() properties could not see an ID change
 // confined to them and the $isunknown() properties could not see X on them.
 interface master_assertions (input                     aclk,

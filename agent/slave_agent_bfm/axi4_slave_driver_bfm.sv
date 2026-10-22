@@ -547,8 +547,8 @@ task axi4_write_data_phase (inout axi4_write_transfer_char_s data_write_packet, 
   endtask : axi4_write_data_phase
 
 // Track-B: transaction ID width must follow AXI_ID_WIDTH. Hard-coding [3:0]
-// silently truncates the wider IDs a real interconnect emits (the NIC-400
-// fabric appends source-port bits), so the slave echoes a BID/RID the fabric
+// silently truncates the wider IDs a real interconnect emits (the commercial
+// fabric IP appends source-port bits), so the slave echoes a BID/RID the fabric
 // cannot match to any outstanding transaction and the transfer never retires.
   //-------------------------------------------------------
   // Task: axi4_write_response_phase

@@ -75,7 +75,7 @@
 
 // Transaction ID Width Configuration (AWID/ARID/BID/RID)
 // Default 4 bits preserves the historical axi4_if declaration.
-// Track-B builds against the NIC-400 fabric override this to 8, because the
+// Track-B builds against the commercial fabric IP override this to 8, because the
 // fabric's egress AxID is VIDWidth(4) + ceil(log2(10 ingress ports)) = 8 bits
 // and the VIP slave agents must be able to echo the full ID back for the
 // interconnect to route responses home.
@@ -91,7 +91,7 @@
 // converters assign those fields with $cast, which is runtime-checked against
 // the member list, so an ID outside it fails the cast silently and leaves the
 // previous ID in place.
-//   AXI_ID_WIDTH=4 -> 15 (default)   AXI_ID_WIDTH=8 -> 255 (Track-B / NIC-400)
+//   AXI_ID_WIDTH=4 -> 15 (default)   AXI_ID_WIDTH=8 -> 255 (Track-B, commercial fabric IP)
 `ifndef AXI_ID_LAST
   `define AXI_ID_LAST 15
 `endif
@@ -118,7 +118,7 @@
   `define AXI4_MID_TAG_MASK 32'hFFFF_FFF0
 `endif
 
-// Per-ingress external AxID width the NIC-400 was generated with (VIDWidth in
+// Per-ingress external AxID width the commercial fabric IP was generated with (VIDWidth in
 // scripts/build_vip_fabric_*.rb). The fabric's EGRESS AxID is
 // {original AxID, ingress-port index} -- the port index sits in the LOW bits and
 // is AXI_ID_WIDTH-AXI_VID_WIDTH wide. Established from measured probe data, not

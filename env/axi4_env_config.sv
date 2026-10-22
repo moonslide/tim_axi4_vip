@@ -115,16 +115,17 @@ class axi4_env_config extends uvm_object;
 
   //Variable: axid_passthrough_chk_cfg
   //1 = require slave-side AxID/BID/RID to equal the master-side value.
-  //An interconnect legitimately remaps IDs (NIC-400 appends the ingress-port
-  //index to the egress AxID), so set this to 0 when a DUT is in the path. The
+  //An interconnect legitimately remaps IDs (the commercial fabric IP appends the
+  //ingress-port index to the egress AxID), so set this to 0 when a DUT is in the path. The
   //stronger, still-valid property -- the manager gets its OWN id back on B/R --
   //is checked separately and unconditionally by validate_response_correctness.
   bit axid_passthrough_chk_cfg = 1;
 
   //Variable: axqos_passthrough_chk_cfg
   //1 = require slave-side AxQOS to equal the master-side value. AXI4 does not
-  //require an interconnect to forward QoS downstream, and NIC-400 does not: the
-  //generated fabric has QoS ports on the ingress side only. Set to 0 with a DUT.
+  //require an interconnect to forward QoS downstream, and the commercial fabric IP
+  //does not: the generated fabric has QoS ports on the ingress side only. Set to
+  //0 with a DUT.
   bit axqos_passthrough_chk_cfg = 1;
 
   //Variable: awqos_chk_cfg

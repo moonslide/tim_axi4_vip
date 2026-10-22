@@ -11,7 +11,7 @@
 import axi4_globals_pkg::*;
 // NOTE on the ID ports below: they MUST follow `AXI_ID_WIDTH, exactly like
 // axi4_if does. They were hard-coded [3:0] while the interface was already
-// `AXI_ID_WIDTH wide, so on the Track-B/NIC-400 build (AXI_ID_WIDTH=8) VCS
+// `AXI_ID_WIDTH wide, so on the Track-B (commercial fabric IP) build (AXI_ID_WIDTH=8) VCS
 // silently connected 8-bit expressions to 4-bit ports (16 PCWM-W warnings):
 // the fabric's egress source tag lives in exactly those dropped upper bits, so
 // the monitor aliased every ingress port onto the same 4-bit ID and no checker

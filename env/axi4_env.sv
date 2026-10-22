@@ -109,7 +109,7 @@ function void axi4_env::build_phase(uvm_phase phase);
   //
   // sb_keyed_pairing is normally set by the test (Track-B turns it on because
   // a real interconnect reorders). Without this override the keyed path can
-  // only be exercised by rebuilding against the NIC-400 fabric, which makes
+  // only be exercised by rebuilding against the commercial fabric IP, which makes
   // the B/R correlation fix (codex_review.md finding 5) unverifiable on the
   // 1:1 direct-wired build. The plusarg is absent by default, so nothing
   // changes unless it is explicitly passed.

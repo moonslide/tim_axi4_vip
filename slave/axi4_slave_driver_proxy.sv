@@ -804,7 +804,7 @@ task axi4_slave_driver_proxy::axi4_write_task();
           // slave's response and the scoreboard's expectation are computed against
           // different rows of the access matrix. With the 1:1 direct wiring
           // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-          // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+          // slave_id IS the source master. Behind the commercial fabric IP it is not,
           // and the egress AxID carries the ingress port instead, so the historical
           // AxID rule is kept there.
           `ifdef BUS_MATRIX_FABRIC_IP
@@ -1439,7 +1439,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave's response and the scoreboard's expectation are computed against
               // different rows of the access matrix. With the 1:1 direct wiring
               // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // slave_id IS the source master. Behind the commercial fabric IP it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
               `ifdef BUS_MATRIX_FABRIC_IP
@@ -1489,7 +1489,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
             // slave's response and the scoreboard's expectation are computed against
             // different rows of the access matrix. With the 1:1 direct wiring
             // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-            // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+            // slave_id IS the source master. Behind the commercial fabric IP it is not,
             // and the egress AxID carries the ingress port instead, so the historical
             // AxID rule is kept there.
             `ifdef BUS_MATRIX_FABRIC_IP
@@ -1566,7 +1566,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave's response and the scoreboard's expectation are computed against
               // different rows of the access matrix. With the 1:1 direct wiring
               // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // slave_id IS the source master. Behind the commercial fabric IP it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
               `ifdef BUS_MATRIX_FABRIC_IP
@@ -1661,7 +1661,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
               // slave's response and the scoreboard's expectation are computed against
               // different rows of the access matrix. With the 1:1 direct wiring
               // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-              // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+              // slave_id IS the source master. Behind the commercial fabric IP it is not,
               // and the egress AxID carries the ingress port instead, so the historical
               // AxID rule is kept there.
               `ifdef BUS_MATRIX_FABRIC_IP
@@ -1756,7 +1756,7 @@ task axi4_slave_driver_proxy::axi4_read_task();
           // slave's response and the scoreboard's expectation are computed against
           // different rows of the access matrix. With the 1:1 direct wiring
           // (top/hdl_top.sv connects master[j] to slave[j]) this agent's own
-          // slave_id IS the source master. Behind the NIC-400 fabric it is not,
+          // slave_id IS the source master. Behind the commercial fabric IP it is not,
           // and the egress AxID carries the ingress port instead, so the historical
           // AxID rule is kept there.
           `ifdef BUS_MATRIX_FABRIC_IP

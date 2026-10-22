@@ -229,8 +229,8 @@ class axi4_scoreboard extends uvm_scoreboard;
   // and one off the slave fifo and compare them, i.e. they paired by ARRIVAL
   // ORDER. Both fifos are fed by EVERY agent (env/axi4_env.sv), so that only
   // holds when nothing between the two sides can reorder -- true for the 1:1
-  // direct wiring, false for any arbitrating interconnect. Behind the NIC-400
-  // fabric it reported mismatches between two perfectly legal addresses that
+  // direct wiring, false for any arbitrating interconnect. Behind the commercial
+  // fabric IP it reported mismatches between two perfectly legal addresses that
   // had simply swapped places.
   //
   // When keyed pairing is on, slave-side transactions are drawn into a holding
@@ -3344,7 +3344,7 @@ endtask : sb_match_slave_read_address
 //    as a false BRESP/BUSER mismatch, or -- worse -- as a silent PASS when the
 //    two swapped responses happen to carry the same value, hiding a routing
 //    swap. That is exactly what the AW/W/AR channels were fixed for.
-//  * NOT BID == BID. The fabric REMAPS the id (NIC-400 appends the ingress
+//  * NOT BID == BID. The fabric REMAPS the id (the commercial fabric IP appends the ingress
 //    port index to the egress AxID); that is why axid_passthrough_chk_cfg
 //    exists and is turned off with a DUT in the path. An identifier the DUT is
 //    allowed to rewrite cannot be a correlation key. The manager-side property
@@ -4304,7 +4304,7 @@ endfunction : sb_fifo_residue
 //   UVM_PASSIVE removes the slave DRIVER, not the slave MONITOR. The monitor is
 //   built and connected to this scoreboard either way, so a passive-slave run
 //   still delivers subordinate-side transactions whenever anything (the direct
-//   1:1 wiring, a DUT, the NIC-400 fabric) drives the subordinate interface, and
+//   1:1 wiring, a DUT, the commercial fabric IP) drives the subordinate interface, and
 //   the full accounting applies unchanged.
 //   The one case passive genuinely changes is when NOTHING drives the
 //   subordinate side at all: then no comparison was ever possible, and reporting

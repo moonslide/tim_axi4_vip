@@ -35,8 +35,8 @@ package axi4_globals_pkg;
   parameter int ADDRESS_WIDTH = 64;
 
   // Default stays 1024 so existing regressions are unaffected. Track-B builds
-  // against the NIC-400 fabric compile with +define+DATA_WIDTH=256, which is
-  // the widest data bus NIC-400 supports (legal values 32/64/128/256).
+  // against the commercial fabric IP compile with +define+DATA_WIDTH=256, which is
+  // the widest data bus the commercial fabric IP supports (legal values 32/64/128/256).
   `ifndef DATA_WIDTH
     `define DATA_WIDTH 1024
   `endif
@@ -211,7 +211,7 @@ package axi4_globals_pkg;
   // bit-identical to the explicit list this replaced. It has to follow
   // AXI_ID_WIDTH because the converters assign these fields with $cast, which
   // is runtime-checked against the member list: behind an interconnect that
-  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // widens AxID (the commercial fabric IP appends the ingress-port index) the cast of an
   // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
     AWID_[0:`AXI_ID_LAST]
@@ -224,7 +224,7 @@ package axi4_globals_pkg;
   // bit-identical to the explicit list this replaced. It has to follow
   // AXI_ID_WIDTH because the converters assign these fields with $cast, which
   // is runtime-checked against the member list: behind an interconnect that
-  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // widens AxID (the commercial fabric IP appends the ingress-port index) the cast of an
   // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
     BID_[0:`AXI_ID_LAST]
@@ -237,7 +237,7 @@ package axi4_globals_pkg;
   // bit-identical to the explicit list this replaced. It has to follow
   // AXI_ID_WIDTH because the converters assign these fields with $cast, which
   // is runtime-checked against the member list: behind an interconnect that
-  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // widens AxID (the commercial fabric IP appends the ingress-port index) the cast of an
   // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
     ARID_[0:`AXI_ID_LAST]
@@ -250,7 +250,7 @@ package axi4_globals_pkg;
   // bit-identical to the explicit list this replaced. It has to follow
   // AXI_ID_WIDTH because the converters assign these fields with $cast, which
   // is runtime-checked against the member list: behind an interconnect that
-  // widens AxID (NIC-400 appends the ingress-port index) the cast of an
+  // widens AxID (the commercial fabric IP appends the ingress-port index) the cast of an
   // out-of-range value FAILS SILENTLY and leaves the previous ID in place.
   typedef enum bit [15:0] {
     RID_[0:`AXI_ID_LAST]

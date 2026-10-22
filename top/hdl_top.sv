@@ -290,7 +290,7 @@ module hdl_top;
 
 `ifdef BUS_MATRIX_FABRIC_IP
     // The 1:1 direct wiring is stateless, so a single-edge reset is enough for
-    // it. Real RTL is not: the NIC-400 fabric has arbiters, outstanding-
+    // it. Real RTL is not: the commercial fabric IP has arbiters, outstanding-
     // transaction FIFOs and clock-domain structures that need several cycles of
     // asserted reset to leave X. With the original single edge the fabric came
     // out of reset with X internal state, its egress AxVALID stayed X forever,
