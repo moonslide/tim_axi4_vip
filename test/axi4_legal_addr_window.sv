@@ -85,4 +85,71 @@ class axi4_legal_addr_window;
 
 endclass : axi4_legal_addr_window
 
+//--------------------------------------------------------------------------------------------
+// Class: axi4_master_tx_legal_window
+//
+// axi4_master_tx with one extra HARD constraint: awaddr and araddr inside
+// [win_lo:win_hi]. A test opts in by calling enable() in its build_phase, which
+// registers this class as a factory type override of axi4_master_tx. Every
+// `axi4_master_tx::type_id::create` in that test then builds this type, so the
+// window merges with the inline `with {}` of every master sequence and no
+// sequence has to repeat it. A sequence that pins an address outside the window
+// fails randomize (loud "Rand failed"), never silently.
+//
+// Call enable() ONLY when the mode is not NONE: in NONE the override is never
+// registered, this class is never instantiated, and the run is the same as
+// without this file.
+//
+// win_lo / win_hi are static state variables, not rand: the class adds no random
+// variable. No pre/post_randomize. The only clone() users (driver / monitor
+// proxies) do not randomize, so there only the type name changes.
+//--------------------------------------------------------------------------------------------
+class axi4_master_tx_legal_window extends axi4_master_tx;
+  `uvm_object_utils(axi4_master_tx_legal_window)
+
+  static bit [ADDRESS_WIDTH-1:0] win_lo;
+  static bit [ADDRESS_WIDTH-1:0] win_hi;
+
+  constraint legal_window_c {
+    awaddr inside {[win_lo:win_hi]};
+    araddr inside {[win_lo:win_hi]};
+  }
+
+  function new(string name = "axi4_master_tx_legal_window");
+    super.new(name);
+  endfunction : new
+
+  extern static function void enable(axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+                                     int unsigned master);
+
+endclass : axi4_master_tx_legal_window
+
+//--------------------------------------------------------------------------------------------
+// Function: enable
+// Looks up master's write window for mode (the read window is the same slave),
+// stores it and registers the factory override. No window -> fatal, so a test
+// cannot run believing it is constrained when it is not.
+// Static context: the report calls go through uvm_pkg directly because the
+// `uvm_* macros would resolve to the (non-static) uvm_sequence_item report methods.
+//--------------------------------------------------------------------------------------------
+function void axi4_master_tx_legal_window::enable(axi4_bus_matrix_ref::bus_matrix_mode_e mode,
+                                                  int unsigned master);
+  bit [ADDRESS_WIDTH-1:0] lo, hi;
+  bit                     prot_fixed;
+  bit [2:0]               prot_val;
+
+  if (!axi4_legal_addr_window::legal_window(mode, master, 1'b1, lo, hi, prot_fixed, prot_val)) begin
+    uvm_pkg::uvm_report_fatal("ADDR_WINDOW",
+      $sformatf("no legal write window for master %0d in mode %s", master, mode.name()),
+      UVM_NONE, `__FILE__, `__LINE__);
+    return;
+  end
+  win_lo = lo;
+  win_hi = hi;
+  axi4_master_tx::type_id::set_type_override(axi4_master_tx_legal_window::get_type());
+  uvm_pkg::uvm_report_info("ADDR_WINDOW",
+    $sformatf("mode=%s master=%0d window=[0x%016h:0x%016h]", mode.name(), master, lo, hi),
+    UVM_LOW, `__FILE__, `__LINE__);
+endfunction : enable
+
 `endif
