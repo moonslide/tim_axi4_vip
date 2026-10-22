@@ -16,6 +16,7 @@ class axi4_write_read_test extends axi4_base_test;
   // Externally defined Tasks and Functions
   //-------------------------------------------------------
   extern function new(string name = "axi4_write_read_test", uvm_component parent = null);
+  extern function void build_phase(uvm_phase phase);
   extern virtual task run_phase(uvm_phase phase);
 
 endclass : axi4_write_read_test
@@ -31,6 +32,20 @@ function axi4_write_read_test::new(string name = "axi4_write_read_test",
                                  uvm_component parent = null);
   super.new(name, parent);
 endfunction : new
+
+//--------------------------------------------------------------------------------------------
+// Function: build_phase
+// Outside NONE, constrain master 0 to its legal address window (axi4_legal_addr_window).
+// NONE registers nothing, so the NONE run is unchanged.
+//
+// Parameters:
+//  phase - uvm phase
+//--------------------------------------------------------------------------------------------
+function void axi4_write_read_test::build_phase(uvm_phase phase);
+  super.build_phase(phase);
+  if (axi4_env_cfg_h.bus_matrix_mode != axi4_bus_matrix_ref::NONE)
+    axi4_master_tx_legal_window::enable(axi4_env_cfg_h.bus_matrix_mode, 0);
+endfunction : build_phase
 
 //--------------------------------------------------------------------------------------------
 // Task: run_phase
