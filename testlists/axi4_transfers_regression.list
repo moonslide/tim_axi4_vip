@@ -183,6 +183,21 @@ axi4_same_id_nonadjacent_reorder_test run_cnt=3
 # unique and clear of the _1.._3 that run_cnt=3 above produces.
 axi4_same_id_nonadjacent_reorder_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
 axi4_same_id_nonadjacent_reorder_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+
+#------------------------------------------------------------------------------------
+# Stall Detector Tests (axi4_performance_metrics deadlock / livelock detection)
+# Negative direction only (see axi4_stall_detector_base_test): an idle bus and a reset
+# that discards outstanding writes must not be reported as a stall. Master 0 writes
+# inside a window it may write with OKAY in the active map (master0_write_window():
+# NONE unconstrained as before, 4x4 S0 DDR, ENHANCED S0 with AxPROT 000). Named _11 /
+# _44 / _1010 for the reason given at the same-ID entries above.
+#------------------------------------------------------------------------------------
+axi4_stall_detector_idle_test_11 run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_stall_detector_idle_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_stall_detector_idle_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_stall_detector_reset_test_11 run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
+axi4_stall_detector_reset_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_stall_detector_reset_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_refused_write_shadow_test
 
 #------------------------------------------------------------------------------------

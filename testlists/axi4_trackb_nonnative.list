@@ -40,6 +40,14 @@
 # consistency checks only: master 0's R bursts and B responses were observed in issue order
 # at seeds 777, 1 and runner-random seeds (cause not probed), so the cross-ID reorder they
 # exist to provoke was not seen. Their reorder coverage comes from the baseline build.
+# axi4_stall_detector_idle_test and axi4_stall_detector_reset_test write inside S0 with
+# AxPROT 000 (master0_write_window()). On Track-B the reset test is a weak flush check:
+# only 1 write was outstanding immediately before the reset (baseline: 16), because 18 of
+# its 20 writes had already completed (seeds 1, 777, 351485697 and one runner-random
+# seed; cause not probed). The
+# flush is still checked (the metrics discarded 2 writes and nothing stayed queued), but
+# the backlog the test describes is not built there. The reset test runs with the
+# scoreboard off, as it does on the baseline.
 # Scope: ENHANCED 10x10 fabric (ext/nic400_vipv3b) only; AxID < 16 only (the
 # fabric ingress AxID is 4 bits).
 
@@ -78,3 +86,11 @@ axi4_cross_id_read_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +defin
 axi4_cross_id_write_reorder_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_cross_id_write_reorder_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
 axi4_cross_id_write_reorder_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_stall_detector_idle_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_stall_detector_idle_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_stall_detector_idle_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+
+axi4_stall_detector_reset_test_777 seed=777 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_stall_detector_reset_test_1 seed=1 command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
+axi4_stall_detector_reset_test command_add="+define+BUS_MATRIX_FABRIC_IP +define+DATA_WIDTH=256 +define+AXI_ID_WIDTH=8 +define+AXI_ID_LAST=255 -f ../../sim/fabric_ip_rtl.f ../../top/axi4_fabric_ip_wrapper.sv +BUS_MATRIX_MODE=ENHANCED"
