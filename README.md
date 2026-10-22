@@ -390,7 +390,7 @@ protocol sign-off or current regression closure.
 | Out-of-order response | In-order, read OOO, write OOO, or both in subordinate response policy | Per-ID ordering machinery exists; same-ID end checker coverage is incomplete—see limitations |
 | Exclusive access | Reactive monitor slots and success/failure response behavior | Directed exclusive tests are registered; not a formal proof of all exclusive semantics |
 | Protection/access | BASE masks and ENHANCED security/privilege/instruction rules | Reference behavior depends on the real `AxPROT` |
-| QoS | Stimulus and coverage fields; fairness metrics | Baseline reference model does not arbitrate using QoS |
+| QoS | Stimulus and coverage fields; VIP-side selection (manager write QoS in the W-data phase by default, optional `WR_QOS_ARB_AT_AW`; subordinate read pick by ARQOS); fairness index (printed, no threshold) | Reference model does not arbitrate using QoS; write-side QoS arbitration is not effectively exercised in the default mode; the read pick ignores ARID — see [QoS control knobs](#qos-control-knobs) |
 | CACHE/REGION | Stimulus, monitor, selected comparison/coverage | Reference memory/decode does not change behavior from CACHE or REGION |
 | USER | AW/AR/W 32-bit and B/R 16-bit defaults; stimulus and coverage | Propagation behind a DUT is configuration-dependent |
 | Reset/clock | Global and per-interface reset/clock-control machinery | Reset/frequency checkers are optional and default off |
@@ -838,11 +838,43 @@ arbitrated by AWQOS). A slave with read QoS on also instantiates the
 `qos_rd_arb_cg` covergroup; runs without read QoS have no instance.
 
 Known limitations: the read-QoS arbiter ignores ARID, so same-ARID reads can be
-returned out of order (AXI4 A5.3) — keep reorderable reads on distinct ARIDs
-(`axi4_qos_basic_priority_test`: every read ARID 0, yet slave 0 reports `reordered=4`).
+returned out of order (violates AXI4 same-ID read ordering) — keep reorderable
+reads on distinct ARIDs (`axi4_qos_basic_priority_test`: every read ARID 0, yet
+slave 0 reports `reordered=4`).
 On Track-B these knobs verify no QoS behaviour: the fabric forwards no QoS, the
 QoS compares are off, and the slaves in the two QoS tests there keep read QoS
 disabled.
+
+What the older QoS tests establish: `axi4_qos_basic_priority_test` and
+`axi4_qos_equal_priority_fairness_test` drive QoS-mode stimulus, but nothing in
+them checks the resulting order (`qos_rd_arb_chk` defaults to 0), the fairness
+index is printed without a threshold, and their write side is vacuous (one AWID
+per manager, slave write pool depth 1). A PASS there is not evidence of QoS
+arbitration.
+
+Open items (reported by the implementing sessions, not re-run for this README
+update):
+
+- **Write-QoS default.** `wr_qos_arb_point` still defaults to the legacy
+  `WR_QOS_ARB_AT_WDATA`, which can put W out of AW order; whether to make
+  `WR_QOS_ARB_AT_AW` the default (it is experimental) is a pending decision.
+- **Same-ID read reorder.** The subordinate read-QoS pick (and the
+  `qos_rd_arb_chk` self-check, which re-derives the same rule) ignores ARID;
+  no fix yet.
+- **Subordinate write QoS is vacuous.** The write-response pool never holds
+  more than one entry, so B is never arbitrated by AWQOS; no write-direction
+  knob exists.
+- **AWQOS sampling gap.** The slave monitor BFM
+  (`agent/slave_agent_bfm/axi4_slave_monitor_bfm.sv`) never assigns `awqos` (nor
+  `awregion`), so the subordinate-side value is always 0: the AWQOS compare stays
+  off by default, and subordinate-side AWQOS coverage samples a constant.
+- **Assertion failures are not in the verdict.** 31 of the 44 concurrent
+  assertions in `assertions/master_assertions.sv` / `assertions/slave_assertions.sv`
+  have no `` `uvm_error `` action (counted on `b48859b`); when one fails, only
+  the simulator reports it, so `UVM_ERROR : 0` and `TEST RESULT: PASS` can sit
+  on top of a failing assertion, and `axi4_regression.py` does not scan for
+  assertion failures. Check the log (`failed at`) before claiming an
+  assertion-covered property.
 
 ## Prerequisites
 
@@ -1271,11 +1303,13 @@ tops, then assertions. `sim/axi4_compile.f` is the executable source of truth.
 | ID stimulus range | Track-B builds with 8-bit (10×10) / 6-bit (4×4) subordinate-side IDs, but the fabric ingress AxID is 4 bits: managers may use 0–15 only, and a wider valid AxID stops the run at `IDW_INGRESS_TRUNC`. Default initiator constraints/helpers generate IDs 0–15 |
 | Track-B QoS | No QoS behaviour is verified on Track-B: the fabric forwards no QoS, the ARQOS check is off in the non-native tests, and slave read-QoS ordering is disabled in the two QoS tests that run there (see [Track-B](#track-b-commercial-fabric-as-dut)) |
 | Assertion scope | AW/AR stable/known payload sets include AxQOS but omit REGION and USER; there are no comprehensive SVA rules for all burst/4-KiB/WLAST/WSTRB/same-ID cases |
+| Assertion verdicts | Most concurrent assertions have no `` `uvm_error `` action, so their failures do not reach `UVM_ERROR` or `TEST RESULT` (see [QoS control knobs](#qos-control-knobs) open items) |
 | READY timeout wording | The property uses unbounded `##[1:$]`; the reported finite ready-delay configuration is not wired into the assertions |
 | Same-ID closure | Read-side adjudication is selective and write-side same-ID ordering is not fully adjudicated by the end checker |
 | Content checking defaults | Independent write-to-read memory content checking is not universally enabled; direct-side equality can compare observations of the same wire |
 | QoS/CACHE/REGION semantics | Fields are driven/observed/covered, but the reference model does not implement QoS arbitration, cache behavior, or REGION-based decode |
-| Coverage sampling gaps | QoS/USER and protocol subscribers can sample unused-side/default fields; response-paired error-injection coverage has an unassigned subordinate transaction and recovery cycles are randomized rather than measured |
+| VIP-side QoS arbitration | Default manager write QoS can send W out of AW order with distinct AWIDs; subordinate read QoS ignores ARID; subordinate write QoS never arbitrates (pool depth 1). See [QoS control knobs](#qos-control-knobs) |
+| Coverage sampling gaps | QoS/USER and protocol subscribers can sample unused-side/default fields (subordinate-side AWQOS is never sampled, so its coverage is a constant 0); response-paired error-injection coverage has an unassigned subordinate transaction and recovery cycles are randomized rather than measured |
 | Optional checker readiness | Reset/frequency checkers default off; frequency-checker VIF integration has not been established by this documentation pass |
 | Clock comment mismatch | `hdl_top` labels a 10 ns toggle delay as 100 MHz, but toggling every 10 ns produces a 20 ns period; do not use the comment as a frequency contract |
 | Make topology inference | GNU make name filters currently fail for representative `%qos%`/`%boundary%` patterns; select topology explicitly |
