@@ -42,6 +42,8 @@ endfunction : new
 //--------------------------------------------------------------------------------------------
 function void axi4_blocking_write_read_test::build_phase(uvm_phase phase);
   super.build_phase(phase);
+  if (axi4_env_cfg_h.bus_matrix_mode != axi4_bus_matrix_ref::NONE)
+    axi4_master_tx_legal_window::enable(axi4_env_cfg_h.bus_matrix_mode, 0);
   
 endfunction : build_phase
 
