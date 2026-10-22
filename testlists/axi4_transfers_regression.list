@@ -17,6 +17,13 @@
 # Basic Transfer Tests (Blocking)
 #------------------------------------------------------------------------------------
 axi4_blocking_write_read_test run_cnt=2
+# The same test under the BASE (4x4) and ENHANCED maps. Outside NONE the test constrains
+# master 0 to its legal window (test/axi4_legal_addr_window.sv: 4x4 S0 DDR, ENHANCED S2
+# Shared Buffer, AxPROT left random); the NONE entry above is unchanged. Named _44 / _1010
+# for the reason given at the same-ID entries below: unique log names, suffix stripped for
+# +UVM_TESTNAME.
+axi4_blocking_write_read_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_blocking_write_read_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_blocking_write_read_rand_test run_cnt=2
 axi4_blocking_cross_write_read_test run_cnt=2
 axi4_blocking_outstanding_transfer_write_read_test run_cnt=2
@@ -102,6 +109,10 @@ axi4_blocking_exokay_response_write_test run_cnt=2
 # Basic Transfer Tests (Non-Blocking)
 #------------------------------------------------------------------------------------
 axi4_non_blocking_write_read_test run_cnt=2
+# The same test under the BASE (4x4) and ENHANCED maps, legal window as for
+# axi4_blocking_write_read_test_44 / _1010 above.
+axi4_non_blocking_write_read_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_non_blocking_write_read_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 axi4_non_blocking_write_read_rand_test run_cnt=2
 axi4_non_blocking_cross_write_read_test run_cnt=2
 axi4_non_blocking_outstanding_transfer_write_read_test run_cnt=2
@@ -360,6 +371,10 @@ axi4_width_config_test run_cnt=2
 #------------------------------------------------------------------------------------
 axi4_read_test run_cnt=2
 axi4_write_read_test run_cnt=2
+# The same test under the BASE (4x4) and ENHANCED maps, legal window as for
+# axi4_blocking_write_read_test_44 / _1010 above.
+axi4_write_read_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
+axi4_write_read_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
 
 #------------------------------------------------------------------------------------
 # Configuration & Smoke Tests
