@@ -183,6 +183,7 @@ axi4_same_id_nonadjacent_reorder_test run_cnt=3
 # unique and clear of the _1.._3 that run_cnt=3 above produces.
 axi4_same_id_nonadjacent_reorder_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
 axi4_same_id_nonadjacent_reorder_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
+axi4_refused_write_shadow_test
 
 #------------------------------------------------------------------------------------
 # Stall Detector Tests (axi4_performance_metrics deadlock / livelock detection)
@@ -198,7 +199,6 @@ axi4_stall_detector_idle_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANC
 axi4_stall_detector_reset_test_11 run_cnt=1 command_add=+BUS_MATRIX_MODE=NONE
 axi4_stall_detector_reset_test_44 run_cnt=1 command_add=+BUS_MATRIX_MODE=4x4
 axi4_stall_detector_reset_test_1010 run_cnt=1 command_add=+BUS_MATRIX_MODE=ENHANCED
-axi4_refused_write_shadow_test
 
 #------------------------------------------------------------------------------------
 # Slave Memory Mode Tests (Non-Blocking)
