@@ -36,7 +36,7 @@
 // Until then the detector is half covered: it is proven not to fire when it
 // must not, and unproven when it must.
 //
-// Addresses (landmines #38 / #67). The shared write sequences these tests used
+// Addresses (landmines #67 / #75). The shared write sequences these tests used
 // put NO constraint on awaddr. In NONE every address decodes to slave 0 OKAY,
 // so that was invisible; under 4x4 and ENHANCED the random 64-bit addresses hit
 // no slave window, every write came back DECERR, and perf-metrics failed the

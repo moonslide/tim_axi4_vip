@@ -558,8 +558,11 @@ Commits `c18b6f3`..`dacdf09` (13 commits after `3671fda`) and `c53f58f`..`c8dee1
   identity mask, `32'h0007_8000`). `testlists/axi4_trackb_nonnative.list` runs
   these four tests plus `qos_basic_priority`, `qos_equal_priority_fairness` and
   `same_id_nonadjacent_reorder`, and since `d66a7ad` `cross_id_read_reorder` and
-  `cross_id_write_reorder` (9 tests, 27 entries) on Track-B `ENHANCED` with
-  seeds 777, 1 and a random seed. The two cross-ID tests are consistency checks
+  `cross_id_write_reorder`, and since `61fe2e5` `stall_detector_idle` and
+  `stall_detector_reset` (11 tests, 33 entries) on Track-B `ENHANCED` with
+  seeds 777, 1 and a random seed (the stall-detector reset test is only a weak flush
+  check there: about one write is still outstanding at reset, against 16 on the
+  baseline). The two cross-ID tests are consistency checks
   only there: master 0's R bursts and B responses were observed in issue order
   (cause not probed), so the reorder they target was not seen.
 - **What Track-B does not check.** For these tests the AWID/BID/ARID/RID and
