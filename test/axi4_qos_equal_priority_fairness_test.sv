@@ -3,8 +3,15 @@
 
 //--------------------------------------------------------------------------------------------
 // Class: axi4_qos_equal_priority_fairness_test
-// Tests fairness when multiple transactions have equal QoS priority values
-// Verifies that equal priority transactions are serviced fairly without starvation
+// Drives QoS-mode traffic (manager and slave qos_mode_type = WRITE_READ on the
+// baseline; Track-B slaves ONLY_WRITE, see below) with AxQOS 4 on every
+// manager. Intent: equal-priority transactions served fairly, without
+// starvation. What it actually establishes: the scoreboard and the
+// deadlock/livelock checks stay clean. The arbitration-fairness index is
+// only printed by the performance metrics, never compared with a threshold, and
+// nothing checks the service order. Write side: the slave B pool is always 1
+// deep and the manager's W-data-phase pick (legacy wr_qos_arb_point) has one
+// AWID per manager, so write-side QoS arbitration is not exercised.
 // Supports all three bus matrix modes: NONE, BASE_BUS_MATRIX (4x4), BUS_ENHANCED_MATRIX (10x10)
 //--------------------------------------------------------------------------------------------
 class axi4_qos_equal_priority_fairness_test extends axi4_base_test;
@@ -106,7 +113,7 @@ function void axi4_qos_equal_priority_fairness_test::build_phase(uvm_phase phase
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Bus Matrix Mode: %s", bus_matrix_mode_str), UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
-  `uvm_info(get_type_name(), "Test validates fairness when all masters have equal QoS priority", UVM_LOW)
+  `uvm_info(get_type_name(), "Equal-QoS stimulus on all masters; fairness index is reported, not checked", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
 
 `ifdef BUS_MATRIX_FABRIC_IP
@@ -243,7 +250,8 @@ function void axi4_qos_equal_priority_fairness_test::setup_axi4_master_agent_cfg
   super.setup_axi4_master_agent_cfg();
   
   foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i]) begin
-    // Enable QoS mode for both write and read priority-based arbitration
+    // QoS mode for both directions. Write side: arbitration runs in the W-data
+    // phase (legacy wr_qos_arb_point) and is not checked here; see header.
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
   end
 endfunction : setup_axi4_master_agent_cfg

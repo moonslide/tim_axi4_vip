@@ -965,8 +965,14 @@ task axi4_master_driver_proxy::axi4_write_task();
           //BFM's w_channel_key, so the invariant becomes checkable - and worth
           //checking, since a violation here is a manager-generated protocol error
           //that would surface far away as wrong write data. Everything between
-          //here and the BFM call below is zero-time. Skipped under QoS, which
-          //re-orders which packet a data thread drives on purpose.
+          //here and the BFM call below is zero-time. Skipped while write QoS is
+          //arbitrated in the W-data phase (legacy wr_qos_arb_point =
+          //WR_QOS_ARB_AT_WDATA, the default): there the data thread drives the
+          //highest-AWQOS queued write, not the oldest issued AW, so W CAN go out
+          //of AW order - that re-ordering is a protocol violation, not a
+          //feature, and this check is simply not run against it. With
+          //WR_QOS_ARB_AT_AW wr_w_qos_mode() is QOS_MODE_DISABLE, W follows AW
+          //order and the check is live. See wr_qos_arb_point_e.
           if((wr_w_qos_mode() != ONLY_WRITE_QOS_MODE_ENABLE) &&
              (wr_w_qos_mode() != WRITE_READ_QOS_MODE_ENABLE)) begin
             if(wr_ticket != wr_data_ticket_next) begin

@@ -3,8 +3,17 @@
 
 //--------------------------------------------------------------------------------------------
 // Class: axi4_qos_basic_priority_test
-// Tests basic QoS priority ordering where higher priority transactions
-// should be serviced before lower priority ones
+// Drives QoS-mode traffic (manager and slave qos_mode_type = WRITE_READ on the
+// baseline; Track-B slaves ONLY_WRITE, see below) from manager 0 with AxQOS
+// 1/4/8. Intent: higher-priority transactions served first. What it actually
+// establishes: with QoS mode on, the scoreboard and the deadlock/livelock
+// checks stay clean. Nothing here checks the resulting order (the slave read-QoS self-check qos_rd_arb_chk
+// is off by default). Write side: the slave B pool is always 1 deep, so B is
+// never arbitrated by AWQOS, and the manager's W-data-phase pick (legacy
+// wr_qos_arb_point) cannot reorder W with one AWID per manager - the write-side
+// PASS is vacuous. A read-side priority-order check (the arbiter rule
+// re-derived, not an independent oracle; distinct ARIDs) is in
+// axi4_qos_rd_priority_order_test (testlists/axi4_qos_control.list).
 // Supports all three bus matrix modes: NONE, BASE_BUS_MATRIX (4x4), BUS_ENHANCED_MATRIX (10x10)
 //--------------------------------------------------------------------------------------------
 class axi4_qos_basic_priority_test extends axi4_base_test;
@@ -81,7 +90,7 @@ function void axi4_qos_basic_priority_test::build_phase(uvm_phase phase);
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Bus Matrix Mode: %s", bus_matrix_mode_str), UVM_LOW)
   `uvm_info(get_type_name(), $sformatf("Masters: %0d, Slaves: %0d", num_masters, num_slaves), UVM_LOW)
-  `uvm_info(get_type_name(), "Test validates QoS priority-based arbitration", UVM_LOW)
+  `uvm_info(get_type_name(), "QoS-mode stimulus (WRITE_READ); arbitration order is not checked by this test", UVM_LOW)
   `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
 
 `ifdef BUS_MATRIX_FABRIC_IP
@@ -217,7 +226,8 @@ function void axi4_qos_basic_priority_test::setup_axi4_master_agent_cfg();
   super.setup_axi4_master_agent_cfg();
   
   foreach(axi4_env_cfg_h.axi4_master_agent_cfg_h[i]) begin
-    // Enable QoS mode for both write and read priority-based arbitration
+    // QoS mode for both directions. Write side: arbitration runs in the W-data
+    // phase (legacy wr_qos_arb_point) and is not checked here; see header.
     axi4_env_cfg_h.axi4_master_agent_cfg_h[i].qos_mode_type = WRITE_READ_QOS_MODE_ENABLE;
   end
 endfunction : setup_axi4_master_agent_cfg
