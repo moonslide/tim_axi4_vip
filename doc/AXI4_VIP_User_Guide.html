@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AXI4 VIP User Guide v2.8 - Production Release</title>
+    <title>AXI4 VIP User Guide</title>
     <style>
         /* ============================================
            Modern Design System - Clean & Accessible
@@ -695,8 +695,8 @@
     <header class="header">
         <div class="header-title">
             <div class="logo">AXI</div>
-            <h1>AXI4 VIP User Guide - Version 2.8</h1>
-            <span class="version-badge">v2.8-PRODUCTION</span>
+            <h1>AXI4 VIP User Guide</h1>
+            <span class="version-badge">v2.8 text, revised 2026-10-22</span>
         </div>
         <div class="header-actions">
             <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -817,16 +817,24 @@
                     <h2>Overview</h2>
                 </div>
                 
-                <p>The AXI4 Verification IP (VIP) <strong>Version 2.8</strong> is an advanced, production-ready UVM-based verification solution for ARM® AMBA® AXI4 protocol. Built for next-generation SoC verification, it features the revolutionary <strong>10x10 bus matrix</strong> configuration with real-time performance KPI monitoring, comprehensive error injection support, and enhanced regression capabilities. This release addresses critical UVM factory registration issues, fixes sequencer coordination problems, and improves test reliability across all bus matrix modes.</p>
+                <div class="info-box warning">
+                    <div class="info-box-title">
+                        <span>⚠️</span>
+                        <strong>Document status (2026-10-22)</strong>
+                    </div>
+                    <p>This guide is hand-written and was last broadly revised for v2.8. <code>README.md</code> and <code>sim/synopsys_sim/Makefile</code> are authoritative wherever they disagree with it. Many command lines, test names and code blocks in later sections are historical or illustrative: the Make variable is lowercase <code>test</code> (<code>make sim test=&lt;name&gt;</code>), <code>TEST=</code>, <code>WAVES=</code> and <code>DEFINES=</code> are not Makefile variables, and a test name that <code>git grep</code> does not find in <code>test/</code> does not exist.</p>
+                </div>
+
+                <p>The AXI4 Verification IP (VIP) is a UVM-based verification IP for the ARM® AMBA® AXI4 protocol. It provides a <strong>10x10 bus matrix</strong> reference configuration with performance KPI reporting, error injection support, and a regression runner. The v2.8 changes (UVM factory registration, sequencer coordination, test reliability across bus matrix modes) are described in the v2.8 section.</p>
                 
                 <div class="card-grid">
                     <div class="card">
                         <div class="card-title">
                             <span>✅</span>
-                            100% Pass Rate
+                            Regression Status
                         </div>
                         <div class="card-content">
-                            All 196 tests passing (123 standard + 18 performance KPI tests + 31 error injection/exception tests + 24 reset/clock tests). Complete regression suite with 20 critical fixes applied in v2.8, including UVM factory registration, sequencer coordination, and regression script improvements.
+                            Default list <code>testlists/axi4_transfers_regression.list</code>: 340 entries, 193 distinct test classes, 800 runs (commit <code>4c555f6</code>). Last recorded full run: 794/794 functional passes on 2026-09-20/21 (README.md "Full-regression confirmation"); the 6 runs added since were not part of it. A pass needs <code>UVM_ERROR : 0</code> and <code>TEST RESULT: PASS</code> in the run's own log.
                         </div>
                     </div>
                     <div class="card">
@@ -851,14 +859,14 @@
                 
                 <h3>Key Features</h3>
                 <ul>
-                    <li>Full IHI0022D AXI4 specification compliance</li>
+                    <li>Written against IHI0022D (AXI4); no certified compliance-suite result is established (README.md "Known limitations")</li>
                     <li>Scalable bus matrix reference model with multiple modes</li>
-                    <li>Comprehensive QoS support (18 tests) and USER signal verification (8 tests)</li>
-                    <li>Advanced protocol checking with assertions</li>
+                    <li>QoS stimulus and VIP-side read-QoS selection (16 test classes with <code>qos</code> in the name, 13 of them <code>axi4_qos_*</code>; the reference model does not arbitrate by QoS and Track-B verifies no QoS behaviour) and USER signal tests (8 <code>axi4_user_*</code> tests)</li>
+                    <li>Targeted protocol assertions (most have no <code>`uvm_error</code> action, so their failures do not reach <code>UVM_ERROR</code>; see README.md "Known limitations")</li>
                     <li>Built-in error injection capabilities</li>
                     <li>Exclusive access transaction support</li>
                     <li>Out-of-order transaction handling</li>
-                    <li>Complete functional and code coverage</li>
+                    <li>Functional covergroups and VCS code coverage collection; no coverage-closure figure is claimed here</li>
                 </ul>
             </section>
             
@@ -885,12 +893,14 @@
                 <pre><code>git clone https://github.com/moonslide/tim_axi4_vip.git
 cd tim_axi4_vip</code></pre>
                 
-                <div class="code-header">Step 2: Set Environment</div>
-                <pre><code>source setup_env.sh</code></pre>
+                <div class="code-header">Step 2: Check the Tools</div>
+                <pre><code># no setup script is shipped; vcs and python3 must be on PATH
+vcs -ID
+python3 --version</code></pre>
                 
                 <div class="code-header">Step 3: Run Test</div>
                 <pre><code>cd sim/synopsys_sim
-make TEST=axi4_write_read_test</code></pre>
+make sim test=axi4_write_read_test SEED=12345 FSDB_DUMP=0</code></pre>
                 
                 <div class="code-header">Step 4: Run Regression</div>
                 <pre><code>python3 axi4_regression.py --test-list axi4_transfers_regression.list --cov --lsf</code></pre>
@@ -900,7 +910,7 @@ make TEST=axi4_write_read_test</code></pre>
                         <span>✅</span>
                         <strong>Expected Result</strong>
                     </div>
-                    <p>All tests should pass with 100% success rate. If any test fails, check the troubleshooting section or ensure you're using v2.5.</p>
+                    <p>Each run's own log must show <code>UVM_ERROR : 0</code> and <code>TEST RESULT: PASS</code>; neither implies the other, and the runner summary alone is not a verdict. For the last recorded full-regression result see the Regression Status card above.</p>
                 </div>
             </section>
 
@@ -1321,7 +1331,7 @@ endclass</code></pre>
                         </tr>
                         <tr>
                             <td>BUS_ENHANCED_MATRIX</td>
-                            <td>QoS and priority routing (Enhanced)</td>
+                            <td>ENHANCED 10x10 address map with AxPROT access rules (no QoS arbitration)</td>
                             <td>10x10 matrix, concurrent tests</td>
                             <td><span class="badge badge-success">ENHANCED</span></td>
                         </tr>
@@ -1377,7 +1387,7 @@ endfunction</code></pre>
                         <span>ℹ️</span>
                         <strong>v2.6 Enhanced Update</strong>
                     </div>
-                    <p>BOUNDARY_ACCESS_TESTS now use NONE mode by default to support 1:1 HDL topology. This prevents false SLVERR responses when testing direct master-slave connections. Enhanced configuration uses BUS_ENHANCED_MATRIX mode with 10x10 bus matrix for concurrent tests and advanced QoS/USER signal verification.</p>
+                    <p>BOUNDARY_ACCESS_TESTS now use NONE mode by default to support 1:1 HDL topology. This prevents false SLVERR responses when testing direct master-slave connections. Enhanced configuration uses BUS_ENHANCED_MATRIX mode (the 10x10 reference address map) for concurrent tests and QoS/USER stimulus; the reference model does not arbitrate by QoS.</p>
                 </div>
             </section>
 
@@ -2386,7 +2396,7 @@ grep "TEST PASSED" *.log | wc -l  # Count passed tests</code></pre>
                             <td>QoS (Enhanced)</td>
                             <td>14</td>
                             <td>10-15 sec</td>
-                            <td>axi4_qos_priority_test, axi4_qos_fairness_test</td>
+                            <td>axi4_qos_basic_priority_test, axi4_qos_equal_priority_fairness_test</td>
                         </tr>
                         <tr>
                             <td>Exclusive</td>
@@ -3187,28 +3197,23 @@ endclass</code></pre>
                         </tr>
                         <tr>
                             <td>Burst</td>
-                            <td>axi4_burst_*_test</td>
-                            <td>axi4_burst_incr_test</td>
+                            <td>axi4_*_burst_*_test</td>
+                            <td>axi4_blocking_incr_burst_write_read_test</td>
                         </tr>
                         <tr>
                             <td>Error</td>
-                            <td>axi4_error_*_test</td>
-                            <td>axi4_error_slverr_test</td>
+                            <td>axi4_error_inject_*_test</td>
+                            <td>axi4_error_inject_awvalid_x_test</td>
                         </tr>
                         <tr>
-                            <td>QoS (18 tests)</td>
+                            <td>QoS (13 tests)</td>
                             <td>axi4_qos_*_test</td>
-                            <td>axi4_qos_priority_test</td>
+                            <td>axi4_qos_basic_priority_test</td>
                         </tr>
                         <tr>
                             <td>USER (8 tests)</td>
                             <td>axi4_user_*_test</td>
                             <td>axi4_user_transaction_tracing_test</td>
-                        </tr>
-                        <tr>
-                            <td>Protocol</td>
-                            <td>axi4_tc_*_test</td>
-                            <td>axi4_tc_046_test</td>
                         </tr>
                     </tbody>
                 </table>
@@ -3554,8 +3559,13 @@ endproperty</code></pre>
                 </table>
                 
                 <h4>QoS Test Implementation</h4>
-                <div class="code-header">QoS Priority Test</div>
-                <pre><code>class axi4_qos_priority_test extends axi4_base_test;
+                <div class="code-header">QoS Priority Test (illustrative sketch, not a shipped class)</div>
+                <pre><code>// ILLUSTRATIVE SKETCH ONLY - does not compile against this repo:
+// axi4_qos_priority_test, high_pri_seq / low_pri_seq and their .done flag
+// do not exist. Shipped QoS tests live in test/, e.g.
+// axi4_qos_basic_priority_test (stimulus only, no order check) and
+// axi4_qos_rd_priority_order_test (sets qos_rd_arb_chk = 1).
+class axi4_qos_priority_test extends axi4_base_test;
     task run_phase(uvm_phase phase);
         // High priority transaction
         high_pri_seq.qos_value = 15;
@@ -3585,8 +3595,10 @@ endclass</code></pre>
                     <li><strong>Custom Metadata:</strong> Application-specific data</li>
                 </ul>
                 
-                <div class="code-header">USER Signal Example</div>
-                <pre><code>// Security tagging with USER signals
+                <div class="code-header">USER Signal Example (illustrative sketch, not a shipped sequence)</div>
+                <pre><code>// ILLUSTRATIVE SKETCH ONLY: user_sideband_t and secure_transaction_seq do not
+// exist in this repo. Shipped test: axi4_user_security_tagging_test (test/).
+// Security tagging with USER signals
 typedef struct packed {
     bit [3:0] security_level;  // 0=public, 15=top_secret
     bit [3:0] domain_id;        // Security domain
@@ -3607,11 +3619,12 @@ class secure_transaction_seq extends axi4_master_base_seq;
 endclass</code></pre>
                 
                 <h3>QoS and USER Test Coverage</h3>
+                <p>The rows below are coverage <strong>targets</strong>, not results: no measured coverage or check data backs them. The older QoS tests do not check service order (<code>qos_rd_arb_chk</code> defaults to 0) and the fairness index is printed without a threshold (README.md "QoS control knobs").</p>
                 <table>
                     <thead>
                         <tr>
                             <th>Test</th>
-                            <th>Coverage</th>
+                            <th>Coverage target</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -3619,32 +3632,32 @@ endclass</code></pre>
                         <tr>
                             <td>QoS Priority Ordering</td>
                             <td>All 16 levels</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                         <tr>
                             <td>QoS Fairness</td>
                             <td>Equal priority arbitration</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                         <tr>
                             <td>QoS Starvation Prevention</td>
                             <td>Aging mechanism</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                         <tr>
                             <td>USER Signal Passthrough</td>
                             <td>All widths</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                         <tr>
                             <td>USER Width Mismatch</td>
                             <td>Truncation/padding</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                         <tr>
                             <td>USER-based Routing</td>
                             <td>Custom routing</td>
-                            <td><span class="badge badge-success">PASS</span></td>
+                            <td><span class="badge badge-info">TARGET</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -4329,7 +4342,7 @@ make test=axi4_write_read_test command_add="+BUS_MATRIX_MODE=NONE"
 make test=axi4_enhanced_bus_matrix_test command_add="+BUS_MATRIX_MODE=BUS_ENHANCED_MATRIX"
 
 # With multiple parameters (v2.8 fixed quote handling)
-make test=axi4_qos_priority_test seed=99 command_add="+BUS_MATRIX_MODE=BASE_BUS_MATRIX +define+DISABLE_X_ASSERTIONS"</code></pre>
+make test=axi4_qos_basic_priority_test seed=99 command_add="+BUS_MATRIX_MODE=BASE_BUS_MATRIX +define+DISABLE_X_ASSERTIONS"</code></pre>
                             </div>
                         </div>
                         
